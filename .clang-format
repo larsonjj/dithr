@@ -1,0 +1,58 @@
+---
+# Based on LLVM style with some adjustments
+BasedOnStyle: LLVM
+
+# Indentation
+IndentWidth: 4
+TabWidth: 4
+UseTab: Never
+IndentCaseLabels: true
+NamespaceIndentation: None
+
+# Alignment
+AlignAfterOpenBracket: Align
+AlignConsecutiveAssignments: true
+AlignConsecutiveDeclarations: true
+AlignConsecutiveMacros: true
+AlignEscapedNewlines: Right
+AlignOperands: true
+AlignTrailingComments: true
+
+# Breaking and wrapping
+AllowAllParametersOfDeclarationOnNextLine: false
+AllowShortBlocksOnASingleLine: Empty
+AllowShortCaseLabelsOnASingleLine: false
+AllowShortFunctionsOnASingleLine: Empty
+AllowShortIfStatementsOnASingleLine: Never
+AllowShortLoopsOnASingleLine: false
+AlwaysBreakAfterReturnType: None
+BreakBeforeBraces: Custom
+BraceWrapping:
+    AfterEnum: false
+    AfterStruct: false
+    AfterFunction: true
+    SplitEmptyFunction: false
+BreakBeforeBinaryOperators: None
+BreakBeforeTernaryOperators: false
+ColumnLimit: 100
+
+# Spaces vs. Parentheses
+SpaceAfterCStyleCast: false
+SpaceAfterLogicalNot: false
+SpaceBeforeAssignmentOperators: true
+SpaceBeforeParens: ControlStatements
+SpaceInEmptyParentheses: false
+SpacesInCStyleCastParentheses: false
+SpacesInParentheses: false
+SpacesInSquareBrackets: false
+
+# Include sorting
+IncludeBlocks: Regroup
+SortIncludes: true
+
+# Function formatting
+BinPackArguments: false
+BinPackParameters: false
+
+# Pointer alignment (*/& alignment)
+PointerAlignment: Right
