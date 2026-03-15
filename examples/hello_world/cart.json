@@ -1,0 +1,59 @@
+{
+    "meta": {
+        "title": "hello_world",
+        "author": "",
+        "version": "1.0.0",
+        "description": ""
+    },
+    "display": {
+        "width": 320,
+        "height": 180,
+        "scale": 3
+    },
+    "timing": {
+        "fps": 60
+    },
+    "sprites": {
+        "sheet": "assets/sprites/spritesheet.png",
+        "tileW": 8,
+        "tileH": 8
+    },
+    "audio": {
+        "channels": 8
+    },
+    "input": {
+        "default_mappings": {
+            "left": [
+                "KEY_LEFT",
+                "KEY_A",
+                "PAD_LEFT"
+            ],
+            "right": [
+                "KEY_RIGHT",
+                "KEY_D",
+                "PAD_RIGHT"
+            ],
+            "up": [
+                "KEY_UP",
+                "KEY_W",
+                "PAD_UP"
+            ],
+            "down": [
+                "KEY_DOWN",
+                "KEY_S",
+                "PAD_DOWN"
+            ],
+            "jump": [
+                "KEY_Z",
+                "KEY_SPACE",
+                "PAD_A"
+            ],
+            "action": [
+                "KEY_X",
+                "PAD_B"
+            ]
+        }
+    },
+    "code": "src/main.js",
+    "maps": []
+}

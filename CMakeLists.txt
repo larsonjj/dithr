@@ -184,6 +184,15 @@ if (MVN_DEV_BUILD)
     target_compile_definitions(mvngin PRIVATE DEV_BUILD=1)
 endif()
 
+# Copy shared library DLLs next to the executable
+if (WIN32)
+    add_custom_command(TARGET mvngin POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            $<TARGET_RUNTIME_DLLS:mvngin> $<TARGET_FILE_DIR:mvngin>
+        COMMAND_EXPAND_LISTS
+    )
+endif()
+
 # --- Examples ---
 option(MVN_BUILD_EXAMPLES "Build example programs" ON)
 if (MVN_BUILD_EXAMPLES)

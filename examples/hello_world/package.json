@@ -1,0 +1,10 @@
+{
+  "name": "hello_world",
+  "version": "1.0.0",
+  "private": true,
+  "description": "hello_world — mvngin cart",
+  "scripts": {
+    "start": "mvngin cart.json",
+    "export": "node ../tools/cart-export.js cart.json"
+  }
+}

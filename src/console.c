@@ -419,6 +419,19 @@ static bool prv_load_cart_assets(mvn_console_t *con)
         }
     }
 
+    /* JS source code */
+    if (cart->code == NULL && cart->code_path[0] != '\0') {
+        size_t len;
+
+        SDL_snprintf(path_buf, sizeof(path_buf), "%s%s", cart->base_path, cart->code_path);
+        cart->code = (char *)SDL_LoadFile(path_buf, &len);
+        if (cart->code != NULL) {
+            cart->code_len = len;
+        } else {
+            SDL_Log("Failed to load code: %s", path_buf);
+        }
+    }
+
     return true;
 }
 
