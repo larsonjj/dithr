@@ -157,7 +157,16 @@ void mvn_event_flush(mvn_event_bus_t *bus)
 
             result = JS_Call(bus->ctx, h->callback, JS_UNDEFINED, 1, &ev->payload);
             if (JS_IsException(result)) {
-                JS_FreeValue(bus->ctx, JS_GetException(bus->ctx));
+                JSValue     exc;
+                const char *msg;
+
+                exc = JS_GetException(bus->ctx);
+                msg = JS_ToCString(bus->ctx, exc);
+                if (msg != NULL) {
+                    SDL_Log("Event '%s' handler exception: %s", ev->name, msg);
+                    JS_FreeCString(bus->ctx, msg);
+                }
+                JS_FreeValue(bus->ctx, exc);
             }
             JS_FreeValue(bus->ctx, result);
 

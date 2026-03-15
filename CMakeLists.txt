@@ -105,9 +105,8 @@ else()
     target_compile_options(quickjs PRIVATE -w)
 endif()
 
-# --- Executable ---
-add_executable(mvngin
-    src/main.c
+# --- Engine static library (everything except main.c) ---
+add_library(mvngin_core STATIC
     src/console.c
     src/runtime.c
     src/graphics.c
@@ -135,31 +134,29 @@ add_executable(mvngin
     src/api/sys_api.c
 )
 
-target_include_directories(mvngin PRIVATE
+target_include_directories(mvngin_core PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/src
 )
 
-target_compile_options(mvngin PRIVATE ${MVN_WARN_FLAGS})
+target_compile_options(mvngin_core PRIVATE ${MVN_WARN_FLAGS})
 
 # Suppress C4244 from QuickJS inline functions in quickjs.h
 if (MSVC)
-    target_compile_options(mvngin PRIVATE /wd4244)
+    target_compile_options(mvngin_core PRIVATE /wd4244)
 endif()
 
-target_link_libraries(mvngin PRIVATE
+target_link_libraries(mvngin_core PUBLIC
     SDL3::SDL3
     SDL3_mixer::SDL3_mixer
     quickjs
 )
 
-if (MSVC)
-    # Link math library implicitly on MSVC
-else()
-    target_link_libraries(mvngin PRIVATE m)
+if (NOT MSVC)
+    target_link_libraries(mvngin_core PUBLIC m)
 endif()
 
 # Pass compile-time defaults as definitions
-target_compile_definitions(mvngin PRIVATE
+target_compile_definitions(mvngin_core PUBLIC
     CONSOLE_FB_WIDTH=${MVN_FB_WIDTH}
     CONSOLE_FB_HEIGHT=${MVN_FB_HEIGHT}
     CONSOLE_PALETTE_SIZE=${MVN_PALETTE_SIZE}
@@ -181,8 +178,12 @@ target_compile_definitions(mvngin PRIVATE
 # Dev build flag
 option(MVN_DEV_BUILD "Enable development features (hot reload, debug overlays)" OFF)
 if (MVN_DEV_BUILD)
-    target_compile_definitions(mvngin PRIVATE DEV_BUILD=1)
+    target_compile_definitions(mvngin_core PUBLIC DEV_BUILD=1)
 endif()
+
+# --- Executable ---
+add_executable(mvngin src/main.c)
+target_link_libraries(mvngin PRIVATE mvngin_core)
 
 # Copy shared library DLLs next to the executable
 if (WIN32)

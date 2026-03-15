@@ -188,6 +188,44 @@ bool mvn_runtime_call(mvn_runtime_t *rt, JSAtom name)
 }
 
 /* ------------------------------------------------------------------ */
+/*  Call global function by atom with arguments                        */
+/* ------------------------------------------------------------------ */
+
+bool mvn_runtime_call_argv(mvn_runtime_t *rt, JSAtom name, int argc, JSValue *argv)
+{
+    JSValue global;
+    JSValue func;
+    JSValue result;
+
+    if (rt->error_active) {
+        return false;
+    }
+
+    global = JS_GetGlobalObject(rt->ctx);
+    func   = JS_GetProperty(rt->ctx, global, name);
+
+    if (!JS_IsFunction(rt->ctx, func)) {
+        JS_FreeValue(rt->ctx, func);
+        JS_FreeValue(rt->ctx, global);
+        return true;
+    }
+
+    result = JS_Call(rt->ctx, func, global, argc, argv);
+    if (JS_IsException(result)) {
+        prv_capture_exception(rt);
+        JS_FreeValue(rt->ctx, result);
+        JS_FreeValue(rt->ctx, func);
+        JS_FreeValue(rt->ctx, global);
+        return false;
+    }
+
+    JS_FreeValue(rt->ctx, result);
+    JS_FreeValue(rt->ctx, func);
+    JS_FreeValue(rt->ctx, global);
+    return true;
+}
+
+/* ------------------------------------------------------------------ */
 /*  Drain microtasks                                                   */
 /* ------------------------------------------------------------------ */
 

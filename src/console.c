@@ -177,6 +177,9 @@ mvn_console_t *mvn_console_create(const char *cart_path)
     /* --- Audio subsystem --- */
     con->audio = mvn_audio_create(
         con->cart->audio.channels, con->cart->audio.frequency, con->cart->audio.buffer_size);
+    if (con->audio == NULL) {
+        SDL_Log("Warning: audio subsystem failed to initialise — audio disabled");
+    }
 
     /* --- Input subsystems --- */
     con->keys     = mvn_key_create();
@@ -300,8 +303,12 @@ void mvn_console_run(mvn_console_t *con)
         /* Event bus flush */
         mvn_event_flush(con->events);
 
-        /* JS _update */
-        mvn_runtime_call(con->runtime, con->runtime->atom_update);
+        /* JS _update(dt) */
+        {
+            JSValue dt_arg = JS_NewFloat64(con->runtime->ctx, (double)con->delta);
+            mvn_runtime_call_argv(con->runtime, con->runtime->atom_update, 1, &dt_arg);
+            JS_FreeValue(con->runtime->ctx, dt_arg);
+        }
 
         /* JS _draw */
         mvn_runtime_call(con->runtime, con->runtime->atom_draw);

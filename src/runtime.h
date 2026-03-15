@@ -78,6 +78,16 @@ bool mvn_runtime_eval(mvn_runtime_t *rt, const char *code, size_t len, const cha
 bool mvn_runtime_call(mvn_runtime_t *rt, JSAtom name);
 
 /**
+ * \brief           Call a named global JS function with arguments
+ * \param[in]       rt: Runtime
+ * \param[in]       name: Atom of the global function to call
+ * \param[in]       argc: Number of arguments
+ * \param[in]       argv: Argument array (caller retains ownership)
+ * \return          true on success, false if exception occurred
+ */
+bool mvn_runtime_call_argv(mvn_runtime_t *rt, JSAtom name, int argc, JSValue *argv);
+
+/**
  * \brief           Drain pending QuickJS microtasks
  */
 void mvn_runtime_drain_jobs(mvn_runtime_t *rt);

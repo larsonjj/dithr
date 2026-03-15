@@ -110,7 +110,7 @@ bool mvn_audio_load_sfx(mvn_audio_t *aud, const uint8_t *data, size_t len)
     SDL_IOStream *io;
     MIX_Audio *   audio;
 
-    if (aud->sfx_count >= MVN_MAX_SFX) {
+    if (aud == NULL || aud->sfx_count >= MVN_MAX_SFX) {
         return false;
     }
 
@@ -165,6 +165,9 @@ void mvn_sfx_play(mvn_audio_t *aud, int32_t idx, int32_t channel, int32_t offset
 
 void mvn_sfx_stop(mvn_audio_t *aud, int32_t channel)
 {
+    if (aud == NULL) {
+        return;
+    }
     if (channel < 0 || channel >= CONSOLE_MAX_CHANNELS) {
         /* Stop all */
         for (int32_t idx = 0; idx < CONSOLE_MAX_CHANNELS; ++idx) {
@@ -181,6 +184,9 @@ void mvn_sfx_stop(mvn_audio_t *aud, int32_t channel)
 
 void mvn_sfx_volume(mvn_audio_t *aud, float vol, int32_t channel)
 {
+    if (aud == NULL) {
+        return;
+    }
     if (channel >= 0 && channel < CONSOLE_MAX_CHANNELS) {
         aud->channel_volume[channel] = vol;
         if (aud->sfx_tracks[channel] != NULL) {
@@ -191,6 +197,9 @@ void mvn_sfx_volume(mvn_audio_t *aud, float vol, int32_t channel)
 
 float mvn_sfx_get_volume(mvn_audio_t *aud, int32_t channel)
 {
+    if (aud == NULL) {
+        return 0.0f;
+    }
     if (channel >= 0 && channel < CONSOLE_MAX_CHANNELS) {
         return aud->channel_volume[channel];
     }
@@ -199,6 +208,9 @@ float mvn_sfx_get_volume(mvn_audio_t *aud, int32_t channel)
 
 bool mvn_sfx_playing(mvn_audio_t *aud, int32_t channel)
 {
+    if (aud == NULL) {
+        return false;
+    }
     if (channel < 0 || channel >= CONSOLE_MAX_CHANNELS) {
         return false;
     }
@@ -217,7 +229,7 @@ bool mvn_audio_load_music(mvn_audio_t *aud, const uint8_t *data, size_t len)
     SDL_IOStream *io;
     MIX_Audio *   audio;
 
-    if (aud->music_count >= MVN_MAX_MUSIC) {
+    if (aud == NULL || aud->music_count >= MVN_MAX_MUSIC) {
         return false;
     }
 
@@ -267,7 +279,7 @@ void mvn_mus_play(mvn_audio_t *aud, int32_t idx, int32_t fade_ms, uint32_t chann
 
 void mvn_mus_stop(mvn_audio_t *aud, int32_t fade_ms)
 {
-    if (aud->music_track == NULL) {
+    if (aud == NULL || aud->music_track == NULL) {
         return;
     }
 
@@ -283,6 +295,9 @@ void mvn_mus_stop(mvn_audio_t *aud, int32_t fade_ms)
 
 void mvn_mus_volume(mvn_audio_t *aud, float vol)
 {
+    if (aud == NULL) {
+        return;
+    }
     aud->master_volume = vol;
     if (aud->music_track != NULL) {
         MIX_SetTrackGain(aud->music_track, vol);
@@ -291,12 +306,15 @@ void mvn_mus_volume(mvn_audio_t *aud, float vol)
 
 float mvn_mus_get_volume(mvn_audio_t *aud)
 {
+    if (aud == NULL) {
+        return 0.0f;
+    }
     return aud->master_volume;
 }
 
 bool mvn_mus_playing(mvn_audio_t *aud)
 {
-    if (aud->music_track == NULL) {
+    if (aud == NULL || aud->music_track == NULL) {
         return false;
     }
     return MIX_TrackPlaying(aud->music_track);

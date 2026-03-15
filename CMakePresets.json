@@ -38,18 +38,6 @@
       }
     },
     {
-      "name": "wide",
-      "displayName": "Wide (384x216)",
-      "description": "Wider 16:9 framebuffer",
-      "inherits": "debug",
-      "binaryDir": "${sourceDir}/build/wide",
-      "cacheVariables": {
-        "MVN_FB_WIDTH": "384",
-        "MVN_FB_HEIGHT": "216",
-        "MVN_WINDOW_SCALE": "3"
-      }
-    },
-    {
       "name": "wasm",
       "displayName": "WASM Release",
       "description": "Emscripten WebAssembly release build",
@@ -88,10 +76,6 @@
     {
       "name": "retro",
       "configurePreset": "retro"
-    },
-    {
-      "name": "wide",
-      "configurePreset": "wide"
     },
     {
       "name": "wasm",

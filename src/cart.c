@@ -369,31 +369,72 @@ bool mvn_cart_validate(mvn_cart_t *cart)
     if (cart->display.width < 64 || cart->display.width > CONSOLE_FB_WIDTH) {
         SDL_Log("Cart: display.width %d out of range, clamped", cart->display.width);
         cart->display.width = CONSOLE_FB_WIDTH;
+        valid = false;
     }
     if (cart->display.height < 64 || cart->display.height > CONSOLE_FB_HEIGHT) {
         SDL_Log("Cart: display.height %d out of range, clamped", cart->display.height);
         cart->display.height = CONSOLE_FB_HEIGHT;
+        valid = false;
+    }
+
+    /* Scale must be at least 1 */
+    if (cart->display.scale < 1 || cart->display.scale > 8) {
+        SDL_Log("Cart: display.scale %d out of range, clamped", cart->display.scale);
+        cart->display.scale = CONSOLE_DEFAULT_SCALE;
+        valid = false;
     }
 
     /* Clamp FPS */
     if (cart->timing.fps < 15) {
         cart->timing.fps = 15;
+        valid = false;
     }
     if (cart->timing.fps > CONSOLE_FPS) {
         cart->timing.fps = CONSOLE_FPS;
+        valid = false;
+    }
+
+    /* Audio channels */
+    if (cart->audio.channels < 1 || cart->audio.channels > CONSOLE_MAX_CHANNELS) {
+        SDL_Log("Cart: audio.channels %d out of range, clamped", cart->audio.channels);
+        cart->audio.channels = CONSOLE_AUDIO_CHANNELS;
+        valid = false;
+    }
+
+    /* Audio frequency */
+    if (cart->audio.frequency < 8000 || cart->audio.frequency > 96000) {
+        SDL_Log("Cart: audio.frequency %d out of range, clamped", cart->audio.frequency);
+        cart->audio.frequency = CONSOLE_AUDIO_FREQ;
+        valid = false;
+    }
+
+    /* Audio buffer size */
+    if (cart->audio.buffer_size < 256 || cart->audio.buffer_size > 8192) {
+        SDL_Log("Cart: audio.buffer_size %d out of range, clamped", cart->audio.buffer_size);
+        cart->audio.buffer_size = CONSOLE_AUDIO_BUFFER;
+        valid = false;
     }
 
     /* Clamp memory limits */
     if (cart->runtime.mem_limit > (uint32_t)CONSOLE_JS_MEM_MB * 1024u * 1024u) {
         cart->runtime.mem_limit = (uint32_t)CONSOLE_JS_MEM_MB * 1024u * 1024u;
+        valid = false;
     }
 
-    /* Tile dimensions must be power of two */
+    /* Stack limit */
+    if (cart->runtime.stack_limit > (uint32_t)CONSOLE_JS_STACK_KB * 1024u) {
+        cart->runtime.stack_limit = (uint32_t)CONSOLE_JS_STACK_KB * 1024u;
+        valid = false;
+    }
+
+    /* Tile dimensions must be in range 4-64 */
     if (cart->sprites.tile_w < 4 || cart->sprites.tile_w > 64) {
         cart->sprites.tile_w = CONSOLE_TILE_W;
+        valid = false;
     }
     if (cart->sprites.tile_h < 4 || cart->sprites.tile_h > 64) {
         cart->sprites.tile_h = CONSOLE_TILE_H;
+        valid = false;
     }
 
     return valid;
