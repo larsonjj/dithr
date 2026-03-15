@@ -1,0 +1,27 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "WASM: Build",
+      "type": "shell",
+      "command": "cmake --build build/wasm",
+      "group": "build",
+      "problemMatcher": "$gcc",
+      "dependsOn": "WASM: Configure"
+    },
+    {
+      "label": "WASM: Configure",
+      "type": "shell",
+      "command": "cmake --preset wasm",
+      "problemMatcher": []
+    },
+    {
+      "label": "WASM: Run (emrun)",
+      "type": "shell",
+      "command": "emrun build/wasm/mvngin.html",
+      "dependsOn": "WASM: Build",
+      "problemMatcher": [],
+      "isBackground": true
+    }
+  ]
+}

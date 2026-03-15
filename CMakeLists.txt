@@ -8,7 +8,11 @@ project(mvngin
 
 set(CMAKE_C_STANDARD 99)
 set(CMAKE_C_STANDARD_REQUIRED ON)
-set(CMAKE_C_EXTENSIONS OFF)
+if (EMSCRIPTEN)
+    set(CMAKE_C_EXTENSIONS ON)   # EM_ASM requires GNU extensions (-std=gnu99)
+else()
+    set(CMAKE_C_EXTENSIONS OFF)
+endif()
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # Compiler warnings (applied only to our own targets, not dependencies)

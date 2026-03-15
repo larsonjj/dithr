@@ -8,6 +8,7 @@
 #include "font.h"
 
 #include <math.h>
+#include <stdlib.h>
 
 /* ------------------------------------------------------------------ */
 /*  Default 256-colour palette (first 16 inspired by PICO-8)           */
