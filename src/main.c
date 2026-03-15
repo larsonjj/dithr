@@ -34,7 +34,13 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char **argv)
         return SDL_APP_FAILURE;
     }
 
+#ifdef MVN_WASM_CART_PATH
+    (void)argc;
+    (void)argv;
+    app->cart_path = MVN_WASM_CART_PATH;
+#else
     app->cart_path = (argc > 1) ? argv[1] : "cart.json";
+#endif
     SDL_Log("mvngin %s — loading %s", CONSOLE_VERSION, app->cart_path);
 
     app->con = mvn_console_create(app->cart_path);

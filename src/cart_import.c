@@ -7,21 +7,10 @@
 
 #include "cart.h"
 
-/* ------------------------------------------------------------------ */
-/*  stb_image for PNG loading (included inline)                        */
-/*  In a real build, you'd include the stb_image.h header.             */
-/*  For now, we use SDL_image or SDL_LoadBMP fallback.                 */
-/* ------------------------------------------------------------------ */
-
-/*
- * NOTE: For Phase 1, we use SDL3's built-in surface loading for
- * simple BMP/PNG. For production, consider bundling stb_image or
- * SDL_image. The cart_import functions here provide the interface
- * that the build system will wire to real implementations.
- */
+#include <SDL3_image/SDL_image.h>
 
 /* ------------------------------------------------------------------ */
-/*  PNG / image loading via SDL                                        */
+/*  PNG / image loading via SDL_image                                   */
 /* ------------------------------------------------------------------ */
 
 uint8_t *mvn_import_png(const char *path, int32_t *out_w, int32_t *out_h)
@@ -31,7 +20,7 @@ uint8_t *mvn_import_png(const char *path, int32_t *out_w, int32_t *out_h)
     uint8_t *    pixels;
     size_t       size;
 
-    surface = SDL_LoadBMP(path);
+    surface = IMG_Load(path);
     if (surface == NULL) {
         SDL_Log("mvn_import_png: failed to load '%s': %s", path, SDL_GetError());
         *out_w = 0;

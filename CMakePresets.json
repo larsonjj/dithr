@@ -47,7 +47,8 @@
         "CMAKE_BUILD_TYPE": "Release",
         "CMAKE_TOOLCHAIN_FILE": "$env{EMSDK}/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake",
         "MVN_BUILD_EXAMPLES": "OFF",
-        "MVN_BUILD_TESTS": "OFF"
+        "MVN_BUILD_TESTS": "OFF",
+        "MVN_WASM_CART_DIR": "${sourceDir}/examples/hello_world"
       }
     },
     {
@@ -60,7 +61,8 @@
         "CMAKE_BUILD_TYPE": "Debug",
         "CMAKE_TOOLCHAIN_FILE": "$env{EMSDK}/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake",
         "MVN_BUILD_EXAMPLES": "OFF",
-        "MVN_BUILD_TESTS": "OFF"
+        "MVN_BUILD_TESTS": "OFF",
+        "MVN_WASM_CART_DIR": "${sourceDir}/examples/hello_world"
       }
     }
   ],

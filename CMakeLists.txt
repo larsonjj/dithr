@@ -64,6 +64,33 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(SDL3_mixer)
 
+# SDL3_image
+set(SDLIMAGE_AVIF OFF)
+set(SDLIMAGE_BMP  ON)
+set(SDLIMAGE_GIF  OFF)
+set(SDLIMAGE_JPG  OFF)
+set(SDLIMAGE_JXL  OFF)
+set(SDLIMAGE_LBM  OFF)
+set(SDLIMAGE_PCX  OFF)
+set(SDLIMAGE_PNG  ON)
+set(SDLIMAGE_PNM  OFF)
+set(SDLIMAGE_QOI  OFF)
+set(SDLIMAGE_SVG  OFF)
+set(SDLIMAGE_TGA  OFF)
+set(SDLIMAGE_TIF  OFF)
+set(SDLIMAGE_WEBP OFF)
+set(SDLIMAGE_XCF  OFF)
+set(SDLIMAGE_XPM  OFF)
+set(SDLIMAGE_XV   OFF)
+FetchContent_Declare(
+    SDL3_image
+    GIT_REPOSITORY https://github.com/libsdl-org/SDL_image.git
+    GIT_TAG release-3.4.0
+    GIT_SHALLOW TRUE
+    EXCLUDE_FROM_ALL YES
+)
+FetchContent_MakeAvailable(SDL3_image)
+
 # QuickJS-NG (download source only, we build it ourselves)
 FetchContent_Declare(
     quickjs
@@ -92,7 +119,7 @@ target_compile_definitions(quickjs PRIVATE
     QUICKJS_NG_BUILD
     _GNU_SOURCE
 )
-if (WIN32)
+if (WIN32 AND NOT EMSCRIPTEN)
     target_compile_definitions(quickjs PRIVATE
         WIN32_LEAN_AND_MEAN
         _WIN32_WINNT=0x0601
@@ -148,6 +175,7 @@ endif()
 target_link_libraries(mvngin_core PUBLIC
     SDL3::SDL3
     SDL3_mixer::SDL3_mixer
+    SDL3_image::SDL3_image
     quickjs
 )
 
@@ -186,7 +214,33 @@ add_executable(mvngin src/main.c)
 target_compile_definitions(mvngin PRIVATE SDL_MAIN_USE_CALLBACKS=1)
 target_link_libraries(mvngin PRIVATE mvngin_core)
 
-# Copy shared library DLLs next to the executable
+# --- Emscripten / WASM ---
+if (EMSCRIPTEN)
+    # Cart directory to embed in the virtual filesystem
+    set(MVN_WASM_CART_DIR "" CACHE PATH "Cart directory to preload for WASM builds")
+
+    target_link_options(mvngin PRIVATE
+        -sALLOW_MEMORY_GROWTH=1
+        -sSTACK_SIZE=1048576
+        -sINITIAL_MEMORY=67108864
+    )
+
+    # Preload cart assets into the Emscripten virtual FS
+    if (MVN_WASM_CART_DIR)
+        target_link_options(mvngin PRIVATE
+            "SHELL:--preload-file ${MVN_WASM_CART_DIR}@/cart"
+        )
+        target_compile_definitions(mvngin PRIVATE MVN_WASM_CART_PATH="/cart/cart.json")
+    endif()
+
+    # Produce .html output so the Emscripten shell page is generated
+    set_target_properties(mvngin PROPERTIES SUFFIX ".html")
+
+    # Enable emrun so the binary can be launched with: emrun build/wasm/mvngin.html
+    target_link_options(mvngin PRIVATE "SHELL:--emrun")
+endif()
+
+# Copy shared library DLLs next to the executable (Windows only)
 if (WIN32)
     add_custom_command(TARGET mvngin POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
