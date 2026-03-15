@@ -54,6 +54,7 @@ set(SDLMIXER_GME  OFF)
 set(SDLMIXER_MOD  OFF)
 set(SDLMIXER_MIDI OFF)
 set(SDLMIXER_OPUS OFF)
+set(MPG123_NO_ASM  ON CACHE BOOL "Disable mpg123 asm to suppress yasm warning")
 FetchContent_Declare(
     SDL3_mixer
     GIT_REPOSITORY https://github.com/libsdl-org/SDL_mixer.git
@@ -72,7 +73,7 @@ FetchContent_Declare(
 )
 FetchContent_GetProperties(quickjs)
 if (NOT quickjs_POPULATED)
-    FetchContent_Populate(quickjs)
+    FetchContent_MakeAvailable(quickjs)
 endif()
 
 # Build QuickJS as a static library from source
@@ -139,6 +140,11 @@ target_include_directories(mvngin PRIVATE
 )
 
 target_compile_options(mvngin PRIVATE ${MVN_WARN_FLAGS})
+
+# Suppress C4244 from QuickJS inline functions in quickjs.h
+if (MSVC)
+    target_compile_options(mvngin PRIVATE /wd4244)
+endif()
 
 target_link_libraries(mvngin PRIVATE
     SDL3::SDL3

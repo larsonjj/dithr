@@ -214,6 +214,7 @@ js_postfx_restore(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst 
 static JSValue
 js_postfx_define(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
+    (void)ctx;
     (void)this_val;
     (void)argc;
     (void)argv;
@@ -224,6 +225,7 @@ js_postfx_define(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *
 static JSValue
 js_postfx_useShader(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
+    (void)ctx;
     (void)this_val;
     (void)argc;
     (void)argv;

@@ -253,6 +253,7 @@ js_sys_set_fullscreen(JSContext *ctx, JSValueConst this_val, int argc, JSValueCo
     bool           fs;
 
     (void)this_val;
+    (void)argc;
     con = mvn_api_get_console(ctx);
     fs  = JS_ToBool(ctx, argv[0]);
     SDL_SetWindowFullscreen(con->window, fs);

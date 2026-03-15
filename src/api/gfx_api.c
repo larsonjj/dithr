@@ -221,11 +221,11 @@ static JSValue js_gfx_pal(JSContext *ctx, JSValueConst this_val, int argc, JSVal
 {
     (void)this_val;
     if (argc == 0) {
-        mvn_gfx_pal(GFX(ctx), -1, -1, 0);
+        mvn_gfx_pal_reset(GFX(ctx));
     } else {
         mvn_gfx_pal(GFX(ctx),
-                    mvn_api_opt_int(ctx, argc, argv, 0, 0),
-                    mvn_api_opt_int(ctx, argc, argv, 1, 0),
+                    (uint8_t)mvn_api_opt_int(ctx, argc, argv, 0, 0),
+                    (uint8_t)mvn_api_opt_int(ctx, argc, argv, 1, 0),
                     mvn_api_opt_int(ctx, argc, argv, 2, 0));
     }
     return JS_UNDEFINED;
@@ -235,10 +235,10 @@ static JSValue js_gfx_palt(JSContext *ctx, JSValueConst this_val, int argc, JSVa
 {
     (void)this_val;
     if (argc == 0) {
-        mvn_gfx_palt(GFX(ctx), -1, false);
+        mvn_gfx_palt_reset(GFX(ctx));
     } else {
         mvn_gfx_palt(GFX(ctx),
-                     mvn_api_opt_int(ctx, argc, argv, 0, 0),
+                     (uint8_t)mvn_api_opt_int(ctx, argc, argv, 0, 0),
                      mvn_api_opt_int(ctx, argc, argv, 1, 1) != 0);
     }
     return JS_UNDEFINED;
