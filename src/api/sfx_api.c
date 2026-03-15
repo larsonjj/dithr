@@ -14,8 +14,7 @@ static JSValue js_sfx_play(JSContext *ctx, JSValueConst this_val, int argc, JSVa
     mvn_sfx_play(AUD(ctx),
                  mvn_api_opt_int(ctx, argc, argv, 0, 0),
                  mvn_api_opt_int(ctx, argc, argv, 1, -1),
-                 mvn_api_opt_int(ctx, argc, argv, 2, 0),
-                 mvn_api_opt_int(ctx, argc, argv, 3, 0));
+                 mvn_api_opt_int(ctx, argc, argv, 2, 0));
     return JS_UNDEFINED;
 }
 
@@ -48,7 +47,7 @@ static JSValue js_sfx_playing(JSContext *ctx, JSValueConst this_val, int argc, J
 }
 
 static const JSCFunctionListEntry js_sfx_funcs[] = {
-    JS_CFUNC_DEF("play", 4, js_sfx_play),
+    JS_CFUNC_DEF("play", 3, js_sfx_play),
     JS_CFUNC_DEF("stop", 1, js_sfx_stop),
     JS_CFUNC_DEF("volume", 2, js_sfx_volume),
     JS_CFUNC_DEF("getVolume", 1, js_sfx_getVolume),

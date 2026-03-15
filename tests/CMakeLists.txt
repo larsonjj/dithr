@@ -87,3 +87,33 @@ if (WIN32)
     )
 endif()
 add_test(NAME test_runtime COMMAND test_runtime)
+
+# --- Audio tests ---
+add_executable(test_audio test_audio.c)
+target_link_libraries(test_audio PRIVATE mvngin_core)
+if (MSVC)
+    target_compile_options(test_audio PRIVATE /wd4244)
+endif()
+if (WIN32)
+    add_custom_command(TARGET test_audio POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            $<TARGET_RUNTIME_DLLS:test_audio> $<TARGET_FILE_DIR:test_audio>
+        COMMAND_EXPAND_LISTS
+    )
+endif()
+add_test(NAME test_audio COMMAND test_audio)
+
+# --- PostFX tests ---
+add_executable(test_postfx test_postfx.c)
+target_link_libraries(test_postfx PRIVATE mvngin_core)
+if (MSVC)
+    target_compile_options(test_postfx PRIVATE /wd4244)
+endif()
+if (WIN32)
+    add_custom_command(TARGET test_postfx POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            $<TARGET_RUNTIME_DLLS:test_postfx> $<TARGET_FILE_DIR:test_postfx>
+        COMMAND_EXPAND_LISTS
+    )
+endif()
+add_test(NAME test_postfx COMMAND test_postfx)

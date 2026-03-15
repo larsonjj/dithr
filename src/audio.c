@@ -133,12 +133,10 @@ bool mvn_audio_load_sfx(mvn_audio_t *aud, const uint8_t *data, size_t len)
 /*  SFX playback                                                       */
 /* ------------------------------------------------------------------ */
 
-void mvn_sfx_play(mvn_audio_t *aud, int32_t idx, int32_t channel, int32_t offset, int32_t length)
+void mvn_sfx_play(mvn_audio_t *aud, int32_t idx, int32_t channel, int32_t length)
 {
     MIX_Track *     track;
     SDL_PropertiesID props;
-
-    (void)offset;
 
     if (aud == NULL || idx < 0 || idx >= aud->sfx_count) {
         return;
@@ -159,6 +157,9 @@ void mvn_sfx_play(mvn_audio_t *aud, int32_t idx, int32_t channel, int32_t offset
     MIX_SetTrackLoops(track, (length > 0) ? length - 1 : 0);
 
     props = SDL_CreateProperties();
+    if (props == 0) {
+        return;
+    }
     MIX_PlayTrack(track, props);
     SDL_DestroyProperties(props);
 }
@@ -269,6 +270,9 @@ void mvn_mus_play(mvn_audio_t *aud, int32_t idx, int32_t fade_ms, uint32_t chann
     MIX_SetTrackLoops(aud->music_track, -1);
 
     props = SDL_CreateProperties();
+    if (props == 0) {
+        return;
+    }
     if (fade_ms > 0) {
         SDL_SetNumberProperty(props, MIX_PROP_PLAY_FADE_IN_MILLISECONDS_NUMBER,
                               fade_ms);

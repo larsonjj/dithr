@@ -42,10 +42,12 @@ the active colour.
 
 ### Sprites
 
-| Function | Parameters                               | Returns | Description                                                                            |
-| -------- | ---------------------------------------- | ------- | -------------------------------------------------------------------------------------- |
-| `spr`    | `idx?, x?, y?, w?, h?, flip_x?, flip_y?` | —       | Draw sprite. `w` and `h` are in tiles (default 1). `flip_x`/`flip_y` mirror the sprite |
-| `sspr`   | `sx?, sy?, sw?, sh?, dx?, dy?, dw?, dh?` | —       | Stretch-blit a region of the spritesheet. `sw`/`sh` default to 8                       |
+| Function     | Parameters                                           | Returns | Description                                                                               |
+| ------------ | ---------------------------------------------------- | ------- | ----------------------------------------------------------------------------------------- |
+| `spr`        | `idx?, x?, y?, w?, h?, flip_x?, flip_y?`             | —       | Draw sprite. `w` and `h` are in tiles (default 1). `flip_x`/`flip_y` mirror the sprite    |
+| `sspr`       | `sx?, sy?, sw?, sh?, dx?, dy?, dw?, dh?`             | —       | Stretch-blit a region of the spritesheet. `sw`/`sh` default to 8                          |
+| `spr_rot`    | `idx?, x?, y?, angle?, cx?, cy?`                     | —       | Draw sprite rotated by `angle` (radians) around pivot (`cx`, `cy`). Pivot −1 = center     |
+| `spr_affine` | `idx?, x?, y?, origin_x?, origin_y?, rot_x?, rot_y?` | —       | Draw sprite with 2×2 affine transform. `rot_x`/`rot_y` = basis vectors (default identity) |
 
 ### Sprite flags
 
@@ -205,13 +207,13 @@ end of each frame.
 
 ## `sfx` — Sound Effects
 
-| Function    | Parameters                       | Returns | Description                                         |
-| ----------- | -------------------------------- | ------- | --------------------------------------------------- |
-| `play`      | `id?, channel?, offset?, loops?` | —       | Play a sound. `channel` −1 = auto. `loops` 0 = once |
-| `stop`      | `channel?`                       | —       | Stop a channel (−1 = all)                           |
-| `volume`    | `vol?, channel?`                 | —       | Set volume 0.0 – 1.0. `channel` −1 = all            |
-| `getVolume` | `channel?`                       | `float` | Get channel volume                                  |
-| `playing`   | `channel?`                       | `bool`  | Is the channel playing? (−1 = any)                  |
+| Function    | Parameters              | Returns | Description                                         |
+| ----------- | ----------------------- | ------- | --------------------------------------------------- |
+| `play`      | `id?, channel?, loops?` | —       | Play a sound. `channel` −1 = auto. `loops` 0 = once |
+| `stop`      | `channel?`              | —       | Stop a channel (−1 = all)                           |
+| `volume`    | `vol?, channel?`        | —       | Set volume 0.0 – 1.0. `channel` −1 = all            |
+| `getVolume` | `channel?`              | `float` | Get channel volume                                  |
+| `playing`   | `channel?`              | `bool`  | Is the channel playing? (−1 = any)                  |
 
 ---
 

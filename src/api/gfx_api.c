@@ -197,6 +197,34 @@ static JSValue js_gfx_sspr(JSContext *ctx, JSValueConst this_val, int argc, JSVa
     return JS_UNDEFINED;
 }
 
+static JSValue js_gfx_spr_rot(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+{
+    (void)this_val;
+    mvn_gfx_spr_rot(GFX(ctx),
+                    mvn_api_opt_int(ctx, argc, argv, 0, 0),
+                    mvn_api_opt_int(ctx, argc, argv, 1, 0),
+                    mvn_api_opt_int(ctx, argc, argv, 2, 0),
+                    (float)mvn_api_opt_float(ctx, argc, argv, 3, 0.0),
+                    mvn_api_opt_int(ctx, argc, argv, 4, -1),
+                    mvn_api_opt_int(ctx, argc, argv, 5, -1));
+    return JS_UNDEFINED;
+}
+
+static JSValue
+js_gfx_spr_affine(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+{
+    (void)this_val;
+    mvn_gfx_spr_affine(GFX(ctx),
+                       mvn_api_opt_int(ctx, argc, argv, 0, 0),
+                       mvn_api_opt_int(ctx, argc, argv, 1, 0),
+                       mvn_api_opt_int(ctx, argc, argv, 2, 0),
+                       (float)mvn_api_opt_float(ctx, argc, argv, 3, 0.0),
+                       (float)mvn_api_opt_float(ctx, argc, argv, 4, 0.0),
+                       (float)mvn_api_opt_float(ctx, argc, argv, 5, 1.0),
+                       (float)mvn_api_opt_float(ctx, argc, argv, 6, 0.0));
+    return JS_UNDEFINED;
+}
+
 /* ---- Sprite flags ----------------------------------------------------- */
 
 static JSValue js_gfx_fget(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
@@ -309,7 +337,9 @@ static const JSCFunctionListEntry js_gfx_funcs[] = {
     JS_CFUNC_DEF("circ", 4, js_gfx_circ),   JS_CFUNC_DEF("circfill", 4, js_gfx_circfill),
     JS_CFUNC_DEF("tri", 7, js_gfx_tri),     JS_CFUNC_DEF("trifill", 7, js_gfx_trifill),
     JS_CFUNC_DEF("print", 4, js_gfx_print), JS_CFUNC_DEF("spr", 7, js_gfx_spr),
-    JS_CFUNC_DEF("sspr", 10, js_gfx_sspr),  JS_CFUNC_DEF("fget", 2, js_gfx_fget),
+    JS_CFUNC_DEF("sspr", 10, js_gfx_sspr),  JS_CFUNC_DEF("spr_rot", 6, js_gfx_spr_rot),
+    JS_CFUNC_DEF("spr_affine", 7, js_gfx_spr_affine),
+    JS_CFUNC_DEF("fget", 2, js_gfx_fget),
     JS_CFUNC_DEF("fset", 3, js_gfx_fset),   JS_CFUNC_DEF("pal", 3, js_gfx_pal),
     JS_CFUNC_DEF("palt", 2, js_gfx_palt),   JS_CFUNC_DEF("camera", 2, js_gfx_camera),
     JS_CFUNC_DEF("clip", 4, js_gfx_clip),   JS_CFUNC_DEF("fillp", 1, js_gfx_fillp),

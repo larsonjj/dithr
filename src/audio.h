@@ -47,7 +47,7 @@ void         mvn_audio_destroy(mvn_audio_t *aud);
 
 /* SFX */
 bool  mvn_audio_load_sfx(mvn_audio_t *aud, const uint8_t *data, size_t len);
-void  mvn_sfx_play(mvn_audio_t *aud, int32_t idx, int32_t channel, int32_t offset, int32_t length);
+void  mvn_sfx_play(mvn_audio_t *aud, int32_t idx, int32_t channel, int32_t length);
 void  mvn_sfx_stop(mvn_audio_t *aud, int32_t channel);
 void  mvn_sfx_volume(mvn_audio_t *aud, float vol, int32_t channel);
 float mvn_sfx_get_volume(mvn_audio_t *aud, int32_t channel);
