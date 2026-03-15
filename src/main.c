@@ -18,6 +18,9 @@ int main(int argc, char *argv[])
 
     cart_path = (argc > 1) ? argv[1] : "cart.json";
 
+    SDL_SetLogPriorities(SDL_LOG_PRIORITY_INFO);
+    SDL_Log("mvngin %s — loading %s", CONSOLE_VERSION, cart_path);
+
     do {
         con = mvn_console_create(cart_path);
         if (con == NULL) {
