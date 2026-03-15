@@ -7,14 +7,10 @@ Modifications:
 - Change column limit from 120 to 100
 - Change comment rules to use 4 spaces after a statement when single line and allow double forward slashes (`//`)
 - Change to use `stdbool.h` library for `true` or `false` values insteed of `0` or `1`
-- Added Copyright section
 - Declare all local variables of the same type on a separate line
 - Always prefer SDL equivalent of stdlib functions
 - Prefer using MVN_MALLOC, MVN_CALLOC, MVN_REALLOC, and MVN_FREE for memory managment as they are aliases for SDL memory management functions
-- Prefer using mvn_list_t to pointer arrays
-- Prefer mvn_string_t to char \*
-- Prefer mvn_hashmap_t for data structures where they provide improved flexibility and performance
-- Include instructions to docuent macros in header file
+- Include instructions to document macros in header file
 - Ensure that all variables are at least 3 characters long
 - Ensure that code is compatible with MSVC, GCC, and Clang
 
@@ -33,7 +29,6 @@ Modifications:
     - [Macros and preprocessor directives](#macros-and-preprocessor-directives)
     - [Documentation](#documentation)
     - [Header/source files](#headersource-files)
-    - [Copyright](#copyright)
 
 ## Conventions used
 
