@@ -161,6 +161,7 @@ typedef struct mvn_console {
     bool paused;
     bool has_error;
     bool fullscreen;
+    bool restart;
 
     uint64_t frame_count;
     uint64_t time_prev;

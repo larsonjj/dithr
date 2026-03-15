@@ -119,6 +119,25 @@ typedef struct mvn_cart_audio {
 } mvn_cart_audio_t;
 
 /* ------------------------------------------------------------------------ */
+/*  Cart input mapping config                                                */
+/* ------------------------------------------------------------------------ */
+
+#define MVN_CART_MAX_INPUT_ACTIONS  16
+#define MVN_CART_MAX_INPUT_BINDINGS 8
+#define MVN_CART_BIND_NAME_LEN     32
+
+typedef struct mvn_cart_input_mapping {
+    char    action[32];
+    char    bindings[MVN_CART_MAX_INPUT_BINDINGS][MVN_CART_BIND_NAME_LEN];
+    int32_t bind_count;
+} mvn_cart_input_mapping_t;
+
+typedef struct mvn_cart_input {
+    mvn_cart_input_mapping_t mappings[MVN_CART_MAX_INPUT_ACTIONS];
+    int32_t                  mapping_count;
+} mvn_cart_input_t;
+
+/* ------------------------------------------------------------------------ */
 /*  Cart meta (full configuration)                                           */
 /* ------------------------------------------------------------------------ */
 
@@ -143,6 +162,7 @@ typedef struct mvn_cart {
     mvn_cart_sprites_t sprites;
     mvn_cart_runtime_t runtime;
     mvn_cart_audio_t   audio;
+    mvn_cart_input_t   input;
 
     /* JS source code (owned) */
     char * code;

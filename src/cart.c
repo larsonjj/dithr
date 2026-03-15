@@ -275,6 +275,82 @@ bool mvn_cart_parse(mvn_cart_t *cart, JSContext *ctx, const char *json, size_t l
         JS_FreeValue(ctx, maps_val);
     }
 
+    /* --- input.default_mappings --- */
+    sub = JS_GetPropertyStr(ctx, root, "input");
+    if (JS_IsObject(sub)) {
+        JSValue           dm;
+        JSPropertyEnum *  props;
+        uint32_t          prop_count;
+
+        dm = JS_GetPropertyStr(ctx, sub, "default_mappings");
+        if (JS_IsObject(dm)) {
+            if (JS_GetOwnPropertyNames(ctx, &props, &prop_count, dm,
+                                       JS_GPN_STRING_MASK | JS_GPN_ENUM_ONLY) == 0) {
+                for (uint32_t pi = 0; pi < prop_count && cart->input.mapping_count <
+                                                             MVN_CART_MAX_INPUT_ACTIONS;
+                     ++pi) {
+                    const char *                action_name;
+                    JSValue                     bindings_arr;
+                    mvn_cart_input_mapping_t *  mapping;
+
+                    action_name = JS_AtomToCString(ctx, props[pi].atom);
+                    if (action_name == NULL) {
+                        continue;
+                    }
+
+                    bindings_arr = JS_GetProperty(ctx, dm, props[pi].atom);
+                    if (!JS_IsArray(bindings_arr)) {
+                        JS_FreeValue(ctx, bindings_arr);
+                        JS_FreeCString(ctx, action_name);
+                        continue;
+                    }
+
+                    mapping = &cart->input.mappings[cart->input.mapping_count];
+                    SDL_strlcpy(mapping->action, action_name, sizeof(mapping->action));
+                    mapping->bind_count = 0;
+
+                    {
+                        JSValue blen_val;
+                        int32_t blen;
+
+                        blen_val = JS_GetPropertyStr(ctx, bindings_arr, "length");
+                        JS_ToInt32(ctx, &blen, blen_val);
+                        JS_FreeValue(ctx, blen_val);
+
+                        for (int32_t bi = 0;
+                             bi < blen && mapping->bind_count < MVN_CART_MAX_INPUT_BINDINGS;
+                             ++bi) {
+                            JSValue     belem;
+                            const char *bstr;
+
+                            belem = JS_GetPropertyUint32(ctx, bindings_arr, (uint32_t)bi);
+                            bstr  = JS_ToCString(ctx, belem);
+                            JS_FreeValue(ctx, belem);
+                            if (bstr != NULL) {
+                                SDL_strlcpy(mapping->bindings[mapping->bind_count],
+                                            bstr,
+                                            MVN_CART_BIND_NAME_LEN);
+                                mapping->bind_count++;
+                                JS_FreeCString(ctx, bstr);
+                            }
+                        }
+                    }
+
+                    cart->input.mapping_count++;
+                    JS_FreeValue(ctx, bindings_arr);
+                    JS_FreeCString(ctx, action_name);
+                }
+
+                for (uint32_t pi = 0; pi < prop_count; ++pi) {
+                    JS_FreeAtom(ctx, props[pi].atom);
+                }
+                js_free(ctx, props);
+            }
+        }
+        JS_FreeValue(ctx, dm);
+    }
+    JS_FreeValue(ctx, sub);
+
     JS_FreeValue(ctx, root);
     return true;
 }

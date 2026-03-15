@@ -191,6 +191,12 @@ bool  mvn_input_btn(mvn_input_state_t *inp, const char *action);
 bool  mvn_input_btnp(mvn_input_state_t *inp, const char *action);
 float mvn_input_axis(mvn_input_state_t *inp, const char *action);
 
+/**
+ * \brief           Parse a binding string like "KEY_LEFT", "PAD_A", "MOUSE_LEFT"
+ * \return          true if parsed successfully
+ */
+bool mvn_input_parse_binding(const char *str, mvn_binding_t *out);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

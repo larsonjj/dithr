@@ -97,10 +97,37 @@ function main() {
 <style>
 html, body { margin: 0; padding: 0; background: #000; overflow: hidden; }
 canvas { display: block; margin: auto; image-rendering: pixelated; }
+#splash {
+  position: fixed; inset: 0; display: flex; align-items: center;
+  justify-content: center; background: #111; color: #ccc;
+  font: 1.4rem sans-serif; cursor: pointer; z-index: 10;
+}
+#splash.hidden { display: none; }
 </style>
 </head>
 <body>
+<div id="splash">Tap or click to start</div>
 <canvas id="screen"></canvas>
+<script>
+// Audio context unlock — required for browsers to allow playback
+(function() {
+  var splash = document.getElementById("splash");
+  function unlock() {
+    splash.classList.add("hidden");
+    var AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if (AudioCtx) {
+      var ctx = new AudioCtx();
+      if (ctx.state === "suspended") ctx.resume();
+      window._mvnAudioCtx = ctx;
+    }
+    document.removeEventListener("click", unlock);
+    document.removeEventListener("touchend", unlock);
+    if (window._mvnginStart) window._mvnginStart();
+  }
+  document.addEventListener("click", unlock);
+  document.addEventListener("touchend", unlock);
+})();
+</script>
 <script>
 // mvngin embedded cart — requires mvngin WASM runtime
 window.MVNGIN_CART = ${JSON.stringify(exportCart)};

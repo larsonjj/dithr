@@ -56,6 +56,7 @@ function main() {
     }
 
     fs.mkdirSync(dir, { recursive: true });
+    fs.mkdirSync(path.join(dir, "src"), { recursive: true });
     fs.mkdirSync(path.join(dir, "assets"), { recursive: true });
     fs.mkdirSync(path.join(dir, "assets", "sprites"), { recursive: true });
     fs.mkdirSync(path.join(dir, "assets", "maps"), { recursive: true });
@@ -68,19 +69,79 @@ function main() {
             title: name,
             author: "",
             version: "1.0.0",
+            description: "",
         },
-        code: "main.js",
+        display: {
+            width: 320,
+            height: 180,
+            scale: 3,
+        },
+        timing: {
+            fps: 60,
+        },
         sprites: {
             sheet: "assets/sprites/spritesheet.png",
+            tileW: 8,
+            tileH: 8,
         },
+        audio: {
+            channels: 8,
+        },
+        input: {
+            default_mappings: {
+                left: ["KEY_LEFT", "KEY_A", "PAD_LEFT"],
+                right: ["KEY_RIGHT", "KEY_D", "PAD_RIGHT"],
+                up: ["KEY_UP", "KEY_W", "PAD_UP"],
+                down: ["KEY_DOWN", "KEY_S", "PAD_DOWN"],
+                jump: ["KEY_Z", "KEY_SPACE", "PAD_A"],
+                action: ["KEY_X", "PAD_B"],
+            },
+        },
+        code: "src/main.js",
         maps: [],
     };
     fs.writeFileSync(path.join(dir, "cart.json"), JSON.stringify(cart, null, 4) + "\n");
 
-    // main.js from template
+    // src/main.js from template
     const tplPath = path.join(TEMPLATES_DIR, TEMPLATES[template]);
     const tplSrc = fs.readFileSync(tplPath, "utf-8");
-    fs.writeFileSync(path.join(dir, "main.js"), tplSrc);
+    fs.writeFileSync(path.join(dir, "src", "main.js"), tplSrc);
+
+    // .gitignore
+    fs.writeFileSync(
+        path.join(dir, ".gitignore"),
+        ["node_modules/", "build/", "*.baked.json", ".DS_Store", ""].join("\n"),
+    );
+
+    // README.md
+    fs.writeFileSync(
+        path.join(dir, "README.md"),
+        [
+            `# ${name}`,
+            "",
+            `A game made with [mvngin](https://github.com/example/mvngin).`,
+            "",
+            "## Run",
+            "",
+            "```bash",
+            `mvngin cart.json`,
+            "```",
+            "",
+        ].join("\n"),
+    );
+
+    // package.json
+    const pkg = {
+        name: safeName,
+        version: "1.0.0",
+        private: true,
+        description: `${name} — mvngin cart`,
+        scripts: {
+            start: "mvngin cart.json",
+            export: "node ../tools/cart-export.js cart.json",
+        },
+    };
+    fs.writeFileSync(path.join(dir, "package.json"), JSON.stringify(pkg, null, 2) + "\n");
 
     console.log(`Created cart "${name}" in ${dir}/`);
     console.log(`  Template: ${template}`);

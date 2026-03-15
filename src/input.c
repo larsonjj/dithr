@@ -355,3 +355,101 @@ float mvn_input_axis(mvn_input_state_t *inp, const char *action)
     }
     return 0.0f;
 }
+
+/* ------------------------------------------------------------------ */
+/*  Binding string resolver                                             */
+/* ------------------------------------------------------------------ */
+
+bool mvn_input_parse_binding(const char *str, mvn_binding_t *out)
+{
+    /* KEY_* → key binding */
+    if (SDL_strncmp(str, "KEY_", 4) == 0) {
+        const char *name;
+
+        name = str + 4;
+        for (int32_t idx = 0; idx < MVN_KEY_COUNT; ++idx) {
+            if (SDL_strcmp(KEY_NAMES[idx], name) == 0) {
+                out->type      = MVN_BIND_KEY;
+                out->code      = idx;
+                out->threshold = 0.0f;
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /* PAD_AXIS_* → axis binding */
+    if (SDL_strncmp(str, "PAD_AXIS_", 9) == 0) {
+        const char *name;
+
+        name = str + 9;
+        if (SDL_strcmp(name, "LX") == 0) {
+            out->type = MVN_BIND_PAD_AXIS;
+            out->code = MVN_PAD_AXIS_LX;
+        } else if (SDL_strcmp(name, "LY") == 0) {
+            out->type = MVN_BIND_PAD_AXIS;
+            out->code = MVN_PAD_AXIS_LY;
+        } else if (SDL_strcmp(name, "RX") == 0) {
+            out->type = MVN_BIND_PAD_AXIS;
+            out->code = MVN_PAD_AXIS_RX;
+        } else if (SDL_strcmp(name, "RY") == 0) {
+            out->type = MVN_BIND_PAD_AXIS;
+            out->code = MVN_PAD_AXIS_RY;
+        } else {
+            return false;
+        }
+        out->threshold = 0.25f;
+        return true;
+    }
+
+    /* PAD_* → pad button binding */
+    if (SDL_strncmp(str, "PAD_", 4) == 0) {
+        const char *name;
+
+        name = str + 4;
+        /* clang-format off */
+        struct { const char *nm; mvn_pad_btn_t btn; } pad_map[] = {
+            { "UP",     MVN_PAD_UP     }, { "DOWN",   MVN_PAD_DOWN   },
+            { "LEFT",   MVN_PAD_LEFT   }, { "RIGHT",  MVN_PAD_RIGHT  },
+            { "A",      MVN_PAD_A      }, { "B",      MVN_PAD_B      },
+            { "X",      MVN_PAD_X      }, { "Y",      MVN_PAD_Y      },
+            { "L1",     MVN_PAD_L1     }, { "R1",     MVN_PAD_R1     },
+            { "L2",     MVN_PAD_L2     }, { "R2",     MVN_PAD_R2     },
+            { "L3",     MVN_PAD_L3     }, { "R3",     MVN_PAD_R3     },
+            { "START",  MVN_PAD_START  }, { "SELECT", MVN_PAD_SELECT },
+            { "GUIDE",  MVN_PAD_GUIDE  },
+        };
+        /* clang-format on */
+
+        for (size_t idx = 0; idx < sizeof(pad_map) / sizeof(pad_map[0]); ++idx) {
+            if (SDL_strcmp(pad_map[idx].nm, name) == 0) {
+                out->type      = MVN_BIND_PAD_BTN;
+                out->code      = (int32_t)pad_map[idx].btn;
+                out->threshold = 0.0f;
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /* MOUSE_* → mouse button binding */
+    if (SDL_strncmp(str, "MOUSE_", 6) == 0) {
+        const char *name;
+
+        name = str + 6;
+        if (SDL_strcmp(name, "LEFT") == 0) {
+            out->code = MVN_MOUSE_LEFT;
+        } else if (SDL_strcmp(name, "MIDDLE") == 0) {
+            out->code = MVN_MOUSE_MIDDLE;
+        } else if (SDL_strcmp(name, "RIGHT") == 0) {
+            out->code = MVN_MOUSE_RIGHT;
+        } else {
+            return false;
+        }
+        out->type      = MVN_BIND_MOUSE_BTN;
+        out->threshold = 0.0f;
+        return true;
+    }
+
+    return false;
+}

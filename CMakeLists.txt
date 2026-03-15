@@ -172,6 +172,12 @@ target_compile_definitions(mvngin PRIVATE
     CONSOLE_VERSION="${MVN_VERSION_STR}"
 )
 
+# Dev build flag
+option(MVN_DEV_BUILD "Enable development features (hot reload, debug overlays)" OFF)
+if (MVN_DEV_BUILD)
+    target_compile_definitions(mvngin PRIVATE DEV_BUILD=1)
+endif()
+
 # --- Examples ---
 option(MVN_BUILD_EXAMPLES "Build example programs" ON)
 if (MVN_BUILD_EXAMPLES)

@@ -25,11 +25,15 @@ typedef struct mvn_audio {
     int32_t frequency;
     int32_t buffer_size;
 
-    Mix_Chunk *sfx[MVN_MAX_SFX];
-    int32_t    sfx_count;
+    MIX_Mixer *mixer;
 
-    Mix_Music *music[MVN_MAX_MUSIC];
+    MIX_Audio *sfx[MVN_MAX_SFX];
+    int32_t    sfx_count;
+    MIX_Track *sfx_tracks[CONSOLE_MAX_CHANNELS];
+
+    MIX_Audio *music[MVN_MAX_MUSIC];
     int32_t    music_count;
+    MIX_Track *music_track;
 
     float master_volume;
     float channel_volume[CONSOLE_MAX_CHANNELS];

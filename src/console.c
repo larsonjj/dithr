@@ -211,6 +211,28 @@ mvn_console_t *mvn_console_create(const char *cart_path)
     /* --- Register all JS APIs --- */
     mvn_api_register_all(con->runtime);
 
+    /* --- Apply default input mappings from cart.json --- */
+    for (int32_t mi = 0; mi < con->cart->input.mapping_count; ++mi) {
+        mvn_cart_input_mapping_t *mapping;
+        mvn_binding_t             bindings[MVN_INPUT_MAX_BINDINGS];
+        int32_t                   valid;
+
+        mapping = &con->cart->input.mappings[mi];
+        valid   = 0;
+
+        for (int32_t bi = 0; bi < mapping->bind_count && valid < MVN_INPUT_MAX_BINDINGS; ++bi) {
+            if (mvn_input_parse_binding(mapping->bindings[bi], &bindings[valid])) {
+                ++valid;
+            } else {
+                SDL_Log("Unknown input binding: %s", mapping->bindings[bi]);
+            }
+        }
+
+        if (valid > 0) {
+            mvn_input_map(con->input, mapping->action, bindings, valid);
+        }
+    }
+
     /* --- Evaluate cart JS source --- */
     if (con->cart->code != NULL && con->cart->code_len > 0) {
         mvn_runtime_eval(con->runtime, con->cart->code, con->cart->code_len, "main.js");
@@ -315,6 +337,12 @@ void mvn_console_destroy(mvn_console_t *con)
         return;
     }
 
+    /* Fire sys:quit before any cleanup */
+    if (con->events != NULL && con->runtime != NULL && con->runtime->ctx != NULL) {
+        mvn_event_emit(con->events, "sys:quit", JS_UNDEFINED);
+        mvn_event_flush(con->events);
+    }
+
     /* Fire sys:cart_unload */
     if (con->events != NULL && con->runtime != NULL && con->runtime->ctx != NULL) {
         mvn_event_emit(con->events, "sys:cart_unload", JS_UNDEFINED);
@@ -365,20 +393,18 @@ static bool prv_load_cart_assets(mvn_console_t *con)
                            cart->sprite_rgba,
                            cart->sprite_w,
                            cart->sprite_h,
-                           cart->meta.sprites.tile_w,
-                           cart->meta.sprites.tile_h);
+                           cart->sprites.tile_w,
+                           cart->sprites.tile_h);
     }
 
     /* Maps: already parsed during cart_parse for baked carts */
     /* For dev carts, import from source files */
     if (!cart->baked) {
         for (int32_t idx = 0; idx < cart->map_count; ++idx) {
-            mvn_map_level_t *lvl;
-            const char *     src;
-            size_t           src_len;
+            const char *src;
+            size_t      src_len;
 
-            lvl     = &cart->maps[idx];
-            src     = lvl->name; /* source path stored temporarily */
+            src     = cart->map_paths[idx];
             src_len = SDL_strlen(src);
 
             /* Build full path */
@@ -386,9 +412,9 @@ static bool prv_load_cart_assets(mvn_console_t *con)
 
             /* Detect format by extension */
             if (src_len > 4 && SDL_strcmp(src + src_len - 4, ".tmj") == 0) {
-                mvn_import_tiled(cart, path_buf, lvl->name, con->runtime->ctx);
+                mvn_import_tiled(path_buf, &cart->maps[idx], con->runtime->ctx);
             } else if (src_len > 5 && SDL_strcmp(src + src_len - 5, ".ldtk") == 0) {
-                mvn_import_ldtk(cart, path_buf, con->runtime->ctx);
+                mvn_import_ldtk(path_buf, &cart->maps[idx], con->runtime->ctx);
             }
         }
     }
