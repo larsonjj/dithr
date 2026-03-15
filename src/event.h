@@ -39,13 +39,13 @@ typedef struct mvn_queued_event {
 /**
  * \brief           Event bus state
  */
-typedef struct mvn_event_bus {
+struct mvn_event_bus {
     mvn_event_handler_t handlers[MVN_EVENT_MAX_HANDLERS];
     mvn_queued_event_t  queue[MVN_EVENT_MAX_QUEUED];
     int32_t             queue_count;
     int32_t             next_handle;
     JSContext *         ctx;
-} mvn_event_bus_t;
+};
 
 mvn_event_bus_t *mvn_event_create(JSContext *ctx);
 void             mvn_event_destroy(mvn_event_bus_t *bus);

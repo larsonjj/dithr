@@ -239,9 +239,6 @@ if (EMSCRIPTEN)
 
     # Produce .html output so the Emscripten shell page is generated
     set_target_properties(mvngin PROPERTIES SUFFIX ".html")
-
-    # Enable emrun so the binary can be launched with: emrun build/wasm/mvngin.html
-    target_link_options(mvngin PRIVATE "SHELL:--emrun")
 endif()
 
 # Copy shared library DLLs next to the executable (Windows only)

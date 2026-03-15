@@ -12,16 +12,25 @@
     {
       "label": "WASM: Configure",
       "type": "shell",
-      "command": "cmake --preset wasm",
+      "command": "cmake --preset wasm -DMVN_WASM_CART_DIR=${input:wasmCart}",
       "problemMatcher": []
     },
     {
-      "label": "WASM: Run (emrun)",
+      "label": "WASM: Run",
       "type": "shell",
-      "command": "emrun build/wasm/mvngin.html",
+      "command": "node tools/serve-wasm.js",
       "dependsOn": "WASM: Build",
       "problemMatcher": [],
       "isBackground": true
+    }
+  ],
+  "inputs": [
+    {
+      "id": "wasmCart",
+      "type": "pickString",
+      "description": "Select cart to embed in WASM build",
+      "options": ["", "${workspaceFolder}/examples/hello_world"],
+      "default": ""
     }
   ]
 }

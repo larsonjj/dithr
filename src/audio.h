@@ -20,7 +20,7 @@ extern "C" {
 /**
  * \brief           Audio subsystem state
  */
-typedef struct mvn_audio {
+struct mvn_audio {
     int32_t num_channels;
     int32_t frequency;
     int32_t buffer_size;
@@ -39,7 +39,7 @@ typedef struct mvn_audio {
     float channel_volume[CONSOLE_MAX_CHANNELS];
 
     bool initialized;
-} mvn_audio_t;
+};
 
 /* Lifecycle */
 mvn_audio_t *mvn_audio_create(int32_t channels, int32_t freq, int32_t buffer);

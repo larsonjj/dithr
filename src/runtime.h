@@ -19,7 +19,7 @@ extern "C" {
 /**
  * \brief           JS runtime wrapper
  */
-typedef struct mvn_runtime {
+struct mvn_runtime {
     JSRuntime *    rt;
     JSContext *    ctx;
     mvn_console_t *console;
@@ -33,7 +33,7 @@ typedef struct mvn_runtime {
     bool    error_active;
     char    error_msg[MVN_ERROR_MSG_LEN];
     int32_t error_line;
-} mvn_runtime_t;
+};
 
 /* ------------------------------------------------------------------------ */
 /*  Lifecycle                                                                */
@@ -107,7 +107,7 @@ JSValue mvn_runtime_parse_json(mvn_runtime_t *rt, const char *json, size_t len);
 void mvn_runtime_clear_error(mvn_runtime_t *rt);
 
 /* ------------------------------------------------------------------------ */
-/*  API registration — called by each api/*.c module                         */
+/*  API registration — called by each api module                            */
 /* ------------------------------------------------------------------------ */
 
 /**

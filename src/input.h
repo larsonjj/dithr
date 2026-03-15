@@ -120,10 +120,10 @@ typedef enum mvn_mouse_btn {
 /*  Keyboard state                                                           */
 /* ------------------------------------------------------------------------ */
 
-typedef struct mvn_key_state {
+struct mvn_key_state {
     bool current[MVN_KEY_COUNT];
     bool previous[MVN_KEY_COUNT];
-} mvn_key_state_t;
+};
 
 mvn_key_state_t *mvn_key_create(void);
 void             mvn_key_destroy(mvn_key_state_t *keys);
@@ -169,10 +169,10 @@ typedef struct mvn_input_action {
     float         axis_value;
 } mvn_input_action_t;
 
-typedef struct mvn_input_state {
+struct mvn_input_state {
     mvn_input_action_t actions[MVN_INPUT_MAX_ACTIONS];
     int32_t            action_count;
-} mvn_input_state_t;
+};
 
 mvn_input_state_t *mvn_input_create(void);
 void               mvn_input_destroy(mvn_input_state_t *inp);

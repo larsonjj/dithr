@@ -40,7 +40,7 @@ typedef struct mvn_postfx_entry {
 /**
  * \brief           Post-processing pipeline state
  */
-typedef struct mvn_postfx {
+struct mvn_postfx {
     mvn_postfx_entry_t stack[MVN_POSTFX_MAX_STACK];
     int32_t            count;
 
@@ -48,7 +48,7 @@ typedef struct mvn_postfx {
     uint32_t *scratch;
     int32_t   width;
     int32_t   height;
-} mvn_postfx_t;
+};
 
 mvn_postfx_t *mvn_postfx_create(int32_t width, int32_t height);
 void          mvn_postfx_destroy(mvn_postfx_t *pfx);

@@ -38,7 +38,7 @@ typedef struct mvn_sprite_sheet {
 /**
  * \brief           Complete graphics subsystem state
  */
-typedef struct mvn_graphics {
+struct mvn_graphics {
     /* Palette-indexed framebuffer */
     uint8_t framebuffer[CONSOLE_FB_WIDTH * CONSOLE_FB_HEIGHT];
 
@@ -83,7 +83,7 @@ typedef struct mvn_graphics {
     /* Framebuffer dimensions (may be overridden by cart) */
     int32_t width;
     int32_t height;
-} mvn_graphics_t;
+};
 
 /* ------------------------------------------------------------------------ */
 /*  Lifecycle                                                                */

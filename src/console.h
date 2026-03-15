@@ -120,7 +120,7 @@ extern "C" {
 #define MVN_FREE(ptr)           SDL_free(ptr)
 
 /* ------------------------------------------------------------------------ */
-/*  Forward declarations                                                     */
+/*  Forward declarations (typedef once — subsystem headers define bodies)    */
 /* ------------------------------------------------------------------------ */
 
 typedef struct mvn_graphics      mvn_graphics_t;

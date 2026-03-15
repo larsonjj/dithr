@@ -153,7 +153,7 @@ typedef struct mvn_cart_meta {
 /*  Cart — complete cart state                                               */
 /* ------------------------------------------------------------------------ */
 
-typedef struct mvn_cart {
+struct mvn_cart {
     mvn_cart_meta_t meta;
 
     /* Config sections (flat, not nested in meta) */
@@ -201,7 +201,7 @@ typedef struct mvn_cart {
 
     /* JS context ref (for object properties in map objects) */
     JSContext *ctx;
-} mvn_cart_t;
+};
 
 /* ------------------------------------------------------------------------ */
 /*  Cart lifecycle                                                           */

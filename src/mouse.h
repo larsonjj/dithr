@@ -16,7 +16,7 @@ extern "C" {
 /**
  * \brief           Mouse state (positions are in framebuffer coordinates)
  */
-typedef struct mvn_mouse_state {
+struct mvn_mouse_state {
     float x;
     float y;
     float dx;
@@ -34,7 +34,7 @@ typedef struct mvn_mouse_state {
     float scale_y;
     float offset_x;
     float offset_y;
-} mvn_mouse_state_t;
+};
 
 mvn_mouse_state_t *mvn_mouse_create(void);
 void               mvn_mouse_destroy(mvn_mouse_state_t *mouse);

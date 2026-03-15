@@ -36,10 +36,10 @@ typedef struct mvn_gamepad {
 /**
  * \brief           Gamepad subsystem managing up to MVN_MAX_GAMEPADS
  */
-typedef struct mvn_gamepad_state {
+struct mvn_gamepad_state {
     mvn_gamepad_t pads[MVN_MAX_GAMEPADS];
     int32_t       count;
-} mvn_gamepad_state_t;
+};
 
 mvn_gamepad_state_t *mvn_gamepad_create(void);
 void                 mvn_gamepad_destroy(mvn_gamepad_state_t *gp);
