@@ -299,7 +299,8 @@ void mvn_input_update(mvn_input_state_t *inp, mvn_key_state_t *keys, mvn_gamepad
                     break;
 
                 case MVN_BIND_PAD_BTN:
-                    if (mvn_gamepad_btn(pads, (mvn_pad_btn_t)bind->code, 0)) {
+                    if (pads != NULL &&
+                        mvn_gamepad_btn(pads, (mvn_pad_btn_t)bind->code, 0)) {
                         pressed = true;
                     }
                     break;
@@ -307,6 +308,7 @@ void mvn_input_update(mvn_input_state_t *inp, mvn_key_state_t *keys, mvn_gamepad
                 case MVN_BIND_PAD_AXIS: {
                     float val;
 
+                    if (pads == NULL) break;
                     val = mvn_gamepad_axis(pads, (mvn_pad_axis_t)bind->code, 0);
                     if (fabsf(val) > bind->threshold) {
                         axis_val = val;

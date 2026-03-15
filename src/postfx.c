@@ -25,6 +25,9 @@ mvn_postfx_t *mvn_postfx_create(int32_t width, int32_t height)
 
 void mvn_postfx_destroy(mvn_postfx_t *pfx)
 {
+    if (pfx != NULL) {
+        MVN_FREE(pfx->scratch);
+    }
     MVN_FREE(pfx);
 }
 

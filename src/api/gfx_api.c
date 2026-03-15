@@ -8,6 +8,15 @@
 
 #define GFX(ctx) (mvn_api_get_console(ctx)->graphics)
 
+/**
+ * \brief  Resolve an optional colour argument: -1 → current draw colour
+ */
+static uint8_t prv_resolve_col(JSContext *ctx, int argc, JSValueConst *argv, int idx)
+{
+    int32_t raw = mvn_api_opt_int(ctx, argc, argv, idx, -1);
+    return (raw < 0) ? GFX(ctx)->color : (uint8_t)raw;
+}
+
 /* ---- Drawing ---------------------------------------------------------- */
 
 static JSValue js_gfx_cls(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
@@ -23,7 +32,7 @@ static JSValue js_gfx_pset(JSContext *ctx, JSValueConst this_val, int argc, JSVa
     mvn_gfx_pset(GFX(ctx),
                  mvn_api_opt_int(ctx, argc, argv, 0, 0),
                  mvn_api_opt_int(ctx, argc, argv, 1, 0),
-                 (uint8_t)mvn_api_opt_int(ctx, argc, argv, 2, -1));
+                 prv_resolve_col(ctx, argc, argv, 2));
     return JS_UNDEFINED;
 }
 
@@ -44,7 +53,7 @@ static JSValue js_gfx_line(JSContext *ctx, JSValueConst this_val, int argc, JSVa
                  mvn_api_opt_int(ctx, argc, argv, 1, 0),
                  mvn_api_opt_int(ctx, argc, argv, 2, 0),
                  mvn_api_opt_int(ctx, argc, argv, 3, 0),
-                 (uint8_t)mvn_api_opt_int(ctx, argc, argv, 4, -1));
+                 prv_resolve_col(ctx, argc, argv, 4));
     return JS_UNDEFINED;
 }
 
@@ -56,7 +65,7 @@ static JSValue js_gfx_rect(JSContext *ctx, JSValueConst this_val, int argc, JSVa
                  mvn_api_opt_int(ctx, argc, argv, 1, 0),
                  mvn_api_opt_int(ctx, argc, argv, 2, 0),
                  mvn_api_opt_int(ctx, argc, argv, 3, 0),
-                 (uint8_t)mvn_api_opt_int(ctx, argc, argv, 4, -1));
+                 prv_resolve_col(ctx, argc, argv, 4));
     return JS_UNDEFINED;
 }
 
@@ -68,7 +77,7 @@ static JSValue js_gfx_rectfill(JSContext *ctx, JSValueConst this_val, int argc, 
                      mvn_api_opt_int(ctx, argc, argv, 1, 0),
                      mvn_api_opt_int(ctx, argc, argv, 2, 0),
                      mvn_api_opt_int(ctx, argc, argv, 3, 0),
-                     (uint8_t)mvn_api_opt_int(ctx, argc, argv, 4, -1));
+                     prv_resolve_col(ctx, argc, argv, 4));
     return JS_UNDEFINED;
 }
 
@@ -79,7 +88,7 @@ static JSValue js_gfx_circ(JSContext *ctx, JSValueConst this_val, int argc, JSVa
                  mvn_api_opt_int(ctx, argc, argv, 0, 0),
                  mvn_api_opt_int(ctx, argc, argv, 1, 0),
                  mvn_api_opt_int(ctx, argc, argv, 2, 4),
-                 (uint8_t)mvn_api_opt_int(ctx, argc, argv, 3, -1));
+                 prv_resolve_col(ctx, argc, argv, 3));
     return JS_UNDEFINED;
 }
 
@@ -90,7 +99,7 @@ static JSValue js_gfx_circfill(JSContext *ctx, JSValueConst this_val, int argc, 
                      mvn_api_opt_int(ctx, argc, argv, 0, 0),
                      mvn_api_opt_int(ctx, argc, argv, 1, 0),
                      mvn_api_opt_int(ctx, argc, argv, 2, 4),
-                     (uint8_t)mvn_api_opt_int(ctx, argc, argv, 3, -1));
+                     prv_resolve_col(ctx, argc, argv, 3));
     return JS_UNDEFINED;
 }
 
@@ -104,7 +113,7 @@ static JSValue js_gfx_tri(JSContext *ctx, JSValueConst this_val, int argc, JSVal
                 mvn_api_opt_int(ctx, argc, argv, 3, 0),
                 mvn_api_opt_int(ctx, argc, argv, 4, 0),
                 mvn_api_opt_int(ctx, argc, argv, 5, 0),
-                (uint8_t)mvn_api_opt_int(ctx, argc, argv, 6, -1));
+                prv_resolve_col(ctx, argc, argv, 6));
     return JS_UNDEFINED;
 }
 
@@ -118,7 +127,7 @@ static JSValue js_gfx_trifill(JSContext *ctx, JSValueConst this_val, int argc, J
                     mvn_api_opt_int(ctx, argc, argv, 3, 0),
                     mvn_api_opt_int(ctx, argc, argv, 4, 0),
                     mvn_api_opt_int(ctx, argc, argv, 5, 0),
-                    (uint8_t)mvn_api_opt_int(ctx, argc, argv, 6, -1));
+                    prv_resolve_col(ctx, argc, argv, 6));
     return JS_UNDEFINED;
 }
 
@@ -144,7 +153,7 @@ static JSValue js_gfx_print(JSContext *ctx, JSValueConst this_val, int argc, JSV
 
     x   = mvn_api_opt_int(ctx, argc, argv, 1, -1);
     y   = mvn_api_opt_int(ctx, argc, argv, 2, -1);
-    col = (uint8_t)mvn_api_opt_int(ctx, argc, argv, 3, -1);
+    col = prv_resolve_col(ctx, argc, argv, 3);
 
     if (x == -1 && y == -1) {
         /* Use cursor position */

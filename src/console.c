@@ -175,14 +175,7 @@ mvn_console_t *mvn_console_create(const char *cart_path)
     con->gamepads = mvn_gamepad_create();
     con->input    = mvn_input_create();
 
-    /* --- Mouse coordinate mapping --- */
-    if (con->fb_width > 0 && con->fb_height > 0) {
-        mvn_mouse_set_mapping(con->mouse,
-                              (float)con->fb_width / (float)con->win_width,
-                              (float)con->fb_height / (float)con->win_height,
-                              0.0f,
-                              0.0f);
-    }
+    /* --- Mouse coordinate mapping (handled by SDL_ConvertEventToRenderCoordinates) --- */
 
     /* --- Event bus --- */
     con->events = mvn_event_create(con->runtime->ctx);
@@ -255,6 +248,9 @@ mvn_console_t *mvn_console_create(const char *cart_path)
 
 void mvn_console_event(mvn_console_t *con, SDL_Event *event)
 {
+    /* Let SDL handle logical-presentation coordinate conversion (letterbox, etc.) */
+    SDL_ConvertEventToRenderCoordinates(con->renderer, event);
+
     switch (event->type) {
         case SDL_EVENT_QUIT:
             con->running = false;
@@ -299,10 +295,10 @@ void mvn_console_event(mvn_console_t *con, SDL_Event *event)
         }
 
         case SDL_EVENT_MOUSE_MOTION:
-            con->mouse->x = event->motion.x * con->mouse->scale_x + con->mouse->offset_x;
-            con->mouse->y = event->motion.y * con->mouse->scale_y + con->mouse->offset_y;
-            con->mouse->dx += event->motion.xrel * con->mouse->scale_x;
-            con->mouse->dy += event->motion.yrel * con->mouse->scale_y;
+            con->mouse->x = event->motion.x;
+            con->mouse->y = event->motion.y;
+            con->mouse->dx += event->motion.xrel;
+            con->mouse->dy += event->motion.yrel;
             break;
 
         case SDL_EVENT_MOUSE_BUTTON_DOWN:
@@ -340,19 +336,14 @@ void mvn_console_event(mvn_console_t *con, SDL_Event *event)
 
         case SDL_EVENT_WINDOW_RESIZED:
             mvn_event_emit(con->events, "sys:resize", JS_UNDEFINED);
-            /* Update mouse mapping */
-            if (con->fb_width > 0 && con->fb_height > 0) {
+            /* Update cached window size */
+            {
                 int32_t win_w;
                 int32_t win_h;
 
                 SDL_GetWindowSize(con->window, &win_w, &win_h);
                 con->win_width  = win_w;
                 con->win_height = win_h;
-                mvn_mouse_set_mapping(con->mouse,
-                                      (float)con->fb_width / (float)win_w,
-                                      (float)con->fb_height / (float)win_h,
-                                      0.0f,
-                                      0.0f);
             }
             break;
 
@@ -376,6 +367,9 @@ void mvn_console_iterate(mvn_console_t *con)
     con->delta     = (float)(now - con->time_prev) / freq;
     con->time_prev = now;
     con->time += con->delta;
+
+    /* Mark start of a new frame */
+    con->new_frame = true;
 
     /* Reset per-frame mouse deltas at the start of each frame */
     con->mouse->dx      = 0.0f;

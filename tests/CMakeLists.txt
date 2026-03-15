@@ -27,3 +27,63 @@ if (WIN32)
     )
 endif()
 add_test(NAME test_cart COMMAND test_cart)
+
+# --- Graphics tests ---
+add_executable(test_graphics test_graphics.c)
+target_link_libraries(test_graphics PRIVATE mvngin_core)
+if (MSVC)
+    target_compile_options(test_graphics PRIVATE /wd4244)
+endif()
+if (WIN32)
+    add_custom_command(TARGET test_graphics POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            $<TARGET_RUNTIME_DLLS:test_graphics> $<TARGET_FILE_DIR:test_graphics>
+        COMMAND_EXPAND_LISTS
+    )
+endif()
+add_test(NAME test_graphics COMMAND test_graphics)
+
+# --- Event tests ---
+add_executable(test_event test_event.c)
+target_link_libraries(test_event PRIVATE mvngin_core)
+if (MSVC)
+    target_compile_options(test_event PRIVATE /wd4244)
+endif()
+if (WIN32)
+    add_custom_command(TARGET test_event POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            $<TARGET_RUNTIME_DLLS:test_event> $<TARGET_FILE_DIR:test_event>
+        COMMAND_EXPAND_LISTS
+    )
+endif()
+add_test(NAME test_event COMMAND test_event)
+
+# --- Mouse / Gamepad tests ---
+add_executable(test_mouse_gamepad test_mouse_gamepad.c)
+target_link_libraries(test_mouse_gamepad PRIVATE mvngin_core)
+if (MSVC)
+    target_compile_options(test_mouse_gamepad PRIVATE /wd4244)
+endif()
+if (WIN32)
+    add_custom_command(TARGET test_mouse_gamepad POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            $<TARGET_RUNTIME_DLLS:test_mouse_gamepad> $<TARGET_FILE_DIR:test_mouse_gamepad>
+        COMMAND_EXPAND_LISTS
+    )
+endif()
+add_test(NAME test_mouse_gamepad COMMAND test_mouse_gamepad)
+
+# --- Runtime tests ---
+add_executable(test_runtime test_runtime.c)
+target_link_libraries(test_runtime PRIVATE mvngin_core)
+if (MSVC)
+    target_compile_options(test_runtime PRIVATE /wd4244)
+endif()
+if (WIN32)
+    add_custom_command(TARGET test_runtime POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            $<TARGET_RUNTIME_DLLS:test_runtime> $<TARGET_FILE_DIR:test_runtime>
+        COMMAND_EXPAND_LISTS
+    )
+endif()
+add_test(NAME test_runtime COMMAND test_runtime)
