@@ -162,6 +162,7 @@ typedef struct mvn_console {
     bool has_error;
     bool fullscreen;
     bool restart;
+    bool new_frame; /**< Set true at start of each iterate, cleared after resets */
 
     uint64_t frame_count;
     uint64_t time_prev;
@@ -176,6 +177,9 @@ typedef struct mvn_console {
     /* Framebuffer dimensions from cart or compiled default */
     int32_t fb_width;
     int32_t fb_height;
+
+    /* Cart path for restart support */
+    char cart_path[512];
 } mvn_console_t;
 
 /* ------------------------------------------------------------------------ */
@@ -190,10 +194,17 @@ typedef struct mvn_console {
 mvn_console_t *mvn_console_create(const char *cart_path);
 
 /**
- * \brief           Run the main loop (blocks until quit)
+ * \brief           Process a single SDL event
+ * \param[in]       con: Console instance
+ * \param[in]       event: SDL event to handle
+ */
+void mvn_console_event(mvn_console_t *con, SDL_Event *event);
+
+/**
+ * \brief           Run one frame (called each iteration by SDL)
  * \param[in]       con: Console instance
  */
-void mvn_console_run(mvn_console_t *con);
+void mvn_console_iterate(mvn_console_t *con);
 
 /**
  * \brief           Tear down and free all resources

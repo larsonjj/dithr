@@ -23,8 +23,6 @@
 /* ------------------------------------------------------------------ */
 
 static bool prv_load_cart_assets(mvn_console_t *con);
-static void prv_handle_sdl_events(mvn_console_t *con);
-static void prv_cap_framerate(mvn_console_t *con);
 static void prv_render_pause_overlay(mvn_console_t *con);
 static void prv_render_error_overlay(mvn_console_t *con);
 
@@ -43,17 +41,12 @@ mvn_console_t *mvn_console_create(const char *cart_path)
         return NULL;
     }
 
-    /* --- SDL init --- */
-    if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_GAMEPAD)) {
-        SDL_Log("SDL_Init failed: %s", SDL_GetError());
-        MVN_FREE(con);
-        return NULL;
-    }
+    /* Store cart path for restart support */
+    SDL_strlcpy(con->cart_path, cart_path, sizeof(con->cart_path));
 
     /* --- Cart (create + defaults) --- */
     con->cart = mvn_cart_create();
     if (con->cart == NULL) {
-        SDL_Quit();
         MVN_FREE(con);
         return NULL;
     }
@@ -65,7 +58,6 @@ mvn_console_t *mvn_console_create(const char *cart_path)
                                       (int32_t)(con->cart->runtime.stack_limit / 1024u));
     if (con->runtime == NULL) {
         mvn_cart_destroy(con->cart);
-        SDL_Quit();
         MVN_FREE(con);
         return NULL;
     }
@@ -124,7 +116,6 @@ mvn_console_t *mvn_console_create(const char *cart_path)
         SDL_Log("SDL_CreateWindow failed: %s", SDL_GetError());
         mvn_runtime_destroy(con->runtime);
         mvn_cart_destroy(con->cart);
-        SDL_Quit();
         MVN_FREE(con);
         return NULL;
     }
@@ -135,7 +126,6 @@ mvn_console_t *mvn_console_create(const char *cart_path)
         SDL_DestroyWindow(con->window);
         mvn_runtime_destroy(con->runtime);
         mvn_cart_destroy(con->cart);
-        SDL_Quit();
         MVN_FREE(con);
         return NULL;
     }
@@ -155,7 +145,6 @@ mvn_console_t *mvn_console_create(const char *cart_path)
         SDL_DestroyWindow(con->window);
         mvn_runtime_destroy(con->runtime);
         mvn_cart_destroy(con->cart);
-        SDL_Quit();
         MVN_FREE(con);
         return NULL;
     }
@@ -169,7 +158,6 @@ mvn_console_t *mvn_console_create(const char *cart_path)
         SDL_DestroyWindow(con->window);
         mvn_runtime_destroy(con->runtime);
         mvn_cart_destroy(con->cart);
-        SDL_Quit();
         MVN_FREE(con);
         return NULL;
     }
@@ -262,76 +250,185 @@ mvn_console_t *mvn_console_create(const char *cart_path)
 }
 
 /* ------------------------------------------------------------------ */
-/*  Main loop                                                          */
+/*  Per-event handler (called by SDL_AppEvent)                         */
 /* ------------------------------------------------------------------ */
 
-void mvn_console_run(mvn_console_t *con)
+void mvn_console_event(mvn_console_t *con, SDL_Event *event)
+{
+    switch (event->type) {
+        case SDL_EVENT_QUIT:
+            con->running = false;
+            break;
+
+        case SDL_EVENT_KEY_DOWN: {
+            mvn_key_t key;
+
+            /* Hardcoded pause toggle: Escape */
+            if (event->key.scancode == SDL_SCANCODE_ESCAPE) {
+                con->paused = !con->paused;
+                if (con->paused) {
+                    mvn_event_emit(con->events, "sys:pause", JS_UNDEFINED);
+                } else {
+                    mvn_event_emit(con->events, "sys:resume", JS_UNDEFINED);
+                }
+                break;
+            }
+            /* Fullscreen toggle: F11 */
+            if (event->key.scancode == SDL_SCANCODE_F11) {
+                con->fullscreen = !con->fullscreen;
+                SDL_SetWindowFullscreen(con->window, con->fullscreen);
+                mvn_event_emit(con->events, "sys:fullscreen", JS_UNDEFINED);
+                break;
+            }
+
+            key = mvn_key_from_scancode(event->key.scancode);
+            if (key != MVN_KEY_NONE) {
+                mvn_key_set(con->keys, key, true);
+            }
+            break;
+        }
+
+        case SDL_EVENT_KEY_UP: {
+            mvn_key_t key;
+
+            key = mvn_key_from_scancode(event->key.scancode);
+            if (key != MVN_KEY_NONE) {
+                mvn_key_set(con->keys, key, false);
+            }
+            break;
+        }
+
+        case SDL_EVENT_MOUSE_MOTION:
+            con->mouse->x = event->motion.x * con->mouse->scale_x + con->mouse->offset_x;
+            con->mouse->y = event->motion.y * con->mouse->scale_y + con->mouse->offset_y;
+            con->mouse->dx += event->motion.xrel * con->mouse->scale_x;
+            con->mouse->dy += event->motion.yrel * con->mouse->scale_y;
+            break;
+
+        case SDL_EVENT_MOUSE_BUTTON_DOWN:
+            if (event->button.button >= 1 && event->button.button <= MVN_MOUSE_BTN_COUNT) {
+                con->mouse->btn_current[event->button.button - 1] = true;
+            }
+            break;
+
+        case SDL_EVENT_MOUSE_BUTTON_UP:
+            if (event->button.button >= 1 && event->button.button <= MVN_MOUSE_BTN_COUNT) {
+                con->mouse->btn_current[event->button.button - 1] = false;
+            }
+            break;
+
+        case SDL_EVENT_MOUSE_WHEEL:
+            con->mouse->wheel_x += event->wheel.x;
+            con->mouse->wheel += event->wheel.y;
+            break;
+
+        case SDL_EVENT_GAMEPAD_ADDED:
+            mvn_gamepad_on_added(con->gamepads, event->gdevice.which);
+            break;
+
+        case SDL_EVENT_GAMEPAD_REMOVED:
+            mvn_gamepad_on_removed(con->gamepads, event->gdevice.which);
+            break;
+
+        case SDL_EVENT_WINDOW_FOCUS_LOST:
+            mvn_event_emit(con->events, "sys:focus_lost", JS_UNDEFINED);
+            break;
+
+        case SDL_EVENT_WINDOW_FOCUS_GAINED:
+            mvn_event_emit(con->events, "sys:focus_gained", JS_UNDEFINED);
+            break;
+
+        case SDL_EVENT_WINDOW_RESIZED:
+            mvn_event_emit(con->events, "sys:resize", JS_UNDEFINED);
+            /* Update mouse mapping */
+            if (con->fb_width > 0 && con->fb_height > 0) {
+                int32_t win_w;
+                int32_t win_h;
+
+                SDL_GetWindowSize(con->window, &win_w, &win_h);
+                con->win_width  = win_w;
+                con->win_height = win_h;
+                mvn_mouse_set_mapping(con->mouse,
+                                      (float)con->fb_width / (float)win_w,
+                                      (float)con->fb_height / (float)win_h,
+                                      0.0f,
+                                      0.0f);
+            }
+            break;
+
+        default:
+            break;
+    }
+}
+
+/* ------------------------------------------------------------------ */
+/*  Per-frame iteration (called by SDL_AppIterate)                     */
+/* ------------------------------------------------------------------ */
+
+void mvn_console_iterate(mvn_console_t *con)
 {
     uint64_t now;
     float    freq;
 
-    freq = (float)SDL_GetPerformanceFrequency();
+    /* Timing */
+    freq           = (float)SDL_GetPerformanceFrequency();
+    now            = SDL_GetPerformanceCounter();
+    con->delta     = (float)(now - con->time_prev) / freq;
+    con->time_prev = now;
+    con->time += con->delta;
 
-    while (con->running) {
-        /* Timing */
-        now            = SDL_GetPerformanceCounter();
-        con->delta     = (float)(now - con->time_prev) / freq;
-        con->time_prev = now;
-        con->time += con->delta;
+    /* Reset per-frame mouse deltas at the start of each frame */
+    con->mouse->dx      = 0.0f;
+    con->mouse->dy      = 0.0f;
+    con->mouse->wheel_x = 0.0f;
+    con->mouse->wheel   = 0.0f;
 
-        /* SDL events */
-        prv_handle_sdl_events(con);
-
-        if (con->paused) {
-            prv_render_pause_overlay(con);
-            prv_cap_framerate(con);
-            continue;
-        }
-
-        if (con->runtime->error_active) {
-            prv_render_error_overlay(con);
-            prv_cap_framerate(con);
-            continue;
-        }
-
-        /* Input update */
-        mvn_key_update(con->keys);
-        mvn_mouse_update(con->mouse);
-        mvn_gamepad_update(con->gamepads);
-        mvn_input_update(con->input, con->keys, con->gamepads);
-
-        /* Event bus flush */
-        mvn_event_flush(con->events);
-
-        /* JS _update(dt) */
-        {
-            JSValue dt_arg = JS_NewFloat64(con->runtime->ctx, (double)con->delta);
-            mvn_runtime_call_argv(con->runtime, con->runtime->atom_update, 1, &dt_arg);
-            JS_FreeValue(con->runtime->ctx, dt_arg);
-        }
-
-        /* JS _draw */
-        mvn_runtime_call(con->runtime, con->runtime->atom_draw);
-
-        /* PostFX */
-        mvn_gfx_flip(con->graphics);
-        mvn_postfx_apply(con->postfx, con->graphics->pixels, con->fb_width, con->fb_height);
-
-        /* Upload to texture and present */
-        SDL_UpdateTexture(con->screen_tex,
-                          NULL,
-                          con->graphics->pixels,
-                          con->fb_width * (int32_t)sizeof(uint32_t));
-        SDL_RenderClear(con->renderer);
-        SDL_RenderTexture(con->renderer, con->screen_tex, NULL, NULL);
-        SDL_RenderPresent(con->renderer);
-
-        /* Drain microtasks */
-        mvn_runtime_drain_jobs(con->runtime);
-
-        ++con->frame_count;
-        prv_cap_framerate(con);
+    if (con->paused) {
+        prv_render_pause_overlay(con);
+        return;
     }
+
+    if (con->runtime->error_active) {
+        prv_render_error_overlay(con);
+        return;
+    }
+
+    /* Input update */
+    mvn_key_update(con->keys);
+    mvn_mouse_update(con->mouse);
+    mvn_gamepad_update(con->gamepads);
+    mvn_input_update(con->input, con->keys, con->gamepads);
+
+    /* Event bus flush */
+    mvn_event_flush(con->events);
+
+    /* JS _update(dt) */
+    {
+        JSValue dt_arg = JS_NewFloat64(con->runtime->ctx, (double)con->delta);
+        mvn_runtime_call_argv(con->runtime, con->runtime->atom_update, 1, &dt_arg);
+        JS_FreeValue(con->runtime->ctx, dt_arg);
+    }
+
+    /* JS _draw */
+    mvn_runtime_call(con->runtime, con->runtime->atom_draw);
+
+    /* PostFX */
+    mvn_gfx_flip(con->graphics);
+    mvn_postfx_apply(con->postfx, con->graphics->pixels, con->fb_width, con->fb_height);
+
+    /* Upload to texture and present */
+    SDL_UpdateTexture(con->screen_tex,
+                      NULL,
+                      con->graphics->pixels,
+                      con->fb_width * (int32_t)sizeof(uint32_t));
+    SDL_RenderClear(con->renderer);
+    SDL_RenderTexture(con->renderer, con->screen_tex, NULL, NULL);
+    SDL_RenderPresent(con->renderer);
+
+    /* Drain microtasks */
+    mvn_runtime_drain_jobs(con->runtime);
+
+    ++con->frame_count;
 }
 
 /* ------------------------------------------------------------------ */
@@ -378,7 +475,6 @@ void mvn_console_destroy(mvn_console_t *con)
     if (con->window != NULL) {
         SDL_DestroyWindow(con->window);
     }
-    SDL_Quit();
 
     MVN_FREE(con);
 }
@@ -440,158 +536,6 @@ static bool prv_load_cart_assets(mvn_console_t *con)
     }
 
     return true;
-}
-
-/* ------------------------------------------------------------------ */
-/*  Internal: SDL event handling                                       */
-/* ------------------------------------------------------------------ */
-
-static void prv_handle_sdl_events(mvn_console_t *con)
-{
-    SDL_Event evt;
-
-    /* Reset per-frame mouse deltas */
-    con->mouse->dx      = 0.0f;
-    con->mouse->dy      = 0.0f;
-    con->mouse->wheel_x = 0.0f;
-    con->mouse->wheel   = 0.0f;
-
-    while (SDL_PollEvent(&evt)) {
-        switch (evt.type) {
-            case SDL_EVENT_QUIT:
-                con->running = false;
-                break;
-
-            case SDL_EVENT_KEY_DOWN: {
-                mvn_key_t key;
-
-                /* Hardcoded pause toggle: Escape or P */
-                if (evt.key.scancode == SDL_SCANCODE_ESCAPE) {
-                    con->paused = !con->paused;
-                    if (con->paused) {
-                        mvn_event_emit(con->events, "sys:pause", JS_UNDEFINED);
-                    } else {
-                        mvn_event_emit(con->events, "sys:resume", JS_UNDEFINED);
-                    }
-                    break;
-                }
-                /* Fullscreen toggle: F11 */
-                if (evt.key.scancode == SDL_SCANCODE_F11) {
-                    con->fullscreen = !con->fullscreen;
-                    SDL_SetWindowFullscreen(con->window, con->fullscreen);
-                    mvn_event_emit(con->events, "sys:fullscreen", JS_UNDEFINED);
-                    break;
-                }
-
-                key = mvn_key_from_scancode(evt.key.scancode);
-                if (key != MVN_KEY_NONE) {
-                    mvn_key_set(con->keys, key, true);
-                }
-                break;
-            }
-
-            case SDL_EVENT_KEY_UP: {
-                mvn_key_t key;
-
-                key = mvn_key_from_scancode(evt.key.scancode);
-                if (key != MVN_KEY_NONE) {
-                    mvn_key_set(con->keys, key, false);
-                }
-                break;
-            }
-
-            case SDL_EVENT_MOUSE_MOTION:
-                con->mouse->x = evt.motion.x * con->mouse->scale_x + con->mouse->offset_x;
-                con->mouse->y = evt.motion.y * con->mouse->scale_y + con->mouse->offset_y;
-                con->mouse->dx += evt.motion.xrel * con->mouse->scale_x;
-                con->mouse->dy += evt.motion.yrel * con->mouse->scale_y;
-                break;
-
-            case SDL_EVENT_MOUSE_BUTTON_DOWN:
-                if (evt.button.button >= 1 && evt.button.button <= MVN_MOUSE_BTN_COUNT) {
-                    con->mouse->btn_current[evt.button.button - 1] = true;
-                }
-                break;
-
-            case SDL_EVENT_MOUSE_BUTTON_UP:
-                if (evt.button.button >= 1 && evt.button.button <= MVN_MOUSE_BTN_COUNT) {
-                    con->mouse->btn_current[evt.button.button - 1] = false;
-                }
-                break;
-
-            case SDL_EVENT_MOUSE_WHEEL:
-                con->mouse->wheel_x += evt.wheel.x;
-                con->mouse->wheel += evt.wheel.y;
-                break;
-
-            case SDL_EVENT_GAMEPAD_ADDED:
-                mvn_gamepad_on_added(con->gamepads, evt.gdevice.which);
-                break;
-
-            case SDL_EVENT_GAMEPAD_REMOVED:
-                mvn_gamepad_on_removed(con->gamepads, evt.gdevice.which);
-                break;
-
-            case SDL_EVENT_WINDOW_FOCUS_LOST:
-                mvn_event_emit(con->events, "sys:focus_lost", JS_UNDEFINED);
-                break;
-
-            case SDL_EVENT_WINDOW_FOCUS_GAINED:
-                mvn_event_emit(con->events, "sys:focus_gained", JS_UNDEFINED);
-                break;
-
-            case SDL_EVENT_WINDOW_RESIZED:
-                mvn_event_emit(con->events, "sys:resize", JS_UNDEFINED);
-                /* Update mouse mapping */
-                if (con->fb_width > 0 && con->fb_height > 0) {
-                    int32_t win_w;
-                    int32_t win_h;
-
-                    SDL_GetWindowSize(con->window, &win_w, &win_h);
-                    con->win_width  = win_w;
-                    con->win_height = win_h;
-                    mvn_mouse_set_mapping(con->mouse,
-                                          (float)con->fb_width / (float)win_w,
-                                          (float)con->fb_height / (float)win_h,
-                                          0.0f,
-                                          0.0f);
-                }
-                break;
-
-            default:
-                break;
-        }
-    }
-}
-
-/* ------------------------------------------------------------------ */
-/*  Internal: framerate cap                                            */
-/* ------------------------------------------------------------------ */
-
-static void prv_cap_framerate(mvn_console_t *con)
-{
-    uint64_t now;
-    float    elapsed;
-    float    target;
-    float    freq;
-
-    if (con->target_fps <= 0) {
-        return;
-    }
-
-    target  = 1.0f / (float)con->target_fps;
-    freq    = (float)SDL_GetPerformanceFrequency();
-    now     = SDL_GetPerformanceCounter();
-    elapsed = (float)(now - con->time_prev) / freq;
-
-    if (elapsed < target) {
-        uint32_t delay_ms;
-
-        delay_ms = (uint32_t)((target - elapsed) * 1000.0f);
-        if (delay_ms > 0) {
-            SDL_Delay(delay_ms);
-        }
-    }
 }
 
 /* ------------------------------------------------------------------ */

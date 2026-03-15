@@ -183,6 +183,7 @@ endif()
 
 # --- Executable ---
 add_executable(mvngin src/main.c)
+target_compile_definitions(mvngin PRIVATE SDL_MAIN_USE_CALLBACKS=1)
 target_link_libraries(mvngin PRIVATE mvngin_core)
 
 # Copy shared library DLLs next to the executable
