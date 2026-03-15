@@ -251,6 +251,10 @@ bool        mvn_cart_has_key(mvn_cart_t *cart, const char *key);
 void   mvn_cart_dset(mvn_cart_t *cart, int32_t index, double value);
 double mvn_cart_dget(mvn_cart_t *cart, int32_t index);
 
+/* Disk persistence — flush/load dslots + kv to/from a JSON file */
+bool mvn_cart_persist_save(mvn_cart_t *cart);
+bool mvn_cart_persist_load(mvn_cart_t *cart);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

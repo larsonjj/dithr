@@ -436,6 +436,24 @@ static JSValue js_sys_stat(JSContext *ctx, JSValueConst this_val, int argc, JSVa
 
 /* ---- Function list ---------------------------------------------------- */
 
+static JSValue
+js_sys_text_input(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+{
+    mvn_console_t *con;
+    bool           enabled;
+
+    (void)this_val;
+    con     = mvn_api_get_console(ctx);
+    enabled = (argc >= 1) ? JS_ToBool(ctx, argv[0]) : true;
+
+    if (enabled) {
+        SDL_StartTextInput(con->window);
+    } else {
+        SDL_StopTextInput(con->window);
+    }
+    return JS_UNDEFINED;
+}
+
 static const JSCFunctionListEntry js_sys_funcs[] = {
     JS_CFUNC_DEF("time", 0, js_sys_time),
     JS_CFUNC_DEF("delta", 0, js_sys_delta),
@@ -460,6 +478,7 @@ static const JSCFunctionListEntry js_sys_funcs[] = {
     JS_CFUNC_DEF("config", 1, js_sys_config),
     JS_CFUNC_DEF("limit", 1, js_sys_limit),
     JS_CFUNC_DEF("stat", 1, js_sys_stat),
+    JS_CFUNC_DEF("textInput", 1, js_sys_text_input),
 };
 
 void mvn_sys_api_register(JSContext *ctx, JSValue global)

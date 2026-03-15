@@ -192,6 +192,9 @@ mvn_console_t *mvn_console_create(const char *cart_path)
     /* --- Load assets (sprites, maps, sfx, music) --- */
     prv_load_cart_assets(con);
 
+    /* --- Load persisted save data (dslots + kv) --- */
+    mvn_cart_persist_load(con->cart);
+
     /* --- Register all JS APIs --- */
     mvn_api_register_all(con->runtime);
 
@@ -347,6 +350,18 @@ void mvn_console_event(mvn_console_t *con, SDL_Event *event)
             }
             break;
 
+        case SDL_EVENT_TEXT_INPUT:
+            if (event->text.text != NULL) {
+                JSContext *ctx;
+                JSValue    payload;
+
+                ctx     = con->runtime->ctx;
+                payload = JS_NewString(ctx, event->text.text);
+                mvn_event_emit(con->events, "text:input", payload);
+                JS_FreeValue(ctx, payload);
+            }
+            break;
+
         default:
             break;
     }
@@ -456,6 +471,7 @@ void mvn_console_destroy(mvn_console_t *con)
     mvn_key_destroy(con->keys);
     mvn_audio_destroy(con->audio);
     mvn_gfx_destroy(con->graphics);
+    mvn_cart_persist_save(con->cart);
     mvn_cart_destroy(con->cart);
     mvn_runtime_destroy(con->runtime);
 

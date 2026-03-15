@@ -607,6 +607,195 @@ double mvn_cart_dget(mvn_cart_t *cart, int32_t slot)
 }
 
 /* ------------------------------------------------------------------ */
+/*  Disk persistence — JSON file                                       */
+/* ------------------------------------------------------------------ */
+
+/**
+ * \brief           Build the save-file path from the cart title
+ *
+ * Stores under SDL_GetPrefPath("mvngin", <title>)/save.json.
+ */
+static bool prv_save_path(mvn_cart_t *cart, char *out, size_t out_sz)
+{
+    const char *title;
+    char *      pref;
+
+    title = cart->meta.title;
+    if (title[0] == '\0') {
+        title = "default";
+    }
+
+    pref = SDL_GetPrefPath("mvngin", title);
+    if (pref == NULL) {
+        return false;
+    }
+
+    SDL_snprintf(out, out_sz, "%ssave.json", pref);
+    SDL_free(pref);
+    return true;
+}
+
+bool mvn_cart_persist_save(mvn_cart_t *cart)
+{
+    char    path[512];
+    char *  buf;
+    size_t  cap;
+    size_t  pos;
+    int32_t idx;
+    bool    first;
+
+    if (!prv_save_path(cart, path, sizeof(path))) {
+        return false;
+    }
+
+    /* Conservative upper bound: 64 slots * 30 chars + 64 kv * 350 chars + overhead */
+    cap = 64 * 30 + 64 * 350 + 256;
+    buf = MVN_MALLOC(cap);
+    if (buf == NULL) {
+        return false;
+    }
+
+    pos = 0;
+    pos += (size_t)SDL_snprintf(buf + pos, cap - pos, "{\n\"dslots\":[");
+
+    /* Write dslots array */
+    for (idx = 0; idx < MVN_CART_MAX_DSLOTS; ++idx) {
+        if (idx > 0) {
+            pos += (size_t)SDL_snprintf(buf + pos, cap - pos, ",");
+        }
+        pos += (size_t)SDL_snprintf(buf + pos, cap - pos, "%.17g", cart->dslots[idx]);
+    }
+    pos += (size_t)SDL_snprintf(buf + pos, cap - pos, "],\n\"kv\":{");
+
+    /* Write kv object */
+    first = true;
+    for (idx = 0; idx < cart->kv_count; ++idx) {
+        if (!first) {
+            pos += (size_t)SDL_snprintf(buf + pos, cap - pos, ",");
+        }
+        first = false;
+        pos += (size_t)SDL_snprintf(buf + pos, cap - pos,
+                                     "\"%s\":\"%s\"",
+                                     cart->kv_keys[idx],
+                                     cart->kv_values[idx]);
+    }
+    pos += (size_t)SDL_snprintf(buf + pos, cap - pos, "}\n}");
+
+    /* Write file */
+    {
+        bool ok;
+
+        ok = SDL_SaveFile(path, buf, pos);
+        if (!ok) {
+            SDL_Log("persist: failed to write %s: %s", path, SDL_GetError());
+        }
+        MVN_FREE(buf);
+        return ok;
+    }
+}
+
+bool mvn_cart_persist_load(mvn_cart_t *cart)
+{
+    char       path[512];
+    char *     json;
+    size_t     len;
+    JSContext * ctx;
+    JSRuntime *jrt;
+    JSValue    root;
+    JSValue    dslots;
+    JSValue    kv_obj;
+
+    if (!prv_save_path(cart, path, sizeof(path))) {
+        return false;
+    }
+
+    json = (char *)SDL_LoadFile(path, &len);
+    if (json == NULL) {
+        /* No save file — not an error */
+        return true;
+    }
+
+    /* Use a temporary JS context for JSON parsing */
+    jrt = JS_NewRuntime();
+    ctx = JS_NewContext(jrt);
+
+    root = JS_ParseJSON(ctx, json, len, "<save>");
+    SDL_free(json);
+
+    if (JS_IsException(root)) {
+        SDL_Log("persist: failed to parse %s", path);
+        JS_FreeContext(ctx);
+        JS_FreeRuntime(jrt);
+        return false;
+    }
+
+    /* dslots array */
+    dslots = JS_GetPropertyStr(ctx, root, "dslots");
+    if (JS_IsArray(dslots)) {
+        for (int32_t idx = 0; idx < MVN_CART_MAX_DSLOTS; ++idx) {
+            JSValue val;
+            double  dbl;
+
+            val = JS_GetPropertyUint32(ctx, dslots, (uint32_t)idx);
+            if (JS_ToFloat64(ctx, &dbl, val) == 0) {
+                cart->dslots[idx] = dbl;
+            }
+            JS_FreeValue(ctx, val);
+        }
+    }
+    JS_FreeValue(ctx, dslots);
+
+    /* kv object */
+    kv_obj = JS_GetPropertyStr(ctx, root, "kv");
+    if (JS_IsObject(kv_obj)) {
+        JSPropertyEnum *props;
+        uint32_t        prop_count;
+
+        if (JS_GetOwnPropertyNames(ctx, &props, &prop_count, kv_obj,
+                                    JS_GPN_STRING_MASK | JS_GPN_ENUM_ONLY) == 0) {
+            for (uint32_t pi = 0; pi < prop_count && cart->kv_count < MVN_CART_MAX_KV; ++pi) {
+                const char *key;
+                JSValue     val;
+                const char *str;
+
+                key = JS_AtomToCString(ctx, props[pi].atom);
+                val = JS_GetProperty(ctx, kv_obj, props[pi].atom);
+                str = JS_ToCString(ctx, val);
+
+                if (key != NULL && str != NULL) {
+                    SDL_strlcpy(cart->kv_keys[cart->kv_count], key,
+                                sizeof(cart->kv_keys[cart->kv_count]));
+                    SDL_strlcpy(cart->kv_values[cart->kv_count], str,
+                                sizeof(cart->kv_values[cart->kv_count]));
+                    ++cart->kv_count;
+                }
+
+                if (str != NULL) {
+                    JS_FreeCString(ctx, str);
+                }
+                JS_FreeValue(ctx, val);
+                if (key != NULL) {
+                    JS_FreeCString(ctx, key);
+                }
+            }
+
+            for (uint32_t pi = 0; pi < prop_count; ++pi) {
+                JS_FreeAtom(ctx, props[pi].atom);
+            }
+            js_free(ctx, props);
+        }
+    }
+    JS_FreeValue(ctx, kv_obj);
+
+    JS_FreeValue(ctx, root);
+    JS_FreeContext(ctx);
+    JS_FreeRuntime(jrt);
+
+    SDL_Log("persist: loaded %s (%d kv entries)", path, cart->kv_count);
+    return true;
+}
+
+/* ------------------------------------------------------------------ */
 /*  Cleanup                                                            */
 /* ------------------------------------------------------------------ */
 
@@ -624,7 +813,10 @@ void mvn_cart_destroy(mvn_cart_t *cart)
             for (int32_t li = 0; li < level->layer_count; ++li) {
                 MVN_FREE(level->layers[li].tiles);
                 for (int32_t oi = 0; oi < level->layers[li].object_count; ++oi) {
-                    /* Object name/type are inline arrays, no free needed */
+                    mvn_map_object_t *obj = &level->layers[li].objects[oi];
+                    if (cart->ctx != NULL && !JS_IsUndefined(obj->props)) {
+                        JS_FreeValue(cart->ctx, obj->props);
+                    }
                 }
                 MVN_FREE(level->layers[li].objects);
             }

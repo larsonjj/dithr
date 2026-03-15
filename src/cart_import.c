@@ -370,6 +370,47 @@ bool mvn_import_tiled(const char *tmj_path, mvn_map_level_t **out_level, JSConte
                         JS_FreeValue(ctx, gv);
                     }
 
+                    /* Tiled custom properties → JS object */
+                    {
+                        JSValue parr;
+
+                        parr = JS_GetPropertyStr(ctx, oobj, "properties");
+                        if (JS_IsArray(parr)) {
+                            JSValue lenv;
+                            int32_t pcount;
+
+                            lenv = JS_GetPropertyStr(ctx, parr, "length");
+                            JS_ToInt32(ctx, &pcount, lenv);
+                            JS_FreeValue(ctx, lenv);
+
+                            mobj->props = JS_NewObject(ctx);
+                            for (int32_t pi = 0; pi < pcount; ++pi) {
+                                JSValue     pobj;
+                                JSValue     pname;
+                                JSValue     pval;
+                                const char *pname_s;
+
+                                pobj   = JS_GetPropertyUint32(ctx, parr, (uint32_t)pi);
+                                pname  = JS_GetPropertyStr(ctx, pobj, "name");
+                                pval   = JS_GetPropertyStr(ctx, pobj, "value");
+                                pname_s = JS_ToCString(ctx, pname);
+
+                                if (pname_s != NULL) {
+                                    JS_SetPropertyStr(ctx, mobj->props, pname_s,
+                                                      JS_DupValue(ctx, pval));
+                                    JS_FreeCString(ctx, pname_s);
+                                }
+
+                                JS_FreeValue(ctx, pval);
+                                JS_FreeValue(ctx, pname);
+                                JS_FreeValue(ctx, pobj);
+                            }
+                        } else {
+                            mobj->props = JS_UNDEFINED;
+                        }
+                        JS_FreeValue(ctx, parr);
+                    }
+
                     JS_FreeValue(ctx, oobj);
                 }
             }
