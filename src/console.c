@@ -242,6 +242,23 @@ mvn_console_t *mvn_console_create(const char *cart_path)
     con->delta       = 0.0f;
     con->time_prev   = SDL_GetPerformanceCounter();
 
+#if DEV_BUILD
+    /* Set up file watcher for the JS source */
+    con->watch_path[0] = '\0';
+    con->watch_mtime   = 0;
+    con->watch_timer   = 0.5f;
+    if (con->cart->code_path[0] != '\0') {
+        SDL_PathInfo info;
+
+        SDL_snprintf(con->watch_path, sizeof(con->watch_path),
+                     "%s%s", con->cart->base_path, con->cart->code_path);
+        if (SDL_GetPathInfo(con->watch_path, &info)) {
+            con->watch_mtime = info.modify_time;
+            SDL_Log("hot-reload: watching %s", con->watch_path);
+        }
+    }
+#endif
+
     return con;
 }
 
@@ -438,6 +455,24 @@ void mvn_console_iterate(mvn_console_t *con)
     mvn_runtime_drain_jobs(con->runtime);
 
     ++con->frame_count;
+
+#if DEV_BUILD
+    /* Hot-reload: poll JS source file for changes */
+    if (con->watch_path[0] != '\0') {
+        con->watch_timer -= con->delta;
+        if (con->watch_timer <= 0.0f) {
+            SDL_PathInfo info;
+
+            con->watch_timer = 0.5f; /* poll every 500 ms */
+            if (SDL_GetPathInfo(con->watch_path, &info)) {
+                if (info.modify_time != con->watch_mtime) {
+                    SDL_Log("hot-reload: %s changed, restarting", con->watch_path);
+                    con->restart = true;
+                }
+            }
+        }
+    }
+#endif
 }
 
 /* ------------------------------------------------------------------ */

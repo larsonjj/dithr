@@ -9,7 +9,8 @@
       "args": [],
       "cwd": "${workspaceFolder}",
       "environment": [],
-      "console": "integratedTerminal"
+      "console": "integratedTerminal",
+      "preLaunchTask": "Build (Debug)"
     },
     {
       "name": "Hello World",
@@ -19,7 +20,8 @@
       "args": ["${workspaceFolder}/examples/hello_world/cart.json"],
       "cwd": "${workspaceFolder}",
       "environment": [],
-      "console": "integratedTerminal"
+      "console": "integratedTerminal",
+      "preLaunchTask": "Build (Debug)"
     }
   ]
 }

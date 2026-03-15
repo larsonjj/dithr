@@ -114,21 +114,34 @@ static void prv_apply_crt(uint32_t *pixels, int32_t w, int32_t h, float strength
      * Simple CRT effect:
      * 1. Barrel distortion (simulated by darkening edges)
      * 2. Color bleeding (shift R channel slightly right)
+     *
+     * The vignette uses dist² from center.  Since the formula is
+     * vignette = 1 - dist² * strength * 0.5, we never need sqrt —
+     * dist² = (dx²+dy²) / max_dist² is computed directly.
      */
 
     float cx;
     float cy;
-    float max_dist;
+    float inv_max_dist_sq;
+    float half_strength;
 
-    cx       = (float)w * 0.5f;
-    cy       = (float)h * 0.5f;
-    max_dist = sqrtf(cx * cx + cy * cy);
+    cx               = (float)w * 0.5f;
+    cy               = (float)h * 0.5f;
+    inv_max_dist_sq  = 1.0f / (cx * cx + cy * cy);
+    half_strength    = strength * 0.5f;
 
     for (int32_t y = 0; y < h; ++y) {
+        float    dy;
+        float    dy_sq;
+        int32_t  row_off;
+
+        dy      = (float)y - cy;
+        dy_sq   = dy * dy;
+        row_off = y * w;
+
         for (int32_t x = 0; x < w; ++x) {
             float    dx;
-            float    dy;
-            float    dist;
+            float    dist_sq;
             float    vignette;
             uint32_t px;
             uint32_t r;
@@ -136,17 +149,15 @@ static void prv_apply_crt(uint32_t *pixels, int32_t w, int32_t h, float strength
             uint32_t b;
             uint32_t a;
 
-            px = pixels[y * w + x];
+            px = pixels[row_off + x];
             r  = (px >> 0) & 0xFF;
             g  = (px >> 8) & 0xFF;
             b  = (px >> 16) & 0xFF;
             a  = (px >> 24) & 0xFF;
 
-            /* Vignette based on distance from center */
             dx       = (float)x - cx;
-            dy       = (float)y - cy;
-            dist     = sqrtf(dx * dx + dy * dy) / max_dist;
-            vignette = 1.0f - dist * dist * strength * 0.5f;
+            dist_sq  = (dx * dx + dy_sq) * inv_max_dist_sq;
+            vignette = 1.0f - dist_sq * half_strength;
 
             if (vignette < 0.0f) {
                 vignette = 0.0f;
@@ -156,24 +167,27 @@ static void prv_apply_crt(uint32_t *pixels, int32_t w, int32_t h, float strength
             g = (uint32_t)((float)g * vignette);
             b = (uint32_t)((float)b * vignette);
 
-            pixels[y * w + x] = r | (g << 8) | (b << 16) | (a << 24);
+            pixels[row_off + x] = r | (g << 8) | (b << 16) | (a << 24);
         }
     }
 
     /* Color bleeding: shift R channel one pixel right */
     if (strength > 0.3f) {
         for (int32_t y = 0; y < h; ++y) {
+            int32_t row_off;
+
+            row_off = y * w;
             for (int32_t x = w - 1; x > 0; --x) {
                 uint32_t cur;
                 uint32_t prev;
                 uint32_t bleed_r;
 
-                cur     = pixels[y * w + x];
-                prev    = pixels[y * w + x - 1];
+                cur     = pixels[row_off + x];
+                prev    = pixels[row_off + x - 1];
                 bleed_r = ((prev >> 0) & 0xFF);
 
-                cur               = (cur & 0xFFFFFF00u) | bleed_r;
-                pixels[y * w + x] = cur;
+                cur                    = (cur & 0xFFFFFF00u) | bleed_r;
+                pixels[row_off + x]    = cur;
             }
         }
     }
@@ -233,23 +247,35 @@ static void prv_apply_bloom(uint32_t *pixels, int32_t w, int32_t h, float streng
 
 /**
  * \brief           Chromatic aberration — offset R and B channels
+ *
+ * Reuses pfx->scratch instead of allocating every frame.
  */
-static void prv_apply_aberration(uint32_t *pixels, int32_t w, int32_t h, float strength)
+static void prv_apply_aberration(mvn_postfx_t *pfx, uint32_t *pixels, int32_t w, int32_t h,
+                                 float strength)
 {
     int32_t   offset;
     uint32_t *temp;
+    size_t    buf_sz;
 
     offset = (int32_t)(strength * 2.0f + 0.5f);
     if (offset < 1) {
         offset = 1;
     }
 
-    temp = MVN_MALLOC((size_t)w * (size_t)h * sizeof(uint32_t));
-    if (temp == NULL) {
-        return;
+    /* Ensure scratch buffer is large enough */
+    buf_sz = (size_t)w * (size_t)h * sizeof(uint32_t);
+    if (pfx->scratch == NULL || pfx->width != w || pfx->height != h) {
+        MVN_FREE(pfx->scratch);
+        pfx->scratch = MVN_MALLOC(buf_sz);
+        pfx->width   = w;
+        pfx->height  = h;
+        if (pfx->scratch == NULL) {
+            return;
+        }
     }
 
-    SDL_memcpy(temp, pixels, (size_t)w * (size_t)h * sizeof(uint32_t));
+    temp = pfx->scratch;
+    SDL_memcpy(temp, pixels, buf_sz);
 
     for (int32_t y = 0; y < h; ++y) {
         for (int32_t x = 0; x < w; ++x) {
@@ -286,8 +312,6 @@ static void prv_apply_aberration(uint32_t *pixels, int32_t w, int32_t h, float s
             pixels[y * w + x] = r | (g << 8) | (b << 16) | (a << 24);
         }
     }
-
-    MVN_FREE(temp);
 }
 
 /* ------------------------------------------------------------------ */
@@ -321,7 +345,7 @@ void mvn_postfx_apply(mvn_postfx_t *pfx, uint32_t *pixels, int32_t w, int32_t h)
                 break;
 
             case MVN_POSTFX_ABERRATION:
-                prv_apply_aberration(pixels, w, h, strength);
+                prv_apply_aberration(pfx, pixels, w, h, strength);
                 break;
 
             case MVN_POSTFX_NONE:

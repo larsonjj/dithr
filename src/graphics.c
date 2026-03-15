@@ -227,6 +227,72 @@ static void prv_put_pixel(mvn_graphics_t *gfx, int32_t raw_x, int32_t raw_y, uin
 }
 
 /* ------------------------------------------------------------------ */
+/*  Internal: fast horizontal span (pre-clipped scanline)              */
+/* ------------------------------------------------------------------ */
+
+/**
+ * \brief           Draw a horizontal span from (raw_x0..raw_x1) at raw_y.
+ *
+ * Camera transform, Y-clipping, and X-clipping are done once per span
+ * rather than per pixel.  When the fill pattern is zero (solid fill)
+ * the span is written with SDL_memset for maximum throughput.
+ */
+static void
+prv_hline(mvn_graphics_t *gfx, int32_t raw_x0, int32_t raw_x1, int32_t raw_y, uint8_t col)
+{
+    int32_t scr_y;
+    int32_t left;
+    int32_t right;
+    int32_t clip_l;
+    int32_t clip_r;
+
+    /* Camera transform Y and clip */
+    scr_y = raw_y - gfx->camera_y;
+    if (scr_y < gfx->clip_y || scr_y >= gfx->clip_y + gfx->clip_h) {
+        return;
+    }
+
+    /* Camera transform X */
+    left  = raw_x0 - gfx->camera_x;
+    right = raw_x1 - gfx->camera_x;
+
+    /* Clip X */
+    clip_l = gfx->clip_x;
+    clip_r = gfx->clip_x + gfx->clip_w - 1;
+    if (left < clip_l) {
+        left = clip_l;
+    }
+    if (right > clip_r) {
+        right = clip_r;
+    }
+    if (left > right) {
+        return;
+    }
+
+    /* Remap colour once */
+    col = gfx->draw_pal[col];
+
+    if (gfx->fill_pattern == 0) {
+        /* Solid fill — memset the span */
+        SDL_memset(&gfx->framebuffer[scr_y * gfx->width + left], col,
+                   (size_t)(right - left + 1));
+    } else {
+        /* Patterned fill */
+        int32_t pat_y_bits;
+
+        pat_y_bits = (scr_y & 3) * 4;
+        for (int32_t sx = left; sx <= right; ++sx) {
+            int32_t bit;
+
+            bit = pat_y_bits + (sx & 3);
+            if (gfx->fill_pattern & (1 << bit)) {
+                gfx->framebuffer[scr_y * gfx->width + sx] = col;
+            }
+        }
+    }
+}
+
+/* ------------------------------------------------------------------ */
 /*  Core drawing                                                       */
 /* ------------------------------------------------------------------ */
 
@@ -317,9 +383,7 @@ void mvn_gfx_rectfill(mvn_graphics_t *gfx,
     max_y = (y0 > y1) ? y0 : y1;
 
     for (int32_t row = min_y; row <= max_y; ++row) {
-        for (int32_t px = min_x; px <= max_x; ++px) {
-            prv_put_pixel(gfx, px, row, col);
-        }
+        prv_hline(gfx, min_x, max_x, row, col);
     }
 }
 
@@ -357,12 +421,33 @@ void mvn_gfx_circ(mvn_graphics_t *gfx, int32_t x, int32_t y, int32_t r, uint8_t 
 
 void mvn_gfx_circfill(mvn_graphics_t *gfx, int32_t x, int32_t y, int32_t r, uint8_t col)
 {
-    for (int32_t dy_val = -r; dy_val <= r; ++dy_val) {
-        int32_t half_w;
+    int32_t dx_val;
+    int32_t dy_val;
+    int32_t err;
 
-        half_w = (int32_t)sqrtf((float)(r * r - dy_val * dy_val));
-        for (int32_t dx_val = -half_w; dx_val <= half_w; ++dx_val) {
-            prv_put_pixel(gfx, x + dx_val, y + dy_val, col);
+    if (r <= 0) {
+        prv_put_pixel(gfx, x, y, col);
+        return;
+    }
+
+    /* Midpoint circle algorithm — draw horizontal spans */
+    dx_val = r;
+    dy_val = 0;
+    err    = 1 - r;
+
+    while (dx_val >= dy_val) {
+        /* Four symmetric horizontal spans */
+        prv_hline(gfx, x - dx_val, x + dx_val, y + dy_val, col);
+        prv_hline(gfx, x - dx_val, x + dx_val, y - dy_val, col);
+        prv_hline(gfx, x - dy_val, x + dy_val, y + dx_val, col);
+        prv_hline(gfx, x - dy_val, x + dy_val, y - dx_val, col);
+
+        ++dy_val;
+        if (err < 0) {
+            err += 2 * dy_val + 1;
+        } else {
+            --dx_val;
+            err += 2 * (dy_val - dx_val) + 1;
         }
     }
 }
@@ -453,9 +538,7 @@ void mvn_gfx_trifill(mvn_graphics_t *gfx,
         left  = (int32_t)floorf(xa < xb ? xa : xb);
         right = (int32_t)ceilf(xa > xb ? xa : xb);
 
-        for (int32_t px = left; px <= right; ++px) {
-            prv_put_pixel(gfx, px, row, col);
-        }
+        prv_hline(gfx, left, right, row, col);
     }
 }
 

@@ -1,0 +1,78 @@
+name: CI
+
+on:
+    push:
+        branches: [main]
+    pull_request:
+        branches: [main]
+
+jobs:
+    # ---------------------------------------------------------------------------
+    #  Windows — MSVC (native)
+    # ---------------------------------------------------------------------------
+    windows:
+        runs-on: windows-latest
+        steps:
+            - uses: actions/checkout@v4
+
+            - name: Configure
+              run: cmake --preset debug
+
+            - name: Build
+              run: cmake --build build/debug --config Debug
+
+            - name: Test
+              working-directory: build/debug
+              run: ctest --output-on-failure -C Debug
+
+    # ---------------------------------------------------------------------------
+    #  Linux — GCC
+    # ---------------------------------------------------------------------------
+    linux:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+
+            - name: Install dependencies
+              run: |
+                  sudo apt-get update
+                  sudo apt-get install -y ninja-build libx11-dev libxext-dev \
+                    libwayland-dev libxkbcommon-dev libasound2-dev libpulse-dev \
+                    libpipewire-0.3-dev libdecor-0-dev
+
+            - name: Configure
+              run: >
+                  cmake -B build/debug -G Ninja
+                  -DCMAKE_BUILD_TYPE=Debug
+                  -DMVN_DEV_BUILD=ON
+
+            - name: Build
+              run: cmake --build build/debug
+
+            - name: Test
+              working-directory: build/debug
+              run: ctest --output-on-failure
+
+    # ---------------------------------------------------------------------------
+    #  macOS — AppleClang
+    # ---------------------------------------------------------------------------
+    macos:
+        runs-on: macos-latest
+        steps:
+            - uses: actions/checkout@v4
+
+            - name: Install Ninja
+              run: brew install ninja
+
+            - name: Configure
+              run: >
+                  cmake -B build/debug -G Ninja
+                  -DCMAKE_BUILD_TYPE=Debug
+                  -DMVN_DEV_BUILD=ON
+
+            - name: Build
+              run: cmake --build build/debug
+
+            - name: Test
+              working-directory: build/debug
+              run: ctest --output-on-failure

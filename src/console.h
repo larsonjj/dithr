@@ -180,6 +180,13 @@ typedef struct mvn_console {
 
     /* Cart path for restart support */
     char cart_path[512];
+
+#if DEV_BUILD
+    /* Hot-reload: JS source file watching */
+    char    watch_path[1024]; /**< Resolved path to the JS source file */
+    int64_t watch_mtime;      /**< Last known modify_time (SDL_Time ns) */
+    float   watch_timer;      /**< Seconds until next poll */
+#endif
 } mvn_console_t;
 
 /* ------------------------------------------------------------------------ */

@@ -250,6 +250,29 @@ if (WIN32)
     )
 endif()
 
+# --- Install rules ---
+include(GNUInstallDirs)
+
+install(TARGETS mvngin
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+)
+
+# Install runtime DLLs (SDL3, SDL3_mixer, SDL3_image, codec libs)
+if (TARGET SDL3-shared)
+    install(TARGETS SDL3-shared RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+endif()
+if (TARGET SDL3_mixer-shared)
+    install(TARGETS SDL3_mixer-shared RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+endif()
+if (TARGET SDL3_image-shared)
+    install(TARGETS SDL3_image-shared RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+endif()
+
+# Install cart templates for new-project scaffolding
+install(DIRECTORY tools/templates/
+    DESTINATION ${CMAKE_INSTALL_DATADIR}/mvngin/templates
+)
+
 # --- Examples ---
 option(MVN_BUILD_EXAMPLES "Build example programs" ON)
 if (MVN_BUILD_EXAMPLES)
