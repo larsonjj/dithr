@@ -24,13 +24,13 @@ in the browser via WebAssembly.
 
 ### Prerequisites
 
-| Tool | Version | Notes |
-|------|---------|-------|
-| CMake | >= 3.22.1 | |
-| C compiler | MSVC, GCC, or Clang | C99 |
-| Git | any | For FetchContent |
-| Node.js | >= 18 | Optional — cart tooling and WASM dev server |
-| Emscripten | >= 3.x | Optional — WASM builds only |
+| Tool       | Version             | Notes                                       |
+| ---------- | ------------------- | ------------------------------------------- |
+| CMake      | >= 3.22.1           |                                             |
+| C compiler | MSVC, GCC, or Clang | C99                                         |
+| Git        | any                 | For FetchContent                            |
+| Node.js    | >= 18               | Optional — cart tooling and WASM dev server |
+| Emscripten | >= 3.x              | Optional — WASM builds only                 |
 
 All library dependencies (SDL3, SDL3_mixer, SDL3_image, QuickJS-NG) are
 fetched automatically by CMake.
@@ -85,13 +85,13 @@ mvngin cart.json
 
 ## Documentation
 
-| Document | Description |
-|----------|-------------|
-| [API Reference](docs/api-reference.md) | All 13 JS namespaces with every function and constant |
-| [Cart Format](docs/cart-format.md) | `cart.json` schema and asset conventions |
-| [Architecture](docs/architecture.md) | Engine lifecycle, subsystem overview, design decisions |
-| [Building](docs/building.md) | Build presets, CMake variables, WASM workflow |
-| [Code Style](docs/code-style.md) | C coding conventions for contributors |
+| Document                               | Description                                            |
+| -------------------------------------- | ------------------------------------------------------ |
+| [API Reference](docs/api-reference.md) | All 13 JS namespaces with every function and constant  |
+| [Cart Format](docs/cart-format.md)     | `cart.json` schema and asset conventions               |
+| [Architecture](docs/architecture.md)   | Engine lifecycle, subsystem overview, design decisions |
+| [Building](docs/building.md)           | Build presets, CMake variables, WASM workflow          |
+| [Code Style](docs/code-style.md)       | C coding conventions for contributors                  |
 
 ## Project Structure
 
