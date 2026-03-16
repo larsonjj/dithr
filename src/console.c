@@ -130,6 +130,8 @@ mvn_console_t *mvn_console_create(const char *cart_path)
         return NULL;
     }
 
+    SDL_SetRenderVSync(con->renderer, 0);
+
     SDL_SetRenderLogicalPresentation(
         con->renderer, con->fb_width, con->fb_height, SDL_LOGICAL_PRESENTATION_INTEGER_SCALE);
 

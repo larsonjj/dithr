@@ -95,6 +95,12 @@ function _draw() {
 
     gfx.print("strength: " + math.flr(strength * 100) + "%", 4, 22, 7);
     gfx.print("up/dn=strength  spc=all  e=clear", 4, 32, 5);
+
+    // FPS counter
+    var fps_str = "FPS:" + math.flr(sys.fps());
+    var fps_w = fps_str.length * 6 + 2;
+    gfx.rectfill(320 - fps_w, 0, 319, 8, 0);
+    gfx.print(fps_str, 321 - fps_w, 1, 7);
 }
 
 // A colourful test scene: gradient, shapes, text

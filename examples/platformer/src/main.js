@@ -387,4 +387,10 @@ function _draw() {
         gfx.print("score: " + player.score, 130, 90, 7);
         gfx.print("press jump to retry", 110, 100, 5);
     }
+
+    // FPS counter
+    var fps_str = "FPS:" + math.flr(sys.fps());
+    var fps_w = fps_str.length * 6 + 2;
+    gfx.rectfill(320 - fps_w, 0, 319, 8, 0);
+    gfx.print(fps_str, 321 - fps_w, 1, 7);
 }

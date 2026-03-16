@@ -151,4 +151,10 @@ function _draw() {
     gfx.print("a/b/c/d = play sfx 0-3", 4, 152, 5);
     gfx.print("w = toggle music        up/dn = sfx vol", 4, 160, 5);
     gfx.print("left/right = music vol", 4, 168, 5);
+
+    // FPS counter
+    var fps_str = "FPS:" + math.flr(sys.fps());
+    var fps_w = fps_str.length * 6 + 2;
+    gfx.rectfill(320 - fps_w, 0, 319, 8, 0);
+    gfx.print(fps_str, 321 - fps_w, 1, 7);
 }
