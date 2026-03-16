@@ -32,6 +32,108 @@ typedef struct mvn_sprite_sheet {
 } mvn_sprite_sheet_t;
 
 /* ------------------------------------------------------------------------ */
+/*  Screen transitions                                                       */
+/* ------------------------------------------------------------------------ */
+
+/**
+ * \\brief           Transition type enumeration
+ */
+typedef enum mvn_transition_type {
+    MVN_TRANS_NONE     = 0,
+    MVN_TRANS_FADE     = 1,
+    MVN_TRANS_WIPE     = 2,
+    MVN_TRANS_DISSOLVE = 3,
+} mvn_transition_type_t;
+
+/**
+ * \\brief           Direction for wipe transitions
+ */
+typedef enum mvn_wipe_dir {
+    MVN_WIPE_LEFT  = 0,
+    MVN_WIPE_RIGHT = 1,
+    MVN_WIPE_UP    = 2,
+    MVN_WIPE_DOWN  = 3,
+} mvn_wipe_dir_t;
+
+/**
+ * \\brief           Screen transition state
+ */
+typedef struct mvn_transition {
+    mvn_transition_type_t type;
+    int32_t               frame;     /**< Current frame of the transition */
+    int32_t               duration;  /**< Total frames for the transition */
+    uint8_t               color;     /**< Target colour for fade/dissolve */
+    mvn_wipe_dir_t        direction; /**< Wipe direction */
+} mvn_transition_t;
+
+/* ------------------------------------------------------------------------ */
+/*  Custom font                                                              */
+/* ------------------------------------------------------------------------ */
+
+/**
+ * \\brief           Custom monospaced font loaded from the sprite sheet
+ */
+typedef struct mvn_custom_font {
+    bool    active;   /**< True when a custom font is in use */
+    int32_t sx;       /**< Source X in sprite sheet pixels */
+    int32_t sy;       /**< Source Y in sprite sheet pixels */
+    int32_t char_w;   /**< Character width in pixels */
+    int32_t char_h;   /**< Character height in pixels */
+    int32_t cols;     /**< Characters per row in the font grid */
+    char    first;    /**< First ASCII character in the grid */
+    int32_t count;    /**< Total number of characters */
+} mvn_custom_font_t;
+
+/* ------------------------------------------------------------------------ */
+/*  Draw list (sprite batch)                                                 */
+/* ------------------------------------------------------------------------ */
+
+/**
+ * \brief           Draw command types
+ */
+typedef enum mvn_draw_cmd_type {
+    MVN_DRAW_SPR        = 0,
+    MVN_DRAW_SSPR       = 1,
+    MVN_DRAW_SPR_ROT    = 2,
+    MVN_DRAW_SPR_AFFINE = 3,
+} mvn_draw_cmd_type_t;
+
+/**
+ * \brief           A single queued draw command
+ */
+typedef struct mvn_draw_cmd {
+    mvn_draw_cmd_type_t type;
+    int32_t             layer;     /**< Sort key — lower layers drawn first */
+    int32_t             order;     /**< Insertion order for stable sort */
+    union {
+        struct {
+            int32_t idx, x, y, w, h;
+            bool    fx, fy;
+        } spr;
+        struct {
+            int32_t sx, sy, sw, sh, dx, dy, dw, dh;
+        } sspr;
+        struct {
+            int32_t idx, x, y, cx, cy;
+            float   angle;
+        } spr_rot;
+        struct {
+            int32_t idx, x, y;
+            float   ox, oy, rx, ry;
+        } spr_affine;
+    } u;
+} mvn_draw_cmd_t;
+
+/**
+ * \brief           Draw list state
+ */
+typedef struct mvn_draw_list {
+    mvn_draw_cmd_t cmds[CONSOLE_MAX_DRAW_CMDS];
+    int32_t        count;   /**< Number of queued commands */
+    bool           active;  /**< True between dl_begin and dl_end */
+} mvn_draw_list_t;
+
+/* ------------------------------------------------------------------------ */
 /*  Graphics state                                                           */
 /* ------------------------------------------------------------------------ */
 
@@ -79,6 +181,15 @@ struct mvn_graphics {
 
     /* Sprite sheet */
     mvn_sprite_sheet_t sheet;
+
+    /* Custom font (loaded from sprite sheet region) */
+    mvn_custom_font_t custom_font;
+
+    /* Screen transition */
+    mvn_transition_t transition;
+
+    /* Draw list (sprite batch) */
+    mvn_draw_list_t draw_list;
 
     /* Framebuffer dimensions (may be overridden by cart) */
     int32_t width;
@@ -132,6 +243,22 @@ void mvn_gfx_trifill(mvn_graphics_t *gfx,
                      int32_t         y2,
                      uint8_t         col);
 
+/**
+ * \\brief           Draw a polygon outline from an array of (x,y) pairs
+ * \\param[in]       pts: Flat array [x0,y0, x1,y1, ...] of vertex coordinates
+ * \\param[in]       count: Number of vertices (pts has count*2 elements)
+ * \\param[in]       col: Palette colour
+ */
+void mvn_gfx_poly(mvn_graphics_t *gfx, const int32_t *pts, int32_t count, uint8_t col);
+
+/**
+ * \\brief           Fill a convex polygon using fan-of-triangles
+ * \\param[in]       pts: Flat array [x0,y0, x1,y1, ...] of vertex coordinates
+ * \\param[in]       count: Number of vertices (pts has count*2 elements)
+ * \\param[in]       col: Palette colour
+ */
+void mvn_gfx_polyfill(mvn_graphics_t *gfx, const int32_t *pts, int32_t count, uint8_t col);
+
 /* ------------------------------------------------------------------------ */
 /*  Text                                                                     */
 /* ------------------------------------------------------------------------ */
@@ -140,7 +267,27 @@ void mvn_gfx_trifill(mvn_graphics_t *gfx,
  * \brief           Print a string and return the x advance in pixels
  */
 int32_t mvn_gfx_print(mvn_graphics_t *gfx, const char *str, int32_t x, int32_t y, uint8_t col);
+/**
+ * \\brief           Set a custom font from a sprite sheet region
+ * \\param[in]       sx: Source X of the font grid on the sheet
+ * \\param[in]       sy: Source Y of the font grid on the sheet
+ * \\param[in]       char_w: Width of each character cell
+ * \\param[in]       char_h: Height of each character cell
+ * \\param[in]       first: First ASCII character in the grid (e.g. ' ')
+ * \\param[in]       count: Number of characters in the grid
+ */
+void mvn_gfx_font(mvn_graphics_t *gfx,
+                  int32_t         sx,
+                  int32_t         sy,
+                  int32_t         char_w,
+                  int32_t         char_h,
+                  char            first,
+                  int32_t         count);
 
+/**
+ * \\brief           Reset to the built-in 4x6 font
+ */
+void mvn_gfx_font_reset(mvn_graphics_t *gfx);
 /* ------------------------------------------------------------------------ */
 /*  Sprites                                                                  */
 /* ------------------------------------------------------------------------ */
@@ -212,6 +359,59 @@ void mvn_gfx_cursor(mvn_graphics_t *gfx, int32_t x, int32_t y);
 /* ------------------------------------------------------------------------ */
 
 void mvn_gfx_flip(mvn_graphics_t *gfx);
+
+/* ------------------------------------------------------------------------ */
+/*  Screen transitions                                                       */
+/* ------------------------------------------------------------------------ */
+
+void mvn_gfx_fade(mvn_graphics_t *gfx, uint8_t color, int32_t frames);
+void mvn_gfx_wipe(mvn_graphics_t *gfx, int32_t direction, uint8_t color, int32_t frames);
+void mvn_gfx_dissolve(mvn_graphics_t *gfx, uint8_t color, int32_t frames);
+bool mvn_gfx_transitioning(mvn_graphics_t *gfx);
+void mvn_gfx_transition_update(mvn_graphics_t *gfx);
+
+/* ------------------------------------------------------------------------ */
+/*  Draw list (sprite batch)                                                 */
+/* ------------------------------------------------------------------------ */
+
+void mvn_gfx_dl_begin(mvn_graphics_t *gfx);
+void mvn_gfx_dl_spr(mvn_graphics_t *gfx,
+                    int32_t         layer,
+                    int32_t         idx,
+                    int32_t         x,
+                    int32_t         y,
+                    int32_t         w,
+                    int32_t         h,
+                    bool            flip_x,
+                    bool            flip_y);
+void mvn_gfx_dl_sspr(mvn_graphics_t *gfx,
+                     int32_t         layer,
+                     int32_t         sx,
+                     int32_t         sy,
+                     int32_t         sw,
+                     int32_t         sh,
+                     int32_t         dx,
+                     int32_t         dy,
+                     int32_t         dw,
+                     int32_t         dh);
+void mvn_gfx_dl_spr_rot(mvn_graphics_t *gfx,
+                        int32_t         layer,
+                        int32_t         idx,
+                        int32_t         x,
+                        int32_t         y,
+                        float           angle,
+                        int32_t         cx,
+                        int32_t         cy);
+void mvn_gfx_dl_spr_affine(mvn_graphics_t *gfx,
+                           int32_t         layer,
+                           int32_t         idx,
+                           int32_t         x,
+                           int32_t         y,
+                           float           origin_x,
+                           float           origin_y,
+                           float           rot_x,
+                           float           rot_y);
+void mvn_gfx_dl_end(mvn_graphics_t *gfx);
 
 /* ------------------------------------------------------------------------ */
 /*  Default palette initialisation                                           */

@@ -6,6 +6,7 @@
 #include "api_common.h"
 #include "../cart.h"
 #include "../mouse.h"
+#include "../audio.h"
 
 /* ------------------------------------------------------------------ */
 /*  Timing                                                             */
@@ -434,6 +435,24 @@ static JSValue js_sys_stat(JSContext *ctx, JSValueConst this_val, int argc, JSVa
     }
 }
 
+/* ------------------------------------------------------------------ */
+/*  Master volume                                                      */
+/* ------------------------------------------------------------------ */
+
+static JSValue js_sys_volume(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+{
+    mvn_console_t *con;
+
+    (void)this_val;
+    con = mvn_api_get_console(ctx);
+
+    if (argc >= 1) {
+        float vol = (float)mvn_api_opt_float(ctx, argc, argv, 0, 1.0);
+        mvn_audio_set_master_volume(con->audio, vol);
+    }
+    return JS_NewFloat64(ctx, (double)mvn_audio_get_master_volume(con->audio));
+}
+
 /* ---- Function list ---------------------------------------------------- */
 
 static JSValue
@@ -479,6 +498,7 @@ static const JSCFunctionListEntry js_sys_funcs[] = {
     JS_CFUNC_DEF("limit", 1, js_sys_limit),
     JS_CFUNC_DEF("stat", 1, js_sys_stat),
     JS_CFUNC_DEF("textInput", 1, js_sys_text_input),
+    JS_CFUNC_DEF("volume", 1, js_sys_volume),
 };
 
 void mvn_sys_api_register(JSContext *ctx, JSValue global)

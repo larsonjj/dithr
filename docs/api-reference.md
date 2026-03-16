@@ -17,18 +17,20 @@ The engine calls three optional global callbacks each frame:
 
 ### Drawing primitives
 
-| Function   | Parameters                           | Returns | Description                        |
-| ---------- | ------------------------------------ | ------- | ---------------------------------- |
-| `cls`      | `col?`                               | —       | Clear the screen. Default colour 0 |
-| `pset`     | `x?, y?, col?`                       | —       | Set a pixel                        |
-| `pget`     | `x?, y?`                             | `int`   | Get the palette index at a pixel   |
-| `line`     | `x0?, y0?, x1?, y1?, col?`           | —       | Draw a line                        |
-| `rect`     | `x0?, y0?, x1?, y1?, col?`           | —       | Draw a rectangle outline           |
-| `rectfill` | `x0?, y0?, x1?, y1?, col?`           | —       | Draw a filled rectangle            |
-| `circ`     | `x?, y?, r?, col?`                   | —       | Circle outline. `r` defaults to 4  |
-| `circfill` | `x?, y?, r?, col?`                   | —       | Filled circle                      |
-| `tri`      | `x0?, y0?, x1?, y1?, x2?, y2?, col?` | —       | Triangle outline                   |
-| `trifill`  | `x0?, y0?, x1?, y1?, x2?, y2?, col?` | —       | Filled triangle                    |
+| Function   | Parameters                           | Returns | Description                                           |
+| ---------- | ------------------------------------ | ------- | ----------------------------------------------------- |
+| `cls`      | `col?`                               | —       | Clear the screen. Default colour 0                    |
+| `pset`     | `x?, y?, col?`                       | —       | Set a pixel                                           |
+| `pget`     | `x?, y?`                             | `int`   | Get the palette index at a pixel                      |
+| `line`     | `x0?, y0?, x1?, y1?, col?`           | —       | Draw a line                                           |
+| `rect`     | `x0?, y0?, x1?, y1?, col?`           | —       | Draw a rectangle outline                              |
+| `rectfill` | `x0?, y0?, x1?, y1?, col?`           | —       | Draw a filled rectangle                               |
+| `circ`     | `x?, y?, r?, col?`                   | —       | Circle outline. `r` defaults to 4                     |
+| `circfill` | `x?, y?, r?, col?`                   | —       | Filled circle                                         |
+| `tri`      | `x0?, y0?, x1?, y1?, x2?, y2?, col?` | —       | Triangle outline                                      |
+| `trifill`  | `x0?, y0?, x1?, y1?, x2?, y2?, col?` | —       | Filled triangle                                       |
+| `poly`     | `pts, col?`                          | —       | Polygon outline from flat `[x0,y0, x1,y1, ...]` array |
+| `polyfill` | `pts, col?`                          | —       | Filled convex polygon (fan-of-triangles)              |
 
 All colour parameters default to the current draw colour (set with
 `gfx.color()`). Omitting a colour passes `-1` internally, which resolves to
@@ -36,9 +38,10 @@ the active colour.
 
 ### Text
 
-| Function | Parameters           | Returns | Description                                                                                      |
-| -------- | -------------------- | ------- | ------------------------------------------------------------------------------------------------ |
-| `print`  | `text, x?, y?, col?` | —       | Print a string. If `x`,`y` are omitted the cursor position is used and advances down by one line |
+| Function | Parameters                                   | Returns | Description                                                                                           |
+| -------- | -------------------------------------------- | ------- | ----------------------------------------------------------------------------------------------------- |
+| `print`  | `text, x?, y?, col?`                         | —       | Print a string. If `x`,`y` are omitted the cursor position is used and advances down by one line      |
+| `font`   | `sx?, sy?, char_w?, char_h?, first?, count?` | —       | Set a custom monospaced font from a sprite sheet region. No arguments resets to the built-in 4×6 font |
 
 ### Sprites
 
@@ -72,6 +75,34 @@ the active colour.
 | `fillp`  | `pattern?`       | —       | Set a 4×4 fill pattern as a 16-bit bitmask (default 0 = solid)          |
 | `color`  | `col?`           | —       | Set the current draw colour (default 7)                                 |
 | `cursor` | `x?, y?`         | —       | Set the text cursor position                                            |
+
+### Screen transitions
+
+Transitions overlay the framebuffer after flip and run for a fixed number of
+frames. Only one transition is active at a time — starting a new one replaces
+the current.
+
+| Function        | Parameters            | Returns | Description                                                         |
+| --------------- | --------------------- | ------- | ------------------------------------------------------------------- |
+| `fade`          | `col?, frames?`       | —       | Fade the screen towards palette colour `col` over `frames` (def 30) |
+| `wipe`          | `dir?, col?, frames?` | —       | Wipe from one edge. Directions: 0=left, 1=right, 2=up, 3=down       |
+| `dissolve`      | `col?, frames?`       | —       | Random pixel dissolve towards `col` over `frames` (def 30)          |
+| `transitioning` |                       | `bool`  | Is a transition currently playing?                                  |
+
+### Draw list (sprite batch)
+
+Queue sprite draws and flush them sorted by layer. Lower layers draw first.
+Use this when you need depth-sorted rendering (e.g. isometric or top-down
+games).
+
+| Function        | Parameters                                               | Returns | Description                               |
+| --------------- | -------------------------------------------------------- | ------- | ----------------------------------------- |
+| `dl_begin`      |                                                          | —       | Start recording draw commands             |
+| `dl_end`        |                                                          | —       | Sort by layer, flush all draws, and clear |
+| `dl_spr`        | `layer, idx, x, y, w?, h?, flip_x?, flip_y?`             | —       | Queue a sprite draw at the given layer    |
+| `dl_sspr`       | `layer, sx, sy, sw, sh, dx, dy, dw, dh`                  | —       | Queue a stretch-blit at the given layer   |
+| `dl_spr_rot`    | `layer, idx, x, y, angle?, cx?, cy?`                     | —       | Queue a rotated sprite draw               |
+| `dl_spr_affine` | `layer, idx, x, y, origin_x?, origin_y?, rot_x?, rot_y?` | —       | Queue an affine sprite draw               |
 
 ---
 
@@ -360,6 +391,12 @@ screen coordinates (Y-down).
 | `fps`            |            | `float` | Current FPS (1 / delta)        |
 | `target_fps`     |            | `int`   | Configured target FPS          |
 | `set_target_fps` | `fps`      | —       | Set target FPS (clamped 1–240) |
+
+### Audio
+
+| Function | Parameters | Returns | Description                                                       |
+| -------- | ---------- | ------- | ----------------------------------------------------------------- |
+| `volume` | `vol?`     | `float` | Get or set master volume (0.0–1.0). Scales all sfx and music gain |
 
 ### Display
 

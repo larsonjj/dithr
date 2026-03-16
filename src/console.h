@@ -56,6 +56,11 @@ extern "C" {
 #ifndef CONSOLE_MAX_CHANNELS
 #define CONSOLE_MAX_CHANNELS 16
 #endif
+
+/* Draw list */
+#ifndef CONSOLE_MAX_DRAW_CMDS
+#define CONSOLE_MAX_DRAW_CMDS 1024
+#endif
 #ifndef CONSOLE_AUDIO_FREQ
 #define CONSOLE_AUDIO_FREQ 44100
 #endif

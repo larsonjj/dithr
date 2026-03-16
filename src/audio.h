@@ -36,6 +36,7 @@ struct mvn_audio {
     MIX_Track *music_track;
 
     float master_volume;
+    float music_volume;
     float channel_volume[CONSOLE_MAX_CHANNELS];
 
     bool initialized;
@@ -60,6 +61,10 @@ void  mvn_mus_stop(mvn_audio_t *aud, int32_t fade_ms);
 void  mvn_mus_volume(mvn_audio_t *aud, float vol);
 float mvn_mus_get_volume(mvn_audio_t *aud);
 bool  mvn_mus_playing(mvn_audio_t *aud);
+
+/* Master volume */
+void  mvn_audio_set_master_volume(mvn_audio_t *aud, float vol);
+float mvn_audio_get_master_volume(mvn_audio_t *aud);
 
 #ifdef __cplusplus
 }

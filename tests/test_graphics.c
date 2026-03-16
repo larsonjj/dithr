@@ -410,6 +410,236 @@ static void test_gfx_reset(void)
 }
 
 /* ------------------------------------------------------------------ */
+/*  Polygon                                                            */
+/* ------------------------------------------------------------------ */
+
+static void test_gfx_poly_outline(void)
+{
+    mvn_graphics_t *gfx = mvn_gfx_create(TW, TH);
+    int32_t pts[] = { 2, 2, 8, 2, 8, 8, 2, 8 };
+
+    mvn_gfx_cls(gfx, 0);
+    mvn_gfx_poly(gfx, pts, 4, 7);
+
+    /* Corners should be drawn */
+    MVN_ASSERT_EQ_INT(mvn_gfx_pget(gfx, 2, 2), 7);
+    MVN_ASSERT_EQ_INT(mvn_gfx_pget(gfx, 8, 2), 7);
+    MVN_ASSERT_EQ_INT(mvn_gfx_pget(gfx, 8, 8), 7);
+    MVN_ASSERT_EQ_INT(mvn_gfx_pget(gfx, 2, 8), 7);
+
+    /* Centre should not be filled */
+    MVN_ASSERT_EQ_INT(mvn_gfx_pget(gfx, 5, 5), 0);
+
+    mvn_gfx_destroy(gfx);
+    MVN_PASS();
+}
+
+static void test_gfx_polyfill(void)
+{
+    mvn_graphics_t *gfx = mvn_gfx_create(TW, TH);
+    int32_t pts[] = { 2, 2, 8, 2, 8, 8, 2, 8 };
+
+    mvn_gfx_cls(gfx, 0);
+    mvn_gfx_polyfill(gfx, pts, 4, 3);
+
+    /* Centre should be filled */
+    MVN_ASSERT_EQ_INT(mvn_gfx_pget(gfx, 5, 5), 3);
+
+    /* Corners should be filled */
+    MVN_ASSERT_EQ_INT(mvn_gfx_pget(gfx, 2, 2), 3);
+
+    mvn_gfx_destroy(gfx);
+    MVN_PASS();
+}
+
+static void test_gfx_poly_degenerate(void)
+{
+    mvn_graphics_t *gfx = mvn_gfx_create(TW, TH);
+    int32_t pts[] = { 0, 0 };
+
+    mvn_gfx_cls(gfx, 0);
+
+    /* Less than 3 vertices — should not crash */
+    mvn_gfx_poly(gfx, pts, 1, 7);
+    mvn_gfx_polyfill(gfx, pts, 2, 7);
+    mvn_gfx_poly(gfx, NULL, 0, 7);
+
+    mvn_gfx_destroy(gfx);
+    MVN_PASS();
+}
+
+/* ------------------------------------------------------------------ */
+/*  Custom font                                                        */
+/* ------------------------------------------------------------------ */
+
+static void test_gfx_font_custom_and_reset(void)
+{
+    mvn_graphics_t *gfx = mvn_gfx_create(TW, TH);
+
+    /* Set custom font */
+    mvn_gfx_font(gfx, 0, 0, 8, 8, ' ', 95);
+    MVN_ASSERT(gfx->custom_font.active);
+    MVN_ASSERT_EQ_INT(gfx->custom_font.char_w, 8);
+    MVN_ASSERT_EQ_INT(gfx->custom_font.char_h, 8);
+    MVN_ASSERT_EQ_INT(gfx->custom_font.first, ' ');
+    MVN_ASSERT_EQ_INT(gfx->custom_font.count, 95);
+
+    /* Reset */
+    mvn_gfx_font_reset(gfx);
+    MVN_ASSERT(!gfx->custom_font.active);
+
+    mvn_gfx_destroy(gfx);
+    MVN_PASS();
+}
+
+/* ------------------------------------------------------------------ */
+/*  Screen transitions                                                 */
+/* ------------------------------------------------------------------ */
+
+static void test_gfx_fade(void)
+{
+    mvn_graphics_t *gfx = mvn_gfx_create(TW, TH);
+
+    MVN_ASSERT(!mvn_gfx_transitioning(gfx));
+
+    mvn_gfx_fade(gfx, 0, 10);
+    MVN_ASSERT(mvn_gfx_transitioning(gfx));
+    MVN_ASSERT_EQ_INT(gfx->transition.type, MVN_TRANS_FADE);
+    MVN_ASSERT_EQ_INT(gfx->transition.duration, 10);
+    MVN_ASSERT_EQ_INT(gfx->transition.color, 0);
+
+    /* Run until completion */
+    mvn_gfx_cls(gfx, 0);
+    mvn_gfx_flip(gfx);
+    for (int i = 0; i < 10; ++i) {
+        mvn_gfx_transition_update(gfx);
+    }
+    MVN_ASSERT(!mvn_gfx_transitioning(gfx));
+
+    mvn_gfx_destroy(gfx);
+    MVN_PASS();
+}
+
+static void test_gfx_wipe(void)
+{
+    mvn_graphics_t *gfx = mvn_gfx_create(TW, TH);
+
+    mvn_gfx_wipe(gfx, MVN_WIPE_LEFT, 1, 5);
+    MVN_ASSERT(mvn_gfx_transitioning(gfx));
+    MVN_ASSERT_EQ_INT(gfx->transition.type, MVN_TRANS_WIPE);
+    MVN_ASSERT_EQ_INT(gfx->transition.direction, MVN_WIPE_LEFT);
+
+    /* Run until completion */
+    mvn_gfx_cls(gfx, 0);
+    mvn_gfx_flip(gfx);
+    for (int i = 0; i < 5; ++i) {
+        mvn_gfx_transition_update(gfx);
+    }
+    MVN_ASSERT(!mvn_gfx_transitioning(gfx));
+
+    mvn_gfx_destroy(gfx);
+    MVN_PASS();
+}
+
+static void test_gfx_dissolve(void)
+{
+    mvn_graphics_t *gfx = mvn_gfx_create(TW, TH);
+
+    mvn_gfx_dissolve(gfx, 2, 8);
+    MVN_ASSERT(mvn_gfx_transitioning(gfx));
+    MVN_ASSERT_EQ_INT(gfx->transition.type, MVN_TRANS_DISSOLVE);
+
+    /* Run until completion */
+    mvn_gfx_cls(gfx, 0);
+    mvn_gfx_flip(gfx);
+    for (int i = 0; i < 8; ++i) {
+        mvn_gfx_transition_update(gfx);
+    }
+    MVN_ASSERT(!mvn_gfx_transitioning(gfx));
+
+    mvn_gfx_destroy(gfx);
+    MVN_PASS();
+}
+
+static void test_gfx_transition_clamp_frames(void)
+{
+    mvn_graphics_t *gfx = mvn_gfx_create(TW, TH);
+
+    /* frames < 1 should be clamped to 1 */
+    mvn_gfx_fade(gfx, 0, 0);
+    MVN_ASSERT_EQ_INT(gfx->transition.duration, 1);
+
+    mvn_gfx_wipe(gfx, 0, 0, -5);
+    MVN_ASSERT_EQ_INT(gfx->transition.duration, 1);
+
+    mvn_gfx_dissolve(gfx, 0, 0);
+    MVN_ASSERT_EQ_INT(gfx->transition.duration, 1);
+
+    mvn_gfx_destroy(gfx);
+    MVN_PASS();
+}
+
+/* ------------------------------------------------------------------ */
+/*  Draw list                                                          */
+/* ------------------------------------------------------------------ */
+
+static void test_gfx_dl_begin_end(void)
+{
+    mvn_graphics_t *gfx = mvn_gfx_create(TW, TH);
+
+    mvn_gfx_dl_begin(gfx);
+    MVN_ASSERT(gfx->draw_list.active);
+    MVN_ASSERT_EQ_INT(gfx->draw_list.count, 0);
+
+    mvn_gfx_dl_end(gfx);
+    MVN_ASSERT(!gfx->draw_list.active);
+
+    mvn_gfx_destroy(gfx);
+    MVN_PASS();
+}
+
+static void test_gfx_dl_queue_and_sort(void)
+{
+    mvn_graphics_t *gfx = mvn_gfx_create(TW, TH);
+
+    mvn_gfx_dl_begin(gfx);
+
+    /* Queue sprites at different layers (higher layer first) */
+    mvn_gfx_dl_spr(gfx, 10, 0, 0, 0, 1, 1, false, false);
+    mvn_gfx_dl_spr(gfx, 1, 0, 0, 0, 1, 1, false, false);
+    mvn_gfx_dl_spr(gfx, 5, 0, 0, 0, 1, 1, false, false);
+    MVN_ASSERT_EQ_INT(gfx->draw_list.count, 3);
+
+    /* dl_end sorts by layer and flushes */
+    mvn_gfx_dl_end(gfx);
+    MVN_ASSERT_EQ_INT(gfx->draw_list.count, 0);
+
+    mvn_gfx_destroy(gfx);
+    MVN_PASS();
+}
+
+static void test_gfx_dl_overflow(void)
+{
+    mvn_graphics_t *gfx = mvn_gfx_create(TW, TH);
+
+    mvn_gfx_dl_begin(gfx);
+
+    /* Fill to capacity */
+    for (int i = 0; i < CONSOLE_MAX_DRAW_CMDS; ++i) {
+        mvn_gfx_dl_spr(gfx, 0, 0, 0, 0, 1, 1, false, false);
+    }
+    MVN_ASSERT_EQ_INT(gfx->draw_list.count, CONSOLE_MAX_DRAW_CMDS);
+
+    /* One more should be silently dropped */
+    mvn_gfx_dl_spr(gfx, 0, 0, 0, 0, 1, 1, false, false);
+    MVN_ASSERT_EQ_INT(gfx->draw_list.count, CONSOLE_MAX_DRAW_CMDS);
+
+    mvn_gfx_dl_end(gfx);
+    mvn_gfx_destroy(gfx);
+    MVN_PASS();
+}
+
+/* ------------------------------------------------------------------ */
 /*  Main                                                               */
 /* ------------------------------------------------------------------ */
 
@@ -439,6 +669,19 @@ int main(int argc, char *argv[])
     test_gfx_fill_pattern();
     test_gfx_flip();
     test_gfx_reset();
+
+    /* Phase 10 */
+    test_gfx_poly_outline();
+    test_gfx_polyfill();
+    test_gfx_poly_degenerate();
+    test_gfx_font_custom_and_reset();
+    test_gfx_fade();
+    test_gfx_wipe();
+    test_gfx_dissolve();
+    test_gfx_transition_clamp_frames();
+    test_gfx_dl_begin_end();
+    test_gfx_dl_queue_and_sort();
+    test_gfx_dl_overflow();
 
     printf("All graphics tests passed.\n");
     return 0;

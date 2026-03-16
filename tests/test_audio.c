@@ -254,6 +254,35 @@ static void test_audio_sfx_stop_all(void)
     MVN_PASS();
 }
 
+static void test_audio_master_volume(void)
+{
+    mvn_audio_t *aud;
+
+    aud = prv_try_create();
+    if (aud == NULL) {
+        printf("  SKIP %s (no audio device)\n", __func__);
+        return;
+    }
+
+    /* Default master volume should be 1.0 */
+    MVN_ASSERT_NEAR(mvn_audio_get_master_volume(aud), 1.0f, 0.001);
+
+    /* Set to 0.5 */
+    mvn_audio_set_master_volume(aud, 0.5f);
+    MVN_ASSERT_NEAR(mvn_audio_get_master_volume(aud), 0.5f, 0.001);
+
+    /* Clamp below 0 */
+    mvn_audio_set_master_volume(aud, -0.5f);
+    MVN_ASSERT_NEAR(mvn_audio_get_master_volume(aud), 0.0f, 0.001);
+
+    /* Clamp above 1 */
+    mvn_audio_set_master_volume(aud, 2.0f);
+    MVN_ASSERT_NEAR(mvn_audio_get_master_volume(aud), 1.0f, 0.001);
+
+    mvn_audio_destroy(aud);
+    MVN_PASS();
+}
+
 /* ------------------------------------------------------------------ */
 /*  Runner                                                             */
 /* ------------------------------------------------------------------ */
@@ -286,6 +315,7 @@ int main(void)
     test_audio_sfx_play_invalid_channel();
     test_audio_music_not_playing();
     test_audio_sfx_stop_all();
+    test_audio_master_volume();
 
     printf("test_audio: all passed\n");
     return 0;

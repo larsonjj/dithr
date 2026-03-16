@@ -25,6 +25,7 @@ mvn_audio_t *mvn_audio_create(int32_t channels, int32_t freq, int32_t buffer)
     aud->frequency     = freq;
     aud->buffer_size   = buffer;
     aud->master_volume = 1.0f;
+    aud->music_volume  = 1.0f;
 
     for (int32_t idx = 0; idx < CONSOLE_MAX_CHANNELS; ++idx) {
         aud->channel_volume[idx] = 1.0f;
@@ -191,7 +192,7 @@ void mvn_sfx_volume(mvn_audio_t *aud, float vol, int32_t channel)
     if (channel >= 0 && channel < CONSOLE_MAX_CHANNELS) {
         aud->channel_volume[channel] = vol;
         if (aud->sfx_tracks[channel] != NULL) {
-            MIX_SetTrackGain(aud->sfx_tracks[channel], vol);
+            MIX_SetTrackGain(aud->sfx_tracks[channel], vol * aud->master_volume);
         }
     }
 }
@@ -302,9 +303,9 @@ void mvn_mus_volume(mvn_audio_t *aud, float vol)
     if (aud == NULL) {
         return;
     }
-    aud->master_volume = vol;
+    aud->music_volume = vol;
     if (aud->music_track != NULL) {
-        MIX_SetTrackGain(aud->music_track, vol);
+        MIX_SetTrackGain(aud->music_track, vol * aud->master_volume);
     }
 }
 
@@ -313,7 +314,7 @@ float mvn_mus_get_volume(mvn_audio_t *aud)
     if (aud == NULL) {
         return 0.0f;
     }
-    return aud->master_volume;
+    return aud->music_volume;
 }
 
 bool mvn_mus_playing(mvn_audio_t *aud)
@@ -322,4 +323,42 @@ bool mvn_mus_playing(mvn_audio_t *aud)
         return false;
     }
     return MIX_TrackPlaying(aud->music_track);
+}
+
+/* ------------------------------------------------------------------ */
+/*  Master volume                                                      */
+/* ------------------------------------------------------------------ */
+
+void mvn_audio_set_master_volume(mvn_audio_t *aud, float vol)
+{
+    if (aud == NULL) {
+        return;
+    }
+    if (vol < 0.0f) {
+        vol = 0.0f;
+    }
+    if (vol > 1.0f) {
+        vol = 1.0f;
+    }
+    aud->master_volume = vol;
+
+    /* Re-apply gain to all SFX channels */
+    for (int32_t idx = 0; idx < CONSOLE_MAX_CHANNELS; ++idx) {
+        if (aud->sfx_tracks[idx] != NULL) {
+            MIX_SetTrackGain(aud->sfx_tracks[idx], aud->channel_volume[idx] * vol);
+        }
+    }
+
+    /* Re-apply gain to music track */
+    if (aud->music_track != NULL) {
+        MIX_SetTrackGain(aud->music_track, aud->music_volume * vol);
+    }
+}
+
+float mvn_audio_get_master_volume(mvn_audio_t *aud)
+{
+    if (aud == NULL) {
+        return 0.0f;
+    }
+    return aud->master_volume;
 }

@@ -442,6 +442,7 @@ void mvn_console_iterate(mvn_console_t *con)
 
     /* PostFX */
     mvn_gfx_flip(con->graphics);
+    mvn_gfx_transition_update(con->graphics);
     mvn_postfx_apply(con->postfx, con->graphics->pixels, con->fb_width, con->fb_height);
 
     /* Upload to texture and present */
