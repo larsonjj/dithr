@@ -22,6 +22,83 @@
       "environment": [],
       "console": "integratedTerminal",
       "preLaunchTask": "Build (Debug)"
+    },
+    {
+      "name": "Audio Demo",
+      "type": "cppvsdbg",
+      "request": "launch",
+      "program": "${workspaceFolder}/build/debug/Debug/mvngin.exe",
+      "args": ["${workspaceFolder}/examples/audio_demo/cart.json"],
+      "cwd": "${workspaceFolder}",
+      "environment": [],
+      "console": "integratedTerminal",
+      "preLaunchTask": "Build (Debug)"
+    },
+    {
+      "name": "Input Demo",
+      "type": "cppvsdbg",
+      "request": "launch",
+      "program": "${workspaceFolder}/build/debug/Debug/mvngin.exe",
+      "args": ["${workspaceFolder}/examples/input_demo/cart.json"],
+      "cwd": "${workspaceFolder}",
+      "environment": [],
+      "console": "integratedTerminal",
+      "preLaunchTask": "Build (Debug)"
+    },
+    {
+      "name": "Persistence",
+      "type": "cppvsdbg",
+      "request": "launch",
+      "program": "${workspaceFolder}/build/debug/Debug/mvngin.exe",
+      "args": ["${workspaceFolder}/examples/persistence/cart.json"],
+      "cwd": "${workspaceFolder}",
+      "environment": [],
+      "console": "integratedTerminal",
+      "preLaunchTask": "Build (Debug)"
+    },
+    {
+      "name": "Platformer",
+      "type": "cppvsdbg",
+      "request": "launch",
+      "program": "${workspaceFolder}/build/debug/Debug/mvngin.exe",
+      "args": ["${workspaceFolder}/examples/platformer/cart.json"],
+      "cwd": "${workspaceFolder}",
+      "environment": [],
+      "console": "integratedTerminal",
+      "preLaunchTask": "Build (Debug)"
+    },
+    {
+      "name": "PostFX Demo",
+      "type": "cppvsdbg",
+      "request": "launch",
+      "program": "${workspaceFolder}/build/debug/Debug/mvngin.exe",
+      "args": ["${workspaceFolder}/examples/postfx_demo/cart.json"],
+      "cwd": "${workspaceFolder}",
+      "environment": [],
+      "console": "integratedTerminal",
+      "preLaunchTask": "Build (Debug)"
+    },
+    {
+      "name": "Sprite Animation",
+      "type": "cppvsdbg",
+      "request": "launch",
+      "program": "${workspaceFolder}/build/debug/Debug/mvngin.exe",
+      "args": ["${workspaceFolder}/examples/sprite_animation/cart.json"],
+      "cwd": "${workspaceFolder}",
+      "environment": [],
+      "console": "integratedTerminal",
+      "preLaunchTask": "Build (Debug)"
+    },
+    {
+      "name": "Tilemap",
+      "type": "cppvsdbg",
+      "request": "launch",
+      "program": "${workspaceFolder}/build/debug/Debug/mvngin.exe",
+      "args": ["${workspaceFolder}/examples/tilemap/cart.json"],
+      "cwd": "${workspaceFolder}",
+      "environment": [],
+      "console": "integratedTerminal",
+      "preLaunchTask": "Build (Debug)"
     }
   ]
 }

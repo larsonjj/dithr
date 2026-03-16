@@ -1,0 +1,29 @@
+{
+  "meta": {
+    "title": "PostFX Demo",
+    "author": "mvngin",
+    "version": "1.0.0",
+    "description": "Demonstrates the post-processing pipeline: CRT, scanlines, bloom, aberration"
+  },
+  "display": {
+    "width": 320,
+    "height": 180,
+    "scale": 3
+  },
+  "timing": {
+    "fps": 60
+  },
+  "sprites": {
+    "sheet": "assets/sprites/spritesheet.png",
+    "tileW": 8,
+    "tileH": 8
+  },
+  "audio": {
+    "channels": 8
+  },
+  "input": {
+    "default_mappings": {}
+  },
+  "code": "src/main.js",
+  "maps": []
+}

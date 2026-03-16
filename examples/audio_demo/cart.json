@@ -1,0 +1,29 @@
+{
+  "meta": {
+    "title": "Audio Demo",
+    "author": "mvngin",
+    "version": "1.0.0",
+    "description": "Demonstrates SFX playback, music, volume control, and fade"
+  },
+  "display": {
+    "width": 320,
+    "height": 180,
+    "scale": 3
+  },
+  "timing": {
+    "fps": 60
+  },
+  "sprites": {
+    "sheet": "assets/sprites/spritesheet.png",
+    "tileW": 8,
+    "tileH": 8
+  },
+  "audio": {
+    "channels": 8
+  },
+  "input": {
+    "default_mappings": {}
+  },
+  "code": "src/main.js",
+  "maps": []
+}

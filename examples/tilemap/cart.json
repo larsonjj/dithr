@@ -1,0 +1,34 @@
+{
+  "meta": {
+    "title": "Tilemap Demo",
+    "author": "mvngin",
+    "version": "1.0.0",
+    "description": "Demonstrates tile map drawing, camera scrolling, and tile queries"
+  },
+  "display": {
+    "width": 320,
+    "height": 180,
+    "scale": 3
+  },
+  "timing": {
+    "fps": 60
+  },
+  "sprites": {
+    "sheet": "assets/sprites/spritesheet.png",
+    "tileW": 8,
+    "tileH": 8
+  },
+  "audio": {
+    "channels": 8
+  },
+  "input": {
+    "default_mappings": {
+      "left": ["KEY_LEFT", "KEY_A", "PAD_LEFT"],
+      "right": ["KEY_RIGHT", "KEY_D", "PAD_RIGHT"],
+      "up": ["KEY_UP", "KEY_W", "PAD_UP"],
+      "down": ["KEY_DOWN", "KEY_S", "PAD_DOWN"]
+    }
+  },
+  "code": "src/main.js",
+  "maps": []
+}

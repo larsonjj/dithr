@@ -52,7 +52,17 @@
       "id": "wasmCart",
       "type": "pickString",
       "description": "Select cart to embed in WASM build",
-      "options": ["", "${workspaceFolder}/examples/hello_world"],
+      "options": [
+        "",
+        "${workspaceFolder}/examples/hello_world",
+        "${workspaceFolder}/examples/sprite_animation",
+        "${workspaceFolder}/examples/input_demo",
+        "${workspaceFolder}/examples/tilemap",
+        "${workspaceFolder}/examples/audio_demo",
+        "${workspaceFolder}/examples/postfx_demo",
+        "${workspaceFolder}/examples/persistence",
+        "${workspaceFolder}/examples/platformer"
+      ],
       "default": ""
     }
   ]
