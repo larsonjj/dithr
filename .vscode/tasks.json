@@ -25,6 +25,29 @@
       "dependsOn": "Build (Debug)"
     },
     {
+      "label": "Configure (Release)",
+      "type": "shell",
+      "command": "cmake --preset release",
+      "problemMatcher": []
+    },
+    {
+      "label": "Build (Release)",
+      "type": "shell",
+      "command": "cmake --build build/release --config Release",
+      "group": "build",
+      "problemMatcher": "$msCompile",
+      "dependsOn": "Configure (Release)"
+    },
+    {
+      "label": "Test (Release)",
+      "type": "shell",
+      "command": "ctest --output-on-failure -C Release",
+      "options": { "cwd": "${workspaceFolder}/build/release" },
+      "group": "test",
+      "problemMatcher": [],
+      "dependsOn": "Build (Release)"
+    },
+    {
       "label": "WASM: Build",
       "type": "shell",
       "command": "cmake --build build/wasm",

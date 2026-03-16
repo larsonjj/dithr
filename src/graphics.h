@@ -358,6 +358,7 @@ void mvn_gfx_cursor(mvn_graphics_t *gfx, int32_t x, int32_t y);
 /*  Flip — convert palette framebuffer to RGBA for SDL texture               */
 /* ------------------------------------------------------------------------ */
 
+void mvn_gfx_flip_to(mvn_graphics_t *gfx, uint32_t *dst);
 void mvn_gfx_flip(mvn_graphics_t *gfx);
 
 /* ------------------------------------------------------------------------ */
@@ -368,6 +369,7 @@ void mvn_gfx_fade(mvn_graphics_t *gfx, uint8_t color, int32_t frames);
 void mvn_gfx_wipe(mvn_graphics_t *gfx, int32_t direction, uint8_t color, int32_t frames);
 void mvn_gfx_dissolve(mvn_graphics_t *gfx, uint8_t color, int32_t frames);
 bool mvn_gfx_transitioning(mvn_graphics_t *gfx);
+void mvn_gfx_transition_update_buf(mvn_graphics_t *gfx, uint32_t *pixels);
 void mvn_gfx_transition_update(mvn_graphics_t *gfx);
 
 /* ------------------------------------------------------------------------ */

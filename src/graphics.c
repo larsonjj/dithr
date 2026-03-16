@@ -1139,7 +1139,7 @@ static uint32_t prv_hash_pixel(int32_t x, int32_t y, int32_t seed)
     return h;
 }
 
-void mvn_gfx_transition_update(mvn_graphics_t *gfx)
+void mvn_gfx_transition_update_buf(mvn_graphics_t *gfx, uint32_t *pixels)
 {
     mvn_transition_t *tr;
     float             t;
@@ -1179,7 +1179,7 @@ void mvn_gfx_transition_update(mvn_graphics_t *gfx)
                 int32_t  rg;
                 int32_t  rb;
 
-                src = gfx->pixels[idx];
+                src = pixels[idx];
                 sr  = (int32_t)((src >> 24) & 0xFF);
                 sg  = (int32_t)((src >> 16) & 0xFF);
                 sb  = (int32_t)((src >> 8) & 0xFF);
@@ -1188,7 +1188,7 @@ void mvn_gfx_transition_update(mvn_graphics_t *gfx)
                 rg = sg + (int32_t)((float)(tg_val - sg) * t);
                 rb = sb + (int32_t)((float)(tb_val - sb) * t);
 
-                gfx->pixels[idx] =
+                pixels[idx] =
                     ((uint32_t)rr << 24) | ((uint32_t)rg << 16) | ((uint32_t)rb << 8) | 0xFF;
             }
             break;
@@ -1206,7 +1206,7 @@ void mvn_gfx_transition_update(mvn_graphics_t *gfx)
                     limit = (int32_t)((float)gfx->width * t);
                     for (int32_t y = 0; y < gfx->height; ++y) {
                         for (int32_t x = 0; x < limit; ++x) {
-                            gfx->pixels[y * gfx->width + x] = col_rgba;
+                            pixels[y * gfx->width + x] = col_rgba;
                         }
                     }
                     break;
@@ -1214,7 +1214,7 @@ void mvn_gfx_transition_update(mvn_graphics_t *gfx)
                     limit = gfx->width - (int32_t)((float)gfx->width * t);
                     for (int32_t y = 0; y < gfx->height; ++y) {
                         for (int32_t x = limit; x < gfx->width; ++x) {
-                            gfx->pixels[y * gfx->width + x] = col_rgba;
+                            pixels[y * gfx->width + x] = col_rgba;
                         }
                     }
                     break;
@@ -1222,7 +1222,7 @@ void mvn_gfx_transition_update(mvn_graphics_t *gfx)
                     limit = (int32_t)((float)gfx->height * t);
                     for (int32_t y = 0; y < limit; ++y) {
                         for (int32_t x = 0; x < gfx->width; ++x) {
-                            gfx->pixels[y * gfx->width + x] = col_rgba;
+                            pixels[y * gfx->width + x] = col_rgba;
                         }
                     }
                     break;
@@ -1230,7 +1230,7 @@ void mvn_gfx_transition_update(mvn_graphics_t *gfx)
                     limit = gfx->height - (int32_t)((float)gfx->height * t);
                     for (int32_t y = limit; y < gfx->height; ++y) {
                         for (int32_t x = 0; x < gfx->width; ++x) {
-                            gfx->pixels[y * gfx->width + x] = col_rgba;
+                            pixels[y * gfx->width + x] = col_rgba;
                         }
                     }
                     break;
@@ -1249,7 +1249,7 @@ void mvn_gfx_transition_update(mvn_graphics_t *gfx)
             for (int32_t y = 0; y < gfx->height; ++y) {
                 for (int32_t x = 0; x < gfx->width; ++x) {
                     if (prv_hash_pixel(x, y, 42) <= threshold) {
-                        gfx->pixels[y * gfx->width + x] = col_rgba;
+                        pixels[y * gfx->width + x] = col_rgba;
                     }
                 }
             }
@@ -1264,6 +1264,11 @@ void mvn_gfx_transition_update(mvn_graphics_t *gfx)
     if (tr->frame >= tr->duration) {
         tr->type = MVN_TRANS_NONE;
     }
+}
+
+void mvn_gfx_transition_update(mvn_graphics_t *gfx)
+{
+    mvn_gfx_transition_update_buf(gfx, gfx->pixels);
 }
 
 /* ------------------------------------------------------------------ */
@@ -1474,7 +1479,7 @@ void mvn_gfx_dl_end(mvn_graphics_t *gfx)
 /*  Flip — palette framebuffer → RGBA                                  */
 /* ------------------------------------------------------------------ */
 
-void mvn_gfx_flip(mvn_graphics_t *gfx)
+void mvn_gfx_flip_to(mvn_graphics_t *gfx, uint32_t *dst)
 {
     int32_t total;
 
@@ -1482,10 +1487,15 @@ void mvn_gfx_flip(mvn_graphics_t *gfx)
     for (int32_t idx = 0; idx < total; ++idx) {
         uint8_t pal_idx;
 
-        pal_idx          = gfx->framebuffer[idx];
-        pal_idx          = gfx->screen_pal[pal_idx];
-        gfx->pixels[idx] = gfx->colors[pal_idx];
+        pal_idx  = gfx->framebuffer[idx];
+        pal_idx  = gfx->screen_pal[pal_idx];
+        dst[idx] = gfx->colors[pal_idx];
     }
+}
+
+void mvn_gfx_flip(mvn_graphics_t *gfx)
+{
+    mvn_gfx_flip_to(gfx, gfx->pixels);
 }
 
 /* ------------------------------------------------------------------ */

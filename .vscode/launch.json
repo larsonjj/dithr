@@ -99,6 +99,35 @@
       "environment": [],
       "console": "integratedTerminal",
       "preLaunchTask": "Build (Debug)"
+    },
+    {
+      "name": "Release",
+      "type": "cppvsdbg",
+      "request": "launch",
+      "program": "${workspaceFolder}/build/release/Release/mvngin.exe",
+      "args": ["${input:cartPath}"],
+      "cwd": "${workspaceFolder}",
+      "environment": [],
+      "console": "integratedTerminal",
+      "preLaunchTask": "Build (Release)"
+    }
+  ],
+  "inputs": [
+    {
+      "id": "cartPath",
+      "type": "pickString",
+      "description": "Select cart to run",
+      "options": [
+        "${workspaceFolder}/examples/hello_world/cart.json",
+        "${workspaceFolder}/examples/sprite_animation/cart.json",
+        "${workspaceFolder}/examples/input_demo/cart.json",
+        "${workspaceFolder}/examples/tilemap/cart.json",
+        "${workspaceFolder}/examples/audio_demo/cart.json",
+        "${workspaceFolder}/examples/postfx_demo/cart.json",
+        "${workspaceFolder}/examples/persistence/cart.json",
+        "${workspaceFolder}/examples/platformer/cart.json"
+      ],
+      "default": "${workspaceFolder}/examples/hello_world/cart.json"
     }
   ]
 }

@@ -440,16 +440,34 @@ void mvn_console_iterate(mvn_console_t *con)
     /* JS _draw */
     mvn_runtime_call(con->runtime, con->runtime->atom_draw);
 
-    /* PostFX */
-    mvn_gfx_flip(con->graphics);
-    mvn_gfx_transition_update(con->graphics);
-    mvn_postfx_apply(con->postfx, con->graphics->pixels, con->fb_width, con->fb_height);
+    /* Flip + transition + postfx directly into the streaming texture */
+    {
+        void   *locked;
+        int     pitch;
+        int32_t row_bytes;
 
-    /* Upload to texture and present */
-    SDL_UpdateTexture(con->screen_tex,
-                      NULL,
-                      con->graphics->pixels,
-                      con->fb_width * (int32_t)sizeof(uint32_t));
+        row_bytes = con->fb_width * (int32_t)sizeof(uint32_t);
+        SDL_LockTexture(con->screen_tex, NULL, &locked, &pitch);
+        if (pitch == row_bytes) {
+            mvn_gfx_flip_to(con->graphics, (uint32_t *)locked);
+            mvn_gfx_transition_update_buf(con->graphics, (uint32_t *)locked);
+            mvn_postfx_apply(con->postfx, (uint32_t *)locked,
+                             con->fb_width, con->fb_height);
+        } else {
+            mvn_gfx_flip(con->graphics);
+            mvn_gfx_transition_update(con->graphics);
+            mvn_postfx_apply(con->postfx, con->graphics->pixels,
+                             con->fb_width, con->fb_height);
+            for (int32_t y = 0; y < con->fb_height; ++y) {
+                SDL_memcpy((uint8_t *)locked + y * pitch,
+                           con->graphics->pixels + y * con->fb_width,
+                           (size_t)row_bytes);
+            }
+        }
+        SDL_UnlockTexture(con->screen_tex);
+    }
+
+    /* Present */
     SDL_RenderClear(con->renderer);
     SDL_RenderTexture(con->renderer, con->screen_tex, NULL, NULL);
     SDL_RenderPresent(con->renderer);
@@ -608,9 +626,25 @@ static void prv_render_pause_overlay(mvn_console_t *con)
     mvn_gfx_print(gfx, "PAUSED", center_x, center_y, 7);
 
     /* Upload to screen */
-    mvn_gfx_flip(gfx);
-    SDL_UpdateTexture(
-        con->screen_tex, NULL, gfx->pixels, con->fb_width * (int32_t)sizeof(uint32_t));
+    {
+        void   *locked;
+        int     pitch;
+        int32_t row_bytes;
+
+        row_bytes = con->fb_width * (int32_t)sizeof(uint32_t);
+        SDL_LockTexture(con->screen_tex, NULL, &locked, &pitch);
+        if (pitch == row_bytes) {
+            mvn_gfx_flip_to(gfx, (uint32_t *)locked);
+        } else {
+            mvn_gfx_flip(gfx);
+            for (int32_t y = 0; y < con->fb_height; ++y) {
+                SDL_memcpy((uint8_t *)locked + y * pitch,
+                           gfx->pixels + y * con->fb_width,
+                           (size_t)row_bytes);
+            }
+        }
+        SDL_UnlockTexture(con->screen_tex);
+    }
     SDL_RenderClear(con->renderer);
     SDL_RenderTexture(con->renderer, con->screen_tex, NULL, NULL);
     SDL_RenderPresent(con->renderer);
@@ -633,9 +667,25 @@ static void prv_render_error_overlay(mvn_console_t *con)
     mvn_gfx_print(gfx, "RUNTIME ERROR", 2, 2, 7);
     mvn_gfx_print(gfx, con->runtime->error_msg, 2, 16, 7);
 
-    mvn_gfx_flip(gfx);
-    SDL_UpdateTexture(
-        con->screen_tex, NULL, gfx->pixels, con->fb_width * (int32_t)sizeof(uint32_t));
+    {
+        void   *locked;
+        int     pitch;
+        int32_t row_bytes;
+
+        row_bytes = con->fb_width * (int32_t)sizeof(uint32_t);
+        SDL_LockTexture(con->screen_tex, NULL, &locked, &pitch);
+        if (pitch == row_bytes) {
+            mvn_gfx_flip_to(gfx, (uint32_t *)locked);
+        } else {
+            mvn_gfx_flip(gfx);
+            for (int32_t y = 0; y < con->fb_height; ++y) {
+                SDL_memcpy((uint8_t *)locked + y * pitch,
+                           gfx->pixels + y * con->fb_width,
+                           (size_t)row_bytes);
+            }
+        }
+        SDL_UnlockTexture(con->screen_tex);
+    }
     SDL_RenderClear(con->renderer);
     SDL_RenderTexture(con->renderer, con->screen_tex, NULL, NULL);
     SDL_RenderPresent(con->renderer);
