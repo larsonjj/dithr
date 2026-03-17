@@ -17,9 +17,9 @@ var SPR_JUMP = 284;
 var SPR_ENEMY_IDLE = 320;
 var SPR_ENEMY_WALK = [321, 322, 323];
 
-var SPR_GROUND_L = 290; // ground left wall
-var SPR_GROUND_M = [270, 271, 272]; // ground top variants
-var SPR_GROUND_R = 292; // ground right wall
+var SPR_GROUND_L = 270; // ground left wall
+var SPR_GROUND_M = [271, 271, 271]; // ground top variants
+var SPR_GROUND_R = 272; // ground right wall
 
 var SPR_COIN = 1;
 var SPR_COIN_BIG = 2;
