@@ -174,6 +174,11 @@ mvn_console_t *mvn_console_create(const char *cart_path)
     /* --- Input subsystems --- */
     con->keys     = mvn_key_create();
     con->mouse    = mvn_mouse_create();
+
+    /* Ensure gamepad subsystem is initialised (SDL callbacks only auto-init EVENTS) */
+    if (!SDL_WasInit(SDL_INIT_GAMEPAD)) {
+        SDL_InitSubSystem(SDL_INIT_GAMEPAD);
+    }
     con->gamepads = mvn_gamepad_create();
     con->input    = mvn_input_create();
 
@@ -325,7 +330,9 @@ void mvn_console_event(mvn_console_t *con, SDL_Event *event)
 
         case SDL_EVENT_MOUSE_BUTTON_DOWN:
             if (event->button.button >= 1 && event->button.button <= MVN_MOUSE_BTN_COUNT) {
-                con->mouse->btn_current[event->button.button - 1] = true;
+                int idx = event->button.button - 1;
+                con->mouse->btn_current[idx] = true;
+                con->mouse->btn_pressed[idx] = true;
             }
             break;
 
@@ -346,6 +353,21 @@ void mvn_console_event(mvn_console_t *con, SDL_Event *event)
 
         case SDL_EVENT_GAMEPAD_REMOVED:
             mvn_gamepad_on_removed(con->gamepads, event->gdevice.which);
+            break;
+
+        case SDL_EVENT_GAMEPAD_BUTTON_DOWN:
+            mvn_gamepad_on_button(con->gamepads, event->gbutton.which,
+                                  event->gbutton.button, true);
+            break;
+
+        case SDL_EVENT_GAMEPAD_BUTTON_UP:
+            mvn_gamepad_on_button(con->gamepads, event->gbutton.which,
+                                  event->gbutton.button, false);
+            break;
+
+        case SDL_EVENT_GAMEPAD_AXIS_MOTION:
+            mvn_gamepad_on_axis(con->gamepads, event->gaxis.which,
+                                event->gaxis.axis, event->gaxis.value);
             break;
 
         case SDL_EVENT_WINDOW_FOCUS_LOST:
@@ -404,12 +426,6 @@ void mvn_console_iterate(mvn_console_t *con)
 
     /* Mark start of a new frame */
     con->new_frame = true;
-
-    /* Reset per-frame mouse deltas at the start of each frame */
-    con->mouse->dx      = 0.0f;
-    con->mouse->dy      = 0.0f;
-    con->mouse->wheel_x = 0.0f;
-    con->mouse->wheel   = 0.0f;
 
     if (con->paused) {
         prv_render_pause_overlay(con);
@@ -473,6 +489,12 @@ void mvn_console_iterate(mvn_console_t *con)
        edge detection (current && !previous) is visible during the frame. */
     mvn_key_update(con->keys);
     mvn_mouse_update(con->mouse);
+
+    /* Reset per-frame mouse deltas after JS has consumed them */
+    con->mouse->dx      = 0.0f;
+    con->mouse->dy      = 0.0f;
+    con->mouse->wheel_x = 0.0f;
+    con->mouse->wheel   = 0.0f;
     mvn_gamepad_update(con->gamepads);
     mvn_input_update(con->input, con->keys, con->gamepads);
 

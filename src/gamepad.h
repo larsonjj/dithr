@@ -26,6 +26,7 @@ typedef struct mvn_gamepad {
 
     bool  btn_current[MVN_PAD_BTN_COUNT];
     bool  btn_previous[MVN_PAD_BTN_COUNT];
+    bool  btn_pressed[MVN_PAD_BTN_COUNT];
     float axes[MVN_PAD_AXIS_COUNT];
 
     float deadzone;
@@ -48,6 +49,10 @@ void                 mvn_gamepad_update(mvn_gamepad_state_t *gp);
 /* Hotplug */
 void mvn_gamepad_on_added(mvn_gamepad_state_t *gp, SDL_JoystickID id);
 void mvn_gamepad_on_removed(mvn_gamepad_state_t *gp, SDL_JoystickID id);
+void mvn_gamepad_on_button(mvn_gamepad_state_t *gp, SDL_JoystickID id,
+                          SDL_GamepadButton btn, bool down);
+void mvn_gamepad_on_axis(mvn_gamepad_state_t *gp, SDL_JoystickID id,
+                        SDL_GamepadAxis axis, int16_t value);
 
 /* Queries */
 bool        mvn_gamepad_btn(mvn_gamepad_state_t *gp, mvn_pad_btn_t b, int32_t index);

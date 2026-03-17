@@ -62,6 +62,7 @@ void mvn_key_api_register(JSContext *ctx, JSValue global)
     JS_SetPropertyStr(ctx, ns, "D", JS_NewInt32(ctx, MVN_KEY_D));
     JS_SetPropertyStr(ctx, ns, "E", JS_NewInt32(ctx, MVN_KEY_E));
     JS_SetPropertyStr(ctx, ns, "F", JS_NewInt32(ctx, MVN_KEY_F));
+    JS_SetPropertyStr(ctx, ns, "S", JS_NewInt32(ctx, MVN_KEY_S));
     JS_SetPropertyStr(ctx, ns, "W", JS_NewInt32(ctx, MVN_KEY_W));
     JS_SetPropertyStr(ctx, ns, "F1", JS_NewInt32(ctx, MVN_KEY_F1));
     JS_SetPropertyStr(ctx, ns, "F2", JS_NewInt32(ctx, MVN_KEY_F2));

@@ -73,6 +73,7 @@ static void test_mouse_btnp(void)
 
     /* Frame 1: press left */
     mouse->btn_current[MVN_MOUSE_LEFT] = true;
+    mouse->btn_pressed[MVN_MOUSE_LEFT] = true;
     MVN_ASSERT(mvn_mouse_btnp(mouse, MVN_MOUSE_LEFT));
 
     /* Frame 2: held */
@@ -86,6 +87,7 @@ static void test_mouse_btnp(void)
 
     mvn_mouse_update(mouse);
     mouse->btn_current[MVN_MOUSE_LEFT] = true;
+    mouse->btn_pressed[MVN_MOUSE_LEFT] = true;
     MVN_ASSERT(mvn_mouse_btnp(mouse, MVN_MOUSE_LEFT));
 
     mvn_mouse_destroy(mouse);

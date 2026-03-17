@@ -98,40 +98,16 @@ void mvn_gamepad_update(mvn_gamepad_state_t *gp)
             continue;
         }
 
-        /* Save previous state */
+        /* Save previous state and clear press latches */
         SDL_memcpy(pad->btn_previous, pad->btn_current, sizeof(pad->btn_current));
+        SDL_memset(pad->btn_pressed, 0, sizeof(pad->btn_pressed));
 
-        /* Poll buttons */
-        for (int32_t btn = 0; btn < SDL_GAMEPAD_BUTTON_COUNT; ++btn) {
-            mvn_pad_btn_t mapped;
-
-            mapped = prv_map_button((SDL_GamepadButton)btn);
-            if (mapped < MVN_PAD_BTN_COUNT) {
-                pad->btn_current[mapped] =
-                    SDL_GetGamepadButton(pad->handle, (SDL_GamepadButton)btn);
-            }
-        }
-
-        /* Poll axes */
+        /* Apply deadzone to axes */
         {
             float dz;
 
             dz = pad->deadzone;
 
-            pad->axes[MVN_PAD_AXIS_LX] =
-                (float)SDL_GetGamepadAxis(pad->handle, SDL_GAMEPAD_AXIS_LEFTX) / 32767.0f;
-            pad->axes[MVN_PAD_AXIS_LY] =
-                (float)SDL_GetGamepadAxis(pad->handle, SDL_GAMEPAD_AXIS_LEFTY) / 32767.0f;
-            pad->axes[MVN_PAD_AXIS_RX] =
-                (float)SDL_GetGamepadAxis(pad->handle, SDL_GAMEPAD_AXIS_RIGHTX) / 32767.0f;
-            pad->axes[MVN_PAD_AXIS_RY] =
-                (float)SDL_GetGamepadAxis(pad->handle, SDL_GAMEPAD_AXIS_RIGHTY) / 32767.0f;
-            pad->axes[MVN_PAD_AXIS_L2] =
-                (float)SDL_GetGamepadAxis(pad->handle, SDL_GAMEPAD_AXIS_LEFT_TRIGGER) / 32767.0f;
-            pad->axes[MVN_PAD_AXIS_R2] =
-                (float)SDL_GetGamepadAxis(pad->handle, SDL_GAMEPAD_AXIS_RIGHT_TRIGGER) / 32767.0f;
-
-            /* Apply deadzone */
             for (int32_t a = 0; a < MVN_PAD_AXIS_COUNT; ++a) {
                 if (fabsf(pad->axes[a]) < dz) {
                     pad->axes[a] = 0.0f;
@@ -206,6 +182,58 @@ void mvn_gamepad_on_removed(mvn_gamepad_state_t *gp, SDL_JoystickID id)
     }
 }
 
+void mvn_gamepad_on_button(mvn_gamepad_state_t *gp, SDL_JoystickID id,
+                           SDL_GamepadButton btn, bool down)
+{
+    for (int32_t idx = 0; idx < MVN_MAX_GAMEPADS; ++idx) {
+        mvn_gamepad_t *pad;
+        mvn_pad_btn_t  mapped;
+
+        pad = &gp->pads[idx];
+        if (!pad->connected || pad->joy_id != id) {
+            continue;
+        }
+
+        mapped = prv_map_button(btn);
+        if (mapped < MVN_PAD_BTN_COUNT) {
+            pad->btn_current[mapped] = down;
+            if (down) {
+                pad->btn_pressed[mapped] = true;
+            }
+        }
+        return;
+    }
+}
+
+void mvn_gamepad_on_axis(mvn_gamepad_state_t *gp, SDL_JoystickID id,
+                         SDL_GamepadAxis axis, int16_t value)
+{
+    static const mvn_pad_axis_t axis_map[] = {
+        [SDL_GAMEPAD_AXIS_LEFTX]         = MVN_PAD_AXIS_LX,
+        [SDL_GAMEPAD_AXIS_LEFTY]         = MVN_PAD_AXIS_LY,
+        [SDL_GAMEPAD_AXIS_RIGHTX]        = MVN_PAD_AXIS_RX,
+        [SDL_GAMEPAD_AXIS_RIGHTY]        = MVN_PAD_AXIS_RY,
+        [SDL_GAMEPAD_AXIS_LEFT_TRIGGER]  = MVN_PAD_AXIS_L2,
+        [SDL_GAMEPAD_AXIS_RIGHT_TRIGGER] = MVN_PAD_AXIS_R2,
+    };
+
+    if (axis < 0 || axis >= SDL_GAMEPAD_AXIS_COUNT) {
+        return;
+    }
+
+    for (int32_t idx = 0; idx < MVN_MAX_GAMEPADS; ++idx) {
+        mvn_gamepad_t *pad;
+
+        pad = &gp->pads[idx];
+        if (!pad->connected || pad->joy_id != id) {
+            continue;
+        }
+
+        pad->axes[axis_map[axis]] = (float)value / 32767.0f;
+        return;
+    }
+}
+
 /* ------------------------------------------------------------------ */
 /*  Queries                                                            */
 /* ------------------------------------------------------------------ */
@@ -229,7 +257,7 @@ bool mvn_gamepad_btnp(mvn_gamepad_state_t *gp, mvn_pad_btn_t b, int32_t index)
     if (!gp->pads[index].connected || b >= MVN_PAD_BTN_COUNT) {
         return false;
     }
-    return gp->pads[index].btn_current[b] && !gp->pads[index].btn_previous[b];
+    return gp->pads[index].btn_pressed[b];
 }
 
 float mvn_gamepad_axis(mvn_gamepad_state_t *gp, mvn_pad_axis_t a, int32_t index)

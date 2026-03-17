@@ -26,6 +26,7 @@ struct mvn_mouse_state {
 
     bool btn_current[MVN_MOUSE_BTN_COUNT];
     bool btn_previous[MVN_MOUSE_BTN_COUNT];
+    bool btn_pressed[MVN_MOUSE_BTN_COUNT];
 
     bool visible;
 

@@ -120,6 +120,8 @@ void mvn_pad_api_register(JSContext *ctx, JSValue global)
     JS_SetPropertyStr(ctx, ns, "LY", JS_NewInt32(ctx, MVN_PAD_AXIS_LY));
     JS_SetPropertyStr(ctx, ns, "RX", JS_NewInt32(ctx, MVN_PAD_AXIS_RX));
     JS_SetPropertyStr(ctx, ns, "RY", JS_NewInt32(ctx, MVN_PAD_AXIS_RY));
+    JS_SetPropertyStr(ctx, ns, "TL", JS_NewInt32(ctx, MVN_PAD_AXIS_L2));
+    JS_SetPropertyStr(ctx, ns, "TR", JS_NewInt32(ctx, MVN_PAD_AXIS_R2));
 
     JS_SetPropertyStr(ctx, global, "pad", ns);
 }
