@@ -224,6 +224,14 @@ void mvn_gfx_rectfill(mvn_graphics_t *gfx,
                       int32_t         x1,
                       int32_t         y1,
                       uint8_t         col);
+void mvn_gfx_tilemap(mvn_graphics_t *gfx,
+                     const uint8_t  *tiles,
+                     int32_t         map_w,
+                     int32_t         map_h,
+                     int32_t         tile_w,
+                     int32_t         tile_h,
+                     const uint8_t  *colors,
+                     int32_t         num_colors);
 void mvn_gfx_circ(mvn_graphics_t *gfx, int32_t x, int32_t y, int32_t r, uint8_t col);
 void mvn_gfx_circfill(mvn_graphics_t *gfx, int32_t x, int32_t y, int32_t r, uint8_t col);
 void mvn_gfx_tri(mvn_graphics_t *gfx,

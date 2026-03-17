@@ -293,6 +293,69 @@ prv_hline(mvn_graphics_t *gfx, int32_t raw_x0, int32_t raw_x1, int32_t raw_y, ui
 }
 
 /* ------------------------------------------------------------------ */
+/*  Internal: fast vertical span (pre-clipped column)                   */
+/* ------------------------------------------------------------------ */
+
+static void
+prv_vline(mvn_graphics_t *gfx, int32_t raw_x, int32_t raw_y0, int32_t raw_y1, uint8_t col)
+{
+    int32_t scr_x;
+    int32_t top;
+    int32_t bot;
+    int32_t clip_t;
+    int32_t clip_b;
+
+    /* Camera transform X and clip */
+    scr_x = raw_x - gfx->camera_x;
+    if (scr_x < gfx->clip_x || scr_x >= gfx->clip_x + gfx->clip_w) {
+        return;
+    }
+
+    /* Camera transform Y */
+    top = raw_y0 - gfx->camera_y;
+    bot = raw_y1 - gfx->camera_y;
+
+    /* Clip Y */
+    clip_t = gfx->clip_y;
+    clip_b = gfx->clip_y + gfx->clip_h - 1;
+    if (top < clip_t) {
+        top = clip_t;
+    }
+    if (bot > clip_b) {
+        bot = clip_b;
+    }
+    if (top > bot) {
+        return;
+    }
+
+    /* Remap colour once */
+    col = gfx->draw_pal[col];
+
+    if (gfx->fill_pattern == 0) {
+        /* Solid fill */
+        int32_t stride;
+
+        stride = gfx->width;
+        for (int32_t sy = top; sy <= bot; ++sy) {
+            gfx->framebuffer[sy * stride + scr_x] = col;
+        }
+    } else {
+        /* Patterned fill */
+        int32_t pat_x_bit;
+
+        pat_x_bit = scr_x & 3;
+        for (int32_t sy = top; sy <= bot; ++sy) {
+            int32_t bit;
+
+            bit = (sy & 3) * 4 + pat_x_bit;
+            if (gfx->fill_pattern & (1 << bit)) {
+                gfx->framebuffer[sy * gfx->width + scr_x] = col;
+            }
+        }
+    }
+}
+
+/* ------------------------------------------------------------------ */
 /*  Core drawing                                                       */
 /* ------------------------------------------------------------------ */
 
@@ -359,10 +422,29 @@ void mvn_gfx_line(mvn_graphics_t *gfx, int32_t x0, int32_t y0, int32_t x1, int32
 
 void mvn_gfx_rect(mvn_graphics_t *gfx, int32_t x0, int32_t y0, int32_t x1, int32_t y1, uint8_t col)
 {
-    mvn_gfx_line(gfx, x0, y0, x1, y0, col);
-    mvn_gfx_line(gfx, x1, y0, x1, y1, col);
-    mvn_gfx_line(gfx, x1, y1, x0, y1, col);
-    mvn_gfx_line(gfx, x0, y1, x0, y0, col);
+    int32_t min_x;
+    int32_t max_x;
+    int32_t min_y;
+    int32_t max_y;
+
+    min_x = (x0 < x1) ? x0 : x1;
+    max_x = (x0 > x1) ? x0 : x1;
+    min_y = (y0 < y1) ? y0 : y1;
+    max_y = (y0 > y1) ? y0 : y1;
+
+    /* Top and bottom edges */
+    prv_hline(gfx, min_x, max_x, min_y, col);
+    if (max_y != min_y) {
+        prv_hline(gfx, min_x, max_x, max_y, col);
+    }
+
+    /* Left and right edges (skip corners already drawn) */
+    if (max_y - min_y > 1) {
+        prv_vline(gfx, min_x, min_y + 1, max_y - 1, col);
+        if (max_x != min_x) {
+            prv_vline(gfx, max_x, min_y + 1, max_y - 1, col);
+        }
+    }
 }
 
 void mvn_gfx_rectfill(mvn_graphics_t *gfx,
@@ -384,6 +466,69 @@ void mvn_gfx_rectfill(mvn_graphics_t *gfx,
 
     for (int32_t row = min_y; row <= max_y; ++row) {
         prv_hline(gfx, min_x, max_x, row, col);
+    }
+}
+
+void mvn_gfx_tilemap(mvn_graphics_t *gfx,
+                     const uint8_t  *tiles,
+                     int32_t         map_w,
+                     int32_t         map_h,
+                     int32_t         tile_w,
+                     int32_t         tile_h,
+                     const uint8_t  *colors,
+                     int32_t         num_colors)
+{
+    int32_t view_x0;
+    int32_t view_y0;
+    int32_t view_x1;
+    int32_t view_y1;
+    int32_t start_tx;
+    int32_t start_ty;
+    int32_t end_tx;
+    int32_t end_ty;
+
+    /* Visible region in world coords */
+    view_x0 = gfx->camera_x + gfx->clip_x;
+    view_y0 = gfx->camera_y + gfx->clip_y;
+    view_x1 = view_x0 + gfx->clip_w - 1;
+    view_y1 = view_y0 + gfx->clip_h - 1;
+
+    /* Tile range to draw */
+    start_tx = view_x0 / tile_w;
+    start_ty = view_y0 / tile_h;
+    end_tx   = view_x1 / tile_w + 1;
+    end_ty   = view_y1 / tile_h + 1;
+
+    if (start_tx < 0) {
+        start_tx = 0;
+    }
+    if (start_ty < 0) {
+        start_ty = 0;
+    }
+    if (end_tx > map_w) {
+        end_tx = map_w;
+    }
+    if (end_ty > map_h) {
+        end_ty = map_h;
+    }
+
+    for (int32_t ty = start_ty; ty < end_ty; ++ty) {
+        int32_t py;
+
+        py = ty * tile_h;
+        for (int32_t tx = start_tx; tx < end_tx; ++tx) {
+            uint8_t tile;
+            uint8_t col;
+            int32_t px;
+
+            tile = tiles[ty * map_w + tx];
+            col  = (tile < num_colors) ? colors[tile] : 0;
+            px   = tx * tile_w;
+
+            for (int32_t row = py; row < py + tile_h; ++row) {
+                prv_hline(gfx, px, px + tile_w - 1, row, col);
+            }
+        }
     }
 }
 

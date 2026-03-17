@@ -81,6 +81,96 @@ static JSValue js_gfx_rectfill(JSContext *ctx, JSValueConst this_val, int argc, 
     return JS_UNDEFINED;
 }
 
+/* gfx.tilemap(tiles, mapW, mapH, colors [, tileW, tileH])
+ *   tiles  — flat JS array of tile indices (uint8)
+ *   mapW   — map width in tiles
+ *   mapH   — map height in tiles
+ *   colors — JS array mapping tile index → palette colour
+ *   tileW  — tile pixel width  (default 8)
+ *   tileH  — tile pixel height (default 8)
+ */
+static JSValue js_gfx_tilemap(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+{
+    int32_t  map_w;
+    int32_t  map_h;
+    int32_t  tile_w;
+    int32_t  tile_h;
+    int32_t  tile_cnt;
+    int32_t  col_cnt;
+    uint8_t *tiles;
+    uint8_t *colors;
+    JSValue  len_val;
+
+    (void)this_val;
+    if (argc < 4 || !JS_IsArray(argv[0]) || !JS_IsArray(argv[3])) {
+        return JS_UNDEFINED;
+    }
+
+    map_w  = mvn_api_opt_int(ctx, argc, argv, 1, 0);
+    map_h  = mvn_api_opt_int(ctx, argc, argv, 2, 0);
+    tile_w = mvn_api_opt_int(ctx, argc, argv, 4, 8);
+    tile_h = mvn_api_opt_int(ctx, argc, argv, 5, 8);
+
+    if (map_w <= 0 || map_h <= 0 || tile_w <= 0 || tile_h <= 0) {
+        return JS_UNDEFINED;
+    }
+
+    /* Read tiles array into temp buffer */
+    len_val = JS_GetPropertyStr(ctx, argv[0], "length");
+    JS_ToInt32(ctx, &tile_cnt, len_val);
+    JS_FreeValue(ctx, len_val);
+
+    if (tile_cnt < map_w * map_h) {
+        return JS_UNDEFINED;
+    }
+
+    tiles = (uint8_t *)SDL_malloc((size_t)(map_w * map_h));
+    if (tiles == NULL) {
+        return JS_UNDEFINED;
+    }
+
+    for (int32_t idx = 0; idx < map_w * map_h; ++idx) {
+        JSValue elem;
+        int32_t val;
+
+        elem = JS_GetPropertyUint32(ctx, argv[0], (uint32_t)idx);
+        JS_ToInt32(ctx, &val, elem);
+        JS_FreeValue(ctx, elem);
+        tiles[idx] = (uint8_t)val;
+    }
+
+    /* Read colors array */
+    len_val = JS_GetPropertyStr(ctx, argv[3], "length");
+    JS_ToInt32(ctx, &col_cnt, len_val);
+    JS_FreeValue(ctx, len_val);
+
+    if (col_cnt > 256) {
+        col_cnt = 256;
+    }
+
+    colors = (uint8_t *)SDL_malloc((size_t)col_cnt);
+    if (colors == NULL) {
+        SDL_free(tiles);
+        return JS_UNDEFINED;
+    }
+
+    for (int32_t idx = 0; idx < col_cnt; ++idx) {
+        JSValue elem;
+        int32_t val;
+
+        elem = JS_GetPropertyUint32(ctx, argv[3], (uint32_t)idx);
+        JS_ToInt32(ctx, &val, elem);
+        JS_FreeValue(ctx, elem);
+        colors[idx] = (uint8_t)val;
+    }
+
+    mvn_gfx_tilemap(GFX(ctx), tiles, map_w, map_h, tile_w, tile_h, colors, col_cnt);
+
+    SDL_free(tiles);
+    SDL_free(colors);
+    return JS_UNDEFINED;
+}
+
 static JSValue js_gfx_circ(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
     (void)this_val;
@@ -549,6 +639,7 @@ static const JSCFunctionListEntry js_gfx_funcs[] = {
     JS_CFUNC_DEF("cls", 1, js_gfx_cls),     JS_CFUNC_DEF("pset", 3, js_gfx_pset),
     JS_CFUNC_DEF("pget", 2, js_gfx_pget),   JS_CFUNC_DEF("line", 5, js_gfx_line),
     JS_CFUNC_DEF("rect", 5, js_gfx_rect),   JS_CFUNC_DEF("rectfill", 5, js_gfx_rectfill),
+    JS_CFUNC_DEF("tilemap", 4, js_gfx_tilemap),
     JS_CFUNC_DEF("circ", 4, js_gfx_circ),   JS_CFUNC_DEF("circfill", 4, js_gfx_circfill),
     JS_CFUNC_DEF("tri", 7, js_gfx_tri),     JS_CFUNC_DEF("trifill", 7, js_gfx_trifill),
     JS_CFUNC_DEF("poly", 2, js_gfx_poly),   JS_CFUNC_DEF("polyfill", 2, js_gfx_polyfill),

@@ -108,28 +108,34 @@ function _draw() {
     // and the engine draws the tilemap from the spritesheet automatically.
     // Since we have no map loaded, we draw placeholder tiles manually:
 
+    // Batch-draw the entire visible tilemap in one native call
+    gfx.tilemap(tiles, MAP_W, MAP_H, tile_colors);
+
+    // Overlay details on special tiles (only walls/deco, not every tile)
     var start_tx = math.flr(cam_x / TILE);
     var start_ty = math.flr(cam_y / TILE);
-    var end_tx = start_tx + 41; // slightly more than screen width
+    var end_tx = start_tx + 41;
     var end_ty = start_ty + 24;
 
     if (end_tx > MAP_W) end_tx = MAP_W;
     if (end_ty > MAP_H) end_ty = MAP_H;
+    if (start_tx < 0) start_tx = 0;
+    if (start_ty < 0) start_ty = 0;
 
     for (var ty = start_ty; ty < end_ty; ++ty) {
         for (var tx = start_tx; tx < end_tx; ++tx) {
             var t = tile_at(tx, ty);
-            var px = tx * TILE;
-            var py = ty * TILE;
-            gfx.rectfill(px, py, px + TILE - 1, py + TILE - 1, tile_colors[t]);
-
-            // Wall pattern
             if (t === 1) {
+                var px = tx * TILE;
+                var py = ty * TILE;
                 gfx.rect(px, py, px + TILE - 1, py + TILE - 1, 6);
-            }
-            // Decoration dot
-            if (t === 2) {
-                gfx.circfill(px + 3, py + 3, 1, 11);
+            } else if (t === 2) {
+                var px = tx * TILE;
+                var py = ty * TILE;
+                gfx.pset(px + 3, py + 3, 11);
+                gfx.pset(px + 4, py + 3, 11);
+                gfx.pset(px + 3, py + 4, 11);
+                gfx.pset(px + 4, py + 4, 11);
             }
         }
     }
