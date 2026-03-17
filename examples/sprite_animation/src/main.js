@@ -6,22 +6,41 @@
 //   - Flip sprites horizontally/vertically
 //   - Rotate sprites with gfx.spr_rot()
 //
-// Replace the placeholder rectangles with a real spritesheet to see
-// actual sprite art.  The animation logic stays the same.
+// Spritesheet: 320x320, 16x16 tiles (20 cols x 20 rows = 400 tiles)
+
+// --- Tile indices ----------------------------------------------------
+
+var SPR_IDLE = 280;
+var SPR_WALK = [281, 282, 283];
+var SPR_JUMP = 284;
+
+var SPR_ENEMY_IDLE = 320;
+var SPR_ENEMY_WALK = [321, 322, 323];
+
+var SPR_GROUND_L = 290; // ground left wall
+var SPR_GROUND_M = [270, 271, 272]; // ground top variants
+var SPR_GROUND_R = 292; // ground right wall
+
+var SPR_COIN = 1;
+var SPR_COIN_BIG = 2;
+var SPR_HEART_SM = 40;
+var SPR_HEART = 41;
+var SPR_HEART_BIG = 42;
 
 // --- State -----------------------------------------------------------
 
-var frame = 0; // animation frame counter
-var anim_t = 0; // accumulator for animation timing
-var anim_speed = 0.12; // seconds per frame
-
-// PLACEHOLDER: sprite indices for a 4-frame walk cycle
-// With a real sheet, set these to the actual tile indices.
-var walk_frames = [0, 1, 2, 3];
-var current_frame = 0;
+var anim_t = 0;
+var anim_speed = 0.15; // seconds per frame
+var walk_frame = 0;
+var enemy_frame = 0;
 
 var facing_right = true;
+var dir_timer = 0;
 var rotation = 0;
+
+// Player X for the walk demo
+var player_x = 0;
+var player_vx = 30; // pixels per second
 
 // --- Callbacks -------------------------------------------------------
 
@@ -30,84 +49,125 @@ function _init() {
 }
 
 function _update(dt) {
-    ++frame;
-
     // Advance animation timer
     anim_t += dt;
     if (anim_t >= anim_speed) {
         anim_t -= anim_speed;
-        current_frame = (current_frame + 1) % walk_frames.length;
+        walk_frame = (walk_frame + 1) % SPR_WALK.length;
+        enemy_frame = (enemy_frame + 1) % SPR_ENEMY_WALK.length;
     }
 
-    // Toggle direction every 2 seconds
-    if (frame % 120 === 0) {
+    // Move player back and forth
+    dir_timer += dt;
+    if (dir_timer >= 1) {
+        dir_timer -= 1;
         facing_right = !facing_right;
     }
+    player_x += (facing_right ? player_vx : -player_vx) * dt;
 
     // Spin the rotation demo
-    rotation += dt * 2.0;
+    rotation += dt * 1.5;
 }
 
 function _draw() {
     gfx.cls(1);
 
-    // --- Section 1: Basic sprite drawing ---
-    gfx.color(7);
-    gfx.print("gfx.spr() basics", 4, 4);
+    var T = 16; // tile size shorthand
+    var col2 = 170; // x offset for right column
 
-    // Draw the first 4 sprites in a row (or placeholders)
-    for (var i = 0; i < 4; ++i) {
-        gfx.spr(i, 8 + i * 16, 16);
-    }
+    // =====================================================
+    // LEFT COLUMN
+    // =====================================================
+
+    // --- Section 1: Idle sprite ---
+    gfx.print("idle", 4, 2, 7);
+    gfx.spr(SPR_IDLE, 8, 12);
 
     // --- Section 2: Animated walk cycle ---
-    gfx.print("animation cycle", 4, 36);
+    gfx.print("walk cycle", 40, 2, 7);
+    // Show all 3 frames side by side, highlight current
+    for (var i = 0; i < SPR_WALK.length; ++i) {
+        var fx = 44 + i * (T + 4);
+        gfx.spr(SPR_WALK[i], fx, 12);
+        if (i === walk_frame) {
+            gfx.rect(fx - 1, 11, fx + T, 12 + T, 10);
+        }
+    }
 
-    // Draw the current walk frame
-    var spr_idx = walk_frames[current_frame];
-    gfx.spr(spr_idx, 8, 48);
+    // --- Section 3: Walking character (moving + flipping) ---
+    gfx.print("flip_x walk", 4, 34, 7);
+    var spr_idx = SPR_WALK[walk_frame];
+    gfx.spr(spr_idx, player_x, 44, 1, 1, !facing_right, false);
 
-    // Label the frame number
-    gfx.print("frame " + current_frame, 24, 50, 6);
+    // --- Section 4: Jump sprite ---
+    gfx.print("jump", 120, 34, 7);
+    gfx.spr(SPR_JUMP, 124, 44);
 
-    // --- Section 3: Horizontal / vertical flip ---
-    gfx.print("flip_x / flip_y", 4, 68);
+    // --- Section 5: Flip showcase ---
+    gfx.print("flip combos", 4, 66, 7);
+    gfx.spr(SPR_IDLE, 8, 78, 1, 1, false, false); // normal
+    gfx.spr(SPR_IDLE, 28, 78, 1, 1, true, false); // flip X
+    gfx.spr(SPR_IDLE, 48, 78, 1, 1, false, true); // flip Y
+    gfx.spr(SPR_IDLE, 68, 78, 1, 1, true, true); // both
+    gfx.print("N", 12, 96, 6);
+    gfx.print("X", 32, 96, 6);
+    gfx.print("Y", 52, 96, 6);
+    gfx.print("XY", 70, 96, 6);
 
-    gfx.spr(0, 8, 80, 1, 1, false, false); // normal
-    gfx.spr(0, 24, 80, 1, 1, true, false); // flip X
-    gfx.spr(0, 40, 80, 1, 1, false, true); // flip Y
-    gfx.spr(0, 56, 80, 1, 1, true, true); // flip both
+    // --- Section 6: Rotation ---
+    gfx.print("spr_rot()", 4, 108, 7);
+    gfx.spr_rot(SPR_IDLE, 20, 126, rotation, -1, -1);
+    gfx.print(math.flr(rotation * 100) / 100, 44, 130, 6);
 
-    gfx.print("N", 10, 90, 6);
-    gfx.print("X", 26, 90, 6);
-    gfx.print("Y", 42, 90, 6);
-    gfx.print("XY", 56, 90, 6);
+    // --- Section 7: Ground tiles ---
+    gfx.print("ground tiles", 4, 150, 7);
+    gfx.spr(SPR_GROUND_L, 8, 162);
+    for (var g = 0; g < 3; ++g) {
+        gfx.spr(SPR_GROUND_M[g], 24 + g * T, 162);
+    }
+    gfx.spr(SPR_GROUND_R, 24 + 3 * T, 162);
 
-    // --- Section 4: Multi-tile sprites ---
-    gfx.print("multi-tile (2x2)", 4, 104);
+    // =====================================================
+    // RIGHT COLUMN
+    // =====================================================
 
-    // Draw a 2x2 tile sprite starting at index 0
-    gfx.spr(0, 8, 116, 2, 2);
+    // --- Enemy ---
+    gfx.print("enemy idle", col2, 2, 7);
+    gfx.spr(SPR_ENEMY_IDLE, col2 + 4, 12);
 
-    // --- Section 5: Rotation ---
-    gfx.print("spr_rot()", 4, 140);
+    gfx.print("enemy walk", col2 + 60, 2, 7);
+    for (var e = 0; e < SPR_ENEMY_WALK.length; ++e) {
+        var ex = col2 + 64 + e * (T + 4);
+        gfx.spr(SPR_ENEMY_WALK[e], ex, 12);
+        if (e === enemy_frame) {
+            gfx.rect(ex - 1, 11, ex + T, 12 + T, 8);
+        }
+    }
 
-    // Rotate sprite 0 around its center
-    gfx.spr_rot(0, 8, 154, rotation, -1, -1);
+    // --- Collectibles ---
+    gfx.print("collectibles", col2, 34, 7);
+    gfx.spr(SPR_COIN, col2 + 2, 46);
+    gfx.spr(SPR_COIN_BIG, col2 + 24, 46);
+    gfx.print("coin", col2, 64, 10);
+    gfx.print("big", col2 + 26, 64, 10);
 
-    gfx.print("angle: " + math.flr(rotation * 100) / 100, 24, 156, 6);
+    // --- Hearts ---
+    gfx.print("hearts", col2, 78, 7);
+    gfx.spr(SPR_HEART_SM, col2 + 4, 90);
+    gfx.spr(SPR_HEART, col2 + 24, 90);
+    gfx.spr(SPR_HEART_BIG, col2 + 44, 90);
+    gfx.print("sm", col2 + 6, 108, 8);
+    gfx.print("med", col2 + 24, 108, 8);
+    gfx.print("lg", col2 + 48, 108, 8);
 
-    // --- Section 6: Stretch blit ---
-    gfx.print("sspr() stretch", 140, 4);
+    // --- Stretch blit ---
+    gfx.print("sspr() stretch", col2, 122, 7);
+    // Stretch the idle sprite (16x16 region) to 48x48
+    var sx = (SPR_IDLE % 20) * T;
+    var sy = math.flr(SPR_IDLE / 20) * T;
+    gfx.sspr(sx, sy, T, T, col2 + 4, 120, 48, 48);
 
-    // Stretch sprite region (0,0,8,8) to a 32x32 destination
-    gfx.sspr(0, 0, 8, 8, 144, 16, 32, 32);
-
-    // --- Info ---
-    gfx.print("replace spritesheet.png", 140, 60, 5);
-    gfx.print("to see real art!", 140, 68, 5);
-
-    // FPS counter
+    // --- FPS ---
     var fps_str = "FPS:" + math.flr(sys.fps());
     var fps_w = fps_str.length * 6 + 2;
     gfx.rectfill(320 - fps_w, 0, 319, 8, 0);

@@ -100,7 +100,7 @@ All console defaults can be overridden at configure time:
 | `MVN_FB_HEIGHT`       | 180                    | Framebuffer height            |
 | `MVN_PALETTE_SIZE`    | 256                    | Palette size                  |
 | `MVN_WINDOW_SCALE`    | 3                      | Default window scale          |
-| `MVN_MAX_SPRITES`     | 256                    | Max sprite tiles              |
+| `MVN_MAX_SPRITES`     | 1024                   | Max sprite tiles              |
 | `MVN_SPRITE_FLAGS`    | 8                      | Flag bits per sprite          |
 | `MVN_MAX_MAPS`        | 32                     | Max map slots                 |
 | `MVN_MAX_MAP_LAYERS`  | 8                      | Max layers per map            |

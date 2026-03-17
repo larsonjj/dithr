@@ -557,11 +557,20 @@ static bool prv_load_cart_assets(mvn_console_t *con)
     cart = con->cart;
 
     /* Sprites: load PNG → RGBA → quantise to palette sheet */
+    if (cart->sprite_rgba == NULL && cart->sprite_sheet_path[0] != '\0') {
+        int32_t w = 0, h = 0;
+
+        SDL_snprintf(path_buf, sizeof(path_buf), "%s%s",
+                     cart->base_path, cart->sprite_sheet_path);
+        cart->sprite_rgba   = mvn_import_png(path_buf, &w, &h);
+        cart->sprite_rgba_w = w;
+        cart->sprite_rgba_h = h;
+    }
     if (cart->sprite_rgba != NULL) {
         mvn_gfx_load_sheet(con->graphics,
                            cart->sprite_rgba,
-                           cart->sprite_w,
-                           cart->sprite_h,
+                           cart->sprite_rgba_w,
+                           cart->sprite_rgba_h,
                            cart->sprites.tile_w,
                            cart->sprites.tile_h);
     }

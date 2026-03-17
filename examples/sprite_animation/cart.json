@@ -15,8 +15,8 @@
   },
   "sprites": {
     "sheet": "assets/sprites/spritesheet.png",
-    "tileW": 8,
-    "tileH": 8
+    "tileW": 16,
+    "tileH": 16
   },
   "audio": {
     "channels": 8
