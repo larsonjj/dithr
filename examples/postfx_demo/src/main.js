@@ -17,6 +17,7 @@ var effects; // filled from postfx.available()
 var active = {}; // name -> bool
 var strength = 1.0;
 var t = 0; // time accumulator for the demo scene
+var debug_flash = [0, 0, 0, 0];
 
 // --- Callbacks -------------------------------------------------------
 
@@ -30,11 +31,28 @@ function _init() {
 function _update(dt) {
     t += dt;
 
+    // Decay flash timers
+    for (var f = 0; f < 4; ++f) {
+        if (debug_flash[f] > 0) debug_flash[f] -= dt;
+    }
+
     // Toggle effects: Z=CRT, X=scanlines, C=bloom, V=aberration
-    if (key.btnp(key.Z)) toggle("crt");
-    if (key.btnp(key.X)) toggle("scanlines");
-    if (key.btnp(key.C)) toggle("bloom");
-    if (key.btnp(key.V)) toggle("aberration");
+    if (key.btnp(key.Z)) {
+        toggle("crt");
+        debug_flash[0] = 0.3;
+    }
+    if (key.btnp(key.X)) {
+        toggle("scanlines");
+        debug_flash[1] = 0.3;
+    }
+    if (key.btnp(key.C)) {
+        toggle("bloom");
+        debug_flash[2] = 0.3;
+    }
+    if (key.btnp(key.V)) {
+        toggle("aberration");
+        debug_flash[3] = 0.3;
+    }
 
     // S = stack all active at once
     if (key.btnp(key.SPACE)) {
@@ -55,8 +73,14 @@ function _update(dt) {
     }
 
     // Strength control
-    if (key.btnp(key.UP)) strength = math.clamp(strength + 0.1, 0.1, 2.0);
-    if (key.btnp(key.DOWN)) strength = math.clamp(strength - 0.1, 0.1, 2.0);
+    if (key.btnp(key.UP)) {
+        strength = math.flr(math.clamp(strength + 0.1, 0.1, 2.0) * 10 + 0.5) / 10;
+        rebuild_stack();
+    }
+    if (key.btnp(key.DOWN)) {
+        strength = math.flr(math.clamp(strength - 0.1, 0.1, 2.0) * 10 + 0.5) / 10;
+        rebuild_stack();
+    }
 }
 
 function toggle(name) {
@@ -84,17 +108,24 @@ function _draw() {
     gfx.rectfill(0, 0, 319, 40, 0);
     gfx.print("=== postfx demo ===", 100, 2, 7);
 
-    // Show which effects are active
+    // Show which effects are active + key debug
     var labels = ["crt", "scanlines", "bloom", "aberration"];
-    var keys = ["Z", "X", "C", "V"];
+    var keycodes = [key.Z, key.X, key.C, key.V];
+    var keynames = ["Z", "X", "C", "V"];
     for (var i = 0; i < labels.length; ++i) {
         var on = active[labels[i]];
+        var held = key.btn(keycodes[i]);
         var col = on ? 11 : 5;
-        gfx.print(keys[i] + ":" + labels[i], 4 + i * 78, 12, col);
+        // Flash yellow on press
+        if (debug_flash[i] > 0) col = 10;
+        var lx = 4 + i * 78;
+        gfx.print(keynames[i] + ":" + labels[i], lx, 12, col);
+        // Show held indicator
+        gfx.rectfill(lx, 20, lx + 4, 24, held ? 11 : 2);
     }
 
-    gfx.print("strength: " + math.flr(strength * 100) + "%", 4, 22, 7);
-    gfx.print("up/dn=strength  spc=all  e=clear", 4, 32, 5);
+    gfx.print("strength: " + math.flr(strength * 100) + "%", 4, 26, 7);
+    gfx.print("up/dn=strength  spc=all  e=clear", 4, 34, 5);
 
     // FPS counter
     var fps_str = "FPS:" + math.flr(sys.fps());
@@ -130,7 +161,7 @@ function draw_demo_scene() {
     // Checkerboard in corner
     for (var y = 150; y < 180; y += 4) {
         for (var x = 240; x < 320; x += 4) {
-            var c = ((x + y) / 4) % 2 === 0 ? 7 : 0;
+            var c = (((x / 4) | 0) + ((y / 4) | 0)) % 2 === 0 ? 7 : 0;
             gfx.rectfill(x, y, x + 3, y + 3, c);
         }
     }

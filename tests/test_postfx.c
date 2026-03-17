@@ -226,17 +226,17 @@ static void test_postfx_apply_scanlines(void)
     mvn_postfx_t *pfx = mvn_postfx_create(TW, TH);
     uint32_t      pixels[TW * TH];
 
-    /* Fill with white (RGBA) */
+    /* Fill with gray, fully opaque (RGBA8888: R=0x80, G=0x80, B=0x80, A=0xFF) */
     for (int32_t idx = 0; idx < TW * TH; ++idx) {
-        pixels[idx] = 0xFF808080u; /* A=0xFF, B=0x80, G=0x80, R=0x80 */
+        pixels[idx] = 0x808080FFu;
     }
 
     mvn_postfx_push(pfx, MVN_POSTFX_SCANLINES, 1.0f);
     mvn_postfx_apply(pfx, pixels, TW, TH);
 
     /* Even rows should be darkened, odd rows unchanged */
-    uint32_t even_r = pixels[0] & 0xFF;
-    uint32_t odd_r  = pixels[TW] & 0xFF; /* row 1 */
+    uint32_t even_r = (pixels[0] >> 24) & 0xFF;
+    uint32_t odd_r  = (pixels[TW] >> 24) & 0xFF; /* row 1 */
 
     MVN_ASSERT(even_r < 0x80); /* darkened */
     MVN_ASSERT(odd_r == 0x80); /* unchanged */
@@ -250,9 +250,9 @@ static void test_postfx_apply_aberration(void)
     mvn_postfx_t *pfx = mvn_postfx_create(TW, TH);
     uint32_t      pixels[TW * TH];
 
-    /* Fill with uniform colour */
+    /* Fill with uniform colour (RGBA8888: R=0x40, G=0x40, B=0x40, A=0xFF) */
     for (int32_t idx = 0; idx < TW * TH; ++idx) {
-        pixels[idx] = 0xFF404040u;
+        pixels[idx] = 0x404040FFu;
     }
 
     mvn_postfx_push(pfx, MVN_POSTFX_ABERRATION, 2.0f);

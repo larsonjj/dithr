@@ -421,12 +421,6 @@ void mvn_console_iterate(mvn_console_t *con)
         return;
     }
 
-    /* Input update */
-    mvn_key_update(con->keys);
-    mvn_mouse_update(con->mouse);
-    mvn_gamepad_update(con->gamepads);
-    mvn_input_update(con->input, con->keys, con->gamepads);
-
     /* Event bus flush */
     mvn_event_flush(con->events);
 
@@ -474,6 +468,13 @@ void mvn_console_iterate(mvn_console_t *con)
 
     /* Drain microtasks */
     mvn_runtime_drain_jobs(con->runtime);
+
+    /* Input update — must happen AFTER JS _update/_draw so that btnp()
+       edge detection (current && !previous) is visible during the frame. */
+    mvn_key_update(con->keys);
+    mvn_mouse_update(con->mouse);
+    mvn_gamepad_update(con->gamepads);
+    mvn_input_update(con->input, con->keys, con->gamepads);
 
     ++con->frame_count;
 

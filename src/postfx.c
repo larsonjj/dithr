@@ -7,6 +7,16 @@
 
 #include <math.h>
 
+/*
+ * RGBA8888 pixel helpers — matches SDL_PIXELFORMAT_RGBA8888 uint32 layout:
+ *   bits 24-31 = R, 16-23 = G, 8-15 = B, 0-7 = A
+ */
+#define PX_R(px)            (((px) >> 24) & 0xFFu)
+#define PX_G(px)            (((px) >> 16) & 0xFFu)
+#define PX_B(px)            (((px) >> 8) & 0xFFu)
+#define PX_A(px)            ((px) & 0xFFu)
+#define PX_PACK(r, g, b, a) (((r) << 24) | ((g) << 16) | ((b) << 8) | (a))
+
 /* ------------------------------------------------------------------ */
 /*  Lifecycle                                                          */
 /* ------------------------------------------------------------------ */
@@ -91,16 +101,16 @@ static void prv_apply_scanlines(uint32_t *pixels, int32_t w, int32_t h, float st
             uint32_t a;
 
             px = pixels[y * w + x];
-            r  = (px >> 0) & 0xFF;
-            g  = (px >> 8) & 0xFF;
-            b  = (px >> 16) & 0xFF;
-            a  = (px >> 24) & 0xFF;
+            r  = PX_R(px);
+            g  = PX_G(px);
+            b  = PX_B(px);
+            a  = PX_A(px);
 
             r = (uint32_t)((float)r * factor);
             g = (uint32_t)((float)g * factor);
             b = (uint32_t)((float)b * factor);
 
-            pixels[y * w + x] = r | (g << 8) | (b << 16) | (a << 24);
+            pixels[y * w + x] = PX_PACK(r, g, b, a);
         }
     }
 }
@@ -150,10 +160,10 @@ static void prv_apply_crt(uint32_t *pixels, int32_t w, int32_t h, float strength
             uint32_t a;
 
             px = pixels[row_off + x];
-            r  = (px >> 0) & 0xFF;
-            g  = (px >> 8) & 0xFF;
-            b  = (px >> 16) & 0xFF;
-            a  = (px >> 24) & 0xFF;
+            r  = PX_R(px);
+            g  = PX_G(px);
+            b  = PX_B(px);
+            a  = PX_A(px);
 
             dx       = (float)x - cx;
             dist_sq  = (dx * dx + dy_sq) * inv_max_dist_sq;
@@ -167,7 +177,7 @@ static void prv_apply_crt(uint32_t *pixels, int32_t w, int32_t h, float strength
             g = (uint32_t)((float)g * vignette);
             b = (uint32_t)((float)b * vignette);
 
-            pixels[row_off + x] = r | (g << 8) | (b << 16) | (a << 24);
+            pixels[row_off + x] = PX_PACK(r, g, b, a);
         }
     }
 
@@ -184,9 +194,9 @@ static void prv_apply_crt(uint32_t *pixels, int32_t w, int32_t h, float strength
 
                 cur     = pixels[row_off + x];
                 prev    = pixels[row_off + x - 1];
-                bleed_r = ((prev >> 0) & 0xFF);
+                bleed_r = PX_R(prev);
 
-                cur                    = (cur & 0xFFFFFF00u) | bleed_r;
+                cur                    = (cur & 0x00FFFFFFu) | (bleed_r << 24);
                 pixels[row_off + x]    = cur;
             }
         }
@@ -215,10 +225,10 @@ static void prv_apply_bloom(uint32_t *pixels, int32_t w, int32_t h, float streng
             int32_t  lum;
 
             px = pixels[y * w + x];
-            r  = (int32_t)((px >> 0) & 0xFF);
-            g  = (int32_t)((px >> 8) & 0xFF);
-            b  = (int32_t)((px >> 16) & 0xFF);
-            a  = px & 0xFF000000u;
+            r  = (int32_t)PX_R(px);
+            g  = (int32_t)PX_G(px);
+            b  = (int32_t)PX_B(px);
+            a  = PX_A(px);
 
             lum = (r + g + b) / 3;
             if (lum > threshold) {
@@ -240,7 +250,7 @@ static void prv_apply_bloom(uint32_t *pixels, int32_t w, int32_t h, float streng
                 }
             }
 
-            pixels[y * w + x] = (uint32_t)r | ((uint32_t)g << 8) | ((uint32_t)b << 16) | a;
+            pixels[y * w + x] = PX_PACK((uint32_t)r, (uint32_t)g, (uint32_t)b, a);
         }
     }
 }
@@ -290,8 +300,8 @@ static void prv_apply_aberration(mvn_postfx_t *pfx, uint32_t *pixels, int32_t w,
             int32_t  bx;
 
             center = temp[y * w + x];
-            g      = (center >> 8) & 0xFF;
-            a      = (center >> 24) & 0xFF;
+            g      = PX_G(center);
+            a      = PX_A(center);
 
             /* Shift R channel left */
             rx = x - offset;
@@ -299,7 +309,7 @@ static void prv_apply_aberration(mvn_postfx_t *pfx, uint32_t *pixels, int32_t w,
                 rx = 0;
             }
             r_src = temp[y * w + rx];
-            r     = (r_src >> 0) & 0xFF;
+            r     = PX_R(r_src);
 
             /* Shift B channel right */
             bx = x + offset;
@@ -307,9 +317,9 @@ static void prv_apply_aberration(mvn_postfx_t *pfx, uint32_t *pixels, int32_t w,
                 bx = w - 1;
             }
             b_src = temp[y * w + bx];
-            b     = (b_src >> 16) & 0xFF;
+            b     = PX_B(b_src);
 
-            pixels[y * w + x] = r | (g << 8) | (b << 16) | (a << 24);
+            pixels[y * w + x] = PX_PACK(r, g, b, a);
         }
     }
 }
@@ -353,6 +363,7 @@ void mvn_postfx_apply(mvn_postfx_t *pfx, uint32_t *pixels, int32_t w, int32_t h)
                 break;
         }
     }
+
 }
 
 /* ------------------------------------------------------------------ */

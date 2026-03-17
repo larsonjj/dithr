@@ -14,10 +14,12 @@
 
 static JSValue js_postfx_push(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
+    int32_t id_val;
+    float   str_val;
     (void)this_val;
-    mvn_postfx_push(PFX(ctx),
-                    (mvn_postfx_id_t)mvn_api_opt_int(ctx, argc, argv, 0, MVN_POSTFX_NONE),
-                    (float)mvn_api_opt_float(ctx, argc, argv, 1, 1.0));
+    id_val  = mvn_api_opt_int(ctx, argc, argv, 0, MVN_POSTFX_NONE);
+    str_val = (float)mvn_api_opt_float(ctx, argc, argv, 1, 1.0);
+    mvn_postfx_push(PFX(ctx), (mvn_postfx_id_t)id_val, str_val);
     return JS_UNDEFINED;
 }
 
