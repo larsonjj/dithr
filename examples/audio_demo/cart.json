@@ -14,7 +14,6 @@
     "fps": 60
   },
   "sprites": {
-    "sheet": "assets/sprites/spritesheet.png",
     "tileW": 8,
     "tileH": 8
   },
@@ -25,5 +24,12 @@
     "default_mappings": {}
   },
   "code": "src/main.js",
-  "maps": []
+  "maps": [],
+  "sfx": [
+    "assets/sfx/blip.wav",
+    "assets/sfx/jump.wav",
+    "assets/sfx/hit.wav",
+    "assets/sfx/coin.wav"
+  ],
+  "music": ["assets/music/theme.mp3"]
 }

@@ -225,6 +225,75 @@ bool mvn_cart_parse(mvn_cart_t *cart, JSContext *ctx, const char *json, size_t l
     }
     JS_FreeValue(ctx, sub);
 
+    /* --- sfx (array of file paths) --- */
+    {
+        JSValue arr;
+
+        arr = JS_GetPropertyStr(ctx, root, "sfx");
+        if (JS_IsArray(arr)) {
+            JSValue len_val;
+            int32_t arr_len;
+
+            len_val = JS_GetPropertyStr(ctx, arr, "length");
+            JS_ToInt32(ctx, &arr_len, len_val);
+            JS_FreeValue(ctx, len_val);
+
+            cart->sfx_count = (arr_len > MVN_CART_MAX_SFX) ? MVN_CART_MAX_SFX : arr_len;
+            for (int32_t idx = 0; idx < cart->sfx_count; ++idx) {
+                JSValue elem;
+
+                elem = JS_GetPropertyUint32(ctx, arr, (uint32_t)idx);
+                if (JS_IsString(elem)) {
+                    const char *str;
+
+                    str = JS_ToCString(ctx, elem);
+                    if (str != NULL) {
+                        SDL_strlcpy(cart->sfx_paths[idx], str,
+                                    sizeof(cart->sfx_paths[idx]));
+                        JS_FreeCString(ctx, str);
+                    }
+                }
+                JS_FreeValue(ctx, elem);
+            }
+        }
+        JS_FreeValue(ctx, arr);
+    }
+
+    /* --- music (array of file paths) --- */
+    {
+        JSValue arr;
+
+        arr = JS_GetPropertyStr(ctx, root, "music");
+        if (JS_IsArray(arr)) {
+            JSValue len_val;
+            int32_t arr_len;
+
+            len_val = JS_GetPropertyStr(ctx, arr, "length");
+            JS_ToInt32(ctx, &arr_len, len_val);
+            JS_FreeValue(ctx, len_val);
+
+            cart->music_count = (arr_len > MVN_CART_MAX_MUSIC)
+                                    ? MVN_CART_MAX_MUSIC : arr_len;
+            for (int32_t idx = 0; idx < cart->music_count; ++idx) {
+                JSValue elem;
+
+                elem = JS_GetPropertyUint32(ctx, arr, (uint32_t)idx);
+                if (JS_IsString(elem)) {
+                    const char *str;
+
+                    str = JS_ToCString(ctx, elem);
+                    if (str != NULL) {
+                        SDL_strlcpy(cart->music_paths[idx], str,
+                                    sizeof(cart->music_paths[idx]));
+                        JS_FreeCString(ctx, str);
+                    }
+                }
+                JS_FreeValue(ctx, elem);
+            }
+        }
+        JS_FreeValue(ctx, arr);
+    }
+
     /* --- code (inline or path) --- */
     {
         JSValue code_val;

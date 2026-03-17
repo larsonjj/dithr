@@ -620,6 +620,42 @@ static bool prv_load_cart_assets(mvn_console_t *con)
         }
     }
 
+    /* SFX files */
+    for (int32_t idx = 0; idx < cart->sfx_count; ++idx) {
+        if (cart->sfx_paths[idx][0] != '\0') {
+            size_t   len;
+            uint8_t *data;
+
+            SDL_snprintf(path_buf, sizeof(path_buf), "%s%s",
+                         cart->base_path, cart->sfx_paths[idx]);
+            data = (uint8_t *)SDL_LoadFile(path_buf, &len);
+            if (data != NULL) {
+                mvn_audio_load_sfx(con->audio, data, len);
+                SDL_free(data);
+            } else {
+                SDL_Log("Failed to load sfx: %s", path_buf);
+            }
+        }
+    }
+
+    /* Music files */
+    for (int32_t idx = 0; idx < cart->music_count; ++idx) {
+        if (cart->music_paths[idx][0] != '\0') {
+            size_t   len;
+            uint8_t *data;
+
+            SDL_snprintf(path_buf, sizeof(path_buf), "%s%s",
+                         cart->base_path, cart->music_paths[idx]);
+            data = (uint8_t *)SDL_LoadFile(path_buf, &len);
+            if (data != NULL) {
+                mvn_audio_load_music(con->audio, data, len);
+                SDL_free(data);
+            } else {
+                SDL_Log("Failed to load music: %s", path_buf);
+            }
+        }
+    }
+
     /* JS source code */
     if (cart->code == NULL && cart->code_path[0] != '\0') {
         size_t len;

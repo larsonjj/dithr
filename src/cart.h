@@ -14,6 +14,8 @@ extern "C" {
 #endif /* __cplusplus */
 
 #define MVN_CART_MAX_MAPS      CONSOLE_MAX_MAPS
+#define MVN_CART_MAX_SFX       256
+#define MVN_CART_MAX_MUSIC     64
 #define MVN_CART_PERSIST_SLOTS 64
 #define MVN_CART_MAX_DSLOTS    MVN_CART_PERSIST_SLOTS
 #define MVN_CART_MAX_KV        64
@@ -172,6 +174,10 @@ struct mvn_cart {
     char sprite_sheet_path[512];
     char code_path[512];
     char map_paths[MVN_CART_MAX_MAPS][512];
+    char sfx_paths[MVN_CART_MAX_SFX][512];
+    int32_t sfx_count;
+    char music_paths[MVN_CART_MAX_MUSIC][512];
+    int32_t music_count;
 
     /* Map levels */
     mvn_map_level_t *maps[MVN_CART_MAX_MAPS];
