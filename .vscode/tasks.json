@@ -58,7 +58,7 @@
     {
       "label": "WASM: Configure",
       "type": "shell",
-      "command": "cmake --preset wasm -DMVN_WASM_CART_DIR=${input:wasmCart}",
+      "command": "cmake --preset wasm -DDTR_WASM_CART_DIR=${input:wasmCart}",
       "problemMatcher": []
     },
     {

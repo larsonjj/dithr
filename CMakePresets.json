@@ -13,7 +13,7 @@
       "binaryDir": "${sourceDir}/build/debug",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
-        "MVN_DEV_BUILD": "ON"
+        "DTR_DEV_BUILD": "ON"
       }
     },
     {
@@ -32,9 +32,9 @@
       "inherits": "debug",
       "binaryDir": "${sourceDir}/build/retro",
       "cacheVariables": {
-        "MVN_FB_WIDTH": "128",
-        "MVN_FB_HEIGHT": "128",
-        "MVN_WINDOW_SCALE": "4"
+        "DTR_FB_WIDTH": "128",
+        "DTR_FB_HEIGHT": "128",
+        "DTR_WINDOW_SCALE": "4"
       }
     },
     {
@@ -46,9 +46,9 @@
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
         "CMAKE_TOOLCHAIN_FILE": "$env{EMSDK}/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake",
-        "MVN_BUILD_EXAMPLES": "OFF",
-        "MVN_BUILD_TESTS": "OFF",
-        "MVN_WASM_CART_DIR": "${sourceDir}/examples/hello_world"
+        "DTR_BUILD_EXAMPLES": "OFF",
+        "DTR_BUILD_TESTS": "OFF",
+        "DTR_WASM_CART_DIR": "${sourceDir}/examples/hello_world"
       }
     },
     {
@@ -60,9 +60,9 @@
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
         "CMAKE_TOOLCHAIN_FILE": "$env{EMSDK}/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake",
-        "MVN_BUILD_EXAMPLES": "OFF",
-        "MVN_BUILD_TESTS": "OFF",
-        "MVN_WASM_CART_DIR": "${sourceDir}/examples/hello_world"
+        "DTR_BUILD_EXAMPLES": "OFF",
+        "DTR_BUILD_TESTS": "OFF",
+        "DTR_WASM_CART_DIR": "${sourceDir}/examples/hello_world"
       }
     }
   ],

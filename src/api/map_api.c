@@ -11,13 +11,13 @@
 /*  Helpers                                                            */
 /* ------------------------------------------------------------------ */
 
-static mvn_map_level_t *prv_get_level(JSContext *ctx, int argc, JSValueConst *argv, int slot_idx)
+static dtr_map_level_t *prv_get_level(JSContext *ctx, int argc, JSValueConst *argv, int slot_idx)
 {
-    mvn_console_t *con;
+    dtr_console_t *con;
     int32_t        slot;
 
-    con  = mvn_api_get_console(ctx);
-    slot = mvn_api_opt_int(ctx, argc, argv, slot_idx, con->cart->current_map);
+    con  = dtr_api_get_console(ctx);
+    slot = dtr_api_opt_int(ctx, argc, argv, slot_idx, con->cart->current_map);
 
     if (slot < 0 || slot >= con->cart->map_count) {
         return NULL;
@@ -31,7 +31,7 @@ static mvn_map_level_t *prv_get_level(JSContext *ctx, int argc, JSValueConst *ar
 
 static JSValue js_map_get(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
-    mvn_map_level_t *level;
+    dtr_map_level_t *level;
     int32_t          x;
     int32_t          y;
     int32_t          layer_idx;
@@ -43,16 +43,16 @@ static JSValue js_map_get(JSContext *ctx, JSValueConst this_val, int argc, JSVal
         return JS_NewInt32(ctx, 0);
     }
 
-    x         = mvn_api_opt_int(ctx, argc, argv, 0, 0);
-    y         = mvn_api_opt_int(ctx, argc, argv, 1, 0);
-    layer_idx = mvn_api_opt_int(ctx, argc, argv, 2, 0);
+    x         = dtr_api_opt_int(ctx, argc, argv, 0, 0);
+    y         = dtr_api_opt_int(ctx, argc, argv, 1, 0);
+    layer_idx = dtr_api_opt_int(ctx, argc, argv, 2, 0);
 
     if (layer_idx < 0 || layer_idx >= level->layer_count) {
         return JS_NewInt32(ctx, 0);
     }
 
     {
-        mvn_map_layer_t *layer;
+        dtr_map_layer_t *layer;
 
         layer = &level->layers[layer_idx];
         if (!layer->is_tile_layer || layer->tiles == NULL) {
@@ -71,7 +71,7 @@ static JSValue js_map_get(JSContext *ctx, JSValueConst this_val, int argc, JSVal
 
 static JSValue js_map_set(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
-    mvn_map_level_t *level;
+    dtr_map_level_t *level;
     int32_t          x;
     int32_t          y;
     int32_t          tile;
@@ -84,17 +84,17 @@ static JSValue js_map_set(JSContext *ctx, JSValueConst this_val, int argc, JSVal
         return JS_UNDEFINED;
     }
 
-    x         = mvn_api_opt_int(ctx, argc, argv, 0, 0);
-    y         = mvn_api_opt_int(ctx, argc, argv, 1, 0);
-    tile      = mvn_api_opt_int(ctx, argc, argv, 2, 0);
-    layer_idx = mvn_api_opt_int(ctx, argc, argv, 3, 0);
+    x         = dtr_api_opt_int(ctx, argc, argv, 0, 0);
+    y         = dtr_api_opt_int(ctx, argc, argv, 1, 0);
+    tile      = dtr_api_opt_int(ctx, argc, argv, 2, 0);
+    layer_idx = dtr_api_opt_int(ctx, argc, argv, 3, 0);
 
     if (layer_idx < 0 || layer_idx >= level->layer_count) {
         return JS_UNDEFINED;
     }
 
     {
-        mvn_map_layer_t *layer;
+        dtr_map_layer_t *layer;
 
         layer = &level->layers[layer_idx];
         if (!layer->is_tile_layer || layer->tiles == NULL) {
@@ -114,27 +114,27 @@ static JSValue js_map_set(JSContext *ctx, JSValueConst this_val, int argc, JSVal
 
 static JSValue js_map_flag(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
-    mvn_console_t *  con;
-    mvn_map_level_t *level;
+    dtr_console_t *  con;
+    dtr_map_level_t *level;
     int32_t          cx;
     int32_t          cy;
     int32_t          f;
     int32_t          tile;
 
     (void)this_val;
-    con   = mvn_api_get_console(ctx);
+    con   = dtr_api_get_console(ctx);
     level = prv_get_level(ctx, argc, argv, 3);
 
     if (level == NULL || level->layer_count == 0) {
         return JS_FALSE;
     }
 
-    cx = mvn_api_opt_int(ctx, argc, argv, 0, 0);
-    cy = mvn_api_opt_int(ctx, argc, argv, 1, 0);
-    f  = mvn_api_opt_int(ctx, argc, argv, 2, 0);
+    cx = dtr_api_opt_int(ctx, argc, argv, 0, 0);
+    cy = dtr_api_opt_int(ctx, argc, argv, 1, 0);
+    f  = dtr_api_opt_int(ctx, argc, argv, 2, 0);
 
     {
-        mvn_map_layer_t *layer;
+        dtr_map_layer_t *layer;
 
         layer = &level->layers[0];
         if (!layer->is_tile_layer || layer->tiles == NULL) {
@@ -150,7 +150,7 @@ static JSValue js_map_flag(JSContext *ctx, JSValueConst this_val, int argc, JSVa
         return JS_FALSE;
     }
 
-    return JS_NewBool(ctx, mvn_gfx_fget_bit(con->graphics, tile - 1, f));
+    return JS_NewBool(ctx, dtr_gfx_fget_bit(con->graphics, tile - 1, f));
 }
 
 /* ------------------------------------------------------------------ */
@@ -159,8 +159,8 @@ static JSValue js_map_flag(JSContext *ctx, JSValueConst this_val, int argc, JSVa
 
 static JSValue js_map_draw(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
-    mvn_console_t *  con;
-    mvn_map_level_t *level;
+    dtr_console_t *  con;
+    dtr_map_level_t *level;
     int32_t          sx;
     int32_t          sy;
     int32_t          dx;
@@ -171,26 +171,26 @@ static JSValue js_map_draw(JSContext *ctx, JSValueConst this_val, int argc, JSVa
 
     (void)this_val;
 
-    con   = mvn_api_get_console(ctx);
+    con   = dtr_api_get_console(ctx);
     level = prv_get_level(ctx, argc, argv, 7);
     if (level == NULL) {
         return JS_UNDEFINED;
     }
 
-    sx        = mvn_api_opt_int(ctx, argc, argv, 0, 0);
-    sy        = mvn_api_opt_int(ctx, argc, argv, 1, 0);
-    dx        = mvn_api_opt_int(ctx, argc, argv, 2, 0);
-    dy        = mvn_api_opt_int(ctx, argc, argv, 3, 0);
-    tw        = mvn_api_opt_int(ctx, argc, argv, 4, level->width);
-    th        = mvn_api_opt_int(ctx, argc, argv, 5, level->height);
-    layer_idx = mvn_api_opt_int(ctx, argc, argv, 6, 0);
+    sx        = dtr_api_opt_int(ctx, argc, argv, 0, 0);
+    sy        = dtr_api_opt_int(ctx, argc, argv, 1, 0);
+    dx        = dtr_api_opt_int(ctx, argc, argv, 2, 0);
+    dy        = dtr_api_opt_int(ctx, argc, argv, 3, 0);
+    tw        = dtr_api_opt_int(ctx, argc, argv, 4, level->width);
+    th        = dtr_api_opt_int(ctx, argc, argv, 5, level->height);
+    layer_idx = dtr_api_opt_int(ctx, argc, argv, 6, 0);
 
     if (layer_idx < 0 || layer_idx >= level->layer_count) {
         return JS_UNDEFINED;
     }
 
     {
-        mvn_map_layer_t *layer;
+        dtr_map_layer_t *layer;
 
         layer = &level->layers[layer_idx];
         if (!layer->is_tile_layer || layer->tiles == NULL) {
@@ -211,7 +211,7 @@ static JSValue js_map_draw(JSContext *ctx, JSValueConst this_val, int argc, JSVa
 
                 tile = layer->tiles[my * layer->width + mx];
                 if (tile > 0) {
-                    mvn_gfx_spr(con->graphics,
+                    dtr_gfx_spr(con->graphics,
                                 tile - 1,
                                 dx + tx * con->cart->sprites.tile_w,
                                 dy + ty * con->cart->sprites.tile_h,
@@ -233,7 +233,7 @@ static JSValue js_map_draw(JSContext *ctx, JSValueConst this_val, int argc, JSVa
 
 static JSValue js_map_width(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
-    mvn_map_level_t *level;
+    dtr_map_level_t *level;
 
     (void)this_val;
     level = prv_get_level(ctx, argc, argv, 0);
@@ -245,7 +245,7 @@ static JSValue js_map_width(JSContext *ctx, JSValueConst this_val, int argc, JSV
 
 static JSValue js_map_height(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
-    mvn_map_level_t *level;
+    dtr_map_level_t *level;
 
     (void)this_val;
     level = prv_get_level(ctx, argc, argv, 0);
@@ -261,7 +261,7 @@ static JSValue js_map_height(JSContext *ctx, JSValueConst this_val, int argc, JS
 
 static JSValue js_map_layers(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
-    mvn_map_level_t *level;
+    dtr_map_level_t *level;
     JSValue          arr;
 
     (void)this_val;
@@ -284,13 +284,13 @@ static JSValue js_map_layers(JSContext *ctx, JSValueConst this_val, int argc, JS
 
 static JSValue js_map_levels(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
-    mvn_console_t *con;
+    dtr_console_t *con;
     JSValue        arr;
 
     (void)this_val;
     (void)argc;
     (void)argv;
-    con = mvn_api_get_console(ctx);
+    con = dtr_api_get_console(ctx);
     arr = JS_NewArray(ctx);
 
     for (int32_t idx = 0; idx < con->cart->map_count; ++idx) {
@@ -309,13 +309,13 @@ static JSValue js_map_levels(JSContext *ctx, JSValueConst this_val, int argc, JS
 static JSValue
 js_map_current_level(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
-    mvn_console_t *  con;
-    mvn_map_level_t *level;
+    dtr_console_t *  con;
+    dtr_map_level_t *level;
 
     (void)this_val;
     (void)argc;
     (void)argv;
-    con = mvn_api_get_console(ctx);
+    con = dtr_api_get_console(ctx);
 
     if (con->cart->current_map >= 0 && con->cart->current_map < con->cart->map_count) {
         level = con->cart->maps[con->cart->current_map];
@@ -332,7 +332,7 @@ js_map_current_level(JSContext *ctx, JSValueConst this_val, int argc, JSValueCon
 
 static JSValue js_map_load(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
-    mvn_console_t *con;
+    dtr_console_t *con;
     const char *   name;
 
     (void)this_val;
@@ -340,7 +340,7 @@ static JSValue js_map_load(JSContext *ctx, JSValueConst this_val, int argc, JSVa
         return JS_FALSE;
     }
 
-    con  = mvn_api_get_console(ctx);
+    con  = dtr_api_get_console(ctx);
     name = JS_ToCString(ctx, argv[0]);
     if (name == NULL) {
         return JS_FALSE;
@@ -362,7 +362,7 @@ static JSValue js_map_load(JSContext *ctx, JSValueConst this_val, int argc, JSVa
 /*  map.objects(name?)                                                 */
 /* ------------------------------------------------------------------ */
 
-static JSValue prv_obj_to_js(JSContext *ctx, mvn_map_object_t *obj)
+static JSValue prv_obj_to_js(JSContext *ctx, dtr_map_object_t *obj)
 {
     JSValue jobj;
 
@@ -386,7 +386,7 @@ static JSValue prv_obj_to_js(JSContext *ctx, mvn_map_object_t *obj)
 
 static JSValue js_map_objects(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
-    mvn_map_level_t *level;
+    dtr_map_level_t *level;
     const char *     filter_name;
     JSValue          arr;
     uint32_t         out_idx;
@@ -406,11 +406,11 @@ static JSValue js_map_objects(JSContext *ctx, JSValueConst this_val, int argc, J
     out_idx = 0;
 
     for (int32_t li = 0; li < level->layer_count; ++li) {
-        mvn_map_layer_t *layer;
+        dtr_map_layer_t *layer;
 
         layer = &level->layers[li];
         for (int32_t oi = 0; oi < layer->object_count; ++oi) {
-            mvn_map_object_t *obj;
+            dtr_map_object_t *obj;
 
             obj = &layer->objects[oi];
             if (filter_name != NULL && SDL_strcmp(obj->name, filter_name) != 0) {
@@ -434,7 +434,7 @@ static JSValue js_map_objects(JSContext *ctx, JSValueConst this_val, int argc, J
 
 static JSValue js_map_object(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
-    mvn_map_level_t *level;
+    dtr_map_level_t *level;
     const char *     name;
 
     (void)this_val;
@@ -453,7 +453,7 @@ static JSValue js_map_object(JSContext *ctx, JSValueConst this_val, int argc, JS
     }
 
     for (int32_t li = 0; li < level->layer_count; ++li) {
-        mvn_map_layer_t *layer;
+        dtr_map_layer_t *layer;
 
         layer = &level->layers[li];
         for (int32_t oi = 0; oi < layer->object_count; ++oi) {
@@ -475,7 +475,7 @@ static JSValue js_map_object(JSContext *ctx, JSValueConst this_val, int argc, JS
 static JSValue
 js_map_objects_in(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
-    mvn_map_level_t *level;
+    dtr_map_level_t *level;
     double           rx;
     double           ry;
     double           rw;
@@ -489,20 +489,20 @@ js_map_objects_in(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst 
         return JS_NewArray(ctx);
     }
 
-    rx = mvn_api_opt_float(ctx, argc, argv, 0, 0.0);
-    ry = mvn_api_opt_float(ctx, argc, argv, 1, 0.0);
-    rw = mvn_api_opt_float(ctx, argc, argv, 2, 0.0);
-    rh = mvn_api_opt_float(ctx, argc, argv, 3, 0.0);
+    rx = dtr_api_opt_float(ctx, argc, argv, 0, 0.0);
+    ry = dtr_api_opt_float(ctx, argc, argv, 1, 0.0);
+    rw = dtr_api_opt_float(ctx, argc, argv, 2, 0.0);
+    rh = dtr_api_opt_float(ctx, argc, argv, 3, 0.0);
 
     arr     = JS_NewArray(ctx);
     out_idx = 0;
 
     for (int32_t li = 0; li < level->layer_count; ++li) {
-        mvn_map_layer_t *layer;
+        dtr_map_layer_t *layer;
 
         layer = &level->layers[li];
         for (int32_t oi = 0; oi < layer->object_count; ++oi) {
-            mvn_map_object_t *obj;
+            dtr_map_object_t *obj;
 
             obj = &layer->objects[oi];
             /* AABB overlap test */
@@ -524,7 +524,7 @@ js_map_objects_in(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst 
 static JSValue
 js_map_objects_with(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
-    mvn_map_level_t *level;
+    dtr_map_level_t *level;
     const char *     prop;
     JSValue          arr;
     uint32_t         out_idx;
@@ -548,11 +548,11 @@ js_map_objects_with(JSContext *ctx, JSValueConst this_val, int argc, JSValueCons
     out_idx = 0;
 
     for (int32_t li = 0; li < level->layer_count; ++li) {
-        mvn_map_layer_t *layer;
+        dtr_map_layer_t *layer;
 
         layer = &level->layers[li];
         for (int32_t oi = 0; oi < layer->object_count; ++oi) {
-            mvn_map_object_t *obj;
+            dtr_map_object_t *obj;
             JSValue           pval;
 
             obj = &layer->objects[oi];
@@ -620,7 +620,7 @@ static const JSCFunctionListEntry js_map_funcs[] = {
     JS_CFUNC_DEF("objects_with", 2, js_map_objects_with),
 };
 
-void mvn_map_api_register(JSContext *ctx, JSValue global)
+void dtr_map_api_register(JSContext *ctx, JSValue global)
 {
     JSValue ns;
 

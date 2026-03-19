@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// tools/create-cart.js — Project scaffolding tool for mvngin carts
+// tools/create-cart.js — Project scaffolding tool for dithr carts
 // Usage: node create-cart.js <name> [--template blank|platformer|pico8-port]
 
 "use strict";
@@ -119,12 +119,12 @@ function main() {
         [
             `# ${name}`,
             "",
-            `A game made with [mvngin](https://github.com/example/mvngin).`,
+            `A game made with [dithr](https://github.com/example/dithr).`,
             "",
             "## Run",
             "",
             "```bash",
-            `mvngin cart.json`,
+            `dithr cart.json`,
             "```",
             "",
         ].join("\n"),
@@ -135,9 +135,9 @@ function main() {
         name: safeName,
         version: "1.0.0",
         private: true,
-        description: `${name} — mvngin cart`,
+        description: `${name} — dithr cart`,
         scripts: {
-            start: "mvngin cart.json",
+            start: "dithr cart.json",
             export: "node ../tools/cart-export.js cart.json",
         },
     };
@@ -145,7 +145,7 @@ function main() {
 
     console.log(`Created cart "${name}" in ${dir}/`);
     console.log(`  Template: ${template}`);
-    console.log(`  Run: mvngin ${dir}/cart.json`);
+    console.log(`  Run: dithr ${dir}/cart.json`);
 }
 
 main();

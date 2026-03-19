@@ -14,7 +14,7 @@
 /**
  * \brief           Extract exception message + line from context
  */
-static void prv_capture_exception(mvn_runtime_t *rt)
+static void prv_capture_exception(dtr_runtime_t *rt)
 {
     JSValue     exc;
     JSValue     stack;
@@ -24,10 +24,10 @@ static void prv_capture_exception(mvn_runtime_t *rt)
     exc = JS_GetException(rt->ctx);
     msg = JS_ToCString(rt->ctx, exc);
     if (msg != NULL) {
-        SDL_snprintf(rt->error_msg, MVN_ERROR_MSG_LEN, "%s", msg);
+        SDL_snprintf(rt->error_msg, DTR_ERROR_MSG_LEN, "%s", msg);
         JS_FreeCString(rt->ctx, msg);
     } else {
-        SDL_strlcpy(rt->error_msg, "Unknown error", MVN_ERROR_MSG_LEN);
+        SDL_strlcpy(rt->error_msg, "Unknown error", DTR_ERROR_MSG_LEN);
     }
 
     /* Try to get line from stack */
@@ -39,7 +39,7 @@ static void prv_capture_exception(mvn_runtime_t *rt)
             size_t cur_len;
 
             cur_len = SDL_strlen(rt->error_msg);
-            SDL_snprintf(rt->error_msg + cur_len, MVN_ERROR_MSG_LEN - cur_len, "\n%s", stk);
+            SDL_snprintf(rt->error_msg + cur_len, DTR_ERROR_MSG_LEN - cur_len, "\n%s", stk);
             JS_FreeCString(rt->ctx, stk);
         }
     }
@@ -67,11 +67,11 @@ static void prv_capture_exception(mvn_runtime_t *rt)
 /*  Create / destroy                                                   */
 /* ------------------------------------------------------------------ */
 
-mvn_runtime_t *mvn_runtime_create(mvn_console_t *con, int32_t heap_mb, int32_t stack_kb)
+dtr_runtime_t *dtr_runtime_create(dtr_console_t *con, int32_t heap_mb, int32_t stack_kb)
 {
-    mvn_runtime_t *rt;
+    dtr_runtime_t *rt;
 
-    rt = MVN_CALLOC(1, sizeof(mvn_runtime_t));
+    rt = DTR_CALLOC(1, sizeof(dtr_runtime_t));
     if (rt == NULL) {
         return NULL;
     }
@@ -80,7 +80,7 @@ mvn_runtime_t *mvn_runtime_create(mvn_console_t *con, int32_t heap_mb, int32_t s
 
     rt->rt = JS_NewRuntime();
     if (rt->rt == NULL) {
-        MVN_FREE(rt);
+        DTR_FREE(rt);
         return NULL;
     }
 
@@ -91,7 +91,7 @@ mvn_runtime_t *mvn_runtime_create(mvn_console_t *con, int32_t heap_mb, int32_t s
     rt->ctx = JS_NewContext(rt->rt);
     if (rt->ctx == NULL) {
         JS_FreeRuntime(rt->rt);
-        MVN_FREE(rt);
+        DTR_FREE(rt);
         return NULL;
     }
 
@@ -110,7 +110,7 @@ mvn_runtime_t *mvn_runtime_create(mvn_console_t *con, int32_t heap_mb, int32_t s
     return rt;
 }
 
-void mvn_runtime_destroy(mvn_runtime_t *rt)
+void dtr_runtime_destroy(dtr_runtime_t *rt)
 {
     if (rt == NULL) {
         return;
@@ -126,14 +126,14 @@ void mvn_runtime_destroy(mvn_runtime_t *rt)
         JS_FreeRuntime(rt->rt);
     }
 
-    MVN_FREE(rt);
+    DTR_FREE(rt);
 }
 
 /* ------------------------------------------------------------------ */
 /*  Eval                                                               */
 /* ------------------------------------------------------------------ */
 
-bool mvn_runtime_eval(mvn_runtime_t *rt, const char *code, size_t len, const char *filename)
+bool dtr_runtime_eval(dtr_runtime_t *rt, const char *code, size_t len, const char *filename)
 {
     JSValue result;
 
@@ -152,7 +152,7 @@ bool mvn_runtime_eval(mvn_runtime_t *rt, const char *code, size_t len, const cha
 /*  Call global function by atom                                       */
 /* ------------------------------------------------------------------ */
 
-bool mvn_runtime_call(mvn_runtime_t *rt, JSAtom name)
+bool dtr_runtime_call(dtr_runtime_t *rt, JSAtom name)
 {
     JSValue global;
     JSValue func;
@@ -191,7 +191,7 @@ bool mvn_runtime_call(mvn_runtime_t *rt, JSAtom name)
 /*  Call global function by atom with arguments                        */
 /* ------------------------------------------------------------------ */
 
-bool mvn_runtime_call_argv(mvn_runtime_t *rt, JSAtom name, int argc, JSValue *argv)
+bool dtr_runtime_call_argv(dtr_runtime_t *rt, JSAtom name, int argc, JSValue *argv)
 {
     JSValue global;
     JSValue func;
@@ -229,7 +229,7 @@ bool mvn_runtime_call_argv(mvn_runtime_t *rt, JSAtom name, int argc, JSValue *ar
 /*  Drain microtasks                                                   */
 /* ------------------------------------------------------------------ */
 
-void mvn_runtime_drain_jobs(mvn_runtime_t *rt)
+void dtr_runtime_drain_jobs(dtr_runtime_t *rt)
 {
     JSContext *pctx;
 
@@ -250,7 +250,7 @@ void mvn_runtime_drain_jobs(mvn_runtime_t *rt)
 /*  JSON parsing                                                       */
 /* ------------------------------------------------------------------ */
 
-JSValue mvn_runtime_parse_json(mvn_runtime_t *rt, const char *json, size_t len)
+JSValue dtr_runtime_parse_json(dtr_runtime_t *rt, const char *json, size_t len)
 {
     JSValue result;
 
@@ -265,7 +265,7 @@ JSValue mvn_runtime_parse_json(mvn_runtime_t *rt, const char *json, size_t len)
 /*  Clear error                                                        */
 /* ------------------------------------------------------------------ */
 
-void mvn_runtime_clear_error(mvn_runtime_t *rt)
+void dtr_runtime_clear_error(dtr_runtime_t *rt)
 {
     rt->error_active = false;
     rt->error_line   = 0;

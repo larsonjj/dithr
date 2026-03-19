@@ -1,10 +1,10 @@
 /**
  * \file            console.h
- * \brief           MVN Console — core state, compile-time defaults, memory macros
+ * \brief           DTR Console — core state, compile-time defaults, memory macros
  */
 
-#ifndef MVN_CONSOLE_H
-#define MVN_CONSOLE_H
+#ifndef DTR_CONSOLE_H
+#define DTR_CONSOLE_H
 
 #include <SDL3/SDL.h>
 #include <stdbool.h>
@@ -119,25 +119,25 @@ extern "C" {
 /*  Memory macros — thin wrappers around SDL allocation                      */
 /* ------------------------------------------------------------------------ */
 
-#define MVN_MALLOC(size)        SDL_malloc(size)
-#define MVN_CALLOC(nmemb, size) SDL_calloc((nmemb), (size))
-#define MVN_REALLOC(ptr, size)  SDL_realloc((ptr), (size))
-#define MVN_FREE(ptr)           SDL_free(ptr)
+#define DTR_MALLOC(size)        SDL_malloc(size)
+#define DTR_CALLOC(nmemb, size) SDL_calloc((nmemb), (size))
+#define DTR_REALLOC(ptr, size)  SDL_realloc((ptr), (size))
+#define DTR_FREE(ptr)           SDL_free(ptr)
 
 /* ------------------------------------------------------------------------ */
 /*  Forward declarations (typedef once — subsystem headers define bodies)    */
 /* ------------------------------------------------------------------------ */
 
-typedef struct mvn_graphics      mvn_graphics_t;
-typedef struct mvn_audio         mvn_audio_t;
-typedef struct mvn_key_state     mvn_key_state_t;
-typedef struct mvn_mouse_state   mvn_mouse_state_t;
-typedef struct mvn_gamepad_state mvn_gamepad_state_t;
-typedef struct mvn_input_state   mvn_input_state_t;
-typedef struct mvn_event_bus     mvn_event_bus_t;
-typedef struct mvn_cart          mvn_cart_t;
-typedef struct mvn_postfx        mvn_postfx_t;
-typedef struct mvn_runtime       mvn_runtime_t;
+typedef struct dtr_graphics      dtr_graphics_t;
+typedef struct dtr_audio         dtr_audio_t;
+typedef struct dtr_key_state     dtr_key_state_t;
+typedef struct dtr_mouse_state   dtr_mouse_state_t;
+typedef struct dtr_gamepad_state dtr_gamepad_state_t;
+typedef struct dtr_input_state   dtr_input_state_t;
+typedef struct dtr_event_bus     dtr_event_bus_t;
+typedef struct dtr_cart          dtr_cart_t;
+typedef struct dtr_postfx        dtr_postfx_t;
+typedef struct dtr_runtime       dtr_runtime_t;
 
 /* ------------------------------------------------------------------------ */
 /*  Console — top-level state                                                */
@@ -146,21 +146,21 @@ typedef struct mvn_runtime       mvn_runtime_t;
 /**
  * \brief           Top-level console state that owns every subsystem
  */
-typedef struct mvn_console {
+typedef struct dtr_console {
     SDL_Window *  window;
     SDL_Renderer *renderer;
     SDL_Texture * screen_tex;
 
-    mvn_runtime_t *      runtime;
-    mvn_graphics_t *     graphics;
-    mvn_audio_t *        audio;
-    mvn_key_state_t *    keys;
-    mvn_mouse_state_t *  mouse;
-    mvn_gamepad_state_t *gamepads;
-    mvn_input_state_t *  input;
-    mvn_event_bus_t *    events;
-    mvn_cart_t *         cart;
-    mvn_postfx_t *       postfx;
+    dtr_runtime_t *      runtime;
+    dtr_graphics_t *     graphics;
+    dtr_audio_t *        audio;
+    dtr_key_state_t *    keys;
+    dtr_mouse_state_t *  mouse;
+    dtr_gamepad_state_t *gamepads;
+    dtr_input_state_t *  input;
+    dtr_event_bus_t *    events;
+    dtr_cart_t *         cart;
+    dtr_postfx_t *       postfx;
 
     bool running;
     bool paused;
@@ -192,7 +192,7 @@ typedef struct mvn_console {
     int64_t watch_mtime;      /**< Last known modify_time (SDL_Time ns) */
     float   watch_timer;      /**< Seconds until next poll */
 #endif
-} mvn_console_t;
+} dtr_console_t;
 
 /* ------------------------------------------------------------------------ */
 /*  Console lifecycle                                                        */
@@ -203,29 +203,29 @@ typedef struct mvn_console {
  * \param[in]       cart_path: Path to cart.json or cart.baked.json
  * \return          Console pointer on success, NULL on failure
  */
-mvn_console_t *mvn_console_create(const char *cart_path);
+dtr_console_t *dtr_console_create(const char *cart_path);
 
 /**
  * \brief           Process a single SDL event
  * \param[in]       con: Console instance
  * \param[in]       event: SDL event to handle
  */
-void mvn_console_event(mvn_console_t *con, SDL_Event *event);
+void dtr_console_event(dtr_console_t *con, SDL_Event *event);
 
 /**
  * \brief           Run one frame (called each iteration by SDL)
  * \param[in]       con: Console instance
  */
-void mvn_console_iterate(mvn_console_t *con);
+void dtr_console_iterate(dtr_console_t *con);
 
 /**
  * \brief           Tear down and free all resources
  * \param[in]       con: Console instance
  */
-void mvn_console_destroy(mvn_console_t *con);
+void dtr_console_destroy(dtr_console_t *con);
 
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
 
-#endif /* MVN_CONSOLE_H */
+#endif /* DTR_CONSOLE_H */

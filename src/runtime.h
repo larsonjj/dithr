@@ -3,8 +3,8 @@
  * \brief           QuickJS-NG runtime wrapper — context, js_call, error overlay
  */
 
-#ifndef MVN_RUNTIME_H
-#define MVN_RUNTIME_H
+#ifndef DTR_RUNTIME_H
+#define DTR_RUNTIME_H
 
 #include "console.h"
 #include "quickjs.h"
@@ -14,15 +14,15 @@ extern "C" {
 #endif /* __cplusplus */
 
 /* Maximum length of the error message stored for the overlay */
-#define MVN_ERROR_MSG_LEN 512
+#define DTR_ERROR_MSG_LEN 512
 
 /**
  * \brief           JS runtime wrapper
  */
-struct mvn_runtime {
+struct dtr_runtime {
     JSRuntime *    rt;
     JSContext *    ctx;
-    mvn_console_t *console;
+    dtr_console_t *console;
 
     /* Cached global function atoms */
     JSAtom atom_init;
@@ -31,7 +31,7 @@ struct mvn_runtime {
 
     /* Error overlay state */
     bool    error_active;
-    char    error_msg[MVN_ERROR_MSG_LEN];
+    char    error_msg[DTR_ERROR_MSG_LEN];
     int32_t error_line;
 };
 
@@ -46,12 +46,12 @@ struct mvn_runtime {
  * \param[in]       stack_kb: JS stack limit in kilobytes
  * \return          Runtime pointer, or NULL on failure
  */
-mvn_runtime_t *mvn_runtime_create(mvn_console_t *con, int32_t heap_mb, int32_t stack_kb);
+dtr_runtime_t *dtr_runtime_create(dtr_console_t *con, int32_t heap_mb, int32_t stack_kb);
 
 /**
  * \brief           Destroy runtime and free all JS resources
  */
-void mvn_runtime_destroy(mvn_runtime_t *rt);
+void dtr_runtime_destroy(dtr_runtime_t *rt);
 
 /* ------------------------------------------------------------------------ */
 /*  Evaluation and invocation                                                */
@@ -65,7 +65,7 @@ void mvn_runtime_destroy(mvn_runtime_t *rt);
  * \param[in]       filename: Source file name for error reporting
  * \return          true on success
  */
-bool mvn_runtime_eval(mvn_runtime_t *rt, const char *code, size_t len, const char *filename);
+bool dtr_runtime_eval(dtr_runtime_t *rt, const char *code, size_t len, const char *filename);
 
 /**
  * \brief           Call a named global JS function with error handling
@@ -75,7 +75,7 @@ bool mvn_runtime_eval(mvn_runtime_t *rt, const char *code, size_t len, const cha
  * \param[in]       name: Atom of the global function to call
  * \return          true on success, false if exception occurred
  */
-bool mvn_runtime_call(mvn_runtime_t *rt, JSAtom name);
+bool dtr_runtime_call(dtr_runtime_t *rt, JSAtom name);
 
 /**
  * \brief           Call a named global JS function with arguments
@@ -85,12 +85,12 @@ bool mvn_runtime_call(mvn_runtime_t *rt, JSAtom name);
  * \param[in]       argv: Argument array (caller retains ownership)
  * \return          true on success, false if exception occurred
  */
-bool mvn_runtime_call_argv(mvn_runtime_t *rt, JSAtom name, int argc, JSValue *argv);
+bool dtr_runtime_call_argv(dtr_runtime_t *rt, JSAtom name, int argc, JSValue *argv);
 
 /**
  * \brief           Drain pending QuickJS microtasks
  */
-void mvn_runtime_drain_jobs(mvn_runtime_t *rt);
+void dtr_runtime_drain_jobs(dtr_runtime_t *rt);
 
 /**
  * \brief           Parse a JSON string using the JS context
@@ -99,12 +99,12 @@ void mvn_runtime_drain_jobs(mvn_runtime_t *rt);
  * \param[in]       len: Length of json
  * \return          Parsed JS value (caller must JS_FreeValue)
  */
-JSValue mvn_runtime_parse_json(mvn_runtime_t *rt, const char *json, size_t len);
+JSValue dtr_runtime_parse_json(dtr_runtime_t *rt, const char *json, size_t len);
 
 /**
  * \brief           Clear the error state and resume execution
  */
-void mvn_runtime_clear_error(mvn_runtime_t *rt);
+void dtr_runtime_clear_error(dtr_runtime_t *rt);
 
 /* ------------------------------------------------------------------------ */
 /*  API registration — called by each api module                            */
@@ -114,10 +114,10 @@ void mvn_runtime_clear_error(mvn_runtime_t *rt);
  * \brief           Register all JS API namespaces on the global object
  * \param[in]       rt: Runtime (context must already exist)
  */
-void mvn_api_register_all(mvn_runtime_t *rt);
+void dtr_api_register_all(dtr_runtime_t *rt);
 
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
 
-#endif /* MVN_RUNTIME_H */
+#endif /* DTR_RUNTIME_H */

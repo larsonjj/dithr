@@ -7,21 +7,21 @@
  * Covers ASCII 32 (' ') through 126 ('~') — 95 glyphs.
  */
 
-#ifndef MVN_FONT_H_INCLUDED
-#define MVN_FONT_H_INCLUDED
+#ifndef DTR_FONT_H_INCLUDED
+#define DTR_FONT_H_INCLUDED
 
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
 
-#define MVN_FONT_W     4
-#define MVN_FONT_H     6
-#define MVN_FONT_FIRST 32
-#define MVN_FONT_LAST  126
-#define MVN_FONT_COUNT (MVN_FONT_LAST - MVN_FONT_FIRST + 1)
+#define DTR_FONT_W     4
+#define DTR_FONT_H     6
+#define DTR_FONT_FIRST 32
+#define DTR_FONT_LAST  126
+#define DTR_FONT_COUNT (DTR_FONT_LAST - DTR_FONT_FIRST + 1)
 
 /* clang-format off */
-static const unsigned char MVN_FONT_DATA[MVN_FONT_COUNT][MVN_FONT_H] = {
+static const unsigned char DTR_FONT_DATA[DTR_FONT_COUNT][DTR_FONT_H] = {
     {0x0,0x0,0x0,0x0,0x0,0x0}, //  32 ' '
     {0x4,0x4,0x4,0x0,0x4,0x0}, //  33 '!'
     {0xA,0xA,0x0,0x0,0x0,0x0}, //  34 '"'
@@ -124,4 +124,4 @@ static const unsigned char MVN_FONT_DATA[MVN_FONT_COUNT][MVN_FONT_H] = {
 }
 #endif /* __cplusplus */
 
-#endif /* MVN_FONT_H_INCLUDED */
+#endif /* DTR_FONT_H_INCLUDED */

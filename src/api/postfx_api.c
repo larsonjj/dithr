@@ -6,7 +6,7 @@
 #include "../postfx.h"
 #include "api_common.h"
 
-#define PFX(ctx) (mvn_api_get_console(ctx)->postfx)
+#define PFX(ctx) (dtr_api_get_console(ctx)->postfx)
 
 /* ------------------------------------------------------------------ */
 /*  Low-level stack manipulation (push / pop / clear / set)            */
@@ -17,9 +17,9 @@ static JSValue js_postfx_push(JSContext *ctx, JSValueConst this_val, int argc, J
     int32_t id_val;
     float   str_val;
     (void)this_val;
-    id_val  = mvn_api_opt_int(ctx, argc, argv, 0, MVN_POSTFX_NONE);
-    str_val = (float)mvn_api_opt_float(ctx, argc, argv, 1, 1.0);
-    mvn_postfx_push(PFX(ctx), (mvn_postfx_id_t)id_val, str_val);
+    id_val  = dtr_api_opt_int(ctx, argc, argv, 0, DTR_POSTFX_NONE);
+    str_val = (float)dtr_api_opt_float(ctx, argc, argv, 1, 1.0);
+    dtr_postfx_push(PFX(ctx), (dtr_postfx_id_t)id_val, str_val);
     return JS_UNDEFINED;
 }
 
@@ -28,7 +28,7 @@ static JSValue js_postfx_pop(JSContext *ctx, JSValueConst this_val, int argc, JS
     (void)this_val;
     (void)argc;
     (void)argv;
-    mvn_postfx_pop(PFX(ctx));
+    dtr_postfx_pop(PFX(ctx));
     return JS_UNDEFINED;
 }
 
@@ -37,17 +37,17 @@ static JSValue js_postfx_clear(JSContext *ctx, JSValueConst this_val, int argc, 
     (void)this_val;
     (void)argc;
     (void)argv;
-    mvn_postfx_clear(PFX(ctx));
+    dtr_postfx_clear(PFX(ctx));
     return JS_UNDEFINED;
 }
 
 static JSValue js_postfx_set(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
     (void)this_val;
-    mvn_postfx_set_param(PFX(ctx),
-                         mvn_api_opt_int(ctx, argc, argv, 0, 0),
-                         mvn_api_opt_int(ctx, argc, argv, 1, 0),
-                         (float)mvn_api_opt_float(ctx, argc, argv, 2, 0.0));
+    dtr_postfx_set_param(PFX(ctx),
+                         dtr_api_opt_int(ctx, argc, argv, 0, 0),
+                         dtr_api_opt_int(ctx, argc, argv, 1, 0),
+                         (float)dtr_api_opt_float(ctx, argc, argv, 2, 0.0));
     return JS_UNDEFINED;
 }
 
@@ -65,10 +65,10 @@ js_postfx_chain_set(JSContext *ctx, JSValueConst this_val, int argc, JSValueCons
     JS_ToInt32(ctx, &index, val);
     JS_FreeValue(ctx, val);
 
-    mvn_postfx_set_param(PFX(ctx),
+    dtr_postfx_set_param(PFX(ctx),
                          index,
-                         mvn_api_opt_int(ctx, argc, argv, 0, 0),
-                         (float)mvn_api_opt_float(ctx, argc, argv, 1, 0.0));
+                         dtr_api_opt_int(ctx, argc, argv, 0, 0),
+                         (float)dtr_api_opt_float(ctx, argc, argv, 1, 0.0));
 
     return JS_DupValue(ctx, this_val);
 }
@@ -89,7 +89,7 @@ static JSValue js_postfx_use(JSContext *ctx, JSValueConst this_val, int argc, JS
         return JS_UNDEFINED;
     }
 
-    index = mvn_postfx_use(PFX(ctx), name);
+    index = dtr_postfx_use(PFX(ctx), name);
     JS_FreeCString(ctx, name);
 
     if (index < 0) {
@@ -119,7 +119,7 @@ static JSValue js_postfx_stack(JSContext *ctx, JSValueConst this_val, int argc, 
         return JS_UNDEFINED;
     }
 
-    mvn_postfx_clear(PFX(ctx));
+    dtr_postfx_clear(PFX(ctx));
 
     arr     = argv[0];
     len_val = JS_GetPropertyStr(ctx, arr, "length");
@@ -135,11 +135,11 @@ static JSValue js_postfx_stack(JSContext *ctx, JSValueConst this_val, int argc, 
         JS_FreeValue(ctx, elem);
 
         if (name != NULL) {
-            mvn_postfx_id_t id;
+            dtr_postfx_id_t id;
 
-            id = mvn_postfx_id_from_name(name);
-            if (id != MVN_POSTFX_NONE) {
-                mvn_postfx_push(PFX(ctx), id, 1.0f);
+            id = dtr_postfx_id_from_name(name);
+            if (id != DTR_POSTFX_NONE) {
+                dtr_postfx_push(PFX(ctx), id, 1.0f);
             }
             JS_FreeCString(ctx, name);
         }
@@ -162,7 +162,7 @@ js_postfx_available(JSContext *ctx, JSValueConst this_val, int argc, JSValueCons
     (void)this_val;
     (void)argc;
     (void)argv;
-    names = mvn_postfx_available(&count);
+    names = dtr_postfx_available(&count);
     arr   = JS_NewArray(ctx);
 
     for (int32_t idx = 0; idx < count; ++idx) {
@@ -175,12 +175,12 @@ js_postfx_available(JSContext *ctx, JSValueConst this_val, int argc, JSValueCons
 /*  postfx.save() / postfx.restore()  — snapshot effect stack          */
 /* ------------------------------------------------------------------ */
 
-static mvn_postfx_entry_t s_saved_stack[MVN_POSTFX_MAX_STACK];
+static dtr_postfx_entry_t s_saved_stack[DTR_POSTFX_MAX_STACK];
 static int32_t            s_saved_count = 0;
 
 static JSValue js_postfx_save(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
-    mvn_postfx_t *pfx;
+    dtr_postfx_t *pfx;
 
     (void)this_val;
     (void)argc;
@@ -189,14 +189,14 @@ static JSValue js_postfx_save(JSContext *ctx, JSValueConst this_val, int argc, J
 
     s_saved_count = pfx->count;
     SDL_memcpy(s_saved_stack, pfx->stack,
-               (size_t)pfx->count * sizeof(mvn_postfx_entry_t));
+               (size_t)pfx->count * sizeof(dtr_postfx_entry_t));
     return JS_UNDEFINED;
 }
 
 static JSValue
 js_postfx_restore(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
-    mvn_postfx_t *pfx;
+    dtr_postfx_t *pfx;
 
     (void)this_val;
     (void)argc;
@@ -205,7 +205,7 @@ js_postfx_restore(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst 
 
     pfx->count = s_saved_count;
     SDL_memcpy(pfx->stack, s_saved_stack,
-               (size_t)s_saved_count * sizeof(mvn_postfx_entry_t));
+               (size_t)s_saved_count * sizeof(dtr_postfx_entry_t));
     return JS_UNDEFINED;
 }
 
@@ -251,7 +251,7 @@ static const JSCFunctionListEntry js_postfx_funcs[] = {
     JS_CFUNC_DEF("useShader", 1, js_postfx_useShader),
 };
 
-void mvn_postfx_api_register(JSContext *ctx, JSValue global)
+void dtr_postfx_api_register(JSContext *ctx, JSValue global)
 {
     JSValue ns;
 
@@ -259,11 +259,11 @@ void mvn_postfx_api_register(JSContext *ctx, JSValue global)
     JS_SetPropertyFunctionList(ctx, ns, js_postfx_funcs, countof(js_postfx_funcs));
 
     /* Effect ID constants */
-    JS_SetPropertyStr(ctx, ns, "NONE", JS_NewInt32(ctx, MVN_POSTFX_NONE));
-    JS_SetPropertyStr(ctx, ns, "CRT", JS_NewInt32(ctx, MVN_POSTFX_CRT));
-    JS_SetPropertyStr(ctx, ns, "SCANLINES", JS_NewInt32(ctx, MVN_POSTFX_SCANLINES));
-    JS_SetPropertyStr(ctx, ns, "BLOOM", JS_NewInt32(ctx, MVN_POSTFX_BLOOM));
-    JS_SetPropertyStr(ctx, ns, "ABERRATION", JS_NewInt32(ctx, MVN_POSTFX_ABERRATION));
+    JS_SetPropertyStr(ctx, ns, "NONE", JS_NewInt32(ctx, DTR_POSTFX_NONE));
+    JS_SetPropertyStr(ctx, ns, "CRT", JS_NewInt32(ctx, DTR_POSTFX_CRT));
+    JS_SetPropertyStr(ctx, ns, "SCANLINES", JS_NewInt32(ctx, DTR_POSTFX_SCANLINES));
+    JS_SetPropertyStr(ctx, ns, "BLOOM", JS_NewInt32(ctx, DTR_POSTFX_BLOOM));
+    JS_SetPropertyStr(ctx, ns, "ABERRATION", JS_NewInt32(ctx, DTR_POSTFX_ABERRATION));
 
     JS_SetPropertyStr(ctx, global, "postfx", ns);
 }

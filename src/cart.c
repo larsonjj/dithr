@@ -11,13 +11,13 @@
 /*  Create                                                             */
 /* ------------------------------------------------------------------ */
 
-mvn_cart_t *mvn_cart_create(void)
+dtr_cart_t *dtr_cart_create(void)
 {
-    mvn_cart_t *cart;
+    dtr_cart_t *cart;
 
-    cart = MVN_CALLOC(1, sizeof(mvn_cart_t));
+    cart = DTR_CALLOC(1, sizeof(dtr_cart_t));
     if (cart != NULL) {
-        mvn_cart_defaults(cart);
+        dtr_cart_defaults(cart);
     }
     return cart;
 }
@@ -26,9 +26,9 @@ mvn_cart_t *mvn_cart_create(void)
 /*  Defaults                                                           */
 /* ------------------------------------------------------------------ */
 
-void mvn_cart_defaults(mvn_cart_t *cart)
+void dtr_cart_defaults(dtr_cart_t *cart)
 {
-    SDL_memset(cart, 0, sizeof(mvn_cart_t));
+    SDL_memset(cart, 0, sizeof(dtr_cart_t));
 
     /* Display defaults */
     cart->display.width      = CONSOLE_FB_WIDTH;
@@ -137,12 +137,12 @@ static bool prv_json_bool(JSContext *ctx, JSValue obj, const char *key, bool dfl
 /*  Parse cart.json                                                    */
 /* ------------------------------------------------------------------ */
 
-bool mvn_cart_parse(mvn_cart_t *cart, JSContext *ctx, const char *json, size_t len)
+bool dtr_cart_parse(dtr_cart_t *cart, JSContext *ctx, const char *json, size_t len)
 {
     JSValue root;
     JSValue sub;
 
-    mvn_cart_defaults(cart);
+    dtr_cart_defaults(cart);
 
     root = JS_ParseJSON(ctx, json, len, "<cart>");
     if (JS_IsException(root)) {
@@ -238,7 +238,7 @@ bool mvn_cart_parse(mvn_cart_t *cart, JSContext *ctx, const char *json, size_t l
             JS_ToInt32(ctx, &arr_len, len_val);
             JS_FreeValue(ctx, len_val);
 
-            cart->sfx_count = (arr_len > MVN_CART_MAX_SFX) ? MVN_CART_MAX_SFX : arr_len;
+            cart->sfx_count = (arr_len > DTR_CART_MAX_SFX) ? DTR_CART_MAX_SFX : arr_len;
             for (int32_t idx = 0; idx < cart->sfx_count; ++idx) {
                 JSValue elem;
 
@@ -272,8 +272,8 @@ bool mvn_cart_parse(mvn_cart_t *cart, JSContext *ctx, const char *json, size_t l
             JS_ToInt32(ctx, &arr_len, len_val);
             JS_FreeValue(ctx, len_val);
 
-            cart->music_count = (arr_len > MVN_CART_MAX_MUSIC)
-                                    ? MVN_CART_MAX_MUSIC : arr_len;
+            cart->music_count = (arr_len > DTR_CART_MAX_MUSIC)
+                                    ? DTR_CART_MAX_MUSIC : arr_len;
             for (int32_t idx = 0; idx < cart->music_count; ++idx) {
                 JSValue elem;
 
@@ -356,11 +356,11 @@ bool mvn_cart_parse(mvn_cart_t *cart, JSContext *ctx, const char *json, size_t l
             if (JS_GetOwnPropertyNames(ctx, &props, &prop_count, dm,
                                        JS_GPN_STRING_MASK | JS_GPN_ENUM_ONLY) == 0) {
                 for (uint32_t pi = 0; pi < prop_count && cart->input.mapping_count <
-                                                             MVN_CART_MAX_INPUT_ACTIONS;
+                                                             DTR_CART_MAX_INPUT_ACTIONS;
                      ++pi) {
                     const char *                action_name;
                     JSValue                     bindings_arr;
-                    mvn_cart_input_mapping_t *  mapping;
+                    dtr_cart_input_mapping_t *  mapping;
 
                     action_name = JS_AtomToCString(ctx, props[pi].atom);
                     if (action_name == NULL) {
@@ -387,7 +387,7 @@ bool mvn_cart_parse(mvn_cart_t *cart, JSContext *ctx, const char *json, size_t l
                         JS_FreeValue(ctx, blen_val);
 
                         for (int32_t bi = 0;
-                             bi < blen && mapping->bind_count < MVN_CART_MAX_INPUT_BINDINGS;
+                             bi < blen && mapping->bind_count < DTR_CART_MAX_INPUT_BINDINGS;
                              ++bi) {
                             JSValue     belem;
                             const char *bstr;
@@ -398,7 +398,7 @@ bool mvn_cart_parse(mvn_cart_t *cart, JSContext *ctx, const char *json, size_t l
                             if (bstr != NULL) {
                                 SDL_strlcpy(mapping->bindings[mapping->bind_count],
                                             bstr,
-                                            MVN_CART_BIND_NAME_LEN);
+                                            DTR_CART_BIND_NAME_LEN);
                                 mapping->bind_count++;
                                 JS_FreeCString(ctx, bstr);
                             }
@@ -428,7 +428,7 @@ bool mvn_cart_parse(mvn_cart_t *cart, JSContext *ctx, const char *json, size_t l
 /*  Validate                                                           */
 /* ------------------------------------------------------------------ */
 
-bool mvn_cart_validate(mvn_cart_t *cart)
+bool dtr_cart_validate(dtr_cart_t *cart)
 {
     bool valid;
 
@@ -513,7 +513,7 @@ bool mvn_cart_validate(mvn_cart_t *cart)
 /*  File loading                                                       */
 /* ------------------------------------------------------------------ */
 
-bool mvn_cart_load(mvn_cart_t *cart, JSContext *ctx, const char *path)
+bool dtr_cart_load(dtr_cart_t *cart, JSContext *ctx, const char *path)
 {
     char * json;
     size_t len;
@@ -549,11 +549,11 @@ bool mvn_cart_load(mvn_cart_t *cart, JSContext *ctx, const char *path)
         return false;
     }
 
-    result = mvn_cart_parse(cart, ctx, json, len);
+    result = dtr_cart_parse(cart, ctx, json, len);
     SDL_free(json);
 
     if (result) {
-        result = mvn_cart_validate(cart);
+        result = dtr_cart_validate(cart);
     }
 
     return result;
@@ -563,7 +563,7 @@ bool mvn_cart_load(mvn_cart_t *cart, JSContext *ctx, const char *path)
 /*  Code loading                                                       */
 /* ------------------------------------------------------------------ */
 
-char *mvn_cart_load_code(mvn_cart_t *cart)
+char *dtr_cart_load_code(dtr_cart_t *cart)
 {
     char   full_path[1024];
     char * code;
@@ -592,7 +592,7 @@ char *mvn_cart_load_code(mvn_cart_t *cart)
 /**
  * \brief           Find a key-value entry by key
  */
-static int32_t prv_find_key(mvn_cart_t *cart, const char *key)
+static int32_t prv_find_key(dtr_cart_t *cart, const char *key)
 {
     for (int32_t idx = 0; idx < cart->kv_count; ++idx) {
         if (SDL_strcmp(cart->kv_keys[idx], key) == 0) {
@@ -602,7 +602,7 @@ static int32_t prv_find_key(mvn_cart_t *cart, const char *key)
     return -1;
 }
 
-void mvn_cart_save(mvn_cart_t *cart, const char *key, const char *value)
+void dtr_cart_save(dtr_cart_t *cart, const char *key, const char *value)
 {
     int32_t idx;
 
@@ -612,7 +612,7 @@ void mvn_cart_save(mvn_cart_t *cart, const char *key, const char *value)
         return;
     }
 
-    if (cart->kv_count >= MVN_CART_MAX_KV) {
+    if (cart->kv_count >= DTR_CART_MAX_KV) {
         SDL_Log("Cart persistence: max keys reached");
         return;
     }
@@ -622,7 +622,7 @@ void mvn_cart_save(mvn_cart_t *cart, const char *key, const char *value)
     ++cart->kv_count;
 }
 
-const char *mvn_cart_load_key(mvn_cart_t *cart, const char *key)
+const char *dtr_cart_load_key(dtr_cart_t *cart, const char *key)
 {
     int32_t idx;
 
@@ -633,12 +633,12 @@ const char *mvn_cart_load_key(mvn_cart_t *cart, const char *key)
     return NULL;
 }
 
-bool mvn_cart_has_key(mvn_cart_t *cart, const char *key)
+bool dtr_cart_has_key(dtr_cart_t *cart, const char *key)
 {
     return prv_find_key(cart, key) >= 0;
 }
 
-void mvn_cart_delete_key(mvn_cart_t *cart, const char *key)
+void dtr_cart_delete_key(dtr_cart_t *cart, const char *key)
 {
     int32_t idx;
 
@@ -660,16 +660,16 @@ void mvn_cart_delete_key(mvn_cart_t *cart, const char *key)
 /*  Data-slot persistence (dset/dget)                                  */
 /* ------------------------------------------------------------------ */
 
-void mvn_cart_dset(mvn_cart_t *cart, int32_t slot, double value)
+void dtr_cart_dset(dtr_cart_t *cart, int32_t slot, double value)
 {
-    if (slot >= 0 && slot < MVN_CART_MAX_DSLOTS) {
+    if (slot >= 0 && slot < DTR_CART_MAX_DSLOTS) {
         cart->dslots[slot] = value;
     }
 }
 
-double mvn_cart_dget(mvn_cart_t *cart, int32_t slot)
+double dtr_cart_dget(dtr_cart_t *cart, int32_t slot)
 {
-    if (slot >= 0 && slot < MVN_CART_MAX_DSLOTS) {
+    if (slot >= 0 && slot < DTR_CART_MAX_DSLOTS) {
         return cart->dslots[slot];
     }
     return 0.0;
@@ -682,9 +682,9 @@ double mvn_cart_dget(mvn_cart_t *cart, int32_t slot)
 /**
  * \brief           Build the save-file path from the cart title
  *
- * Stores under SDL_GetPrefPath("mvngin", <title>)/save.json.
+ * Stores under SDL_GetPrefPath("dithr", <title>)/save.json.
  */
-static bool prv_save_path(mvn_cart_t *cart, char *out, size_t out_sz)
+static bool prv_save_path(dtr_cart_t *cart, char *out, size_t out_sz)
 {
     const char *title;
     char *      pref;
@@ -694,7 +694,7 @@ static bool prv_save_path(mvn_cart_t *cart, char *out, size_t out_sz)
         title = "default";
     }
 
-    pref = SDL_GetPrefPath("mvngin", title);
+    pref = SDL_GetPrefPath("dithr", title);
     if (pref == NULL) {
         return false;
     }
@@ -704,7 +704,7 @@ static bool prv_save_path(mvn_cart_t *cart, char *out, size_t out_sz)
     return true;
 }
 
-bool mvn_cart_persist_save(mvn_cart_t *cart)
+bool dtr_cart_persist_save(dtr_cart_t *cart)
 {
     char    path[512];
     char *  buf;
@@ -719,7 +719,7 @@ bool mvn_cart_persist_save(mvn_cart_t *cart)
 
     /* Conservative upper bound: 64 slots * 30 chars + 64 kv * 350 chars + overhead */
     cap = 64 * 30 + 64 * 350 + 256;
-    buf = MVN_MALLOC(cap);
+    buf = DTR_MALLOC(cap);
     if (buf == NULL) {
         return false;
     }
@@ -728,7 +728,7 @@ bool mvn_cart_persist_save(mvn_cart_t *cart)
     pos += (size_t)SDL_snprintf(buf + pos, cap - pos, "{\n\"dslots\":[");
 
     /* Write dslots array */
-    for (idx = 0; idx < MVN_CART_MAX_DSLOTS; ++idx) {
+    for (idx = 0; idx < DTR_CART_MAX_DSLOTS; ++idx) {
         if (idx > 0) {
             pos += (size_t)SDL_snprintf(buf + pos, cap - pos, ",");
         }
@@ -758,12 +758,12 @@ bool mvn_cart_persist_save(mvn_cart_t *cart)
         if (!ok) {
             SDL_Log("persist: failed to write %s: %s", path, SDL_GetError());
         }
-        MVN_FREE(buf);
+        DTR_FREE(buf);
         return ok;
     }
 }
 
-bool mvn_cart_persist_load(mvn_cart_t *cart)
+bool dtr_cart_persist_load(dtr_cart_t *cart)
 {
     char       path[512];
     char *     json;
@@ -801,7 +801,7 @@ bool mvn_cart_persist_load(mvn_cart_t *cart)
     /* dslots array */
     dslots = JS_GetPropertyStr(ctx, root, "dslots");
     if (JS_IsArray(dslots)) {
-        for (int32_t idx = 0; idx < MVN_CART_MAX_DSLOTS; ++idx) {
+        for (int32_t idx = 0; idx < DTR_CART_MAX_DSLOTS; ++idx) {
             JSValue val;
             double  dbl;
 
@@ -822,7 +822,7 @@ bool mvn_cart_persist_load(mvn_cart_t *cart)
 
         if (JS_GetOwnPropertyNames(ctx, &props, &prop_count, kv_obj,
                                     JS_GPN_STRING_MASK | JS_GPN_ENUM_ONLY) == 0) {
-            for (uint32_t pi = 0; pi < prop_count && cart->kv_count < MVN_CART_MAX_KV; ++pi) {
+            for (uint32_t pi = 0; pi < prop_count && cart->kv_count < DTR_CART_MAX_KV; ++pi) {
                 const char *key;
                 JSValue     val;
                 const char *str;
@@ -868,7 +868,7 @@ bool mvn_cart_persist_load(mvn_cart_t *cart)
 /*  Cleanup                                                            */
 /* ------------------------------------------------------------------ */
 
-void mvn_cart_destroy(mvn_cart_t *cart)
+void dtr_cart_destroy(dtr_cart_t *cart)
 {
     if (cart == NULL) {
         return;
@@ -876,24 +876,24 @@ void mvn_cart_destroy(mvn_cart_t *cart)
 
     for (int32_t idx = 0; idx < cart->map_count; ++idx) {
         if (cart->maps[idx] != NULL) {
-            mvn_map_level_t *level;
+            dtr_map_level_t *level;
 
             level = cart->maps[idx];
             for (int32_t li = 0; li < level->layer_count; ++li) {
-                MVN_FREE(level->layers[li].tiles);
+                DTR_FREE(level->layers[li].tiles);
                 for (int32_t oi = 0; oi < level->layers[li].object_count; ++oi) {
-                    mvn_map_object_t *obj = &level->layers[li].objects[oi];
+                    dtr_map_object_t *obj = &level->layers[li].objects[oi];
                     if (cart->ctx != NULL && !JS_IsUndefined(obj->props)) {
                         JS_FreeValue(cart->ctx, obj->props);
                     }
                 }
-                MVN_FREE(level->layers[li].objects);
+                DTR_FREE(level->layers[li].objects);
             }
-            MVN_FREE(level->layers);
-            MVN_FREE(level);
+            DTR_FREE(level->layers);
+            DTR_FREE(level);
         }
     }
 
-    MVN_FREE(cart->sprite_rgba);
-    MVN_FREE(cart);
+    DTR_FREE(cart->sprite_rgba);
+    DTR_FREE(cart);
 }

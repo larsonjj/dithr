@@ -3,8 +3,8 @@
  * \brief           Asset importers — Aseprite, Tiled (.tmj), LDtk (.ldtk)
  */
 
-#ifndef MVN_CART_IMPORT_H
-#define MVN_CART_IMPORT_H
+#ifndef DTR_CART_IMPORT_H
+#define DTR_CART_IMPORT_H
 
 #include "cart.h"
 
@@ -19,7 +19,7 @@ extern "C" {
  * \param[in]       ctx: JS context for JSON parsing
  * \return          true on success
  */
-bool mvn_import_aseprite(const char *json_path, mvn_cart_t *cart, JSContext *ctx);
+bool dtr_import_aseprite(const char *json_path, dtr_cart_t *cart, JSContext *ctx);
 
 /**
  * \brief           Import a map from Tiled .tmj format
@@ -28,7 +28,7 @@ bool mvn_import_aseprite(const char *json_path, mvn_cart_t *cart, JSContext *ctx
  * \param[in]       ctx: JS context for JSON parsing
  * \return          true on success
  */
-bool mvn_import_tiled(const char *tmj_path, mvn_map_level_t **out_level, JSContext *ctx);
+bool dtr_import_tiled(const char *tmj_path, dtr_map_level_t **out_level, JSContext *ctx);
 
 /**
  * \brief           Import first level from an LDtk .ldtk file
@@ -37,19 +37,19 @@ bool mvn_import_tiled(const char *tmj_path, mvn_map_level_t **out_level, JSConte
  * \param[in]       ctx: JS context for JSON parsing
  * \return          true on success
  */
-bool mvn_import_ldtk(const char *ldtk_path, mvn_map_level_t **out_level, JSContext *ctx);
+bool dtr_import_ldtk(const char *ldtk_path, dtr_map_level_t **out_level, JSContext *ctx);
 
 /**
  * \brief           Load a raw PNG file and return RGBA data
  * \param[in]       path: File path
  * \param[out]      out_w: Image width
  * \param[out]      out_h: Image height
- * \return          RGBA pixel data (caller must MVN_FREE), or NULL
+ * \return          RGBA pixel data (caller must DTR_FREE), or NULL
  */
-uint8_t *mvn_import_png(const char *path, int32_t *out_w, int32_t *out_h);
+uint8_t *dtr_import_png(const char *path, int32_t *out_w, int32_t *out_h);
 
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
 
-#endif /* MVN_CART_IMPORT_H */
+#endif /* DTR_CART_IMPORT_H */

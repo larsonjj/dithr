@@ -3,8 +3,8 @@
  * \brief           Post-processing pipeline — software-based effects
  */
 
-#ifndef MVN_POSTFX_H
-#define MVN_POSTFX_H
+#ifndef DTR_POSTFX_H
+#define DTR_POSTFX_H
 
 #include "console.h"
 
@@ -12,36 +12,36 @@
 extern "C" {
 #endif /* __cplusplus */
 
-#define MVN_POSTFX_NAME_LEN   32
-#define MVN_POSTFX_MAX_STACK  8
-#define MVN_POSTFX_MAX_PARAMS 8
+#define DTR_POSTFX_NAME_LEN   32
+#define DTR_POSTFX_MAX_STACK  8
+#define DTR_POSTFX_MAX_PARAMS 8
 
 /* Built-in effect identifiers */
-typedef enum mvn_postfx_id {
-    MVN_POSTFX_NONE = 0,
-    MVN_POSTFX_CRT,
-    MVN_POSTFX_SCANLINES,
-    MVN_POSTFX_BLOOM,
-    MVN_POSTFX_ABERRATION,
-    MVN_POSTFX_BUILTIN_COUNT
-} mvn_postfx_id_t;
+typedef enum dtr_postfx_id {
+    DTR_POSTFX_NONE = 0,
+    DTR_POSTFX_CRT,
+    DTR_POSTFX_SCANLINES,
+    DTR_POSTFX_BLOOM,
+    DTR_POSTFX_ABERRATION,
+    DTR_POSTFX_BUILTIN_COUNT
+} dtr_postfx_id_t;
 
 /**
  * \brief           A single effect instance in the chain
  */
-typedef struct mvn_postfx_entry {
-    mvn_postfx_id_t id;
-    char            name[MVN_POSTFX_NAME_LEN];
+typedef struct dtr_postfx_entry {
+    dtr_postfx_id_t id;
+    char            name[DTR_POSTFX_NAME_LEN];
     float           strength;
-    float           params[MVN_POSTFX_MAX_PARAMS];
+    float           params[DTR_POSTFX_MAX_PARAMS];
     int32_t         param_count;
-} mvn_postfx_entry_t;
+} dtr_postfx_entry_t;
 
 /**
  * \brief           Post-processing pipeline state
  */
-struct mvn_postfx {
-    mvn_postfx_entry_t stack[MVN_POSTFX_MAX_STACK];
+struct dtr_postfx {
+    dtr_postfx_entry_t stack[DTR_POSTFX_MAX_STACK];
     int32_t            count;
 
     /* Scratch buffer for multi-pass effects */
@@ -50,34 +50,34 @@ struct mvn_postfx {
     int32_t   height;
 };
 
-mvn_postfx_t *mvn_postfx_create(int32_t width, int32_t height);
-void          mvn_postfx_destroy(mvn_postfx_t *pfx);
+dtr_postfx_t *dtr_postfx_create(int32_t width, int32_t height);
+void          dtr_postfx_destroy(dtr_postfx_t *pfx);
 
 /**
  * \brief           Push an effect onto the stack
  */
-void mvn_postfx_push(mvn_postfx_t *pfx, mvn_postfx_id_t id, float strength);
+void dtr_postfx_push(dtr_postfx_t *pfx, dtr_postfx_id_t id, float strength);
 
 /**
  * \brief           Pop the top effect from the stack
  */
-void mvn_postfx_pop(mvn_postfx_t *pfx);
+void dtr_postfx_pop(dtr_postfx_t *pfx);
 
 /**
  * \brief           Clear all effects from the stack
  */
-void mvn_postfx_clear(mvn_postfx_t *pfx);
+void dtr_postfx_clear(dtr_postfx_t *pfx);
 
 /**
  * \brief           Set the active effect (replaces stack with single entry)
  * \return          Index into the stack (for set_param)
  */
-int32_t mvn_postfx_use(mvn_postfx_t *pfx, const char *name);
+int32_t dtr_postfx_use(dtr_postfx_t *pfx, const char *name);
 
 /**
  * \brief           Set a parameter on a stack entry by index
  */
-void mvn_postfx_set_param(mvn_postfx_t *pfx, int32_t index, int32_t param_idx, float value);
+void dtr_postfx_set_param(dtr_postfx_t *pfx, int32_t index, int32_t param_idx, float value);
 
 /**
  * \brief           Apply the current effect stack to an RGBA pixel buffer
@@ -85,20 +85,20 @@ void mvn_postfx_set_param(mvn_postfx_t *pfx, int32_t index, int32_t param_idx, f
  * \param[in]       width: Buffer width
  * \param[in]       height: Buffer height
  */
-void mvn_postfx_apply(mvn_postfx_t *pfx, uint32_t *pixels, int32_t width, int32_t height);
+void dtr_postfx_apply(dtr_postfx_t *pfx, uint32_t *pixels, int32_t width, int32_t height);
 
 /**
  * \brief           Get list of available effect names
  */
-const char **mvn_postfx_available(int32_t *out_count);
+const char **dtr_postfx_available(int32_t *out_count);
 
 /**
  * \brief           Resolve effect name to ID
  */
-mvn_postfx_id_t mvn_postfx_id_from_name(const char *name);
+dtr_postfx_id_t dtr_postfx_id_from_name(const char *name);
 
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
 
-#endif /* MVN_POSTFX_H */
+#endif /* DTR_POSTFX_H */

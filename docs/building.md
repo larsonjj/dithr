@@ -1,6 +1,6 @@
 # Building
 
-mvngin uses CMake with presets for easy configuration. All library dependencies
+dithr uses CMake with presets for easy configuration. All library dependencies
 (SDL3, SDL3_mixer, SDL3_image, QuickJS-NG) are fetched automatically via
 `FetchContent` — no manual dependency management needed.
 
@@ -44,7 +44,7 @@ cmake --build build/release --config Release
 ### Run
 
 ```bash
-./build/debug/Debug/mvngin path/to/cart.json
+./build/debug/Debug/dithr path/to/cart.json
 ```
 
 ### Run tests
@@ -73,10 +73,10 @@ cmake --build build/wasm --config Release
 ```
 
 By default the WASM build bundles the `examples/hello_world` cart. To change
-this, set `MVN_WASM_CART_DIR` to the path of your cart:
+this, set `DTR_WASM_CART_DIR` to the path of your cart:
 
 ```bash
-cmake --preset wasm -DMVN_WASM_CART_DIR=/path/to/my-game
+cmake --preset wasm -DDTR_WASM_CART_DIR=/path/to/my-game
 ```
 
 ### Run locally
@@ -96,39 +96,39 @@ All console defaults can be overridden at configure time:
 
 | Variable              | Default                | Description                   |
 | --------------------- | ---------------------- | ----------------------------- |
-| `MVN_FB_WIDTH`        | 320                    | Framebuffer width             |
-| `MVN_FB_HEIGHT`       | 180                    | Framebuffer height            |
-| `MVN_PALETTE_SIZE`    | 256                    | Palette size                  |
-| `MVN_WINDOW_SCALE`    | 3                      | Default window scale          |
-| `MVN_MAX_SPRITES`     | 1024                   | Max sprite tiles              |
-| `MVN_SPRITE_FLAGS`    | 8                      | Flag bits per sprite          |
-| `MVN_MAX_MAPS`        | 32                     | Max map slots                 |
-| `MVN_MAX_MAP_LAYERS`  | 8                      | Max layers per map            |
-| `MVN_MAX_MAP_OBJECTS` | 512                    | Max objects per map           |
-| `MVN_MAX_CHANNELS`    | 16                     | Audio mixer channels          |
-| `MVN_AUDIO_FREQ`      | 44100                  | Audio sample rate (Hz)        |
-| `MVN_AUDIO_BUFFER`    | 2048                   | Audio buffer size             |
-| `MVN_TARGET_FPS`      | 60                     | Target framerate              |
-| `MVN_JS_HEAP_MB`      | 64                     | QuickJS heap limit (MB)       |
-| `MVN_JS_STACK_KB`     | 512                    | QuickJS stack limit (KB)      |
-| `MVN_VERSION_STR`     | `"0.1.0"`              | Engine version string         |
-| `MVN_DEV_BUILD`       | OFF                    | Enable developer features     |
-| `MVN_BUILD_EXAMPLES`  | ON                     | Build example projects        |
-| `MVN_BUILD_TESTS`     | ON                     | Build test suite              |
-| `MVN_WASM_CART_DIR`   | `examples/hello_world` | Cart to bundle in WASM builds |
+| `DTR_FB_WIDTH`        | 320                    | Framebuffer width             |
+| `DTR_FB_HEIGHT`       | 180                    | Framebuffer height            |
+| `DTR_PALETTE_SIZE`    | 256                    | Palette size                  |
+| `DTR_WINDOW_SCALE`    | 3                      | Default window scale          |
+| `DTR_MAX_SPRITES`     | 1024                   | Max sprite tiles              |
+| `DTR_SPRITE_FLAGS`    | 8                      | Flag bits per sprite          |
+| `DTR_MAX_MAPS`        | 32                     | Max map slots                 |
+| `DTR_MAX_MAP_LAYERS`  | 8                      | Max layers per map            |
+| `DTR_MAX_MAP_OBJECTS` | 512                    | Max objects per map           |
+| `DTR_MAX_CHANNELS`    | 16                     | Audio mixer channels          |
+| `DTR_AUDIO_FREQ`      | 44100                  | Audio sample rate (Hz)        |
+| `DTR_AUDIO_BUFFER`    | 2048                   | Audio buffer size             |
+| `DTR_TARGET_FPS`      | 60                     | Target framerate              |
+| `DTR_JS_HEAP_MB`      | 64                     | QuickJS heap limit (MB)       |
+| `DTR_JS_STACK_KB`     | 512                    | QuickJS stack limit (KB)      |
+| `DTR_VERSION_STR`     | `"0.1.0"`              | Engine version string         |
+| `DTR_DEV_BUILD`       | OFF                    | Enable developer features     |
+| `DTR_BUILD_EXAMPLES`  | ON                     | Build example projects        |
+| `DTR_BUILD_TESTS`     | ON                     | Build test suite              |
+| `DTR_WASM_CART_DIR`   | `examples/hello_world` | Cart to bundle in WASM builds |
 
 Example — a PICO-8 style build with a tiny framebuffer:
 
 ```bash
-cmake --preset debug -DMVN_FB_WIDTH=128 -DMVN_FB_HEIGHT=128 -DMVN_WINDOW_SCALE=4
+cmake --preset debug -DDTR_FB_WIDTH=128 -DDTR_FB_HEIGHT=128 -DDTR_WINDOW_SCALE=4
 ```
 
 ## CMake targets
 
 | Target               | Type           | Description                              |
 | -------------------- | -------------- | ---------------------------------------- |
-| `mvngin_core`        | Static library | All engine source except `main.c`        |
-| `mvngin`             | Executable     | Links `mvngin_core` + SDL main callbacks |
+| `dithr_core`        | Static library | All engine source except `main.c`        |
+| `dithr`             | Executable     | Links `dithr_core` + SDL main callbacks |
 | `test_input`         | Test exe       | Keyboard / virtual input tests           |
 | `test_cart`          | Test exe       | Cart loading tests                       |
 | `test_graphics`      | Test exe       | Graphics primitives tests                |

@@ -1,6 +1,6 @@
 # --- Input tests ---
 add_executable(test_input test_input.c)
-target_link_libraries(test_input PRIVATE mvngin_core)
+target_link_libraries(test_input PRIVATE dithr_core)
 if (MSVC)
     target_compile_options(test_input PRIVATE /wd4244)
 endif()
@@ -15,7 +15,7 @@ add_test(NAME test_input COMMAND test_input)
 
 # --- Cart tests ---
 add_executable(test_cart test_cart.c)
-target_link_libraries(test_cart PRIVATE mvngin_core)
+target_link_libraries(test_cart PRIVATE dithr_core)
 if (MSVC)
     target_compile_options(test_cart PRIVATE /wd4244)
 endif()
@@ -30,7 +30,7 @@ add_test(NAME test_cart COMMAND test_cart)
 
 # --- Graphics tests ---
 add_executable(test_graphics test_graphics.c)
-target_link_libraries(test_graphics PRIVATE mvngin_core)
+target_link_libraries(test_graphics PRIVATE dithr_core)
 if (MSVC)
     target_compile_options(test_graphics PRIVATE /wd4244)
 endif()
@@ -45,7 +45,7 @@ add_test(NAME test_graphics COMMAND test_graphics)
 
 # --- Event tests ---
 add_executable(test_event test_event.c)
-target_link_libraries(test_event PRIVATE mvngin_core)
+target_link_libraries(test_event PRIVATE dithr_core)
 if (MSVC)
     target_compile_options(test_event PRIVATE /wd4244)
 endif()
@@ -60,7 +60,7 @@ add_test(NAME test_event COMMAND test_event)
 
 # --- Mouse / Gamepad tests ---
 add_executable(test_mouse_gamepad test_mouse_gamepad.c)
-target_link_libraries(test_mouse_gamepad PRIVATE mvngin_core)
+target_link_libraries(test_mouse_gamepad PRIVATE dithr_core)
 if (MSVC)
     target_compile_options(test_mouse_gamepad PRIVATE /wd4244)
 endif()
@@ -75,7 +75,7 @@ add_test(NAME test_mouse_gamepad COMMAND test_mouse_gamepad)
 
 # --- Runtime tests ---
 add_executable(test_runtime test_runtime.c)
-target_link_libraries(test_runtime PRIVATE mvngin_core)
+target_link_libraries(test_runtime PRIVATE dithr_core)
 if (MSVC)
     target_compile_options(test_runtime PRIVATE /wd4244)
 endif()
@@ -90,7 +90,7 @@ add_test(NAME test_runtime COMMAND test_runtime)
 
 # --- Audio tests ---
 add_executable(test_audio test_audio.c)
-target_link_libraries(test_audio PRIVATE mvngin_core)
+target_link_libraries(test_audio PRIVATE dithr_core)
 if (MSVC)
     target_compile_options(test_audio PRIVATE /wd4244)
 endif()
@@ -105,7 +105,7 @@ add_test(NAME test_audio COMMAND test_audio)
 
 # --- PostFX tests ---
 add_executable(test_postfx test_postfx.c)
-target_link_libraries(test_postfx PRIVATE mvngin_core)
+target_link_libraries(test_postfx PRIVATE dithr_core)
 if (MSVC)
     target_compile_options(test_postfx PRIVATE /wd4244)
 endif()

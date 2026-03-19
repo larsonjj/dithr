@@ -38,15 +38,15 @@ static void prv_teardown(void)
 
 static void test_event_create_destroy(void)
 {
-    mvn_event_bus_t *bus;
+    dtr_event_bus_t *bus;
 
     prv_setup();
-    bus = mvn_event_create(s_ctx);
-    MVN_ASSERT(bus != NULL);
-    MVN_ASSERT_EQ_INT(bus->queue_count, 0);
-    mvn_event_destroy(bus);
+    bus = dtr_event_create(s_ctx);
+    DTR_ASSERT(bus != NULL);
+    DTR_ASSERT_EQ_INT(bus->queue_count, 0);
+    dtr_event_destroy(bus);
     prv_teardown();
-    MVN_PASS();
+    DTR_PASS();
 }
 
 /* ------------------------------------------------------------------ */
@@ -55,20 +55,20 @@ static void test_event_create_destroy(void)
 
 static void test_event_emit_no_handlers(void)
 {
-    mvn_event_bus_t *bus;
+    dtr_event_bus_t *bus;
 
     prv_setup();
-    bus = mvn_event_create(s_ctx);
+    bus = dtr_event_create(s_ctx);
 
-    mvn_event_emit(bus, "test:noop", JS_UNDEFINED);
-    MVN_ASSERT_EQ_INT(bus->queue_count, 1);
+    dtr_event_emit(bus, "test:noop", JS_UNDEFINED);
+    DTR_ASSERT_EQ_INT(bus->queue_count, 1);
 
-    mvn_event_flush(bus);
-    MVN_ASSERT_EQ_INT(bus->queue_count, 0);
+    dtr_event_flush(bus);
+    DTR_ASSERT_EQ_INT(bus->queue_count, 0);
 
-    mvn_event_destroy(bus);
+    dtr_event_destroy(bus);
     prv_teardown();
-    MVN_PASS();
+    DTR_PASS();
 }
 
 /* ------------------------------------------------------------------ */
@@ -101,7 +101,7 @@ static JSValue prv_get_handler(JSContext *ctx)
 
 static void test_event_on_and_flush(void)
 {
-    mvn_event_bus_t *bus;
+    dtr_event_bus_t *bus;
     JSValue          handler;
 
     prv_setup();
@@ -112,27 +112,27 @@ static void test_event_on_and_flush(void)
         JS_FreeValue(s_ctx, r);
     }
 
-    bus = mvn_event_create(s_ctx);
+    bus = dtr_event_create(s_ctx);
 
     handler = prv_get_handler(s_ctx);
-    mvn_event_on(bus, "test:ping", handler);
+    dtr_event_on(bus, "test:ping", handler);
     JS_FreeValue(s_ctx, handler);
 
     /* Emit and flush */
-    mvn_event_emit(bus, "test:ping", JS_UNDEFINED);
-    mvn_event_flush(bus);
+    dtr_event_emit(bus, "test:ping", JS_UNDEFINED);
+    dtr_event_flush(bus);
 
-    MVN_ASSERT_EQ_INT(prv_get_called(s_ctx), 1);
+    DTR_ASSERT_EQ_INT(prv_get_called(s_ctx), 1);
 
     /* Emit again — handler persists */
-    mvn_event_emit(bus, "test:ping", JS_UNDEFINED);
-    mvn_event_flush(bus);
+    dtr_event_emit(bus, "test:ping", JS_UNDEFINED);
+    dtr_event_flush(bus);
 
-    MVN_ASSERT_EQ_INT(prv_get_called(s_ctx), 2);
+    DTR_ASSERT_EQ_INT(prv_get_called(s_ctx), 2);
 
-    mvn_event_destroy(bus);
+    dtr_event_destroy(bus);
     prv_teardown();
-    MVN_PASS();
+    DTR_PASS();
 }
 
 /* ------------------------------------------------------------------ */
@@ -141,7 +141,7 @@ static void test_event_on_and_flush(void)
 
 static void test_event_once(void)
 {
-    mvn_event_bus_t *bus;
+    dtr_event_bus_t *bus;
     JSValue          handler;
 
     prv_setup();
@@ -150,23 +150,23 @@ static void test_event_once(void)
         JS_FreeValue(s_ctx, r);
     }
 
-    bus     = mvn_event_create(s_ctx);
+    bus     = dtr_event_create(s_ctx);
     handler = prv_get_handler(s_ctx);
-    mvn_event_once(bus, "test:one", handler);
+    dtr_event_once(bus, "test:one", handler);
     JS_FreeValue(s_ctx, handler);
 
-    mvn_event_emit(bus, "test:one", JS_UNDEFINED);
-    mvn_event_flush(bus);
-    MVN_ASSERT_EQ_INT(prv_get_called(s_ctx), 1);
+    dtr_event_emit(bus, "test:one", JS_UNDEFINED);
+    dtr_event_flush(bus);
+    DTR_ASSERT_EQ_INT(prv_get_called(s_ctx), 1);
 
     /* Second emit should not fire the handler */
-    mvn_event_emit(bus, "test:one", JS_UNDEFINED);
-    mvn_event_flush(bus);
-    MVN_ASSERT_EQ_INT(prv_get_called(s_ctx), 1);
+    dtr_event_emit(bus, "test:one", JS_UNDEFINED);
+    dtr_event_flush(bus);
+    DTR_ASSERT_EQ_INT(prv_get_called(s_ctx), 1);
 
-    mvn_event_destroy(bus);
+    dtr_event_destroy(bus);
     prv_teardown();
-    MVN_PASS();
+    DTR_PASS();
 }
 
 /* ------------------------------------------------------------------ */
@@ -175,7 +175,7 @@ static void test_event_once(void)
 
 static void test_event_off(void)
 {
-    mvn_event_bus_t *bus;
+    dtr_event_bus_t *bus;
     JSValue          handler;
     int32_t          handle;
 
@@ -185,21 +185,21 @@ static void test_event_off(void)
         JS_FreeValue(s_ctx, r);
     }
 
-    bus     = mvn_event_create(s_ctx);
+    bus     = dtr_event_create(s_ctx);
     handler = prv_get_handler(s_ctx);
-    handle  = mvn_event_on(bus, "test:rem", handler);
+    handle  = dtr_event_on(bus, "test:rem", handler);
     JS_FreeValue(s_ctx, handler);
 
     /* Remove before any emit */
-    mvn_event_off(bus, handle);
+    dtr_event_off(bus, handle);
 
-    mvn_event_emit(bus, "test:rem", JS_UNDEFINED);
-    mvn_event_flush(bus);
-    MVN_ASSERT_EQ_INT(prv_get_called(s_ctx), 0);
+    dtr_event_emit(bus, "test:rem", JS_UNDEFINED);
+    dtr_event_flush(bus);
+    DTR_ASSERT_EQ_INT(prv_get_called(s_ctx), 0);
 
-    mvn_event_destroy(bus);
+    dtr_event_destroy(bus);
     prv_teardown();
-    MVN_PASS();
+    DTR_PASS();
 }
 
 /* ------------------------------------------------------------------ */
@@ -208,7 +208,7 @@ static void test_event_off(void)
 
 static void test_event_wrong_name(void)
 {
-    mvn_event_bus_t *bus;
+    dtr_event_bus_t *bus;
     JSValue          handler;
 
     prv_setup();
@@ -217,18 +217,18 @@ static void test_event_wrong_name(void)
         JS_FreeValue(s_ctx, r);
     }
 
-    bus     = mvn_event_create(s_ctx);
+    bus     = dtr_event_create(s_ctx);
     handler = prv_get_handler(s_ctx);
-    mvn_event_on(bus, "test:expected", handler);
+    dtr_event_on(bus, "test:expected", handler);
     JS_FreeValue(s_ctx, handler);
 
-    mvn_event_emit(bus, "test:other", JS_UNDEFINED);
-    mvn_event_flush(bus);
-    MVN_ASSERT_EQ_INT(prv_get_called(s_ctx), 0);
+    dtr_event_emit(bus, "test:other", JS_UNDEFINED);
+    dtr_event_flush(bus);
+    DTR_ASSERT_EQ_INT(prv_get_called(s_ctx), 0);
 
-    mvn_event_destroy(bus);
+    dtr_event_destroy(bus);
     prv_teardown();
-    MVN_PASS();
+    DTR_PASS();
 }
 
 /* ------------------------------------------------------------------ */

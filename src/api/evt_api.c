@@ -6,7 +6,7 @@
 #include "../event.h"
 #include "api_common.h"
 
-#define EVT(ctx) (mvn_api_get_console(ctx)->events)
+#define EVT(ctx) (dtr_api_get_console(ctx)->events)
 
 static JSValue js_evt_on(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
@@ -23,7 +23,7 @@ static JSValue js_evt_on(JSContext *ctx, JSValueConst this_val, int argc, JSValu
         return JS_NewInt32(ctx, -1);
     }
 
-    handle = mvn_event_on(EVT(ctx), name, argv[1]);
+    handle = dtr_event_on(EVT(ctx), name, argv[1]);
     JS_FreeCString(ctx, name);
     return JS_NewInt32(ctx, handle);
 }
@@ -43,7 +43,7 @@ static JSValue js_evt_once(JSContext *ctx, JSValueConst this_val, int argc, JSVa
         return JS_NewInt32(ctx, -1);
     }
 
-    handle = mvn_event_once(EVT(ctx), name, argv[1]);
+    handle = dtr_event_once(EVT(ctx), name, argv[1]);
     JS_FreeCString(ctx, name);
     return JS_NewInt32(ctx, handle);
 }
@@ -51,7 +51,7 @@ static JSValue js_evt_once(JSContext *ctx, JSValueConst this_val, int argc, JSVa
 static JSValue js_evt_off(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
     (void)this_val;
-    mvn_event_off(EVT(ctx), mvn_api_opt_int(ctx, argc, argv, 0, -1));
+    dtr_event_off(EVT(ctx), dtr_api_opt_int(ctx, argc, argv, 0, -1));
     return JS_UNDEFINED;
 }
 
@@ -76,7 +76,7 @@ static JSValue js_evt_emit(JSContext *ctx, JSValueConst this_val, int argc, JSVa
         payload = JS_UNDEFINED;
     }
 
-    mvn_event_emit(EVT(ctx), name, payload);
+    dtr_event_emit(EVT(ctx), name, payload);
     JS_FreeCString(ctx, name);
     return JS_UNDEFINED;
 }
@@ -88,7 +88,7 @@ static const JSCFunctionListEntry js_evt_funcs[] = {
     JS_CFUNC_DEF("emit", 2, js_evt_emit),
 };
 
-void mvn_evt_api_register(JSContext *ctx, JSValue global)
+void dtr_evt_api_register(JSContext *ctx, JSValue global)
 {
     JSValue ns;
 

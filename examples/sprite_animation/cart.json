@@ -1,7 +1,7 @@
 {
   "meta": {
     "title": "Sprite & Animation",
-    "author": "mvngin",
+    "author": "dithr",
     "version": "1.0.0",
     "description": "Demonstrates sprite drawing, animation frames, flip, and rotation"
   },

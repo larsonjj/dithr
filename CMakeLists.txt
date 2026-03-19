@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.22.1)
 
-project(mvngin
+project(dithr
     VERSION 0.1.0
     DESCRIPTION "Fantasy console engine for building retro games"
     LANGUAGES C
@@ -17,28 +17,28 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # Compiler warnings (applied only to our own targets, not dependencies)
 if (MSVC)
-    set(MVN_WARN_FLAGS /W4)
+    set(DTR_WARN_FLAGS /W4)
 else()
-    set(MVN_WARN_FLAGS -Wall -Wextra -Wpedantic)
+    set(DTR_WARN_FLAGS -Wall -Wextra -Wpedantic)
 endif()
 
-# --- Console compile-time defaults (override via -DMVN_FB_WIDTH=128 etc.) ---
-set(MVN_FB_WIDTH          320   CACHE STRING "Framebuffer width")
-set(MVN_FB_HEIGHT         180   CACHE STRING "Framebuffer height")
-set(MVN_PALETTE_SIZE      256   CACHE STRING "Palette size")
-set(MVN_WINDOW_SCALE      3     CACHE STRING "Default window scale")
-set(MVN_MAX_SPRITES       1024  CACHE STRING "Max sprite tiles")
-set(MVN_SPRITE_FLAGS      8     CACHE STRING "Flags per sprite")
-set(MVN_MAX_MAPS          32    CACHE STRING "Max map slots")
-set(MVN_MAX_MAP_LAYERS    8     CACHE STRING "Max layers per map")
-set(MVN_MAX_MAP_OBJECTS   512   CACHE STRING "Max objects per map")
-set(MVN_MAX_CHANNELS      16    CACHE STRING "Audio mixer channels")
-set(MVN_AUDIO_FREQ        44100 CACHE STRING "Audio sample rate")
-set(MVN_AUDIO_BUFFER      2048  CACHE STRING "Audio buffer size")
-set(MVN_TARGET_FPS        60    CACHE STRING "Target framerate")
-set(MVN_JS_HEAP_MB        64    CACHE STRING "JS heap size in MB")
-set(MVN_JS_STACK_KB       512   CACHE STRING "JS stack size in KB")
-set(MVN_VERSION_STR       "0.1.0" CACHE STRING "Engine version string")
+# --- Console compile-time defaults (override via -DDTR_FB_WIDTH=128 etc.) ---
+set(DTR_FB_WIDTH          320   CACHE STRING "Framebuffer width")
+set(DTR_FB_HEIGHT         180   CACHE STRING "Framebuffer height")
+set(DTR_PALETTE_SIZE      256   CACHE STRING "Palette size")
+set(DTR_WINDOW_SCALE      3     CACHE STRING "Default window scale")
+set(DTR_MAX_SPRITES       1024  CACHE STRING "Max sprite tiles")
+set(DTR_SPRITE_FLAGS      8     CACHE STRING "Flags per sprite")
+set(DTR_MAX_MAPS          32    CACHE STRING "Max map slots")
+set(DTR_MAX_MAP_LAYERS    8     CACHE STRING "Max layers per map")
+set(DTR_MAX_MAP_OBJECTS   512   CACHE STRING "Max objects per map")
+set(DTR_MAX_CHANNELS      16    CACHE STRING "Audio mixer channels")
+set(DTR_AUDIO_FREQ        44100 CACHE STRING "Audio sample rate")
+set(DTR_AUDIO_BUFFER      2048  CACHE STRING "Audio buffer size")
+set(DTR_TARGET_FPS        60    CACHE STRING "Target framerate")
+set(DTR_JS_HEAP_MB        64    CACHE STRING "JS heap size in MB")
+set(DTR_JS_STACK_KB       512   CACHE STRING "JS stack size in KB")
+set(DTR_VERSION_STR       "0.1.0" CACHE STRING "Engine version string")
 
 # --- Dependencies ---
 include(FetchContent)
@@ -137,7 +137,7 @@ else()
 endif()
 
 # --- Engine static library (everything except main.c) ---
-add_library(mvngin_core STATIC
+add_library(dithr_core STATIC
     src/console.c
     src/runtime.c
     src/graphics.c
@@ -165,18 +165,18 @@ add_library(mvngin_core STATIC
     src/api/sys_api.c
 )
 
-target_include_directories(mvngin_core PUBLIC
+target_include_directories(dithr_core PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/src
 )
 
-target_compile_options(mvngin_core PRIVATE ${MVN_WARN_FLAGS})
+target_compile_options(dithr_core PRIVATE ${DTR_WARN_FLAGS})
 
 # Suppress C4244 from QuickJS inline functions in quickjs.h
 if (MSVC)
-    target_compile_options(mvngin_core PRIVATE /wd4244)
+    target_compile_options(dithr_core PRIVATE /wd4244)
 endif()
 
-target_link_libraries(mvngin_core PUBLIC
+target_link_libraries(dithr_core PUBLIC
     SDL3::SDL3
     SDL3_mixer::SDL3_mixer
     SDL3_image::SDL3_image
@@ -184,68 +184,68 @@ target_link_libraries(mvngin_core PUBLIC
 )
 
 if (NOT MSVC)
-    target_link_libraries(mvngin_core PUBLIC m)
+    target_link_libraries(dithr_core PUBLIC m)
 endif()
 
 # Pass compile-time defaults as definitions
-target_compile_definitions(mvngin_core PUBLIC
-    CONSOLE_FB_WIDTH=${MVN_FB_WIDTH}
-    CONSOLE_FB_HEIGHT=${MVN_FB_HEIGHT}
-    CONSOLE_PALETTE_SIZE=${MVN_PALETTE_SIZE}
-    CONSOLE_WINDOW_SCALE=${MVN_WINDOW_SCALE}
-    CONSOLE_MAX_SPRITES=${MVN_MAX_SPRITES}
-    CONSOLE_SPRITE_FLAGS=${MVN_SPRITE_FLAGS}
-    CONSOLE_MAX_MAPS=${MVN_MAX_MAPS}
-    CONSOLE_MAX_MAP_LAYERS=${MVN_MAX_MAP_LAYERS}
-    CONSOLE_MAX_MAP_OBJECTS=${MVN_MAX_MAP_OBJECTS}
-    CONSOLE_MAX_CHANNELS=${MVN_MAX_CHANNELS}
-    CONSOLE_AUDIO_FREQ=${MVN_AUDIO_FREQ}
-    CONSOLE_AUDIO_BUFFER=${MVN_AUDIO_BUFFER}
-    CONSOLE_TARGET_FPS=${MVN_TARGET_FPS}
-    CONSOLE_JS_HEAP_MB=${MVN_JS_HEAP_MB}
-    CONSOLE_JS_STACK_KB=${MVN_JS_STACK_KB}
-    CONSOLE_VERSION="${MVN_VERSION_STR}"
+target_compile_definitions(dithr_core PUBLIC
+    CONSOLE_FB_WIDTH=${DTR_FB_WIDTH}
+    CONSOLE_FB_HEIGHT=${DTR_FB_HEIGHT}
+    CONSOLE_PALETTE_SIZE=${DTR_PALETTE_SIZE}
+    CONSOLE_WINDOW_SCALE=${DTR_WINDOW_SCALE}
+    CONSOLE_MAX_SPRITES=${DTR_MAX_SPRITES}
+    CONSOLE_SPRITE_FLAGS=${DTR_SPRITE_FLAGS}
+    CONSOLE_MAX_MAPS=${DTR_MAX_MAPS}
+    CONSOLE_MAX_MAP_LAYERS=${DTR_MAX_MAP_LAYERS}
+    CONSOLE_MAX_MAP_OBJECTS=${DTR_MAX_MAP_OBJECTS}
+    CONSOLE_MAX_CHANNELS=${DTR_MAX_CHANNELS}
+    CONSOLE_AUDIO_FREQ=${DTR_AUDIO_FREQ}
+    CONSOLE_AUDIO_BUFFER=${DTR_AUDIO_BUFFER}
+    CONSOLE_TARGET_FPS=${DTR_TARGET_FPS}
+    CONSOLE_JS_HEAP_MB=${DTR_JS_HEAP_MB}
+    CONSOLE_JS_STACK_KB=${DTR_JS_STACK_KB}
+    CONSOLE_VERSION="${DTR_VERSION_STR}"
 )
 
 # Dev build flag
-option(MVN_DEV_BUILD "Enable development features (hot reload, debug overlays)" OFF)
-if (MVN_DEV_BUILD)
-    target_compile_definitions(mvngin_core PUBLIC DEV_BUILD=1)
+option(DTR_DEV_BUILD "Enable development features (hot reload, debug overlays)" OFF)
+if (DTR_DEV_BUILD)
+    target_compile_definitions(dithr_core PUBLIC DEV_BUILD=1)
 endif()
 
 # --- Executable ---
-add_executable(mvngin src/main.c)
-target_compile_definitions(mvngin PRIVATE SDL_MAIN_USE_CALLBACKS=1)
-target_link_libraries(mvngin PRIVATE mvngin_core)
+add_executable(dithr src/main.c)
+target_compile_definitions(dithr PRIVATE SDL_MAIN_USE_CALLBACKS=1)
+target_link_libraries(dithr PRIVATE dithr_core)
 
 # --- Emscripten / WASM ---
 if (EMSCRIPTEN)
     # Cart directory to embed in the virtual filesystem
-    set(MVN_WASM_CART_DIR "" CACHE PATH "Cart directory to preload for WASM builds")
+    set(DTR_WASM_CART_DIR "" CACHE PATH "Cart directory to preload for WASM builds")
 
-    target_link_options(mvngin PRIVATE
+    target_link_options(dithr PRIVATE
         -sALLOW_MEMORY_GROWTH=1
         -sSTACK_SIZE=1048576
         -sINITIAL_MEMORY=67108864
     )
 
     # Preload cart assets into the Emscripten virtual FS
-    if (MVN_WASM_CART_DIR)
-        target_link_options(mvngin PRIVATE
-            "SHELL:--preload-file ${MVN_WASM_CART_DIR}@/cart"
+    if (DTR_WASM_CART_DIR)
+        target_link_options(dithr PRIVATE
+            "SHELL:--preload-file ${DTR_WASM_CART_DIR}@/cart"
         )
-        target_compile_definitions(mvngin PRIVATE MVN_WASM_CART_PATH="/cart/cart.json")
+        target_compile_definitions(dithr PRIVATE DTR_WASM_CART_PATH="/cart/cart.json")
     endif()
 
     # Produce .html output so the Emscripten shell page is generated
-    set_target_properties(mvngin PROPERTIES SUFFIX ".html")
+    set_target_properties(dithr PROPERTIES SUFFIX ".html")
 endif()
 
 # Copy shared library DLLs next to the executable (Windows only)
 if (WIN32)
-    add_custom_command(TARGET mvngin POST_BUILD
+    add_custom_command(TARGET dithr POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
-            $<TARGET_RUNTIME_DLLS:mvngin> $<TARGET_FILE_DIR:mvngin>
+            $<TARGET_RUNTIME_DLLS:dithr> $<TARGET_FILE_DIR:dithr>
         COMMAND_EXPAND_LISTS
     )
 endif()
@@ -253,7 +253,7 @@ endif()
 # --- Install rules ---
 include(GNUInstallDirs)
 
-install(TARGETS mvngin
+install(TARGETS dithr
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
 )
 
@@ -270,18 +270,18 @@ endif()
 
 # Install cart templates for new-project scaffolding
 install(DIRECTORY tools/templates/
-    DESTINATION ${CMAKE_INSTALL_DATADIR}/mvngin/templates
+    DESTINATION ${CMAKE_INSTALL_DATADIR}/dithr/templates
 )
 
 # --- Examples ---
-option(MVN_BUILD_EXAMPLES "Build example programs" ON)
-if (MVN_BUILD_EXAMPLES)
+option(DTR_BUILD_EXAMPLES "Build example programs" ON)
+if (DTR_BUILD_EXAMPLES)
     add_subdirectory(examples)
 endif()
 
 # --- Tests ---
-option(MVN_BUILD_TESTS "Build tests" ON)
-if (MVN_BUILD_TESTS)
+option(DTR_BUILD_TESTS "Build tests" ON)
+if (DTR_BUILD_TESTS)
     enable_testing()
     add_subdirectory(tests)
 endif()

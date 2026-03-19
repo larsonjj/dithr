@@ -32,7 +32,7 @@ static JSValue js_math_rnd(JSContext *ctx, JSValueConst this_val, int argc, JSVa
     double max;
 
     (void)this_val;
-    max = mvn_api_opt_float(ctx, argc, argv, 0, 1.0);
+    max = dtr_api_opt_float(ctx, argc, argv, 0, 1.0);
 
     {
         double val;
@@ -47,7 +47,7 @@ static JSValue js_math_rnd_int(JSContext *ctx, JSValueConst this_val, int argc, 
     int32_t max;
 
     (void)this_val;
-    max = mvn_api_opt_int(ctx, argc, argv, 0, 1);
+    max = dtr_api_opt_int(ctx, argc, argv, 0, 1);
     if (max <= 0) {
         return JS_NewInt32(ctx, 0);
     }
@@ -62,8 +62,8 @@ js_math_rnd_range(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst 
     double t;
 
     (void)this_val;
-    lo = mvn_api_opt_float(ctx, argc, argv, 0, 0.0);
-    hi = mvn_api_opt_float(ctx, argc, argv, 1, 1.0);
+    lo = dtr_api_opt_float(ctx, argc, argv, 0, 0.0);
+    hi = dtr_api_opt_float(ctx, argc, argv, 1, 1.0);
     t  = (double)(prv_xorshift64() & 0xFFFFFFFF) / 4294967296.0;
     return JS_NewFloat64(ctx, lo + (hi - lo) * t);
 }
@@ -73,7 +73,7 @@ static JSValue js_math_seed(JSContext *ctx, JSValueConst this_val, int argc, JSV
     int32_t seed;
 
     (void)this_val;
-    seed          = mvn_api_opt_int(ctx, argc, argv, 0, 1);
+    seed          = dtr_api_opt_int(ctx, argc, argv, 0, 1);
     prv_rng_state = (uint64_t)seed;
     if (prv_rng_state == 0) {
         prv_rng_state = 1;
@@ -88,31 +88,31 @@ static JSValue js_math_seed(JSContext *ctx, JSValueConst this_val, int argc, JSV
 static JSValue js_math_flr(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
     (void)this_val;
-    return JS_NewFloat64(ctx, floor(mvn_api_opt_float(ctx, argc, argv, 0, 0.0)));
+    return JS_NewFloat64(ctx, floor(dtr_api_opt_float(ctx, argc, argv, 0, 0.0)));
 }
 
 static JSValue js_math_ceil(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
     (void)this_val;
-    return JS_NewFloat64(ctx, ceil(mvn_api_opt_float(ctx, argc, argv, 0, 0.0)));
+    return JS_NewFloat64(ctx, ceil(dtr_api_opt_float(ctx, argc, argv, 0, 0.0)));
 }
 
 static JSValue js_math_round(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
     (void)this_val;
-    return JS_NewFloat64(ctx, round(mvn_api_opt_float(ctx, argc, argv, 0, 0.0)));
+    return JS_NewFloat64(ctx, round(dtr_api_opt_float(ctx, argc, argv, 0, 0.0)));
 }
 
 static JSValue js_math_trunc(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
     (void)this_val;
-    return JS_NewFloat64(ctx, trunc(mvn_api_opt_float(ctx, argc, argv, 0, 0.0)));
+    return JS_NewFloat64(ctx, trunc(dtr_api_opt_float(ctx, argc, argv, 0, 0.0)));
 }
 
 static JSValue js_math_abs(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
     (void)this_val;
-    return JS_NewFloat64(ctx, fabs(mvn_api_opt_float(ctx, argc, argv, 0, 0.0)));
+    return JS_NewFloat64(ctx, fabs(dtr_api_opt_float(ctx, argc, argv, 0, 0.0)));
 }
 
 static JSValue js_math_sign(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
@@ -120,7 +120,7 @@ static JSValue js_math_sign(JSContext *ctx, JSValueConst this_val, int argc, JSV
     double val;
 
     (void)this_val;
-    val = mvn_api_opt_float(ctx, argc, argv, 0, 0.0);
+    val = dtr_api_opt_float(ctx, argc, argv, 0, 0.0);
     if (val > 0.0) {
         return JS_NewFloat64(ctx, 1.0);
     }
@@ -133,15 +133,15 @@ static JSValue js_math_sign(JSContext *ctx, JSValueConst this_val, int argc, JSV
 static JSValue js_math_sqrt(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
     (void)this_val;
-    return JS_NewFloat64(ctx, sqrt(mvn_api_opt_float(ctx, argc, argv, 0, 0.0)));
+    return JS_NewFloat64(ctx, sqrt(dtr_api_opt_float(ctx, argc, argv, 0, 0.0)));
 }
 
 static JSValue js_math_pow(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
     (void)this_val;
     return JS_NewFloat64(ctx,
-                         pow(mvn_api_opt_float(ctx, argc, argv, 0, 0.0),
-                             mvn_api_opt_float(ctx, argc, argv, 1, 1.0)));
+                         pow(dtr_api_opt_float(ctx, argc, argv, 0, 0.0),
+                             dtr_api_opt_float(ctx, argc, argv, 1, 1.0)));
 }
 
 static JSValue js_math_min(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
@@ -150,8 +150,8 @@ static JSValue js_math_min(JSContext *ctx, JSValueConst this_val, int argc, JSVa
     double b;
 
     (void)this_val;
-    a = mvn_api_opt_float(ctx, argc, argv, 0, 0.0);
-    b = mvn_api_opt_float(ctx, argc, argv, 1, 0.0);
+    a = dtr_api_opt_float(ctx, argc, argv, 0, 0.0);
+    b = dtr_api_opt_float(ctx, argc, argv, 1, 0.0);
     return JS_NewFloat64(ctx, (a < b) ? a : b);
 }
 
@@ -161,8 +161,8 @@ static JSValue js_math_max(JSContext *ctx, JSValueConst this_val, int argc, JSVa
     double b;
 
     (void)this_val;
-    a = mvn_api_opt_float(ctx, argc, argv, 0, 0.0);
-    b = mvn_api_opt_float(ctx, argc, argv, 1, 0.0);
+    a = dtr_api_opt_float(ctx, argc, argv, 0, 0.0);
+    b = dtr_api_opt_float(ctx, argc, argv, 1, 0.0);
     return JS_NewFloat64(ctx, (a > b) ? a : b);
 }
 
@@ -173,9 +173,9 @@ static JSValue js_math_mid(JSContext *ctx, JSValueConst this_val, int argc, JSVa
     double c;
 
     (void)this_val;
-    a = mvn_api_opt_float(ctx, argc, argv, 0, 0.0);
-    b = mvn_api_opt_float(ctx, argc, argv, 1, 0.0);
-    c = mvn_api_opt_float(ctx, argc, argv, 2, 0.0);
+    a = dtr_api_opt_float(ctx, argc, argv, 0, 0.0);
+    b = dtr_api_opt_float(ctx, argc, argv, 1, 0.0);
+    c = dtr_api_opt_float(ctx, argc, argv, 2, 0.0);
 
     if ((a >= b && a <= c) || (a <= b && a >= c)) {
         return JS_NewFloat64(ctx, a);
@@ -190,16 +190,16 @@ static JSValue js_math_mid(JSContext *ctx, JSValueConst this_val, int argc, JSVa
 /*  Trigonometry (PICO-8 style: 0..1 = full rotation)                  */
 /* ------------------------------------------------------------------ */
 
-#define MVN_PI  3.14159265358979323846
-#define MVN_TAU 6.28318530717958647692
+#define DTR_PI  3.14159265358979323846
+#define DTR_TAU 6.28318530717958647692
 
 static JSValue js_math_sin(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
     double t;
 
     (void)this_val;
-    t = mvn_api_opt_float(ctx, argc, argv, 0, 0.0);
-    return JS_NewFloat64(ctx, -sin(t * MVN_TAU));
+    t = dtr_api_opt_float(ctx, argc, argv, 0, 0.0);
+    return JS_NewFloat64(ctx, -sin(t * DTR_TAU));
 }
 
 static JSValue js_math_cos(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
@@ -207,8 +207,8 @@ static JSValue js_math_cos(JSContext *ctx, JSValueConst this_val, int argc, JSVa
     double t;
 
     (void)this_val;
-    t = mvn_api_opt_float(ctx, argc, argv, 0, 0.0);
-    return JS_NewFloat64(ctx, cos(t * MVN_TAU));
+    t = dtr_api_opt_float(ctx, argc, argv, 0, 0.0);
+    return JS_NewFloat64(ctx, cos(t * DTR_TAU));
 }
 
 static JSValue js_math_tan(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
@@ -216,26 +216,26 @@ static JSValue js_math_tan(JSContext *ctx, JSValueConst this_val, int argc, JSVa
     double t;
 
     (void)this_val;
-    t = mvn_api_opt_float(ctx, argc, argv, 0, 0.0);
-    return JS_NewFloat64(ctx, tan(t * MVN_TAU));
+    t = dtr_api_opt_float(ctx, argc, argv, 0, 0.0);
+    return JS_NewFloat64(ctx, tan(t * DTR_TAU));
 }
 
 static JSValue js_math_asin(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
     (void)this_val;
-    return JS_NewFloat64(ctx, asin(mvn_api_opt_float(ctx, argc, argv, 0, 0.0)));
+    return JS_NewFloat64(ctx, asin(dtr_api_opt_float(ctx, argc, argv, 0, 0.0)));
 }
 
 static JSValue js_math_acos(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
     (void)this_val;
-    return JS_NewFloat64(ctx, acos(mvn_api_opt_float(ctx, argc, argv, 0, 0.0)));
+    return JS_NewFloat64(ctx, acos(dtr_api_opt_float(ctx, argc, argv, 0, 0.0)));
 }
 
 static JSValue js_math_atan(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
     (void)this_val;
-    return JS_NewFloat64(ctx, atan(mvn_api_opt_float(ctx, argc, argv, 0, 0.0)));
+    return JS_NewFloat64(ctx, atan(dtr_api_opt_float(ctx, argc, argv, 0, 0.0)));
 }
 
 static JSValue js_math_atan2(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
@@ -245,11 +245,11 @@ static JSValue js_math_atan2(JSContext *ctx, JSValueConst this_val, int argc, JS
     double a;
 
     (void)this_val;
-    dy = mvn_api_opt_float(ctx, argc, argv, 0, 0.0);
-    dx = mvn_api_opt_float(ctx, argc, argv, 1, 0.0);
+    dy = dtr_api_opt_float(ctx, argc, argv, 0, 0.0);
+    dx = dtr_api_opt_float(ctx, argc, argv, 1, 0.0);
 
     /* Return in 0..1 range (full rotation), PICO-8 convention */
-    a = atan2(-dy, dx) / MVN_TAU;
+    a = atan2(-dy, dx) / DTR_TAU;
     if (a < 0.0) {
         a += 1.0;
     }
@@ -267,9 +267,9 @@ static JSValue js_math_lerp(JSContext *ctx, JSValueConst this_val, int argc, JSV
     double t;
 
     (void)this_val;
-    a = mvn_api_opt_float(ctx, argc, argv, 0, 0.0);
-    b = mvn_api_opt_float(ctx, argc, argv, 1, 0.0);
-    t = mvn_api_opt_float(ctx, argc, argv, 2, 0.0);
+    a = dtr_api_opt_float(ctx, argc, argv, 0, 0.0);
+    b = dtr_api_opt_float(ctx, argc, argv, 1, 0.0);
+    t = dtr_api_opt_float(ctx, argc, argv, 2, 0.0);
     return JS_NewFloat64(ctx, a + (b - a) * t);
 }
 
@@ -281,9 +281,9 @@ static JSValue js_math_unlerp(JSContext *ctx, JSValueConst this_val, int argc, J
     double range;
 
     (void)this_val;
-    a     = mvn_api_opt_float(ctx, argc, argv, 0, 0.0);
-    b     = mvn_api_opt_float(ctx, argc, argv, 1, 1.0);
-    v     = mvn_api_opt_float(ctx, argc, argv, 2, 0.0);
+    a     = dtr_api_opt_float(ctx, argc, argv, 0, 0.0);
+    b     = dtr_api_opt_float(ctx, argc, argv, 1, 1.0);
+    v     = dtr_api_opt_float(ctx, argc, argv, 2, 0.0);
     range = b - a;
     if (range == 0.0) {
         return JS_NewFloat64(ctx, 0.0);
@@ -302,11 +302,11 @@ static JSValue js_math_remap(JSContext *ctx, JSValueConst this_val, int argc, JS
     double range;
 
     (void)this_val;
-    v     = mvn_api_opt_float(ctx, argc, argv, 0, 0.0);
-    a     = mvn_api_opt_float(ctx, argc, argv, 1, 0.0);
-    b     = mvn_api_opt_float(ctx, argc, argv, 2, 1.0);
-    c     = mvn_api_opt_float(ctx, argc, argv, 3, 0.0);
-    d     = mvn_api_opt_float(ctx, argc, argv, 4, 1.0);
+    v     = dtr_api_opt_float(ctx, argc, argv, 0, 0.0);
+    a     = dtr_api_opt_float(ctx, argc, argv, 1, 0.0);
+    b     = dtr_api_opt_float(ctx, argc, argv, 2, 1.0);
+    c     = dtr_api_opt_float(ctx, argc, argv, 3, 0.0);
+    d     = dtr_api_opt_float(ctx, argc, argv, 4, 1.0);
     range = b - a;
     if (range == 0.0) {
         return JS_NewFloat64(ctx, c);
@@ -322,9 +322,9 @@ static JSValue js_math_clamp(JSContext *ctx, JSValueConst this_val, int argc, JS
     double hi;
 
     (void)this_val;
-    val = mvn_api_opt_float(ctx, argc, argv, 0, 0.0);
-    lo  = mvn_api_opt_float(ctx, argc, argv, 1, 0.0);
-    hi  = mvn_api_opt_float(ctx, argc, argv, 2, 1.0);
+    val = dtr_api_opt_float(ctx, argc, argv, 0, 0.0);
+    lo  = dtr_api_opt_float(ctx, argc, argv, 1, 0.0);
+    hi  = dtr_api_opt_float(ctx, argc, argv, 2, 1.0);
     if (val < lo) {
         val = lo;
     }
@@ -343,9 +343,9 @@ js_math_smoothstep(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst
     double x;
 
     (void)this_val;
-    a = mvn_api_opt_float(ctx, argc, argv, 0, 0.0);
-    b = mvn_api_opt_float(ctx, argc, argv, 1, 1.0);
-    t = mvn_api_opt_float(ctx, argc, argv, 2, 0.0);
+    a = dtr_api_opt_float(ctx, argc, argv, 0, 0.0);
+    b = dtr_api_opt_float(ctx, argc, argv, 1, 1.0);
+    t = dtr_api_opt_float(ctx, argc, argv, 2, 0.0);
 
     /* Normalise t to 0..1 within [a,b] */
     if (b - a == 0.0) {
@@ -369,8 +369,8 @@ js_math_pingpong(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *
     double mod_val;
 
     (void)this_val;
-    t   = mvn_api_opt_float(ctx, argc, argv, 0, 0.0);
-    len = mvn_api_opt_float(ctx, argc, argv, 1, 1.0);
+    t   = dtr_api_opt_float(ctx, argc, argv, 0, 0.0);
+    len = dtr_api_opt_float(ctx, argc, argv, 1, 1.0);
 
     if (len <= 0.0) {
         return JS_NewFloat64(ctx, 0.0);
@@ -399,10 +399,10 @@ static JSValue js_math_dist(JSContext *ctx, JSValueConst this_val, int argc, JSV
     double dy;
 
     (void)this_val;
-    x1 = mvn_api_opt_float(ctx, argc, argv, 0, 0.0);
-    y1 = mvn_api_opt_float(ctx, argc, argv, 1, 0.0);
-    x2 = mvn_api_opt_float(ctx, argc, argv, 2, 0.0);
-    y2 = mvn_api_opt_float(ctx, argc, argv, 3, 0.0);
+    x1 = dtr_api_opt_float(ctx, argc, argv, 0, 0.0);
+    y1 = dtr_api_opt_float(ctx, argc, argv, 1, 0.0);
+    x2 = dtr_api_opt_float(ctx, argc, argv, 2, 0.0);
+    y2 = dtr_api_opt_float(ctx, argc, argv, 3, 0.0);
     dx = x2 - x1;
     dy = y2 - y1;
     return JS_NewFloat64(ctx, sqrt(dx * dx + dy * dy));
@@ -416,10 +416,10 @@ static JSValue js_math_angle(JSContext *ctx, JSValueConst this_val, int argc, JS
     double y2;
 
     (void)this_val;
-    x1 = mvn_api_opt_float(ctx, argc, argv, 0, 0.0);
-    y1 = mvn_api_opt_float(ctx, argc, argv, 1, 0.0);
-    x2 = mvn_api_opt_float(ctx, argc, argv, 2, 0.0);
-    y2 = mvn_api_opt_float(ctx, argc, argv, 3, 0.0);
+    x1 = dtr_api_opt_float(ctx, argc, argv, 0, 0.0);
+    y1 = dtr_api_opt_float(ctx, argc, argv, 1, 0.0);
+    x2 = dtr_api_opt_float(ctx, argc, argv, 2, 0.0);
+    y2 = dtr_api_opt_float(ctx, argc, argv, 3, 0.0);
     return JS_NewFloat64(ctx, atan2(y2 - y1, x2 - x1));
 }
 
@@ -458,15 +458,15 @@ static const JSCFunctionListEntry js_math_funcs[] = {
     JS_CFUNC_DEF("angle", 4, js_math_angle),
 };
 
-void mvn_math_api_register(JSContext *ctx, JSValue global)
+void dtr_math_api_register(JSContext *ctx, JSValue global)
 {
     JSValue ns;
 
     ns = JS_NewObject(ctx);
     JS_SetPropertyFunctionList(ctx, ns, js_math_funcs, countof(js_math_funcs));
 
-    JS_SetPropertyStr(ctx, ns, "PI", JS_NewFloat64(ctx, MVN_PI));
-    JS_SetPropertyStr(ctx, ns, "TAU", JS_NewFloat64(ctx, MVN_TAU));
+    JS_SetPropertyStr(ctx, ns, "PI", JS_NewFloat64(ctx, DTR_PI));
+    JS_SetPropertyStr(ctx, ns, "TAU", JS_NewFloat64(ctx, DTR_TAU));
     JS_SetPropertyStr(ctx, ns, "HUGE", JS_NewFloat64(ctx, 1e308));
 
     JS_SetPropertyStr(ctx, global, "math", ns);

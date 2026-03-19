@@ -151,7 +151,7 @@ function draw_demo_scene() {
 
     // Moving text
     var tx = 80 + math.sin(t * 0.15) * 60;
-    gfx.print("mvngin postfx", tx, 80, 7);
+    gfx.print("dithr postfx", tx, 80, 7);
 
     // Diagonal lines
     for (var i = 0; i < 8; ++i) {

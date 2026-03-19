@@ -5,11 +5,11 @@
 
 #include "mouse.h"
 
-mvn_mouse_state_t *mvn_mouse_create(void)
+dtr_mouse_state_t *dtr_mouse_create(void)
 {
-    mvn_mouse_state_t *mouse;
+    dtr_mouse_state_t *mouse;
 
-    mouse = MVN_CALLOC(1, sizeof(mvn_mouse_state_t));
+    mouse = DTR_CALLOC(1, sizeof(dtr_mouse_state_t));
     if (mouse == NULL) {
         return NULL;
     }
@@ -21,18 +21,18 @@ mvn_mouse_state_t *mvn_mouse_create(void)
     return mouse;
 }
 
-void mvn_mouse_destroy(mvn_mouse_state_t *mouse)
+void dtr_mouse_destroy(dtr_mouse_state_t *mouse)
 {
-    MVN_FREE(mouse);
+    DTR_FREE(mouse);
 }
 
-void mvn_mouse_update(mvn_mouse_state_t *mouse)
+void dtr_mouse_update(dtr_mouse_state_t *mouse)
 {
     SDL_memcpy(mouse->btn_previous, mouse->btn_current, sizeof(mouse->btn_current));
     SDL_memset(mouse->btn_pressed, 0, sizeof(mouse->btn_pressed));
 }
 
-void mvn_mouse_set_mapping(mvn_mouse_state_t *mouse,
+void dtr_mouse_set_mapping(dtr_mouse_state_t *mouse,
                            float              scale_x,
                            float              scale_y,
                            float              offset_x,
@@ -44,29 +44,29 @@ void mvn_mouse_set_mapping(mvn_mouse_state_t *mouse,
     mouse->offset_y = offset_y;
 }
 
-bool mvn_mouse_btn(mvn_mouse_state_t *mouse, mvn_mouse_btn_t b)
+bool dtr_mouse_btn(dtr_mouse_state_t *mouse, dtr_mouse_btn_t b)
 {
-    if (b >= 0 && b < MVN_MOUSE_BTN_COUNT) {
+    if (b >= 0 && b < DTR_MOUSE_BTN_COUNT) {
         return mouse->btn_current[b];
     }
     return false;
 }
 
-bool mvn_mouse_btnp(mvn_mouse_state_t *mouse, mvn_mouse_btn_t b)
+bool dtr_mouse_btnp(dtr_mouse_state_t *mouse, dtr_mouse_btn_t b)
 {
-    if (b >= 0 && b < MVN_MOUSE_BTN_COUNT) {
+    if (b >= 0 && b < DTR_MOUSE_BTN_COUNT) {
         return mouse->btn_pressed[b];
     }
     return false;
 }
 
-void mvn_mouse_show(mvn_mouse_state_t *mouse)
+void dtr_mouse_show(dtr_mouse_state_t *mouse)
 {
     mouse->visible = true;
     SDL_ShowCursor();
 }
 
-void mvn_mouse_hide(mvn_mouse_state_t *mouse)
+void dtr_mouse_hide(dtr_mouse_state_t *mouse)
 {
     mouse->visible = false;
     SDL_HideCursor();

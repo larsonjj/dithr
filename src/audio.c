@@ -9,14 +9,14 @@
 /*  Lifecycle                                                          */
 /* ------------------------------------------------------------------ */
 
-mvn_audio_t *mvn_audio_create(int32_t channels, int32_t freq, int32_t buffer)
+dtr_audio_t *dtr_audio_create(int32_t channels, int32_t freq, int32_t buffer)
 {
-    mvn_audio_t * aud;
+    dtr_audio_t * aud;
     SDL_AudioSpec spec;
 
     (void)buffer;
 
-    aud = MVN_CALLOC(1, sizeof(mvn_audio_t));
+    aud = DTR_CALLOC(1, sizeof(dtr_audio_t));
     if (aud == NULL) {
         return NULL;
     }
@@ -33,7 +33,7 @@ mvn_audio_t *mvn_audio_create(int32_t channels, int32_t freq, int32_t buffer)
 
     if (!MIX_Init()) {
         SDL_Log("MIX_Init failed: %s", SDL_GetError());
-        MVN_FREE(aud);
+        DTR_FREE(aud);
         return NULL;
     }
 
@@ -45,7 +45,7 @@ mvn_audio_t *mvn_audio_create(int32_t channels, int32_t freq, int32_t buffer)
     if (aud->mixer == NULL) {
         SDL_Log("MIX_CreateMixerDevice failed: %s", SDL_GetError());
         MIX_Quit();
-        MVN_FREE(aud);
+        DTR_FREE(aud);
         return NULL;
     }
 
@@ -64,7 +64,7 @@ mvn_audio_t *mvn_audio_create(int32_t channels, int32_t freq, int32_t buffer)
     return aud;
 }
 
-void mvn_audio_destroy(mvn_audio_t *aud)
+void dtr_audio_destroy(dtr_audio_t *aud)
 {
     if (aud == NULL) {
         return;
@@ -99,19 +99,19 @@ void mvn_audio_destroy(mvn_audio_t *aud)
     }
 
     MIX_Quit();
-    MVN_FREE(aud);
+    DTR_FREE(aud);
 }
 
 /* ------------------------------------------------------------------ */
 /*  SFX loading                                                        */
 /* ------------------------------------------------------------------ */
 
-bool mvn_audio_load_sfx(mvn_audio_t *aud, const uint8_t *data, size_t len)
+bool dtr_audio_load_sfx(dtr_audio_t *aud, const uint8_t *data, size_t len)
 {
     SDL_IOStream *io;
     MIX_Audio *   audio;
 
-    if (aud == NULL || aud->sfx_count >= MVN_MAX_SFX) {
+    if (aud == NULL || aud->sfx_count >= DTR_MAX_SFX) {
         return false;
     }
 
@@ -134,7 +134,7 @@ bool mvn_audio_load_sfx(mvn_audio_t *aud, const uint8_t *data, size_t len)
 /*  SFX playback                                                       */
 /* ------------------------------------------------------------------ */
 
-void mvn_sfx_play(mvn_audio_t *aud, int32_t idx, int32_t channel, int32_t length)
+void dtr_sfx_play(dtr_audio_t *aud, int32_t idx, int32_t channel, int32_t length)
 {
     MIX_Track *     track;
     SDL_PropertiesID props;
@@ -165,7 +165,7 @@ void mvn_sfx_play(mvn_audio_t *aud, int32_t idx, int32_t channel, int32_t length
     SDL_DestroyProperties(props);
 }
 
-void mvn_sfx_stop(mvn_audio_t *aud, int32_t channel)
+void dtr_sfx_stop(dtr_audio_t *aud, int32_t channel)
 {
     if (aud == NULL) {
         return;
@@ -184,7 +184,7 @@ void mvn_sfx_stop(mvn_audio_t *aud, int32_t channel)
     }
 }
 
-void mvn_sfx_volume(mvn_audio_t *aud, float vol, int32_t channel)
+void dtr_sfx_volume(dtr_audio_t *aud, float vol, int32_t channel)
 {
     if (aud == NULL) {
         return;
@@ -197,7 +197,7 @@ void mvn_sfx_volume(mvn_audio_t *aud, float vol, int32_t channel)
     }
 }
 
-float mvn_sfx_get_volume(mvn_audio_t *aud, int32_t channel)
+float dtr_sfx_get_volume(dtr_audio_t *aud, int32_t channel)
 {
     if (aud == NULL) {
         return 0.0f;
@@ -208,7 +208,7 @@ float mvn_sfx_get_volume(mvn_audio_t *aud, int32_t channel)
     return 0.0f;
 }
 
-bool mvn_sfx_playing(mvn_audio_t *aud, int32_t channel)
+bool dtr_sfx_playing(dtr_audio_t *aud, int32_t channel)
 {
     if (aud == NULL) {
         return false;
@@ -226,12 +226,12 @@ bool mvn_sfx_playing(mvn_audio_t *aud, int32_t channel)
 /*  Music loading                                                      */
 /* ------------------------------------------------------------------ */
 
-bool mvn_audio_load_music(mvn_audio_t *aud, const uint8_t *data, size_t len)
+bool dtr_audio_load_music(dtr_audio_t *aud, const uint8_t *data, size_t len)
 {
     SDL_IOStream *io;
     MIX_Audio *   audio;
 
-    if (aud == NULL || aud->music_count >= MVN_MAX_MUSIC) {
+    if (aud == NULL || aud->music_count >= DTR_MAX_MUSIC) {
         return false;
     }
 
@@ -254,7 +254,7 @@ bool mvn_audio_load_music(mvn_audio_t *aud, const uint8_t *data, size_t len)
 /*  Music playback                                                     */
 /* ------------------------------------------------------------------ */
 
-void mvn_mus_play(mvn_audio_t *aud, int32_t idx, int32_t fade_ms, uint32_t channel_mask)
+void dtr_mus_play(dtr_audio_t *aud, int32_t idx, int32_t fade_ms, uint32_t channel_mask)
 {
     SDL_PropertiesID props;
 
@@ -282,7 +282,7 @@ void mvn_mus_play(mvn_audio_t *aud, int32_t idx, int32_t fade_ms, uint32_t chann
     SDL_DestroyProperties(props);
 }
 
-void mvn_mus_stop(mvn_audio_t *aud, int32_t fade_ms)
+void dtr_mus_stop(dtr_audio_t *aud, int32_t fade_ms)
 {
     if (aud == NULL || aud->music_track == NULL) {
         return;
@@ -298,7 +298,7 @@ void mvn_mus_stop(mvn_audio_t *aud, int32_t fade_ms)
     }
 }
 
-void mvn_mus_volume(mvn_audio_t *aud, float vol)
+void dtr_mus_volume(dtr_audio_t *aud, float vol)
 {
     if (aud == NULL) {
         return;
@@ -309,7 +309,7 @@ void mvn_mus_volume(mvn_audio_t *aud, float vol)
     }
 }
 
-float mvn_mus_get_volume(mvn_audio_t *aud)
+float dtr_mus_get_volume(dtr_audio_t *aud)
 {
     if (aud == NULL) {
         return 0.0f;
@@ -317,7 +317,7 @@ float mvn_mus_get_volume(mvn_audio_t *aud)
     return aud->music_volume;
 }
 
-bool mvn_mus_playing(mvn_audio_t *aud)
+bool dtr_mus_playing(dtr_audio_t *aud)
 {
     if (aud == NULL || aud->music_track == NULL) {
         return false;
@@ -329,7 +329,7 @@ bool mvn_mus_playing(mvn_audio_t *aud)
 /*  Master volume                                                      */
 /* ------------------------------------------------------------------ */
 
-void mvn_audio_set_master_volume(mvn_audio_t *aud, float vol)
+void dtr_audio_set_master_volume(dtr_audio_t *aud, float vol)
 {
     if (aud == NULL) {
         return;
@@ -355,7 +355,7 @@ void mvn_audio_set_master_volume(mvn_audio_t *aud, float vol)
     }
 }
 
-float mvn_audio_get_master_volume(mvn_audio_t *aud)
+float dtr_audio_get_master_volume(dtr_audio_t *aud)
 {
     if (aud == NULL) {
         return 0.0f;

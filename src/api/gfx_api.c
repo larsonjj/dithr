@@ -6,14 +6,14 @@
 #include "../graphics.h"
 #include "api_common.h"
 
-#define GFX(ctx) (mvn_api_get_console(ctx)->graphics)
+#define GFX(ctx) (dtr_api_get_console(ctx)->graphics)
 
 /**
  * \brief  Resolve an optional colour argument: -1 → current draw colour
  */
 static uint8_t prv_resolve_col(JSContext *ctx, int argc, JSValueConst *argv, int idx)
 {
-    int32_t raw = mvn_api_opt_int(ctx, argc, argv, idx, -1);
+    int32_t raw = dtr_api_opt_int(ctx, argc, argv, idx, -1);
     return (raw < 0) ? GFX(ctx)->color : (uint8_t)raw;
 }
 
@@ -22,16 +22,16 @@ static uint8_t prv_resolve_col(JSContext *ctx, int argc, JSValueConst *argv, int
 static JSValue js_gfx_cls(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
     (void)this_val;
-    mvn_gfx_cls(GFX(ctx), (uint8_t)mvn_api_opt_int(ctx, argc, argv, 0, 0));
+    dtr_gfx_cls(GFX(ctx), (uint8_t)dtr_api_opt_int(ctx, argc, argv, 0, 0));
     return JS_UNDEFINED;
 }
 
 static JSValue js_gfx_pset(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
     (void)this_val;
-    mvn_gfx_pset(GFX(ctx),
-                 mvn_api_opt_int(ctx, argc, argv, 0, 0),
-                 mvn_api_opt_int(ctx, argc, argv, 1, 0),
+    dtr_gfx_pset(GFX(ctx),
+                 dtr_api_opt_int(ctx, argc, argv, 0, 0),
+                 dtr_api_opt_int(ctx, argc, argv, 1, 0),
                  prv_resolve_col(ctx, argc, argv, 2));
     return JS_UNDEFINED;
 }
@@ -40,19 +40,19 @@ static JSValue js_gfx_pget(JSContext *ctx, JSValueConst this_val, int argc, JSVa
 {
     (void)this_val;
     return JS_NewInt32(ctx,
-                       mvn_gfx_pget(GFX(ctx),
-                                    mvn_api_opt_int(ctx, argc, argv, 0, 0),
-                                    mvn_api_opt_int(ctx, argc, argv, 1, 0)));
+                       dtr_gfx_pget(GFX(ctx),
+                                    dtr_api_opt_int(ctx, argc, argv, 0, 0),
+                                    dtr_api_opt_int(ctx, argc, argv, 1, 0)));
 }
 
 static JSValue js_gfx_line(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
     (void)this_val;
-    mvn_gfx_line(GFX(ctx),
-                 mvn_api_opt_int(ctx, argc, argv, 0, 0),
-                 mvn_api_opt_int(ctx, argc, argv, 1, 0),
-                 mvn_api_opt_int(ctx, argc, argv, 2, 0),
-                 mvn_api_opt_int(ctx, argc, argv, 3, 0),
+    dtr_gfx_line(GFX(ctx),
+                 dtr_api_opt_int(ctx, argc, argv, 0, 0),
+                 dtr_api_opt_int(ctx, argc, argv, 1, 0),
+                 dtr_api_opt_int(ctx, argc, argv, 2, 0),
+                 dtr_api_opt_int(ctx, argc, argv, 3, 0),
                  prv_resolve_col(ctx, argc, argv, 4));
     return JS_UNDEFINED;
 }
@@ -60,11 +60,11 @@ static JSValue js_gfx_line(JSContext *ctx, JSValueConst this_val, int argc, JSVa
 static JSValue js_gfx_rect(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
     (void)this_val;
-    mvn_gfx_rect(GFX(ctx),
-                 mvn_api_opt_int(ctx, argc, argv, 0, 0),
-                 mvn_api_opt_int(ctx, argc, argv, 1, 0),
-                 mvn_api_opt_int(ctx, argc, argv, 2, 0),
-                 mvn_api_opt_int(ctx, argc, argv, 3, 0),
+    dtr_gfx_rect(GFX(ctx),
+                 dtr_api_opt_int(ctx, argc, argv, 0, 0),
+                 dtr_api_opt_int(ctx, argc, argv, 1, 0),
+                 dtr_api_opt_int(ctx, argc, argv, 2, 0),
+                 dtr_api_opt_int(ctx, argc, argv, 3, 0),
                  prv_resolve_col(ctx, argc, argv, 4));
     return JS_UNDEFINED;
 }
@@ -72,11 +72,11 @@ static JSValue js_gfx_rect(JSContext *ctx, JSValueConst this_val, int argc, JSVa
 static JSValue js_gfx_rectfill(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
     (void)this_val;
-    mvn_gfx_rectfill(GFX(ctx),
-                     mvn_api_opt_int(ctx, argc, argv, 0, 0),
-                     mvn_api_opt_int(ctx, argc, argv, 1, 0),
-                     mvn_api_opt_int(ctx, argc, argv, 2, 0),
-                     mvn_api_opt_int(ctx, argc, argv, 3, 0),
+    dtr_gfx_rectfill(GFX(ctx),
+                     dtr_api_opt_int(ctx, argc, argv, 0, 0),
+                     dtr_api_opt_int(ctx, argc, argv, 1, 0),
+                     dtr_api_opt_int(ctx, argc, argv, 2, 0),
+                     dtr_api_opt_int(ctx, argc, argv, 3, 0),
                      prv_resolve_col(ctx, argc, argv, 4));
     return JS_UNDEFINED;
 }
@@ -106,10 +106,10 @@ static JSValue js_gfx_tilemap(JSContext *ctx, JSValueConst this_val, int argc, J
         return JS_UNDEFINED;
     }
 
-    map_w  = mvn_api_opt_int(ctx, argc, argv, 1, 0);
-    map_h  = mvn_api_opt_int(ctx, argc, argv, 2, 0);
-    tile_w = mvn_api_opt_int(ctx, argc, argv, 4, 8);
-    tile_h = mvn_api_opt_int(ctx, argc, argv, 5, 8);
+    map_w  = dtr_api_opt_int(ctx, argc, argv, 1, 0);
+    map_h  = dtr_api_opt_int(ctx, argc, argv, 2, 0);
+    tile_w = dtr_api_opt_int(ctx, argc, argv, 4, 8);
+    tile_h = dtr_api_opt_int(ctx, argc, argv, 5, 8);
 
     if (map_w <= 0 || map_h <= 0 || tile_w <= 0 || tile_h <= 0) {
         return JS_UNDEFINED;
@@ -164,7 +164,7 @@ static JSValue js_gfx_tilemap(JSContext *ctx, JSValueConst this_val, int argc, J
         colors[idx] = (uint8_t)val;
     }
 
-    mvn_gfx_tilemap(GFX(ctx), tiles, map_w, map_h, tile_w, tile_h, colors, col_cnt);
+    dtr_gfx_tilemap(GFX(ctx), tiles, map_w, map_h, tile_w, tile_h, colors, col_cnt);
 
     SDL_free(tiles);
     SDL_free(colors);
@@ -174,10 +174,10 @@ static JSValue js_gfx_tilemap(JSContext *ctx, JSValueConst this_val, int argc, J
 static JSValue js_gfx_circ(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
     (void)this_val;
-    mvn_gfx_circ(GFX(ctx),
-                 mvn_api_opt_int(ctx, argc, argv, 0, 0),
-                 mvn_api_opt_int(ctx, argc, argv, 1, 0),
-                 mvn_api_opt_int(ctx, argc, argv, 2, 4),
+    dtr_gfx_circ(GFX(ctx),
+                 dtr_api_opt_int(ctx, argc, argv, 0, 0),
+                 dtr_api_opt_int(ctx, argc, argv, 1, 0),
+                 dtr_api_opt_int(ctx, argc, argv, 2, 4),
                  prv_resolve_col(ctx, argc, argv, 3));
     return JS_UNDEFINED;
 }
@@ -185,10 +185,10 @@ static JSValue js_gfx_circ(JSContext *ctx, JSValueConst this_val, int argc, JSVa
 static JSValue js_gfx_circfill(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
     (void)this_val;
-    mvn_gfx_circfill(GFX(ctx),
-                     mvn_api_opt_int(ctx, argc, argv, 0, 0),
-                     mvn_api_opt_int(ctx, argc, argv, 1, 0),
-                     mvn_api_opt_int(ctx, argc, argv, 2, 4),
+    dtr_gfx_circfill(GFX(ctx),
+                     dtr_api_opt_int(ctx, argc, argv, 0, 0),
+                     dtr_api_opt_int(ctx, argc, argv, 1, 0),
+                     dtr_api_opt_int(ctx, argc, argv, 2, 4),
                      prv_resolve_col(ctx, argc, argv, 3));
     return JS_UNDEFINED;
 }
@@ -196,13 +196,13 @@ static JSValue js_gfx_circfill(JSContext *ctx, JSValueConst this_val, int argc, 
 static JSValue js_gfx_tri(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
     (void)this_val;
-    mvn_gfx_tri(GFX(ctx),
-                mvn_api_opt_int(ctx, argc, argv, 0, 0),
-                mvn_api_opt_int(ctx, argc, argv, 1, 0),
-                mvn_api_opt_int(ctx, argc, argv, 2, 0),
-                mvn_api_opt_int(ctx, argc, argv, 3, 0),
-                mvn_api_opt_int(ctx, argc, argv, 4, 0),
-                mvn_api_opt_int(ctx, argc, argv, 5, 0),
+    dtr_gfx_tri(GFX(ctx),
+                dtr_api_opt_int(ctx, argc, argv, 0, 0),
+                dtr_api_opt_int(ctx, argc, argv, 1, 0),
+                dtr_api_opt_int(ctx, argc, argv, 2, 0),
+                dtr_api_opt_int(ctx, argc, argv, 3, 0),
+                dtr_api_opt_int(ctx, argc, argv, 4, 0),
+                dtr_api_opt_int(ctx, argc, argv, 5, 0),
                 prv_resolve_col(ctx, argc, argv, 6));
     return JS_UNDEFINED;
 }
@@ -210,13 +210,13 @@ static JSValue js_gfx_tri(JSContext *ctx, JSValueConst this_val, int argc, JSVal
 static JSValue js_gfx_trifill(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
     (void)this_val;
-    mvn_gfx_trifill(GFX(ctx),
-                    mvn_api_opt_int(ctx, argc, argv, 0, 0),
-                    mvn_api_opt_int(ctx, argc, argv, 1, 0),
-                    mvn_api_opt_int(ctx, argc, argv, 2, 0),
-                    mvn_api_opt_int(ctx, argc, argv, 3, 0),
-                    mvn_api_opt_int(ctx, argc, argv, 4, 0),
-                    mvn_api_opt_int(ctx, argc, argv, 5, 0),
+    dtr_gfx_trifill(GFX(ctx),
+                    dtr_api_opt_int(ctx, argc, argv, 0, 0),
+                    dtr_api_opt_int(ctx, argc, argv, 1, 0),
+                    dtr_api_opt_int(ctx, argc, argv, 2, 0),
+                    dtr_api_opt_int(ctx, argc, argv, 3, 0),
+                    dtr_api_opt_int(ctx, argc, argv, 4, 0),
+                    dtr_api_opt_int(ctx, argc, argv, 5, 0),
                     prv_resolve_col(ctx, argc, argv, 6));
     return JS_UNDEFINED;
 }
@@ -270,7 +270,7 @@ static JSValue js_gfx_poly(JSContext *ctx, JSValueConst this_val, int argc, JSVa
     vert_count = n / 2;
 
     if (vert_count >= 2) {
-        mvn_gfx_poly(GFX(ctx), pts, vert_count, prv_resolve_col(ctx, argc, argv, 1));
+        dtr_gfx_poly(GFX(ctx), pts, vert_count, prv_resolve_col(ctx, argc, argv, 1));
     }
     return JS_UNDEFINED;
 }
@@ -290,7 +290,7 @@ static JSValue js_gfx_polyfill(JSContext *ctx, JSValueConst this_val, int argc, 
     vert_count = n / 2;
 
     if (vert_count >= 3) {
-        mvn_gfx_polyfill(GFX(ctx), pts, vert_count, prv_resolve_col(ctx, argc, argv, 1));
+        dtr_gfx_polyfill(GFX(ctx), pts, vert_count, prv_resolve_col(ctx, argc, argv, 1));
     }
     return JS_UNDEFINED;
 }
@@ -315,15 +315,15 @@ static JSValue js_gfx_print(JSContext *ctx, JSValueConst this_val, int argc, JSV
         return JS_UNDEFINED;
     }
 
-    x   = mvn_api_opt_int(ctx, argc, argv, 1, -1);
-    y   = mvn_api_opt_int(ctx, argc, argv, 2, -1);
+    x   = dtr_api_opt_int(ctx, argc, argv, 1, -1);
+    y   = dtr_api_opt_int(ctx, argc, argv, 2, -1);
     col = prv_resolve_col(ctx, argc, argv, 3);
 
     if (x == -1 && y == -1) {
         /* Use cursor position */
-        mvn_gfx_print(GFX(ctx), text, GFX(ctx)->cursor_x, GFX(ctx)->cursor_y, col);
+        dtr_gfx_print(GFX(ctx), text, GFX(ctx)->cursor_x, GFX(ctx)->cursor_y, col);
     } else {
-        mvn_gfx_print(GFX(ctx), text, x, y, col);
+        dtr_gfx_print(GFX(ctx), text, x, y, col);
     }
 
     JS_FreeCString(ctx, text);
@@ -335,42 +335,42 @@ static JSValue js_gfx_print(JSContext *ctx, JSValueConst this_val, int argc, JSV
 static JSValue js_gfx_spr(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
     (void)this_val;
-    mvn_gfx_spr(GFX(ctx),
-                mvn_api_opt_int(ctx, argc, argv, 0, 0),
-                mvn_api_opt_int(ctx, argc, argv, 1, 0),
-                mvn_api_opt_int(ctx, argc, argv, 2, 0),
-                mvn_api_opt_int(ctx, argc, argv, 3, 1),
-                mvn_api_opt_int(ctx, argc, argv, 4, 1),
-                mvn_api_opt_int(ctx, argc, argv, 5, 0) != 0,
-                mvn_api_opt_int(ctx, argc, argv, 6, 0) != 0);
+    dtr_gfx_spr(GFX(ctx),
+                dtr_api_opt_int(ctx, argc, argv, 0, 0),
+                dtr_api_opt_int(ctx, argc, argv, 1, 0),
+                dtr_api_opt_int(ctx, argc, argv, 2, 0),
+                dtr_api_opt_int(ctx, argc, argv, 3, 1),
+                dtr_api_opt_int(ctx, argc, argv, 4, 1),
+                dtr_api_opt_int(ctx, argc, argv, 5, 0) != 0,
+                dtr_api_opt_int(ctx, argc, argv, 6, 0) != 0);
     return JS_UNDEFINED;
 }
 
 static JSValue js_gfx_sspr(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
     (void)this_val;
-    mvn_gfx_sspr(GFX(ctx),
-                 mvn_api_opt_int(ctx, argc, argv, 0, 0),
-                 mvn_api_opt_int(ctx, argc, argv, 1, 0),
-                 mvn_api_opt_int(ctx, argc, argv, 2, 8),
-                 mvn_api_opt_int(ctx, argc, argv, 3, 8),
-                 mvn_api_opt_int(ctx, argc, argv, 4, 0),
-                 mvn_api_opt_int(ctx, argc, argv, 5, 0),
-                 mvn_api_opt_int(ctx, argc, argv, 6, 8),
-                 mvn_api_opt_int(ctx, argc, argv, 7, 8));
+    dtr_gfx_sspr(GFX(ctx),
+                 dtr_api_opt_int(ctx, argc, argv, 0, 0),
+                 dtr_api_opt_int(ctx, argc, argv, 1, 0),
+                 dtr_api_opt_int(ctx, argc, argv, 2, 8),
+                 dtr_api_opt_int(ctx, argc, argv, 3, 8),
+                 dtr_api_opt_int(ctx, argc, argv, 4, 0),
+                 dtr_api_opt_int(ctx, argc, argv, 5, 0),
+                 dtr_api_opt_int(ctx, argc, argv, 6, 8),
+                 dtr_api_opt_int(ctx, argc, argv, 7, 8));
     return JS_UNDEFINED;
 }
 
 static JSValue js_gfx_spr_rot(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
     (void)this_val;
-    mvn_gfx_spr_rot(GFX(ctx),
-                    mvn_api_opt_int(ctx, argc, argv, 0, 0),
-                    mvn_api_opt_int(ctx, argc, argv, 1, 0),
-                    mvn_api_opt_int(ctx, argc, argv, 2, 0),
-                    (float)mvn_api_opt_float(ctx, argc, argv, 3, 0.0),
-                    mvn_api_opt_int(ctx, argc, argv, 4, -1),
-                    mvn_api_opt_int(ctx, argc, argv, 5, -1));
+    dtr_gfx_spr_rot(GFX(ctx),
+                    dtr_api_opt_int(ctx, argc, argv, 0, 0),
+                    dtr_api_opt_int(ctx, argc, argv, 1, 0),
+                    dtr_api_opt_int(ctx, argc, argv, 2, 0),
+                    (float)dtr_api_opt_float(ctx, argc, argv, 3, 0.0),
+                    dtr_api_opt_int(ctx, argc, argv, 4, -1),
+                    dtr_api_opt_int(ctx, argc, argv, 5, -1));
     return JS_UNDEFINED;
 }
 
@@ -378,14 +378,14 @@ static JSValue
 js_gfx_spr_affine(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
     (void)this_val;
-    mvn_gfx_spr_affine(GFX(ctx),
-                       mvn_api_opt_int(ctx, argc, argv, 0, 0),
-                       mvn_api_opt_int(ctx, argc, argv, 1, 0),
-                       mvn_api_opt_int(ctx, argc, argv, 2, 0),
-                       (float)mvn_api_opt_float(ctx, argc, argv, 3, 0.0),
-                       (float)mvn_api_opt_float(ctx, argc, argv, 4, 0.0),
-                       (float)mvn_api_opt_float(ctx, argc, argv, 5, 1.0),
-                       (float)mvn_api_opt_float(ctx, argc, argv, 6, 0.0));
+    dtr_gfx_spr_affine(GFX(ctx),
+                       dtr_api_opt_int(ctx, argc, argv, 0, 0),
+                       dtr_api_opt_int(ctx, argc, argv, 1, 0),
+                       dtr_api_opt_int(ctx, argc, argv, 2, 0),
+                       (float)dtr_api_opt_float(ctx, argc, argv, 3, 0.0),
+                       (float)dtr_api_opt_float(ctx, argc, argv, 4, 0.0),
+                       (float)dtr_api_opt_float(ctx, argc, argv, 5, 1.0),
+                       (float)dtr_api_opt_float(ctx, argc, argv, 6, 0.0));
     return JS_UNDEFINED;
 }
 
@@ -397,22 +397,22 @@ static JSValue js_gfx_fget(JSContext *ctx, JSValueConst this_val, int argc, JSVa
     int32_t bit;
 
     (void)this_val;
-    n   = mvn_api_opt_int(ctx, argc, argv, 0, 0);
-    bit = mvn_api_opt_int(ctx, argc, argv, 1, -1);
+    n   = dtr_api_opt_int(ctx, argc, argv, 0, 0);
+    bit = dtr_api_opt_int(ctx, argc, argv, 1, -1);
 
     if (bit < 0) {
-        return JS_NewInt32(ctx, mvn_gfx_fget(GFX(ctx), n));
+        return JS_NewInt32(ctx, dtr_gfx_fget(GFX(ctx), n));
     }
-    return JS_NewBool(ctx, mvn_gfx_fget_bit(GFX(ctx), n, bit) != 0);
+    return JS_NewBool(ctx, dtr_gfx_fget_bit(GFX(ctx), n, bit) != 0);
 }
 
 static JSValue js_gfx_fset(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
     (void)this_val;
-    mvn_gfx_fset_bit(GFX(ctx),
-                 mvn_api_opt_int(ctx, argc, argv, 0, 0),
-                 mvn_api_opt_int(ctx, argc, argv, 1, 0),
-                 mvn_api_opt_int(ctx, argc, argv, 2, 1) != 0);
+    dtr_gfx_fset_bit(GFX(ctx),
+                 dtr_api_opt_int(ctx, argc, argv, 0, 0),
+                 dtr_api_opt_int(ctx, argc, argv, 1, 0),
+                 dtr_api_opt_int(ctx, argc, argv, 2, 1) != 0);
     return JS_UNDEFINED;
 }
 
@@ -422,12 +422,12 @@ static JSValue js_gfx_pal(JSContext *ctx, JSValueConst this_val, int argc, JSVal
 {
     (void)this_val;
     if (argc == 0) {
-        mvn_gfx_pal_reset(GFX(ctx));
+        dtr_gfx_pal_reset(GFX(ctx));
     } else {
-        mvn_gfx_pal(GFX(ctx),
-                    (uint8_t)mvn_api_opt_int(ctx, argc, argv, 0, 0),
-                    (uint8_t)mvn_api_opt_int(ctx, argc, argv, 1, 0),
-                    mvn_api_opt_int(ctx, argc, argv, 2, 0));
+        dtr_gfx_pal(GFX(ctx),
+                    (uint8_t)dtr_api_opt_int(ctx, argc, argv, 0, 0),
+                    (uint8_t)dtr_api_opt_int(ctx, argc, argv, 1, 0),
+                    dtr_api_opt_int(ctx, argc, argv, 2, 0));
     }
     return JS_UNDEFINED;
 }
@@ -436,11 +436,11 @@ static JSValue js_gfx_palt(JSContext *ctx, JSValueConst this_val, int argc, JSVa
 {
     (void)this_val;
     if (argc == 0) {
-        mvn_gfx_palt_reset(GFX(ctx));
+        dtr_gfx_palt_reset(GFX(ctx));
     } else {
-        mvn_gfx_palt(GFX(ctx),
-                     (uint8_t)mvn_api_opt_int(ctx, argc, argv, 0, 0),
-                     mvn_api_opt_int(ctx, argc, argv, 1, 1) != 0);
+        dtr_gfx_palt(GFX(ctx),
+                     (uint8_t)dtr_api_opt_int(ctx, argc, argv, 0, 0),
+                     dtr_api_opt_int(ctx, argc, argv, 1, 1) != 0);
     }
     return JS_UNDEFINED;
 }
@@ -450,8 +450,8 @@ static JSValue js_gfx_palt(JSContext *ctx, JSValueConst this_val, int argc, JSVa
 static JSValue js_gfx_camera(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
     (void)this_val;
-    mvn_gfx_camera(
-        GFX(ctx), mvn_api_opt_int(ctx, argc, argv, 0, 0), mvn_api_opt_int(ctx, argc, argv, 1, 0));
+    dtr_gfx_camera(
+        GFX(ctx), dtr_api_opt_int(ctx, argc, argv, 0, 0), dtr_api_opt_int(ctx, argc, argv, 1, 0));
     return JS_UNDEFINED;
 }
 
@@ -459,13 +459,13 @@ static JSValue js_gfx_clip(JSContext *ctx, JSValueConst this_val, int argc, JSVa
 {
     (void)this_val;
     if (argc == 0) {
-        mvn_gfx_clip(GFX(ctx), 0, 0, GFX(ctx)->width, GFX(ctx)->height);
+        dtr_gfx_clip(GFX(ctx), 0, 0, GFX(ctx)->width, GFX(ctx)->height);
     } else {
-        mvn_gfx_clip(GFX(ctx),
-                     mvn_api_opt_int(ctx, argc, argv, 0, 0),
-                     mvn_api_opt_int(ctx, argc, argv, 1, 0),
-                     mvn_api_opt_int(ctx, argc, argv, 2, 0),
-                     mvn_api_opt_int(ctx, argc, argv, 3, 0));
+        dtr_gfx_clip(GFX(ctx),
+                     dtr_api_opt_int(ctx, argc, argv, 0, 0),
+                     dtr_api_opt_int(ctx, argc, argv, 1, 0),
+                     dtr_api_opt_int(ctx, argc, argv, 2, 0),
+                     dtr_api_opt_int(ctx, argc, argv, 3, 0));
     }
     return JS_UNDEFINED;
 }
@@ -473,22 +473,22 @@ static JSValue js_gfx_clip(JSContext *ctx, JSValueConst this_val, int argc, JSVa
 static JSValue js_gfx_fillp(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
     (void)this_val;
-    mvn_gfx_fillp(GFX(ctx), (uint16_t)mvn_api_opt_int(ctx, argc, argv, 0, 0));
+    dtr_gfx_fillp(GFX(ctx), (uint16_t)dtr_api_opt_int(ctx, argc, argv, 0, 0));
     return JS_UNDEFINED;
 }
 
 static JSValue js_gfx_color(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
     (void)this_val;
-    mvn_gfx_color(GFX(ctx), (uint8_t)mvn_api_opt_int(ctx, argc, argv, 0, 7));
+    dtr_gfx_color(GFX(ctx), (uint8_t)dtr_api_opt_int(ctx, argc, argv, 0, 7));
     return JS_UNDEFINED;
 }
 
 static JSValue js_gfx_cursor(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
     (void)this_val;
-    mvn_gfx_cursor(
-        GFX(ctx), mvn_api_opt_int(ctx, argc, argv, 0, 0), mvn_api_opt_int(ctx, argc, argv, 1, 0));
+    dtr_gfx_cursor(
+        GFX(ctx), dtr_api_opt_int(ctx, argc, argv, 0, 0), dtr_api_opt_int(ctx, argc, argv, 1, 0));
     return JS_UNDEFINED;
 }
 
@@ -496,18 +496,18 @@ static JSValue js_gfx_font(JSContext *ctx, JSValueConst this_val, int argc, JSVa
 {
     (void)this_val;
     if (argc == 0) {
-        mvn_gfx_font_reset(GFX(ctx));
+        dtr_gfx_font_reset(GFX(ctx));
     } else {
         int32_t first_char;
 
-        first_char = mvn_api_opt_int(ctx, argc, argv, 4, 32);
-        mvn_gfx_font(GFX(ctx),
-                     mvn_api_opt_int(ctx, argc, argv, 0, 0),
-                     mvn_api_opt_int(ctx, argc, argv, 1, 0),
-                     mvn_api_opt_int(ctx, argc, argv, 2, 8),
-                     mvn_api_opt_int(ctx, argc, argv, 3, 8),
+        first_char = dtr_api_opt_int(ctx, argc, argv, 4, 32);
+        dtr_gfx_font(GFX(ctx),
+                     dtr_api_opt_int(ctx, argc, argv, 0, 0),
+                     dtr_api_opt_int(ctx, argc, argv, 1, 0),
+                     dtr_api_opt_int(ctx, argc, argv, 2, 8),
+                     dtr_api_opt_int(ctx, argc, argv, 3, 8),
                      (char)first_char,
-                     mvn_api_opt_int(ctx, argc, argv, 5, 95));
+                     dtr_api_opt_int(ctx, argc, argv, 5, 95));
     }
     return JS_UNDEFINED;
 }
@@ -517,28 +517,28 @@ static JSValue js_gfx_font(JSContext *ctx, JSValueConst this_val, int argc, JSVa
 static JSValue js_gfx_fade(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
     (void)this_val;
-    mvn_gfx_fade(GFX(ctx),
-                 (uint8_t)mvn_api_opt_int(ctx, argc, argv, 0, 0),
-                 mvn_api_opt_int(ctx, argc, argv, 1, 30));
+    dtr_gfx_fade(GFX(ctx),
+                 (uint8_t)dtr_api_opt_int(ctx, argc, argv, 0, 0),
+                 dtr_api_opt_int(ctx, argc, argv, 1, 30));
     return JS_UNDEFINED;
 }
 
 static JSValue js_gfx_wipe(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
     (void)this_val;
-    mvn_gfx_wipe(GFX(ctx),
-                 mvn_api_opt_int(ctx, argc, argv, 0, 0),
-                 (uint8_t)mvn_api_opt_int(ctx, argc, argv, 1, 0),
-                 mvn_api_opt_int(ctx, argc, argv, 2, 30));
+    dtr_gfx_wipe(GFX(ctx),
+                 dtr_api_opt_int(ctx, argc, argv, 0, 0),
+                 (uint8_t)dtr_api_opt_int(ctx, argc, argv, 1, 0),
+                 dtr_api_opt_int(ctx, argc, argv, 2, 30));
     return JS_UNDEFINED;
 }
 
 static JSValue js_gfx_dissolve(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
     (void)this_val;
-    mvn_gfx_dissolve(GFX(ctx),
-                     (uint8_t)mvn_api_opt_int(ctx, argc, argv, 0, 0),
-                     mvn_api_opt_int(ctx, argc, argv, 1, 30));
+    dtr_gfx_dissolve(GFX(ctx),
+                     (uint8_t)dtr_api_opt_int(ctx, argc, argv, 0, 0),
+                     dtr_api_opt_int(ctx, argc, argv, 1, 30));
     return JS_UNDEFINED;
 }
 
@@ -548,7 +548,7 @@ js_gfx_transitioning(JSContext *ctx, JSValueConst this_val, int argc, JSValueCon
     (void)this_val;
     (void)argc;
     (void)argv;
-    return JS_NewBool(ctx, mvn_gfx_transitioning(GFX(ctx)));
+    return JS_NewBool(ctx, dtr_gfx_transitioning(GFX(ctx)));
 }
 
 /* ---- Draw list (sprite batch) ----------------------------------------- */
@@ -558,7 +558,7 @@ static JSValue js_gfx_dl_begin(JSContext *ctx, JSValueConst this_val, int argc, 
     (void)this_val;
     (void)argc;
     (void)argv;
-    mvn_gfx_dl_begin(GFX(ctx));
+    dtr_gfx_dl_begin(GFX(ctx));
     return JS_UNDEFINED;
 }
 
@@ -567,38 +567,38 @@ static JSValue js_gfx_dl_end(JSContext *ctx, JSValueConst this_val, int argc, JS
     (void)this_val;
     (void)argc;
     (void)argv;
-    mvn_gfx_dl_end(GFX(ctx));
+    dtr_gfx_dl_end(GFX(ctx));
     return JS_UNDEFINED;
 }
 
 static JSValue js_gfx_dl_spr(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
     (void)this_val;
-    mvn_gfx_dl_spr(GFX(ctx),
-                   mvn_api_opt_int(ctx, argc, argv, 0, 0),
-                   mvn_api_opt_int(ctx, argc, argv, 1, 0),
-                   mvn_api_opt_int(ctx, argc, argv, 2, 0),
-                   mvn_api_opt_int(ctx, argc, argv, 3, 0),
-                   mvn_api_opt_int(ctx, argc, argv, 4, 1),
-                   mvn_api_opt_int(ctx, argc, argv, 5, 1),
-                   mvn_api_opt_int(ctx, argc, argv, 6, 0) != 0,
-                   mvn_api_opt_int(ctx, argc, argv, 7, 0) != 0);
+    dtr_gfx_dl_spr(GFX(ctx),
+                   dtr_api_opt_int(ctx, argc, argv, 0, 0),
+                   dtr_api_opt_int(ctx, argc, argv, 1, 0),
+                   dtr_api_opt_int(ctx, argc, argv, 2, 0),
+                   dtr_api_opt_int(ctx, argc, argv, 3, 0),
+                   dtr_api_opt_int(ctx, argc, argv, 4, 1),
+                   dtr_api_opt_int(ctx, argc, argv, 5, 1),
+                   dtr_api_opt_int(ctx, argc, argv, 6, 0) != 0,
+                   dtr_api_opt_int(ctx, argc, argv, 7, 0) != 0);
     return JS_UNDEFINED;
 }
 
 static JSValue js_gfx_dl_sspr(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
     (void)this_val;
-    mvn_gfx_dl_sspr(GFX(ctx),
-                    mvn_api_opt_int(ctx, argc, argv, 0, 0),
-                    mvn_api_opt_int(ctx, argc, argv, 1, 0),
-                    mvn_api_opt_int(ctx, argc, argv, 2, 0),
-                    mvn_api_opt_int(ctx, argc, argv, 3, 0),
-                    mvn_api_opt_int(ctx, argc, argv, 4, 0),
-                    mvn_api_opt_int(ctx, argc, argv, 5, 0),
-                    mvn_api_opt_int(ctx, argc, argv, 6, 0),
-                    mvn_api_opt_int(ctx, argc, argv, 7, 0),
-                    mvn_api_opt_int(ctx, argc, argv, 8, 0));
+    dtr_gfx_dl_sspr(GFX(ctx),
+                    dtr_api_opt_int(ctx, argc, argv, 0, 0),
+                    dtr_api_opt_int(ctx, argc, argv, 1, 0),
+                    dtr_api_opt_int(ctx, argc, argv, 2, 0),
+                    dtr_api_opt_int(ctx, argc, argv, 3, 0),
+                    dtr_api_opt_int(ctx, argc, argv, 4, 0),
+                    dtr_api_opt_int(ctx, argc, argv, 5, 0),
+                    dtr_api_opt_int(ctx, argc, argv, 6, 0),
+                    dtr_api_opt_int(ctx, argc, argv, 7, 0),
+                    dtr_api_opt_int(ctx, argc, argv, 8, 0));
     return JS_UNDEFINED;
 }
 
@@ -606,14 +606,14 @@ static JSValue
 js_gfx_dl_spr_rot(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
     (void)this_val;
-    mvn_gfx_dl_spr_rot(GFX(ctx),
-                       mvn_api_opt_int(ctx, argc, argv, 0, 0),
-                       mvn_api_opt_int(ctx, argc, argv, 1, 0),
-                       mvn_api_opt_int(ctx, argc, argv, 2, 0),
-                       mvn_api_opt_int(ctx, argc, argv, 3, 0),
-                       (float)mvn_api_opt_float(ctx, argc, argv, 4, 0.0),
-                       mvn_api_opt_int(ctx, argc, argv, 5, -1),
-                       mvn_api_opt_int(ctx, argc, argv, 6, -1));
+    dtr_gfx_dl_spr_rot(GFX(ctx),
+                       dtr_api_opt_int(ctx, argc, argv, 0, 0),
+                       dtr_api_opt_int(ctx, argc, argv, 1, 0),
+                       dtr_api_opt_int(ctx, argc, argv, 2, 0),
+                       dtr_api_opt_int(ctx, argc, argv, 3, 0),
+                       (float)dtr_api_opt_float(ctx, argc, argv, 4, 0.0),
+                       dtr_api_opt_int(ctx, argc, argv, 5, -1),
+                       dtr_api_opt_int(ctx, argc, argv, 6, -1));
     return JS_UNDEFINED;
 }
 
@@ -621,15 +621,15 @@ static JSValue
 js_gfx_dl_spr_affine(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
     (void)this_val;
-    mvn_gfx_dl_spr_affine(GFX(ctx),
-                          mvn_api_opt_int(ctx, argc, argv, 0, 0),
-                          mvn_api_opt_int(ctx, argc, argv, 1, 0),
-                          mvn_api_opt_int(ctx, argc, argv, 2, 0),
-                          mvn_api_opt_int(ctx, argc, argv, 3, 0),
-                          (float)mvn_api_opt_float(ctx, argc, argv, 4, 0.0),
-                          (float)mvn_api_opt_float(ctx, argc, argv, 5, 0.0),
-                          (float)mvn_api_opt_float(ctx, argc, argv, 6, 1.0),
-                          (float)mvn_api_opt_float(ctx, argc, argv, 7, 0.0));
+    dtr_gfx_dl_spr_affine(GFX(ctx),
+                          dtr_api_opt_int(ctx, argc, argv, 0, 0),
+                          dtr_api_opt_int(ctx, argc, argv, 1, 0),
+                          dtr_api_opt_int(ctx, argc, argv, 2, 0),
+                          dtr_api_opt_int(ctx, argc, argv, 3, 0),
+                          (float)dtr_api_opt_float(ctx, argc, argv, 4, 0.0),
+                          (float)dtr_api_opt_float(ctx, argc, argv, 5, 0.0),
+                          (float)dtr_api_opt_float(ctx, argc, argv, 6, 1.0),
+                          (float)dtr_api_opt_float(ctx, argc, argv, 7, 0.0));
     return JS_UNDEFINED;
 }
 
@@ -664,7 +664,7 @@ static const JSCFunctionListEntry js_gfx_funcs[] = {
     JS_CFUNC_DEF("dl_spr_affine", 8, js_gfx_dl_spr_affine),
 };
 
-void mvn_gfx_api_register(JSContext *ctx, JSValue global)
+void dtr_gfx_api_register(JSContext *ctx, JSValue global)
 {
     JSValue ns;
 

@@ -1,7 +1,7 @@
 {
   "meta": {
     "title": "Tilemap Demo",
-    "author": "mvngin",
+    "author": "dithr",
     "version": "1.0.0",
     "description": "Demonstrates tile map drawing, camera scrolling, and tile queries"
   },

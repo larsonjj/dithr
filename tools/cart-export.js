@@ -56,7 +56,7 @@ function main() {
 
     const basePath = path.dirname(cartPath);
     const cart = readCartFile(cartPath);
-    const title = (cart.meta && cart.meta.title) || "mvngin cart";
+    const title = (cart.meta && cart.meta.title) || "dithr cart";
 
     if (!outFile) {
         outFile = path.join(basePath, `${title.replace(/[^a-zA-Z0-9_-]/g, "_")}.html`);
@@ -118,24 +118,24 @@ canvas { display: block; margin: auto; image-rendering: pixelated; }
     if (AudioCtx) {
       var ctx = new AudioCtx();
       if (ctx.state === "suspended") ctx.resume();
-      window._mvnAudioCtx = ctx;
+      window._dtrAudioCtx = ctx;
     }
     document.removeEventListener("click", unlock);
     document.removeEventListener("touchend", unlock);
-    if (window._mvnginStart) window._mvnginStart();
+    if (window._dithrStart) window._dithrStart();
   }
   document.addEventListener("click", unlock);
   document.addEventListener("touchend", unlock);
 })();
 </script>
 <script>
-// mvngin embedded cart — requires mvngin WASM runtime
-window.MVNGIN_CART = ${JSON.stringify(exportCart)};
+// dithr embedded cart — requires dithr WASM runtime
+window.DITHR_CART = ${JSON.stringify(exportCart)};
 </script>
 <script>
-// Placeholder: load mvngin WASM runtime here
-console.log("mvngin cart loaded. WASM runtime required to run.");
-console.log("Cart:", window.MVNGIN_CART.meta);
+// Placeholder: load dithr WASM runtime here
+console.log("dithr cart loaded. WASM runtime required to run.");
+console.log("Cart:", window.DITHR_CART.meta);
 </script>
 </body>
 </html>`;

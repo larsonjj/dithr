@@ -1,11 +1,11 @@
 # Architecture
 
-This document describes the high-level design of mvngin for anyone reading or
+This document describes the high-level design of dithr for anyone reading or
 contributing to the engine source code.
 
 ## Overview
 
-mvngin is a **fantasy console**: a small, opinionated game runtime with
+dithr is a **fantasy console**: a small, opinionated game runtime with
 fixed-size framebuffer rendering, a built-in sprite/tilemap pipeline, and a
 JavaScript scripting layer powered by QuickJS-NG. The engine is written in C99
 and uses SDL3 for windowing, rendering, input, and audio.
@@ -40,10 +40,10 @@ callbacks:
 
 | Callback         | File     | Engine function         |
 | ---------------- | -------- | ----------------------- |
-| `SDL_AppInit`    | `main.c` | `mvn_console_create()`  |
-| `SDL_AppEvent`   | `main.c` | `mvn_console_event()`   |
-| `SDL_AppIterate` | `main.c` | `mvn_console_iterate()` |
-| `SDL_AppQuit`    | `main.c` | `mvn_console_destroy()` |
+| `SDL_AppInit`    | `main.c` | `dtr_console_create()`  |
+| `SDL_AppEvent`   | `main.c` | `dtr_console_event()`   |
+| `SDL_AppIterate` | `main.c` | `dtr_console_iterate()` |
+| `SDL_AppQuit`    | `main.c` | `dtr_console_destroy()` |
 
 This means:
 
@@ -55,37 +55,37 @@ This means:
 
 ## Console (`console.h` / `console.c`)
 
-`mvn_console_t` is the top-level struct that owns every subsystem:
+`dtr_console_t` is the top-level struct that owns every subsystem:
 
 ```c
-typedef struct mvn_console {
+typedef struct dtr_console {
     SDL_Window *  window;
     SDL_Renderer *renderer;
     SDL_Texture * screen_tex;
 
-    mvn_runtime_t *      runtime;    // JS engine
-    mvn_graphics_t *     graphics;   // software framebuffer
-    mvn_audio_t *        audio;      // SDL3_mixer wrapper
-    mvn_key_state_t *    keys;       // keyboard
-    mvn_mouse_state_t *  mouse;      // mouse
-    mvn_gamepad_state_t *gamepads;   // gamepads (up to 4)
-    mvn_input_state_t *  input;      // virtual action map
-    mvn_event_bus_t *    events;     // JS event bus
-    mvn_cart_t *         cart;       // loaded cart data
-    mvn_postfx_t *       postfx;    // post-processing
+    dtr_runtime_t *      runtime;    // JS engine
+    dtr_graphics_t *     graphics;   // software framebuffer
+    dtr_audio_t *        audio;      // SDL3_mixer wrapper
+    dtr_key_state_t *    keys;       // keyboard
+    dtr_mouse_state_t *  mouse;      // mouse
+    dtr_gamepad_state_t *gamepads;   // gamepads (up to 4)
+    dtr_input_state_t *  input;      // virtual action map
+    dtr_event_bus_t *    events;     // JS event bus
+    dtr_cart_t *         cart;       // loaded cart data
+    dtr_postfx_t *       postfx;    // post-processing
 
     // timing, flags, dimensions...
-} mvn_console_t;
+} dtr_console_t;
 ```
 
 ### Frame lifecycle
 
 Each frame proceeds as:
 
-1. **Event phase** — `mvn_console_event()` is called once per SDL event.
+1. **Event phase** — `dtr_console_event()` is called once per SDL event.
    Keyboard, mouse, and gamepad state is updated. The renderer's coordinate
    system handles letterbox mapping via `SDL_ConvertEventToRenderCoordinates`.
-2. **Iterate phase** — `mvn_console_iterate()`:
+2. **Iterate phase** — `dtr_console_iterate()`:
     - Copies current input state to previous (for `btnp` detection).
     - Calls the JS `_update(dt)` callback.
     - Calls the JS `_draw()` callback.
@@ -97,12 +97,12 @@ Each frame proceeds as:
 
 Wraps QuickJS-NG with:
 
-- **`mvn_runtime_eval`** — evaluate a JS source string.
-- **`mvn_runtime_call`** — call a global JS function by cached `JSAtom`.
-- **`mvn_runtime_drain_jobs`** — execute pending microtasks (Promises).
+- **`dtr_runtime_eval`** — evaluate a JS source string.
+- **`dtr_runtime_call`** — call a global JS function by cached `JSAtom`.
+- **`dtr_runtime_drain_jobs`** — execute pending microtasks (Promises).
 - **Error overlay** — on exception, the error message and line number are
   captured and rendered on-screen. Further JS calls are blocked until
-  `mvn_runtime_clear_error` is called.
+  `dtr_runtime_clear_error` is called.
 
 The console pointer is stored as the QuickJS context opaque, allowing every
 API binding to reach the full engine state via
@@ -119,7 +119,7 @@ All rendering is **software**. The graphics subsystem owns:
 - Draw state: current colour, camera offset, clip rectangle, cursor position,
   draw palette (colour remapping), transparency mask, and 4×4 fill pattern.
 
-The `gfx` JS namespace maps directly to `mvn_gfx_*` C functions. The API
+The `gfx` JS namespace maps directly to `dtr_gfx_*` C functions. The API
 resolves a colour argument of `-1` to the current draw colour, so omitting a
 colour parameter uses whatever was last set with `gfx.color()`.
 
@@ -127,10 +127,10 @@ colour parameter uses whatever was last set with `gfx.color()`.
 
 Three layers of input:
 
-1. **Raw state** — `mvn_key_state_t`, `mvn_mouse_state_t`,
-   `mvn_gamepad_state_t` track current and previous frame state for `btn`
+1. **Raw state** — `dtr_key_state_t`, `dtr_mouse_state_t`,
+   `dtr_gamepad_state_t` track current and previous frame state for `btn`
    (held) and `btnp` (just pressed) queries.
-2. **Virtual actions** — `mvn_input_state_t` maps named actions (e.g.
+2. **Virtual actions** — `dtr_input_state_t` maps named actions (e.g.
    `"jump"`) to one or more bindings (keyboard key, gamepad button, gamepad
    axis, or mouse button). Bindings are defined in `cart.json` or at runtime
    via `input.map()`.
@@ -177,8 +177,8 @@ See [cart-format.md](cart-format.md) for the full schema.
 
 ## Memory Management
 
-All allocations go through `MVN_MALLOC`, `MVN_CALLOC`, `MVN_REALLOC`, and
-`MVN_FREE` — thin macros over SDL's allocator. This keeps allocation
+All allocations go through `DTR_MALLOC`, `DTR_CALLOC`, `DTR_REALLOC`, and
+`DTR_FREE` — thin macros over SDL's allocator. This keeps allocation
 consistent across engine and dependency code.
 
 ## File Layout

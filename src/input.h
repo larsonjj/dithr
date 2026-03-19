@@ -3,8 +3,8 @@
  * \brief           Virtual input mapping — action-based input abstraction
  */
 
-#ifndef MVN_INPUT_H
-#define MVN_INPUT_H
+#ifndef DTR_INPUT_H
+#define DTR_INPUT_H
 
 #include "console.h"
 
@@ -13,192 +13,192 @@ extern "C" {
 #endif /* __cplusplus */
 
 /* Key constants (matching SDL scancodes conceptually) */
-typedef enum mvn_key {
-    MVN_KEY_NONE = 0,
-    MVN_KEY_UP,
-    MVN_KEY_DOWN,
-    MVN_KEY_LEFT,
-    MVN_KEY_RIGHT,
-    MVN_KEY_Z,
-    MVN_KEY_X,
-    MVN_KEY_C,
-    MVN_KEY_V,
-    MVN_KEY_SPACE,
-    MVN_KEY_ENTER,
-    MVN_KEY_ESCAPE,
-    MVN_KEY_LSHIFT,
-    MVN_KEY_RSHIFT,
-    MVN_KEY_A,
-    MVN_KEY_B,
-    MVN_KEY_D,
-    MVN_KEY_E,
-    MVN_KEY_F,
-    MVN_KEY_G,
-    MVN_KEY_H,
-    MVN_KEY_I,
-    MVN_KEY_J,
-    MVN_KEY_K,
-    MVN_KEY_L,
-    MVN_KEY_M,
-    MVN_KEY_N,
-    MVN_KEY_O,
-    MVN_KEY_P,
-    MVN_KEY_Q,
-    MVN_KEY_R,
-    MVN_KEY_S,
-    MVN_KEY_T,
-    MVN_KEY_U,
-    MVN_KEY_W,
-    MVN_KEY_Y,
-    MVN_KEY_0,
-    MVN_KEY_1,
-    MVN_KEY_2,
-    MVN_KEY_3,
-    MVN_KEY_4,
-    MVN_KEY_5,
-    MVN_KEY_6,
-    MVN_KEY_7,
-    MVN_KEY_8,
-    MVN_KEY_9,
-    MVN_KEY_F1,
-    MVN_KEY_F2,
-    MVN_KEY_F3,
-    MVN_KEY_F4,
-    MVN_KEY_F5,
-    MVN_KEY_F6,
-    MVN_KEY_F7,
-    MVN_KEY_F8,
-    MVN_KEY_F9,
-    MVN_KEY_F10,
-    MVN_KEY_F11,
-    MVN_KEY_F12,
-    MVN_KEY_COUNT
-} mvn_key_t;
+typedef enum dtr_key {
+    DTR_KEY_NONE = 0,
+    DTR_KEY_UP,
+    DTR_KEY_DOWN,
+    DTR_KEY_LEFT,
+    DTR_KEY_RIGHT,
+    DTR_KEY_Z,
+    DTR_KEY_X,
+    DTR_KEY_C,
+    DTR_KEY_V,
+    DTR_KEY_SPACE,
+    DTR_KEY_ENTER,
+    DTR_KEY_ESCAPE,
+    DTR_KEY_LSHIFT,
+    DTR_KEY_RSHIFT,
+    DTR_KEY_A,
+    DTR_KEY_B,
+    DTR_KEY_D,
+    DTR_KEY_E,
+    DTR_KEY_F,
+    DTR_KEY_G,
+    DTR_KEY_H,
+    DTR_KEY_I,
+    DTR_KEY_J,
+    DTR_KEY_K,
+    DTR_KEY_L,
+    DTR_KEY_M,
+    DTR_KEY_N,
+    DTR_KEY_O,
+    DTR_KEY_P,
+    DTR_KEY_Q,
+    DTR_KEY_R,
+    DTR_KEY_S,
+    DTR_KEY_T,
+    DTR_KEY_U,
+    DTR_KEY_W,
+    DTR_KEY_Y,
+    DTR_KEY_0,
+    DTR_KEY_1,
+    DTR_KEY_2,
+    DTR_KEY_3,
+    DTR_KEY_4,
+    DTR_KEY_5,
+    DTR_KEY_6,
+    DTR_KEY_7,
+    DTR_KEY_8,
+    DTR_KEY_9,
+    DTR_KEY_F1,
+    DTR_KEY_F2,
+    DTR_KEY_F3,
+    DTR_KEY_F4,
+    DTR_KEY_F5,
+    DTR_KEY_F6,
+    DTR_KEY_F7,
+    DTR_KEY_F8,
+    DTR_KEY_F9,
+    DTR_KEY_F10,
+    DTR_KEY_F11,
+    DTR_KEY_F12,
+    DTR_KEY_COUNT
+} dtr_key_t;
 
 /* Gamepad button constants */
-typedef enum mvn_pad_btn {
-    MVN_PAD_UP = 0,
-    MVN_PAD_DOWN,
-    MVN_PAD_LEFT,
-    MVN_PAD_RIGHT,
-    MVN_PAD_A,
-    MVN_PAD_B,
-    MVN_PAD_X,
-    MVN_PAD_Y,
-    MVN_PAD_L1,
-    MVN_PAD_R1,
-    MVN_PAD_L2,
-    MVN_PAD_R2,
-    MVN_PAD_L3,
-    MVN_PAD_R3,
-    MVN_PAD_START,
-    MVN_PAD_SELECT,
-    MVN_PAD_GUIDE,
-    MVN_PAD_BTN_COUNT
-} mvn_pad_btn_t;
+typedef enum dtr_pad_btn {
+    DTR_PAD_UP = 0,
+    DTR_PAD_DOWN,
+    DTR_PAD_LEFT,
+    DTR_PAD_RIGHT,
+    DTR_PAD_A,
+    DTR_PAD_B,
+    DTR_PAD_X,
+    DTR_PAD_Y,
+    DTR_PAD_L1,
+    DTR_PAD_R1,
+    DTR_PAD_L2,
+    DTR_PAD_R2,
+    DTR_PAD_L3,
+    DTR_PAD_R3,
+    DTR_PAD_START,
+    DTR_PAD_SELECT,
+    DTR_PAD_GUIDE,
+    DTR_PAD_BTN_COUNT
+} dtr_pad_btn_t;
 
 /* Gamepad axis constants */
-typedef enum mvn_pad_axis {
-    MVN_PAD_AXIS_LX = 0,
-    MVN_PAD_AXIS_LY,
-    MVN_PAD_AXIS_RX,
-    MVN_PAD_AXIS_RY,
-    MVN_PAD_AXIS_L2,
-    MVN_PAD_AXIS_R2,
-    MVN_PAD_AXIS_COUNT
-} mvn_pad_axis_t;
+typedef enum dtr_pad_axis {
+    DTR_PAD_AXIS_LX = 0,
+    DTR_PAD_AXIS_LY,
+    DTR_PAD_AXIS_RX,
+    DTR_PAD_AXIS_RY,
+    DTR_PAD_AXIS_L2,
+    DTR_PAD_AXIS_R2,
+    DTR_PAD_AXIS_COUNT
+} dtr_pad_axis_t;
 
 /* Mouse button constants */
-typedef enum mvn_mouse_btn {
-    MVN_MOUSE_LEFT = 0,
-    MVN_MOUSE_MIDDLE,
-    MVN_MOUSE_RIGHT,
-    MVN_MOUSE_BTN_COUNT
-} mvn_mouse_btn_t;
+typedef enum dtr_mouse_btn {
+    DTR_MOUSE_LEFT = 0,
+    DTR_MOUSE_MIDDLE,
+    DTR_MOUSE_RIGHT,
+    DTR_MOUSE_BTN_COUNT
+} dtr_mouse_btn_t;
 
 /* ------------------------------------------------------------------------ */
 /*  Keyboard state                                                           */
 /* ------------------------------------------------------------------------ */
 
-struct mvn_key_state {
-    bool current[MVN_KEY_COUNT];
-    bool previous[MVN_KEY_COUNT];
+struct dtr_key_state {
+    bool current[DTR_KEY_COUNT];
+    bool previous[DTR_KEY_COUNT];
 };
 
-mvn_key_state_t *mvn_key_create(void);
-void             mvn_key_destroy(mvn_key_state_t *keys);
-void             mvn_key_update(mvn_key_state_t *keys);
-void             mvn_key_set(mvn_key_state_t *keys, mvn_key_t key, bool down);
-bool             mvn_key_btn(mvn_key_state_t *keys, mvn_key_t key);
-bool             mvn_key_btnp(mvn_key_state_t *keys, mvn_key_t key);
-const char *     mvn_key_name(mvn_key_t key);
+dtr_key_state_t *dtr_key_create(void);
+void             dtr_key_destroy(dtr_key_state_t *keys);
+void             dtr_key_update(dtr_key_state_t *keys);
+void             dtr_key_set(dtr_key_state_t *keys, dtr_key_t key, bool down);
+bool             dtr_key_btn(dtr_key_state_t *keys, dtr_key_t key);
+bool             dtr_key_btnp(dtr_key_state_t *keys, dtr_key_t key);
+const char *     dtr_key_name(dtr_key_t key);
 
 /**
- * \brief           Map an SDL scancode to our mvn_key_t enum
+ * \brief           Map an SDL scancode to our dtr_key_t enum
  */
-mvn_key_t mvn_key_from_scancode(SDL_Scancode sc);
+dtr_key_t dtr_key_from_scancode(SDL_Scancode sc);
 
 /* ------------------------------------------------------------------------ */
 /*  Virtual input mapping                                                    */
 /* ------------------------------------------------------------------------ */
 
-#define MVN_INPUT_MAX_ACTIONS  32
-#define MVN_INPUT_MAX_BINDINGS 8
-#define MVN_INPUT_ACTION_LEN   32
+#define DTR_INPUT_MAX_ACTIONS  32
+#define DTR_INPUT_MAX_BINDINGS 8
+#define DTR_INPUT_ACTION_LEN   32
 
 /* A single binding can reference a key, pad button, or pad axis */
-typedef enum mvn_binding_type {
-    MVN_BIND_KEY,
-    MVN_BIND_PAD_BTN,
-    MVN_BIND_PAD_AXIS,
-    MVN_BIND_MOUSE_BTN,
-} mvn_binding_type_t;
+typedef enum dtr_binding_type {
+    DTR_BIND_KEY,
+    DTR_BIND_PAD_BTN,
+    DTR_BIND_PAD_AXIS,
+    DTR_BIND_MOUSE_BTN,
+} dtr_binding_type_t;
 
-typedef struct mvn_binding {
-    mvn_binding_type_t type;
-    int32_t            code;      /**< mvn_key_t, mvn_pad_btn_t, or axis */
+typedef struct dtr_binding {
+    dtr_binding_type_t type;
+    int32_t            code;      /**< dtr_key_t, dtr_pad_btn_t, or axis */
     float              threshold; /**< For axis bindings */
-} mvn_binding_t;
+} dtr_binding_t;
 
-typedef struct mvn_input_action {
-    char          name[MVN_INPUT_ACTION_LEN];
-    mvn_binding_t bindings[MVN_INPUT_MAX_BINDINGS];
+typedef struct dtr_input_action {
+    char          name[DTR_INPUT_ACTION_LEN];
+    dtr_binding_t bindings[DTR_INPUT_MAX_BINDINGS];
     int32_t       bind_count;
     bool          current;
     bool          previous;
     float         axis_value;
-} mvn_input_action_t;
+} dtr_input_action_t;
 
-struct mvn_input_state {
-    mvn_input_action_t actions[MVN_INPUT_MAX_ACTIONS];
+struct dtr_input_state {
+    dtr_input_action_t actions[DTR_INPUT_MAX_ACTIONS];
     int32_t            action_count;
 };
 
-mvn_input_state_t *mvn_input_create(void);
-void               mvn_input_destroy(mvn_input_state_t *inp);
-void  mvn_input_update(mvn_input_state_t *inp, mvn_key_state_t *keys, mvn_gamepad_state_t *pads);
-void  mvn_input_map(mvn_input_state_t *  inp,
+dtr_input_state_t *dtr_input_create(void);
+void               dtr_input_destroy(dtr_input_state_t *inp);
+void  dtr_input_update(dtr_input_state_t *inp, dtr_key_state_t *keys, dtr_gamepad_state_t *pads);
+void  dtr_input_map(dtr_input_state_t *  inp,
                     const char *         action,
-                    const mvn_binding_t *bindings,
+                    const dtr_binding_t *bindings,
                     int32_t              count);
-void  mvn_input_remap(mvn_input_state_t *  inp,
+void  dtr_input_remap(dtr_input_state_t *  inp,
                       const char *         action,
-                      const mvn_binding_t *bindings,
+                      const dtr_binding_t *bindings,
                       int32_t              count);
-void  mvn_input_clear_action(mvn_input_state_t *inp, const char *action);
-void  mvn_input_clear_all(mvn_input_state_t *inp);
-bool  mvn_input_btn(mvn_input_state_t *inp, const char *action);
-bool  mvn_input_btnp(mvn_input_state_t *inp, const char *action);
-float mvn_input_axis(mvn_input_state_t *inp, const char *action);
+void  dtr_input_clear_action(dtr_input_state_t *inp, const char *action);
+void  dtr_input_clear_all(dtr_input_state_t *inp);
+bool  dtr_input_btn(dtr_input_state_t *inp, const char *action);
+bool  dtr_input_btnp(dtr_input_state_t *inp, const char *action);
+float dtr_input_axis(dtr_input_state_t *inp, const char *action);
 
 /**
  * \brief           Parse a binding string like "KEY_LEFT", "PAD_A", "MOUSE_LEFT"
  * \return          true if parsed successfully
  */
-bool mvn_input_parse_binding(const char *str, mvn_binding_t *out);
+bool dtr_input_parse_binding(const char *str, dtr_binding_t *out);
 
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
 
-#endif /* MVN_INPUT_H */
+#endif /* DTR_INPUT_H */

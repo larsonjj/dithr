@@ -3,8 +3,8 @@
  * \brief           Cart configuration, data structures, loading, and save/load
  */
 
-#ifndef MVN_CART_H
-#define MVN_CART_H
+#ifndef DTR_CART_H
+#define DTR_CART_H
 
 #include "console.h"
 #include "quickjs.h"
@@ -13,21 +13,21 @@
 extern "C" {
 #endif /* __cplusplus */
 
-#define MVN_CART_MAX_MAPS      CONSOLE_MAX_MAPS
-#define MVN_CART_MAX_SFX       256
-#define MVN_CART_MAX_MUSIC     64
-#define MVN_CART_PERSIST_SLOTS 64
-#define MVN_CART_MAX_DSLOTS    MVN_CART_PERSIST_SLOTS
-#define MVN_CART_MAX_KV        64
-#define MVN_CART_KEY_LEN       64
-#define MVN_CART_VAL_LEN       256
-#define MVN_CART_TITLE_LEN     64
+#define DTR_CART_MAX_MAPS      CONSOLE_MAX_MAPS
+#define DTR_CART_MAX_SFX       256
+#define DTR_CART_MAX_MUSIC     64
+#define DTR_CART_PERSIST_SLOTS 64
+#define DTR_CART_MAX_DSLOTS    DTR_CART_PERSIST_SLOTS
+#define DTR_CART_MAX_KV        64
+#define DTR_CART_KEY_LEN       64
+#define DTR_CART_VAL_LEN       256
+#define DTR_CART_TITLE_LEN     64
 
 /* ------------------------------------------------------------------------ */
 /*  Map object                                                               */
 /* ------------------------------------------------------------------------ */
 
-typedef struct mvn_map_object {
+typedef struct dtr_map_object {
     char    name[64];
     char    type[64];
     float   x;
@@ -37,41 +37,41 @@ typedef struct mvn_map_object {
     int32_t gid;
     /* Properties stored as a JS object (ref-counted) */
     JSValue props;
-} mvn_map_object_t;
+} dtr_map_object_t;
 
 /* ------------------------------------------------------------------------ */
 /*  Map layer                                                                */
 /* ------------------------------------------------------------------------ */
 
-typedef struct mvn_map_layer {
+typedef struct dtr_map_layer {
     char              name[32];
     bool              is_tile_layer;
     int32_t           width;
     int32_t           height;
     int32_t *         tiles; /**< Tile indices, width*height (tile layers) */
-    mvn_map_object_t *objects;
+    dtr_map_object_t *objects;
     int32_t           object_count;
-} mvn_map_layer_t;
+} dtr_map_layer_t;
 
 /* ------------------------------------------------------------------------ */
 /*  Map level                                                                */
 /* ------------------------------------------------------------------------ */
 
-typedef struct mvn_map_level {
+typedef struct dtr_map_level {
     char             name[64];
     int32_t          width;  /**< Map width in tiles */
     int32_t          height; /**< Map height in tiles */
     int32_t          tile_w;
     int32_t          tile_h;
-    mvn_map_layer_t *layers;
+    dtr_map_layer_t *layers;
     int32_t          layer_count;
-} mvn_map_level_t;
+} dtr_map_level_t;
 
 /* ------------------------------------------------------------------------ */
 /*  Cart display config                                                      */
 /* ------------------------------------------------------------------------ */
 
-typedef struct mvn_cart_display {
+typedef struct dtr_cart_display {
     int32_t width;
     int32_t height;
     int32_t palette_size;
@@ -79,92 +79,92 @@ typedef struct mvn_cart_display {
     int32_t palette;
     bool    fullscreen;
     char    window_title[128];
-} mvn_cart_display_t;
+} dtr_cart_display_t;
 
 /* ------------------------------------------------------------------------ */
 /*  Cart timing config                                                       */
 /* ------------------------------------------------------------------------ */
 
-typedef struct mvn_cart_timing {
+typedef struct dtr_cart_timing {
     int32_t fps;
     int32_t ups;
     bool    frozen;
-} mvn_cart_timing_t;
+} dtr_cart_timing_t;
 
 /* ------------------------------------------------------------------------ */
 /*  Cart sprite config                                                       */
 /* ------------------------------------------------------------------------ */
 
-typedef struct mvn_cart_sprites {
+typedef struct dtr_cart_sprites {
     int32_t tile_w;
     int32_t tile_h;
     int32_t max_sprites;
-} mvn_cart_sprites_t;
+} dtr_cart_sprites_t;
 
 /* ------------------------------------------------------------------------ */
 /*  Cart runtime config                                                      */
 /* ------------------------------------------------------------------------ */
 
-typedef struct mvn_cart_runtime {
+typedef struct dtr_cart_runtime {
     uint32_t mem_limit;   /**< JS heap limit in bytes */
     uint32_t stack_limit; /**< JS stack limit in bytes */
-} mvn_cart_runtime_t;
+} dtr_cart_runtime_t;
 
 /* ------------------------------------------------------------------------ */
 /*  Cart audio config                                                        */
 /* ------------------------------------------------------------------------ */
 
-typedef struct mvn_cart_audio {
+typedef struct dtr_cart_audio {
     int32_t channels;
     int32_t frequency;
     int32_t buffer_size;
-} mvn_cart_audio_t;
+} dtr_cart_audio_t;
 
 /* ------------------------------------------------------------------------ */
 /*  Cart input mapping config                                                */
 /* ------------------------------------------------------------------------ */
 
-#define MVN_CART_MAX_INPUT_ACTIONS  16
-#define MVN_CART_MAX_INPUT_BINDINGS 8
-#define MVN_CART_BIND_NAME_LEN     32
+#define DTR_CART_MAX_INPUT_ACTIONS  16
+#define DTR_CART_MAX_INPUT_BINDINGS 8
+#define DTR_CART_BIND_NAME_LEN     32
 
-typedef struct mvn_cart_input_mapping {
+typedef struct dtr_cart_input_mapping {
     char    action[32];
-    char    bindings[MVN_CART_MAX_INPUT_BINDINGS][MVN_CART_BIND_NAME_LEN];
+    char    bindings[DTR_CART_MAX_INPUT_BINDINGS][DTR_CART_BIND_NAME_LEN];
     int32_t bind_count;
-} mvn_cart_input_mapping_t;
+} dtr_cart_input_mapping_t;
 
-typedef struct mvn_cart_input {
-    mvn_cart_input_mapping_t mappings[MVN_CART_MAX_INPUT_ACTIONS];
+typedef struct dtr_cart_input {
+    dtr_cart_input_mapping_t mappings[DTR_CART_MAX_INPUT_ACTIONS];
     int32_t                  mapping_count;
-} mvn_cart_input_t;
+} dtr_cart_input_t;
 
 /* ------------------------------------------------------------------------ */
 /*  Cart meta (full configuration)                                           */
 /* ------------------------------------------------------------------------ */
 
-typedef struct mvn_cart_meta {
-    char title[MVN_CART_TITLE_LEN];
-    char author[MVN_CART_TITLE_LEN];
+typedef struct dtr_cart_meta {
+    char title[DTR_CART_TITLE_LEN];
+    char author[DTR_CART_TITLE_LEN];
     char version[32];
     char description[256];
     char default_postfx[32];
-} mvn_cart_meta_t;
+} dtr_cart_meta_t;
 
 /* ------------------------------------------------------------------------ */
 /*  Cart — complete cart state                                               */
 /* ------------------------------------------------------------------------ */
 
-struct mvn_cart {
-    mvn_cart_meta_t meta;
+struct dtr_cart {
+    dtr_cart_meta_t meta;
 
     /* Config sections (flat, not nested in meta) */
-    mvn_cart_display_t display;
-    mvn_cart_timing_t  timing;
-    mvn_cart_sprites_t sprites;
-    mvn_cart_runtime_t runtime;
-    mvn_cart_audio_t   audio;
-    mvn_cart_input_t   input;
+    dtr_cart_display_t display;
+    dtr_cart_timing_t  timing;
+    dtr_cart_sprites_t sprites;
+    dtr_cart_runtime_t runtime;
+    dtr_cart_audio_t   audio;
+    dtr_cart_input_t   input;
 
     /* JS source code (owned) */
     char * code;
@@ -173,14 +173,14 @@ struct mvn_cart {
     /* Asset paths from cart.json */
     char sprite_sheet_path[512];
     char code_path[512];
-    char map_paths[MVN_CART_MAX_MAPS][512];
-    char sfx_paths[MVN_CART_MAX_SFX][512];
+    char map_paths[DTR_CART_MAX_MAPS][512];
+    char sfx_paths[DTR_CART_MAX_SFX][512];
     int32_t sfx_count;
-    char music_paths[MVN_CART_MAX_MUSIC][512];
+    char music_paths[DTR_CART_MAX_MUSIC][512];
     int32_t music_count;
 
     /* Map levels */
-    mvn_map_level_t *maps[MVN_CART_MAX_MAPS];
+    dtr_map_level_t *maps[DTR_CART_MAX_MAPS];
     int32_t          map_count;
     int32_t          current_map;
 
@@ -192,11 +192,11 @@ struct mvn_cart {
     int32_t  sprite_rgba_h;
 
     /* dget/dset numeric persistence (PICO-8 compat) */
-    double dslots[MVN_CART_PERSIST_SLOTS];
+    double dslots[DTR_CART_PERSIST_SLOTS];
 
     /* Named key/value persistence */
-    char    kv_keys[MVN_CART_MAX_KV][MVN_CART_KEY_LEN];
-    char    kv_values[MVN_CART_MAX_KV][MVN_CART_VAL_LEN];
+    char    kv_keys[DTR_CART_MAX_KV][DTR_CART_KEY_LEN];
+    char    kv_values[DTR_CART_MAX_KV][DTR_CART_VAL_LEN];
     int32_t kv_count;
 
     /* Path for resolving relative asset paths */
@@ -213,13 +213,13 @@ struct mvn_cart {
 /*  Cart lifecycle                                                           */
 /* ------------------------------------------------------------------------ */
 
-mvn_cart_t *mvn_cart_create(void);
-void        mvn_cart_destroy(mvn_cart_t *cart);
+dtr_cart_t *dtr_cart_create(void);
+void        dtr_cart_destroy(dtr_cart_t *cart);
 
 /**
  * \brief           Fill cart with compiled defaults
  */
-void mvn_cart_defaults(mvn_cart_t *cart);
+void dtr_cart_defaults(dtr_cart_t *cart);
 
 /**
  * \brief           Parse and validate a cart.json or cart.baked.json
@@ -229,40 +229,40 @@ void mvn_cart_defaults(mvn_cart_t *cart);
  * \param[in]       len: JSON string length
  * \return          true on success
  */
-bool mvn_cart_parse(mvn_cart_t *cart, JSContext *ctx, const char *json, size_t len);
+bool dtr_cart_parse(dtr_cart_t *cart, JSContext *ctx, const char *json, size_t len);
 
 /**
  * \brief           Validate cart meta values against compiled ceilings
  * \return          true if all values are within bounds
  */
-bool mvn_cart_validate(mvn_cart_t *cart);
+bool dtr_cart_validate(dtr_cart_t *cart);
 
 /**
  * \brief           Load cart file from disk path
  */
-bool mvn_cart_load(mvn_cart_t *cart, JSContext *ctx, const char *path);
+bool dtr_cart_load(dtr_cart_t *cart, JSContext *ctx, const char *path);
 
 /**
  * \brief           Load code file referenced by cart
  */
-char *mvn_cart_load_code(mvn_cart_t *cart);
+char *dtr_cart_load_code(dtr_cart_t *cart);
 
 /* Persistence (key-value) */
-void        mvn_cart_save(mvn_cart_t *cart, const char *key, const char *value);
-const char *mvn_cart_load_key(mvn_cart_t *cart, const char *key);
-void        mvn_cart_delete_key(mvn_cart_t *cart, const char *key);
-bool        mvn_cart_has_key(mvn_cart_t *cart, const char *key);
+void        dtr_cart_save(dtr_cart_t *cart, const char *key, const char *value);
+const char *dtr_cart_load_key(dtr_cart_t *cart, const char *key);
+void        dtr_cart_delete_key(dtr_cart_t *cart, const char *key);
+bool        dtr_cart_has_key(dtr_cart_t *cart, const char *key);
 
 /* Persistence (numeric slots) */
-void   mvn_cart_dset(mvn_cart_t *cart, int32_t index, double value);
-double mvn_cart_dget(mvn_cart_t *cart, int32_t index);
+void   dtr_cart_dset(dtr_cart_t *cart, int32_t index, double value);
+double dtr_cart_dget(dtr_cart_t *cart, int32_t index);
 
 /* Disk persistence — flush/load dslots + kv to/from a JSON file */
-bool mvn_cart_persist_save(mvn_cart_t *cart);
-bool mvn_cart_persist_load(mvn_cart_t *cart);
+bool dtr_cart_persist_save(dtr_cart_t *cart);
+bool dtr_cart_persist_load(dtr_cart_t *cart);
 
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
 
-#endif /* MVN_CART_H */
+#endif /* DTR_CART_H */

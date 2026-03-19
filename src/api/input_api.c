@@ -6,7 +6,7 @@
 #include "../input.h"
 #include "api_common.h"
 
-#define INP(ctx) (mvn_api_get_console(ctx)->input)
+#define INP(ctx) (dtr_api_get_console(ctx)->input)
 
 static JSValue js_input_btn(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
@@ -23,7 +23,7 @@ static JSValue js_input_btn(JSContext *ctx, JSValueConst this_val, int argc, JSV
         return JS_FALSE;
     }
 
-    result = mvn_input_btn(INP(ctx), action);
+    result = dtr_input_btn(INP(ctx), action);
     JS_FreeCString(ctx, action);
     return JS_NewBool(ctx, result);
 }
@@ -43,7 +43,7 @@ static JSValue js_input_btnp(JSContext *ctx, JSValueConst this_val, int argc, JS
         return JS_FALSE;
     }
 
-    result = mvn_input_btnp(INP(ctx), action);
+    result = dtr_input_btnp(INP(ctx), action);
     JS_FreeCString(ctx, action);
     return JS_NewBool(ctx, result);
 }
@@ -63,7 +63,7 @@ static JSValue js_input_axis(JSContext *ctx, JSValueConst this_val, int argc, JS
         return JS_NewFloat64(ctx, 0.0);
     }
 
-    result = mvn_input_axis(INP(ctx), action);
+    result = dtr_input_axis(INP(ctx), action);
     JS_FreeCString(ctx, action);
     return JS_NewFloat64(ctx, (double)result);
 }
@@ -71,7 +71,7 @@ static JSValue js_input_axis(JSContext *ctx, JSValueConst this_val, int argc, JS
 static JSValue js_input_map(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
     const char *  action;
-    mvn_binding_t bindings[MVN_INPUT_MAX_BINDINGS];
+    dtr_binding_t bindings[DTR_INPUT_MAX_BINDINGS];
     int32_t       bind_count;
 
     (void)this_val;
@@ -94,8 +94,8 @@ static JSValue js_input_map(JSContext *ctx, JSValueConst this_val, int argc, JSV
         JS_ToInt32(ctx, &arr_len, len_val);
         JS_FreeValue(ctx, len_val);
 
-        if (arr_len > MVN_INPUT_MAX_BINDINGS) {
-            arr_len = MVN_INPUT_MAX_BINDINGS;
+        if (arr_len > DTR_INPUT_MAX_BINDINGS) {
+            arr_len = DTR_INPUT_MAX_BINDINGS;
         }
 
         for (int32_t idx = 0; idx < arr_len; ++idx) {
@@ -136,7 +136,7 @@ static JSValue js_input_map(JSContext *ctx, JSValueConst this_val, int argc, JSV
         }
     }
 
-    mvn_input_map(INP(ctx), action, bindings, bind_count);
+    dtr_input_map(INP(ctx), action, bindings, bind_count);
     JS_FreeCString(ctx, action);
     return JS_UNDEFINED;
 }
@@ -150,11 +150,11 @@ static JSValue js_input_clear(JSContext *ctx, JSValueConst this_val, int argc, J
 
         action = JS_ToCString(ctx, argv[0]);
         if (action != NULL) {
-            mvn_input_clear_action(INP(ctx), action);
+            dtr_input_clear_action(INP(ctx), action);
             JS_FreeCString(ctx, action);
         }
     } else {
-        mvn_input_clear_all(INP(ctx));
+        dtr_input_clear_all(INP(ctx));
     }
     return JS_UNDEFINED;
 }
@@ -168,17 +168,17 @@ static const JSCFunctionListEntry js_input_funcs[] = {
 };
 
 /* Binding type constants */
-void mvn_input_api_register(JSContext *ctx, JSValue global)
+void dtr_input_api_register(JSContext *ctx, JSValue global)
 {
     JSValue ns;
 
     ns = JS_NewObject(ctx);
     JS_SetPropertyFunctionList(ctx, ns, js_input_funcs, countof(js_input_funcs));
 
-    JS_SetPropertyStr(ctx, ns, "KEY", JS_NewInt32(ctx, MVN_BIND_KEY));
-    JS_SetPropertyStr(ctx, ns, "PAD_BTN", JS_NewInt32(ctx, MVN_BIND_PAD_BTN));
-    JS_SetPropertyStr(ctx, ns, "PAD_AXIS", JS_NewInt32(ctx, MVN_BIND_PAD_AXIS));
-    JS_SetPropertyStr(ctx, ns, "MOUSE_BTN", JS_NewInt32(ctx, MVN_BIND_MOUSE_BTN));
+    JS_SetPropertyStr(ctx, ns, "KEY", JS_NewInt32(ctx, DTR_BIND_KEY));
+    JS_SetPropertyStr(ctx, ns, "PAD_BTN", JS_NewInt32(ctx, DTR_BIND_PAD_BTN));
+    JS_SetPropertyStr(ctx, ns, "PAD_AXIS", JS_NewInt32(ctx, DTR_BIND_PAD_AXIS));
+    JS_SetPropertyStr(ctx, ns, "MOUSE_BTN", JS_NewInt32(ctx, DTR_BIND_MOUSE_BTN));
 
     JS_SetPropertyStr(ctx, global, "input", ns);
 }

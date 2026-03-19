@@ -3,8 +3,8 @@
  * \brief           Mouse state — position, buttons, wheel, visibility
  */
 
-#ifndef MVN_MOUSE_H
-#define MVN_MOUSE_H
+#ifndef DTR_MOUSE_H
+#define DTR_MOUSE_H
 
 #include "console.h"
 #include "input.h"
@@ -16,7 +16,7 @@ extern "C" {
 /**
  * \brief           Mouse state (positions are in framebuffer coordinates)
  */
-struct mvn_mouse_state {
+struct dtr_mouse_state {
     float x;
     float y;
     float dx;
@@ -24,9 +24,9 @@ struct mvn_mouse_state {
     float wheel_x;
     float wheel;
 
-    bool btn_current[MVN_MOUSE_BTN_COUNT];
-    bool btn_previous[MVN_MOUSE_BTN_COUNT];
-    bool btn_pressed[MVN_MOUSE_BTN_COUNT];
+    bool btn_current[DTR_MOUSE_BTN_COUNT];
+    bool btn_previous[DTR_MOUSE_BTN_COUNT];
+    bool btn_pressed[DTR_MOUSE_BTN_COUNT];
 
     bool visible;
 
@@ -37,21 +37,21 @@ struct mvn_mouse_state {
     float offset_y;
 };
 
-mvn_mouse_state_t *mvn_mouse_create(void);
-void               mvn_mouse_destroy(mvn_mouse_state_t *mouse);
-void               mvn_mouse_update(mvn_mouse_state_t *mouse);
-void               mvn_mouse_set_mapping(mvn_mouse_state_t *mouse,
+dtr_mouse_state_t *dtr_mouse_create(void);
+void               dtr_mouse_destroy(dtr_mouse_state_t *mouse);
+void               dtr_mouse_update(dtr_mouse_state_t *mouse);
+void               dtr_mouse_set_mapping(dtr_mouse_state_t *mouse,
                                          float              scale_x,
                                          float              scale_y,
                                          float              offset_x,
                                          float              offset_y);
-bool               mvn_mouse_btn(mvn_mouse_state_t *mouse, mvn_mouse_btn_t b);
-bool               mvn_mouse_btnp(mvn_mouse_state_t *mouse, mvn_mouse_btn_t b);
-void               mvn_mouse_show(mvn_mouse_state_t *mouse);
-void               mvn_mouse_hide(mvn_mouse_state_t *mouse);
+bool               dtr_mouse_btn(dtr_mouse_state_t *mouse, dtr_mouse_btn_t b);
+bool               dtr_mouse_btnp(dtr_mouse_state_t *mouse, dtr_mouse_btn_t b);
+void               dtr_mouse_show(dtr_mouse_state_t *mouse);
+void               dtr_mouse_hide(dtr_mouse_state_t *mouse);
 
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
 
-#endif /* MVN_MOUSE_H */
+#endif /* DTR_MOUSE_H */

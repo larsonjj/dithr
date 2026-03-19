@@ -1,6 +1,6 @@
 // PICO-8 port template — compatibility shims for porting PICO-8 games
 //
-// Provides thin wrappers that map common PICO-8 API names to mvngin
+// Provides thin wrappers that map common PICO-8 API names to dithr
 // equivalents. Paste your PICO-8 code below the shim section.
 
 // --- PICO-8 compatibility shims ---

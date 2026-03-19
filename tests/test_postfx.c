@@ -17,21 +17,21 @@
 
 static void test_postfx_create_destroy(void)
 {
-    mvn_postfx_t *pfx = mvn_postfx_create(TW, TH);
+    dtr_postfx_t *pfx = dtr_postfx_create(TW, TH);
 
-    MVN_ASSERT(pfx != NULL);
-    MVN_ASSERT_EQ_INT(pfx->width, TW);
-    MVN_ASSERT_EQ_INT(pfx->height, TH);
-    MVN_ASSERT_EQ_INT(pfx->count, 0);
+    DTR_ASSERT(pfx != NULL);
+    DTR_ASSERT_EQ_INT(pfx->width, TW);
+    DTR_ASSERT_EQ_INT(pfx->height, TH);
+    DTR_ASSERT_EQ_INT(pfx->count, 0);
 
-    mvn_postfx_destroy(pfx);
-    MVN_PASS();
+    dtr_postfx_destroy(pfx);
+    DTR_PASS();
 }
 
 static void test_postfx_destroy_null(void)
 {
-    mvn_postfx_destroy(NULL); /* must not crash */
-    MVN_PASS();
+    dtr_postfx_destroy(NULL); /* must not crash */
+    DTR_PASS();
 }
 
 /* ------------------------------------------------------------------ */
@@ -40,64 +40,64 @@ static void test_postfx_destroy_null(void)
 
 static void test_postfx_push_pop(void)
 {
-    mvn_postfx_t *pfx = mvn_postfx_create(TW, TH);
+    dtr_postfx_t *pfx = dtr_postfx_create(TW, TH);
 
-    mvn_postfx_push(pfx, MVN_POSTFX_SCANLINES, 0.8f);
-    MVN_ASSERT_EQ_INT(pfx->count, 1);
-    MVN_ASSERT_EQ_INT(pfx->stack[0].id, MVN_POSTFX_SCANLINES);
-    MVN_ASSERT_NEAR(pfx->stack[0].strength, 0.8f, 0.001);
+    dtr_postfx_push(pfx, DTR_POSTFX_SCANLINES, 0.8f);
+    DTR_ASSERT_EQ_INT(pfx->count, 1);
+    DTR_ASSERT_EQ_INT(pfx->stack[0].id, DTR_POSTFX_SCANLINES);
+    DTR_ASSERT_NEAR(pfx->stack[0].strength, 0.8f, 0.001);
 
-    mvn_postfx_push(pfx, MVN_POSTFX_CRT, 0.5f);
-    MVN_ASSERT_EQ_INT(pfx->count, 2);
+    dtr_postfx_push(pfx, DTR_POSTFX_CRT, 0.5f);
+    DTR_ASSERT_EQ_INT(pfx->count, 2);
 
-    mvn_postfx_pop(pfx);
-    MVN_ASSERT_EQ_INT(pfx->count, 1);
+    dtr_postfx_pop(pfx);
+    DTR_ASSERT_EQ_INT(pfx->count, 1);
 
-    mvn_postfx_pop(pfx);
-    MVN_ASSERT_EQ_INT(pfx->count, 0);
+    dtr_postfx_pop(pfx);
+    DTR_ASSERT_EQ_INT(pfx->count, 0);
 
-    mvn_postfx_destroy(pfx);
-    MVN_PASS();
+    dtr_postfx_destroy(pfx);
+    DTR_PASS();
 }
 
 static void test_postfx_pop_empty(void)
 {
-    mvn_postfx_t *pfx = mvn_postfx_create(TW, TH);
+    dtr_postfx_t *pfx = dtr_postfx_create(TW, TH);
 
-    mvn_postfx_pop(pfx); /* pop on empty — should not crash */
-    MVN_ASSERT_EQ_INT(pfx->count, 0);
+    dtr_postfx_pop(pfx); /* pop on empty — should not crash */
+    DTR_ASSERT_EQ_INT(pfx->count, 0);
 
-    mvn_postfx_destroy(pfx);
-    MVN_PASS();
+    dtr_postfx_destroy(pfx);
+    DTR_PASS();
 }
 
 static void test_postfx_push_overflow(void)
 {
-    mvn_postfx_t *pfx = mvn_postfx_create(TW, TH);
+    dtr_postfx_t *pfx = dtr_postfx_create(TW, TH);
 
-    for (int32_t idx = 0; idx < MVN_POSTFX_MAX_STACK + 2; ++idx) {
-        mvn_postfx_push(pfx, MVN_POSTFX_BLOOM, 1.0f);
+    for (int32_t idx = 0; idx < DTR_POSTFX_MAX_STACK + 2; ++idx) {
+        dtr_postfx_push(pfx, DTR_POSTFX_BLOOM, 1.0f);
     }
     /* Should cap at max */
-    MVN_ASSERT_EQ_INT(pfx->count, MVN_POSTFX_MAX_STACK);
+    DTR_ASSERT_EQ_INT(pfx->count, DTR_POSTFX_MAX_STACK);
 
-    mvn_postfx_destroy(pfx);
-    MVN_PASS();
+    dtr_postfx_destroy(pfx);
+    DTR_PASS();
 }
 
 static void test_postfx_clear(void)
 {
-    mvn_postfx_t *pfx = mvn_postfx_create(TW, TH);
+    dtr_postfx_t *pfx = dtr_postfx_create(TW, TH);
 
-    mvn_postfx_push(pfx, MVN_POSTFX_CRT, 1.0f);
-    mvn_postfx_push(pfx, MVN_POSTFX_BLOOM, 0.5f);
-    MVN_ASSERT_EQ_INT(pfx->count, 2);
+    dtr_postfx_push(pfx, DTR_POSTFX_CRT, 1.0f);
+    dtr_postfx_push(pfx, DTR_POSTFX_BLOOM, 0.5f);
+    DTR_ASSERT_EQ_INT(pfx->count, 2);
 
-    mvn_postfx_clear(pfx);
-    MVN_ASSERT_EQ_INT(pfx->count, 0);
+    dtr_postfx_clear(pfx);
+    DTR_ASSERT_EQ_INT(pfx->count, 0);
 
-    mvn_postfx_destroy(pfx);
-    MVN_PASS();
+    dtr_postfx_destroy(pfx);
+    DTR_PASS();
 }
 
 /* ------------------------------------------------------------------ */
@@ -106,32 +106,32 @@ static void test_postfx_clear(void)
 
 static void test_postfx_set_param(void)
 {
-    mvn_postfx_t *pfx = mvn_postfx_create(TW, TH);
+    dtr_postfx_t *pfx = dtr_postfx_create(TW, TH);
 
-    mvn_postfx_push(pfx, MVN_POSTFX_CRT, 1.0f);
-    mvn_postfx_set_param(pfx, 0, 0, 42.0f);
-    MVN_ASSERT_NEAR(pfx->stack[0].params[0], 42.0f, 0.001);
+    dtr_postfx_push(pfx, DTR_POSTFX_CRT, 1.0f);
+    dtr_postfx_set_param(pfx, 0, 0, 42.0f);
+    DTR_ASSERT_NEAR(pfx->stack[0].params[0], 42.0f, 0.001);
 
-    mvn_postfx_destroy(pfx);
-    MVN_PASS();
+    dtr_postfx_destroy(pfx);
+    DTR_PASS();
 }
 
 static void test_postfx_set_param_out_of_bounds(void)
 {
-    mvn_postfx_t *pfx = mvn_postfx_create(TW, TH);
+    dtr_postfx_t *pfx = dtr_postfx_create(TW, TH);
 
-    mvn_postfx_push(pfx, MVN_POSTFX_CRT, 1.0f);
+    dtr_postfx_push(pfx, DTR_POSTFX_CRT, 1.0f);
 
     /* Invalid stack index */
-    mvn_postfx_set_param(pfx, -1, 0, 1.0f);
-    mvn_postfx_set_param(pfx, 99, 0, 1.0f);
+    dtr_postfx_set_param(pfx, -1, 0, 1.0f);
+    dtr_postfx_set_param(pfx, 99, 0, 1.0f);
 
     /* Invalid param index */
-    mvn_postfx_set_param(pfx, 0, -1, 1.0f);
-    mvn_postfx_set_param(pfx, 0, MVN_POSTFX_MAX_PARAMS, 1.0f);
+    dtr_postfx_set_param(pfx, 0, -1, 1.0f);
+    dtr_postfx_set_param(pfx, 0, DTR_POSTFX_MAX_PARAMS, 1.0f);
 
-    mvn_postfx_destroy(pfx);
-    MVN_PASS();
+    dtr_postfx_destroy(pfx);
+    DTR_PASS();
 }
 
 /* ------------------------------------------------------------------ */
@@ -140,34 +140,34 @@ static void test_postfx_set_param_out_of_bounds(void)
 
 static void test_postfx_id_from_name(void)
 {
-    MVN_ASSERT_EQ_INT(mvn_postfx_id_from_name("none"), MVN_POSTFX_NONE);
-    MVN_ASSERT_EQ_INT(mvn_postfx_id_from_name("crt"), MVN_POSTFX_CRT);
-    MVN_ASSERT_EQ_INT(mvn_postfx_id_from_name("scanlines"), MVN_POSTFX_SCANLINES);
-    MVN_ASSERT_EQ_INT(mvn_postfx_id_from_name("bloom"), MVN_POSTFX_BLOOM);
-    MVN_ASSERT_EQ_INT(mvn_postfx_id_from_name("aberration"), MVN_POSTFX_ABERRATION);
+    DTR_ASSERT_EQ_INT(dtr_postfx_id_from_name("none"), DTR_POSTFX_NONE);
+    DTR_ASSERT_EQ_INT(dtr_postfx_id_from_name("crt"), DTR_POSTFX_CRT);
+    DTR_ASSERT_EQ_INT(dtr_postfx_id_from_name("scanlines"), DTR_POSTFX_SCANLINES);
+    DTR_ASSERT_EQ_INT(dtr_postfx_id_from_name("bloom"), DTR_POSTFX_BLOOM);
+    DTR_ASSERT_EQ_INT(dtr_postfx_id_from_name("aberration"), DTR_POSTFX_ABERRATION);
 
     /* Case insensitive */
-    MVN_ASSERT_EQ_INT(mvn_postfx_id_from_name("CRT"), MVN_POSTFX_CRT);
-    MVN_ASSERT_EQ_INT(mvn_postfx_id_from_name("Bloom"), MVN_POSTFX_BLOOM);
+    DTR_ASSERT_EQ_INT(dtr_postfx_id_from_name("CRT"), DTR_POSTFX_CRT);
+    DTR_ASSERT_EQ_INT(dtr_postfx_id_from_name("Bloom"), DTR_POSTFX_BLOOM);
 
     /* Unknown returns NONE */
-    MVN_ASSERT_EQ_INT(mvn_postfx_id_from_name("unknown"), MVN_POSTFX_NONE);
-    MVN_ASSERT_EQ_INT(mvn_postfx_id_from_name(NULL), MVN_POSTFX_NONE);
+    DTR_ASSERT_EQ_INT(dtr_postfx_id_from_name("unknown"), DTR_POSTFX_NONE);
+    DTR_ASSERT_EQ_INT(dtr_postfx_id_from_name(NULL), DTR_POSTFX_NONE);
 
-    MVN_PASS();
+    DTR_PASS();
 }
 
 static void test_postfx_available(void)
 {
     int32_t      count = 0;
-    const char **names = mvn_postfx_available(&count);
+    const char **names = dtr_postfx_available(&count);
 
-    MVN_ASSERT(names != NULL);
-    MVN_ASSERT_EQ_INT(count, MVN_POSTFX_BUILTIN_COUNT);
-    MVN_ASSERT(strcmp(names[0], "none") == 0);
-    MVN_ASSERT(strcmp(names[1], "crt") == 0);
+    DTR_ASSERT(names != NULL);
+    DTR_ASSERT_EQ_INT(count, DTR_POSTFX_BUILTIN_COUNT);
+    DTR_ASSERT(strcmp(names[0], "none") == 0);
+    DTR_ASSERT(strcmp(names[1], "crt") == 0);
 
-    MVN_PASS();
+    DTR_PASS();
 }
 
 /* ------------------------------------------------------------------ */
@@ -176,20 +176,20 @@ static void test_postfx_available(void)
 
 static void test_postfx_use(void)
 {
-    mvn_postfx_t *pfx = mvn_postfx_create(TW, TH);
+    dtr_postfx_t *pfx = dtr_postfx_create(TW, TH);
 
-    mvn_postfx_push(pfx, MVN_POSTFX_BLOOM, 0.5f);
-    mvn_postfx_push(pfx, MVN_POSTFX_SCANLINES, 0.3f);
-    MVN_ASSERT_EQ_INT(pfx->count, 2);
+    dtr_postfx_push(pfx, DTR_POSTFX_BLOOM, 0.5f);
+    dtr_postfx_push(pfx, DTR_POSTFX_SCANLINES, 0.3f);
+    DTR_ASSERT_EQ_INT(pfx->count, 2);
 
-    int32_t idx = mvn_postfx_use(pfx, "crt");
-    MVN_ASSERT_EQ_INT(idx, 0);
-    MVN_ASSERT_EQ_INT(pfx->count, 1);
-    MVN_ASSERT_EQ_INT(pfx->stack[0].id, MVN_POSTFX_CRT);
-    MVN_ASSERT_NEAR(pfx->stack[0].strength, 1.0f, 0.001);
+    int32_t idx = dtr_postfx_use(pfx, "crt");
+    DTR_ASSERT_EQ_INT(idx, 0);
+    DTR_ASSERT_EQ_INT(pfx->count, 1);
+    DTR_ASSERT_EQ_INT(pfx->stack[0].id, DTR_POSTFX_CRT);
+    DTR_ASSERT_NEAR(pfx->stack[0].strength, 1.0f, 0.001);
 
-    mvn_postfx_destroy(pfx);
-    MVN_PASS();
+    dtr_postfx_destroy(pfx);
+    DTR_PASS();
 }
 
 /* ------------------------------------------------------------------ */
@@ -198,32 +198,32 @@ static void test_postfx_use(void)
 
 static void test_postfx_apply_empty_noop(void)
 {
-    mvn_postfx_t *pfx = mvn_postfx_create(TW, TH);
+    dtr_postfx_t *pfx = dtr_postfx_create(TW, TH);
     uint32_t      pixels[TW * TH];
 
     memset(pixels, 0xAB, sizeof(pixels));
 
     uint32_t saved = pixels[0];
-    mvn_postfx_apply(pfx, pixels, TW, TH);
-    MVN_ASSERT_EQ_INT(pixels[0], saved); /* no change with empty stack */
+    dtr_postfx_apply(pfx, pixels, TW, TH);
+    DTR_ASSERT_EQ_INT(pixels[0], saved); /* no change with empty stack */
 
-    mvn_postfx_destroy(pfx);
-    MVN_PASS();
+    dtr_postfx_destroy(pfx);
+    DTR_PASS();
 }
 
 static void test_postfx_apply_null_noop(void)
 {
     uint32_t pixels[4] = {0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF};
 
-    mvn_postfx_apply(NULL, pixels, 2, 2);
-    MVN_ASSERT_EQ_INT(pixels[0], 0xFFFFFFFF); /* unchanged */
+    dtr_postfx_apply(NULL, pixels, 2, 2);
+    DTR_ASSERT_EQ_INT(pixels[0], 0xFFFFFFFF); /* unchanged */
 
-    MVN_PASS();
+    DTR_PASS();
 }
 
 static void test_postfx_apply_scanlines(void)
 {
-    mvn_postfx_t *pfx = mvn_postfx_create(TW, TH);
+    dtr_postfx_t *pfx = dtr_postfx_create(TW, TH);
     uint32_t      pixels[TW * TH];
 
     /* Fill with gray, fully opaque (RGBA8888: R=0x80, G=0x80, B=0x80, A=0xFF) */
@@ -231,23 +231,23 @@ static void test_postfx_apply_scanlines(void)
         pixels[idx] = 0x808080FFu;
     }
 
-    mvn_postfx_push(pfx, MVN_POSTFX_SCANLINES, 1.0f);
-    mvn_postfx_apply(pfx, pixels, TW, TH);
+    dtr_postfx_push(pfx, DTR_POSTFX_SCANLINES, 1.0f);
+    dtr_postfx_apply(pfx, pixels, TW, TH);
 
     /* Even rows should be darkened, odd rows unchanged */
     uint32_t even_r = (pixels[0] >> 24) & 0xFF;
     uint32_t odd_r  = (pixels[TW] >> 24) & 0xFF; /* row 1 */
 
-    MVN_ASSERT(even_r < 0x80); /* darkened */
-    MVN_ASSERT(odd_r == 0x80); /* unchanged */
+    DTR_ASSERT(even_r < 0x80); /* darkened */
+    DTR_ASSERT(odd_r == 0x80); /* unchanged */
 
-    mvn_postfx_destroy(pfx);
-    MVN_PASS();
+    dtr_postfx_destroy(pfx);
+    DTR_PASS();
 }
 
 static void test_postfx_apply_aberration(void)
 {
-    mvn_postfx_t *pfx = mvn_postfx_create(TW, TH);
+    dtr_postfx_t *pfx = dtr_postfx_create(TW, TH);
     uint32_t      pixels[TW * TH];
 
     /* Fill with uniform colour (RGBA8888: R=0x40, G=0x40, B=0x40, A=0xFF) */
@@ -255,14 +255,14 @@ static void test_postfx_apply_aberration(void)
         pixels[idx] = 0x404040FFu;
     }
 
-    mvn_postfx_push(pfx, MVN_POSTFX_ABERRATION, 2.0f);
-    mvn_postfx_apply(pfx, pixels, TW, TH);
+    dtr_postfx_push(pfx, DTR_POSTFX_ABERRATION, 2.0f);
+    dtr_postfx_apply(pfx, pixels, TW, TH);
 
     /* Scratch buffer should have been allocated */
-    MVN_ASSERT(pfx->scratch != NULL);
+    DTR_ASSERT(pfx->scratch != NULL);
 
-    mvn_postfx_destroy(pfx);
-    MVN_PASS();
+    dtr_postfx_destroy(pfx);
+    DTR_PASS();
 }
 
 /* ------------------------------------------------------------------ */

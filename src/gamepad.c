@@ -8,44 +8,44 @@
 #include <math.h>
 
 /* ------------------------------------------------------------------ */
-/*  SDL gamepad button → mvn_pad_btn_t                                 */
+/*  SDL gamepad button → dtr_pad_btn_t                                 */
 /* ------------------------------------------------------------------ */
 
-static mvn_pad_btn_t prv_map_button(SDL_GamepadButton btn)
+static dtr_pad_btn_t prv_map_button(SDL_GamepadButton btn)
 {
     switch (btn) {
         case SDL_GAMEPAD_BUTTON_DPAD_UP:
-            return MVN_PAD_UP;
+            return DTR_PAD_UP;
         case SDL_GAMEPAD_BUTTON_DPAD_DOWN:
-            return MVN_PAD_DOWN;
+            return DTR_PAD_DOWN;
         case SDL_GAMEPAD_BUTTON_DPAD_LEFT:
-            return MVN_PAD_LEFT;
+            return DTR_PAD_LEFT;
         case SDL_GAMEPAD_BUTTON_DPAD_RIGHT:
-            return MVN_PAD_RIGHT;
+            return DTR_PAD_RIGHT;
         case SDL_GAMEPAD_BUTTON_SOUTH:
-            return MVN_PAD_A;
+            return DTR_PAD_A;
         case SDL_GAMEPAD_BUTTON_EAST:
-            return MVN_PAD_B;
+            return DTR_PAD_B;
         case SDL_GAMEPAD_BUTTON_WEST:
-            return MVN_PAD_X;
+            return DTR_PAD_X;
         case SDL_GAMEPAD_BUTTON_NORTH:
-            return MVN_PAD_Y;
+            return DTR_PAD_Y;
         case SDL_GAMEPAD_BUTTON_LEFT_SHOULDER:
-            return MVN_PAD_L1;
+            return DTR_PAD_L1;
         case SDL_GAMEPAD_BUTTON_RIGHT_SHOULDER:
-            return MVN_PAD_R1;
+            return DTR_PAD_R1;
         case SDL_GAMEPAD_BUTTON_LEFT_STICK:
-            return MVN_PAD_L3;
+            return DTR_PAD_L3;
         case SDL_GAMEPAD_BUTTON_RIGHT_STICK:
-            return MVN_PAD_R3;
+            return DTR_PAD_R3;
         case SDL_GAMEPAD_BUTTON_START:
-            return MVN_PAD_START;
+            return DTR_PAD_START;
         case SDL_GAMEPAD_BUTTON_BACK:
-            return MVN_PAD_SELECT;
+            return DTR_PAD_SELECT;
         case SDL_GAMEPAD_BUTTON_GUIDE:
-            return MVN_PAD_GUIDE;
+            return DTR_PAD_GUIDE;
         default:
-            return MVN_PAD_BTN_COUNT;
+            return DTR_PAD_BTN_COUNT;
     }
 }
 
@@ -53,45 +53,45 @@ static mvn_pad_btn_t prv_map_button(SDL_GamepadButton btn)
 /*  Lifecycle                                                          */
 /* ------------------------------------------------------------------ */
 
-mvn_gamepad_state_t *mvn_gamepad_create(void)
+dtr_gamepad_state_t *dtr_gamepad_create(void)
 {
-    mvn_gamepad_state_t *gp;
+    dtr_gamepad_state_t *gp;
 
-    gp = MVN_CALLOC(1, sizeof(mvn_gamepad_state_t));
+    gp = DTR_CALLOC(1, sizeof(dtr_gamepad_state_t));
     if (gp == NULL) {
         return NULL;
     }
 
-    for (int32_t idx = 0; idx < MVN_MAX_GAMEPADS; ++idx) {
+    for (int32_t idx = 0; idx < DTR_MAX_GAMEPADS; ++idx) {
         gp->pads[idx].deadzone = 0.15f;
     }
 
     return gp;
 }
 
-void mvn_gamepad_destroy(mvn_gamepad_state_t *gp)
+void dtr_gamepad_destroy(dtr_gamepad_state_t *gp)
 {
     if (gp == NULL) {
         return;
     }
 
-    for (int32_t idx = 0; idx < MVN_MAX_GAMEPADS; ++idx) {
+    for (int32_t idx = 0; idx < DTR_MAX_GAMEPADS; ++idx) {
         if (gp->pads[idx].handle != NULL) {
             SDL_CloseGamepad(gp->pads[idx].handle);
         }
     }
 
-    MVN_FREE(gp);
+    DTR_FREE(gp);
 }
 
 /* ------------------------------------------------------------------ */
 /*  Update — poll buttons/axes                                         */
 /* ------------------------------------------------------------------ */
 
-void mvn_gamepad_update(mvn_gamepad_state_t *gp)
+void dtr_gamepad_update(dtr_gamepad_state_t *gp)
 {
-    for (int32_t idx = 0; idx < MVN_MAX_GAMEPADS; ++idx) {
-        mvn_gamepad_t *pad;
+    for (int32_t idx = 0; idx < DTR_MAX_GAMEPADS; ++idx) {
+        dtr_gamepad_t *pad;
 
         pad = &gp->pads[idx];
         if (!pad->connected || pad->handle == NULL) {
@@ -108,15 +108,15 @@ void mvn_gamepad_update(mvn_gamepad_state_t *gp)
 
             dz = pad->deadzone;
 
-            for (int32_t a = 0; a < MVN_PAD_AXIS_COUNT; ++a) {
+            for (int32_t a = 0; a < DTR_PAD_AXIS_COUNT; ++a) {
                 if (fabsf(pad->axes[a]) < dz) {
                     pad->axes[a] = 0.0f;
                 }
             }
 
             /* L2/R2 as digital buttons */
-            pad->btn_current[MVN_PAD_L2] = (pad->axes[MVN_PAD_AXIS_L2] > 0.5f);
-            pad->btn_current[MVN_PAD_R2] = (pad->axes[MVN_PAD_AXIS_R2] > 0.5f);
+            pad->btn_current[DTR_PAD_L2] = (pad->axes[DTR_PAD_AXIS_L2] > 0.5f);
+            pad->btn_current[DTR_PAD_R2] = (pad->axes[DTR_PAD_AXIS_R2] > 0.5f);
         }
     }
 }
@@ -125,10 +125,10 @@ void mvn_gamepad_update(mvn_gamepad_state_t *gp)
 /*  Hotplug                                                            */
 /* ------------------------------------------------------------------ */
 
-void mvn_gamepad_on_added(mvn_gamepad_state_t *gp, SDL_JoystickID id)
+void dtr_gamepad_on_added(dtr_gamepad_state_t *gp, SDL_JoystickID id)
 {
-    for (int32_t idx = 0; idx < MVN_MAX_GAMEPADS; ++idx) {
-        mvn_gamepad_t *pad;
+    for (int32_t idx = 0; idx < DTR_MAX_GAMEPADS; ++idx) {
+        dtr_gamepad_t *pad;
 
         pad = &gp->pads[idx];
         if (pad->connected) {
@@ -162,10 +162,10 @@ void mvn_gamepad_on_added(mvn_gamepad_state_t *gp, SDL_JoystickID id)
     }
 }
 
-void mvn_gamepad_on_removed(mvn_gamepad_state_t *gp, SDL_JoystickID id)
+void dtr_gamepad_on_removed(dtr_gamepad_state_t *gp, SDL_JoystickID id)
 {
-    for (int32_t idx = 0; idx < MVN_MAX_GAMEPADS; ++idx) {
-        mvn_gamepad_t *pad;
+    for (int32_t idx = 0; idx < DTR_MAX_GAMEPADS; ++idx) {
+        dtr_gamepad_t *pad;
 
         pad = &gp->pads[idx];
         if (!pad->connected || pad->joy_id != id) {
@@ -182,12 +182,12 @@ void mvn_gamepad_on_removed(mvn_gamepad_state_t *gp, SDL_JoystickID id)
     }
 }
 
-void mvn_gamepad_on_button(mvn_gamepad_state_t *gp, SDL_JoystickID id,
+void dtr_gamepad_on_button(dtr_gamepad_state_t *gp, SDL_JoystickID id,
                            SDL_GamepadButton btn, bool down)
 {
-    for (int32_t idx = 0; idx < MVN_MAX_GAMEPADS; ++idx) {
-        mvn_gamepad_t *pad;
-        mvn_pad_btn_t  mapped;
+    for (int32_t idx = 0; idx < DTR_MAX_GAMEPADS; ++idx) {
+        dtr_gamepad_t *pad;
+        dtr_pad_btn_t  mapped;
 
         pad = &gp->pads[idx];
         if (!pad->connected || pad->joy_id != id) {
@@ -195,7 +195,7 @@ void mvn_gamepad_on_button(mvn_gamepad_state_t *gp, SDL_JoystickID id,
         }
 
         mapped = prv_map_button(btn);
-        if (mapped < MVN_PAD_BTN_COUNT) {
+        if (mapped < DTR_PAD_BTN_COUNT) {
             pad->btn_current[mapped] = down;
             if (down) {
                 pad->btn_pressed[mapped] = true;
@@ -205,24 +205,24 @@ void mvn_gamepad_on_button(mvn_gamepad_state_t *gp, SDL_JoystickID id,
     }
 }
 
-void mvn_gamepad_on_axis(mvn_gamepad_state_t *gp, SDL_JoystickID id,
+void dtr_gamepad_on_axis(dtr_gamepad_state_t *gp, SDL_JoystickID id,
                          SDL_GamepadAxis axis, int16_t value)
 {
-    static const mvn_pad_axis_t axis_map[] = {
-        [SDL_GAMEPAD_AXIS_LEFTX]         = MVN_PAD_AXIS_LX,
-        [SDL_GAMEPAD_AXIS_LEFTY]         = MVN_PAD_AXIS_LY,
-        [SDL_GAMEPAD_AXIS_RIGHTX]        = MVN_PAD_AXIS_RX,
-        [SDL_GAMEPAD_AXIS_RIGHTY]        = MVN_PAD_AXIS_RY,
-        [SDL_GAMEPAD_AXIS_LEFT_TRIGGER]  = MVN_PAD_AXIS_L2,
-        [SDL_GAMEPAD_AXIS_RIGHT_TRIGGER] = MVN_PAD_AXIS_R2,
+    static const dtr_pad_axis_t axis_map[] = {
+        [SDL_GAMEPAD_AXIS_LEFTX]         = DTR_PAD_AXIS_LX,
+        [SDL_GAMEPAD_AXIS_LEFTY]         = DTR_PAD_AXIS_LY,
+        [SDL_GAMEPAD_AXIS_RIGHTX]        = DTR_PAD_AXIS_RX,
+        [SDL_GAMEPAD_AXIS_RIGHTY]        = DTR_PAD_AXIS_RY,
+        [SDL_GAMEPAD_AXIS_LEFT_TRIGGER]  = DTR_PAD_AXIS_L2,
+        [SDL_GAMEPAD_AXIS_RIGHT_TRIGGER] = DTR_PAD_AXIS_R2,
     };
 
     if (axis < 0 || axis >= SDL_GAMEPAD_AXIS_COUNT) {
         return;
     }
 
-    for (int32_t idx = 0; idx < MVN_MAX_GAMEPADS; ++idx) {
-        mvn_gamepad_t *pad;
+    for (int32_t idx = 0; idx < DTR_MAX_GAMEPADS; ++idx) {
+        dtr_gamepad_t *pad;
 
         pad = &gp->pads[idx];
         if (!pad->connected || pad->joy_id != id) {
@@ -238,83 +238,83 @@ void mvn_gamepad_on_axis(mvn_gamepad_state_t *gp, SDL_JoystickID id,
 /*  Queries                                                            */
 /* ------------------------------------------------------------------ */
 
-bool mvn_gamepad_btn(mvn_gamepad_state_t *gp, mvn_pad_btn_t b, int32_t index)
+bool dtr_gamepad_btn(dtr_gamepad_state_t *gp, dtr_pad_btn_t b, int32_t index)
 {
-    if (index < 0 || index >= MVN_MAX_GAMEPADS) {
+    if (index < 0 || index >= DTR_MAX_GAMEPADS) {
         return false;
     }
-    if (!gp->pads[index].connected || b >= MVN_PAD_BTN_COUNT) {
+    if (!gp->pads[index].connected || b >= DTR_PAD_BTN_COUNT) {
         return false;
     }
     return gp->pads[index].btn_current[b];
 }
 
-bool mvn_gamepad_btnp(mvn_gamepad_state_t *gp, mvn_pad_btn_t b, int32_t index)
+bool dtr_gamepad_btnp(dtr_gamepad_state_t *gp, dtr_pad_btn_t b, int32_t index)
 {
-    if (index < 0 || index >= MVN_MAX_GAMEPADS) {
+    if (index < 0 || index >= DTR_MAX_GAMEPADS) {
         return false;
     }
-    if (!gp->pads[index].connected || b >= MVN_PAD_BTN_COUNT) {
+    if (!gp->pads[index].connected || b >= DTR_PAD_BTN_COUNT) {
         return false;
     }
     return gp->pads[index].btn_pressed[b];
 }
 
-float mvn_gamepad_axis(mvn_gamepad_state_t *gp, mvn_pad_axis_t a, int32_t index)
+float dtr_gamepad_axis(dtr_gamepad_state_t *gp, dtr_pad_axis_t a, int32_t index)
 {
-    if (index < 0 || index >= MVN_MAX_GAMEPADS) {
+    if (index < 0 || index >= DTR_MAX_GAMEPADS) {
         return 0.0f;
     }
-    if (!gp->pads[index].connected || a >= MVN_PAD_AXIS_COUNT) {
+    if (!gp->pads[index].connected || a >= DTR_PAD_AXIS_COUNT) {
         return 0.0f;
     }
     return gp->pads[index].axes[a];
 }
 
-bool mvn_gamepad_connected(mvn_gamepad_state_t *gp, int32_t index)
+bool dtr_gamepad_connected(dtr_gamepad_state_t *gp, int32_t index)
 {
-    if (index < 0 || index >= MVN_MAX_GAMEPADS) {
+    if (index < 0 || index >= DTR_MAX_GAMEPADS) {
         return false;
     }
     return gp->pads[index].connected;
 }
 
-int32_t mvn_gamepad_count(mvn_gamepad_state_t *gp)
+int32_t dtr_gamepad_count(dtr_gamepad_state_t *gp)
 {
     return gp->count;
 }
 
-const char *mvn_gamepad_name(mvn_gamepad_state_t *gp, int32_t index)
+const char *dtr_gamepad_name(dtr_gamepad_state_t *gp, int32_t index)
 {
-    if (index < 0 || index >= MVN_MAX_GAMEPADS) {
+    if (index < 0 || index >= DTR_MAX_GAMEPADS) {
         return "";
     }
     return gp->pads[index].name;
 }
 
-void mvn_gamepad_set_deadzone(mvn_gamepad_state_t *gp, float val, int32_t index)
+void dtr_gamepad_set_deadzone(dtr_gamepad_state_t *gp, float val, int32_t index)
 {
-    if (index < 0 || index >= MVN_MAX_GAMEPADS) {
+    if (index < 0 || index >= DTR_MAX_GAMEPADS) {
         return;
     }
     gp->pads[index].deadzone = val;
 }
 
-float mvn_gamepad_get_deadzone(mvn_gamepad_state_t *gp, int32_t index)
+float dtr_gamepad_get_deadzone(dtr_gamepad_state_t *gp, int32_t index)
 {
-    if (index < 0 || index >= MVN_MAX_GAMEPADS) {
+    if (index < 0 || index >= DTR_MAX_GAMEPADS) {
         return 0.0f;
     }
     return gp->pads[index].deadzone;
 }
 
-void mvn_gamepad_rumble(mvn_gamepad_state_t *gp,
+void dtr_gamepad_rumble(dtr_gamepad_state_t *gp,
                         int32_t              index,
                         uint16_t             low,
                         uint16_t             high,
                         uint32_t             duration_ms)
 {
-    if (index < 0 || index >= MVN_MAX_GAMEPADS) {
+    if (index < 0 || index >= DTR_MAX_GAMEPADS) {
         return;
     }
     if (!gp->pads[index].connected || gp->pads[index].handle == NULL) {
@@ -323,13 +323,13 @@ void mvn_gamepad_rumble(mvn_gamepad_state_t *gp,
     SDL_RumbleGamepad(gp->pads[index].handle, low, high, duration_ms);
 }
 
-void mvn_gamepad_rumble_triggers(mvn_gamepad_state_t *gp,
+void dtr_gamepad_rumble_triggers(dtr_gamepad_state_t *gp,
                                  int32_t              index,
                                  uint16_t             left,
                                  uint16_t             right,
                                  uint32_t             duration_ms)
 {
-    if (index < 0 || index >= MVN_MAX_GAMEPADS) {
+    if (index < 0 || index >= DTR_MAX_GAMEPADS) {
         return;
     }
     if (!gp->pads[index].connected || gp->pads[index].handle == NULL) {

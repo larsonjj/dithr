@@ -16,126 +16,126 @@
 
 static void test_mouse_create_destroy(void)
 {
-    mvn_mouse_state_t *mouse;
+    dtr_mouse_state_t *mouse;
 
-    mouse = mvn_mouse_create();
-    MVN_ASSERT(mouse != NULL);
-    MVN_ASSERT(mouse->visible == true);
-    MVN_ASSERT_NEAR(mouse->scale_x, 1.0f, 0.001f);
-    MVN_ASSERT_NEAR(mouse->scale_y, 1.0f, 0.001f);
-    MVN_ASSERT_NEAR(mouse->offset_x, 0.0f, 0.001f);
-    MVN_ASSERT_NEAR(mouse->offset_y, 0.0f, 0.001f);
-    mvn_mouse_destroy(mouse);
-    MVN_PASS();
+    mouse = dtr_mouse_create();
+    DTR_ASSERT(mouse != NULL);
+    DTR_ASSERT(mouse->visible == true);
+    DTR_ASSERT_NEAR(mouse->scale_x, 1.0f, 0.001f);
+    DTR_ASSERT_NEAR(mouse->scale_y, 1.0f, 0.001f);
+    DTR_ASSERT_NEAR(mouse->offset_x, 0.0f, 0.001f);
+    DTR_ASSERT_NEAR(mouse->offset_y, 0.0f, 0.001f);
+    dtr_mouse_destroy(mouse);
+    DTR_PASS();
 }
 
 static void test_mouse_destroy_null(void)
 {
-    mvn_mouse_destroy(NULL); /* must not crash */
-    MVN_PASS();
+    dtr_mouse_destroy(NULL); /* must not crash */
+    DTR_PASS();
 }
 
 static void test_mouse_btn_default_false(void)
 {
-    mvn_mouse_state_t *mouse;
+    dtr_mouse_state_t *mouse;
 
-    mouse = mvn_mouse_create();
-    MVN_ASSERT(!mvn_mouse_btn(mouse, MVN_MOUSE_LEFT));
-    MVN_ASSERT(!mvn_mouse_btn(mouse, MVN_MOUSE_RIGHT));
-    MVN_ASSERT(!mvn_mouse_btn(mouse, MVN_MOUSE_MIDDLE));
-    mvn_mouse_destroy(mouse);
-    MVN_PASS();
+    mouse = dtr_mouse_create();
+    DTR_ASSERT(!dtr_mouse_btn(mouse, DTR_MOUSE_LEFT));
+    DTR_ASSERT(!dtr_mouse_btn(mouse, DTR_MOUSE_RIGHT));
+    DTR_ASSERT(!dtr_mouse_btn(mouse, DTR_MOUSE_MIDDLE));
+    dtr_mouse_destroy(mouse);
+    DTR_PASS();
 }
 
 static void test_mouse_btn_set_and_query(void)
 {
-    mvn_mouse_state_t *mouse;
+    dtr_mouse_state_t *mouse;
 
-    mouse = mvn_mouse_create();
+    mouse = dtr_mouse_create();
 
     /* Simulate a left-click */
-    mouse->btn_current[MVN_MOUSE_LEFT] = true;
-    MVN_ASSERT(mvn_mouse_btn(mouse, MVN_MOUSE_LEFT));
-    MVN_ASSERT(!mvn_mouse_btn(mouse, MVN_MOUSE_RIGHT));
+    mouse->btn_current[DTR_MOUSE_LEFT] = true;
+    DTR_ASSERT(dtr_mouse_btn(mouse, DTR_MOUSE_LEFT));
+    DTR_ASSERT(!dtr_mouse_btn(mouse, DTR_MOUSE_RIGHT));
 
-    mouse->btn_current[MVN_MOUSE_LEFT] = false;
-    MVN_ASSERT(!mvn_mouse_btn(mouse, MVN_MOUSE_LEFT));
+    mouse->btn_current[DTR_MOUSE_LEFT] = false;
+    DTR_ASSERT(!dtr_mouse_btn(mouse, DTR_MOUSE_LEFT));
 
-    mvn_mouse_destroy(mouse);
-    MVN_PASS();
+    dtr_mouse_destroy(mouse);
+    DTR_PASS();
 }
 
 static void test_mouse_btnp(void)
 {
-    mvn_mouse_state_t *mouse;
+    dtr_mouse_state_t *mouse;
 
-    mouse = mvn_mouse_create();
+    mouse = dtr_mouse_create();
 
     /* Frame 1: press left */
-    mouse->btn_current[MVN_MOUSE_LEFT] = true;
-    mouse->btn_pressed[MVN_MOUSE_LEFT] = true;
-    MVN_ASSERT(mvn_mouse_btnp(mouse, MVN_MOUSE_LEFT));
+    mouse->btn_current[DTR_MOUSE_LEFT] = true;
+    mouse->btn_pressed[DTR_MOUSE_LEFT] = true;
+    DTR_ASSERT(dtr_mouse_btnp(mouse, DTR_MOUSE_LEFT));
 
     /* Frame 2: held */
-    mvn_mouse_update(mouse);
-    MVN_ASSERT(!mvn_mouse_btnp(mouse, MVN_MOUSE_LEFT));
+    dtr_mouse_update(mouse);
+    DTR_ASSERT(!dtr_mouse_btnp(mouse, DTR_MOUSE_LEFT));
 
     /* Frame 3: release then re-press */
-    mvn_mouse_update(mouse);
-    mouse->btn_current[MVN_MOUSE_LEFT] = false;
-    MVN_ASSERT(!mvn_mouse_btnp(mouse, MVN_MOUSE_LEFT));
+    dtr_mouse_update(mouse);
+    mouse->btn_current[DTR_MOUSE_LEFT] = false;
+    DTR_ASSERT(!dtr_mouse_btnp(mouse, DTR_MOUSE_LEFT));
 
-    mvn_mouse_update(mouse);
-    mouse->btn_current[MVN_MOUSE_LEFT] = true;
-    mouse->btn_pressed[MVN_MOUSE_LEFT] = true;
-    MVN_ASSERT(mvn_mouse_btnp(mouse, MVN_MOUSE_LEFT));
+    dtr_mouse_update(mouse);
+    mouse->btn_current[DTR_MOUSE_LEFT] = true;
+    mouse->btn_pressed[DTR_MOUSE_LEFT] = true;
+    DTR_ASSERT(dtr_mouse_btnp(mouse, DTR_MOUSE_LEFT));
 
-    mvn_mouse_destroy(mouse);
-    MVN_PASS();
+    dtr_mouse_destroy(mouse);
+    DTR_PASS();
 }
 
 static void test_mouse_btn_out_of_range(void)
 {
-    mvn_mouse_state_t *mouse;
+    dtr_mouse_state_t *mouse;
 
-    mouse = mvn_mouse_create();
-    MVN_ASSERT(!mvn_mouse_btn(mouse, MVN_MOUSE_BTN_COUNT));
-    MVN_ASSERT(!mvn_mouse_btnp(mouse, MVN_MOUSE_BTN_COUNT));
-    MVN_ASSERT(!mvn_mouse_btn(mouse, (mvn_mouse_btn_t)-1));
-    mvn_mouse_destroy(mouse);
-    MVN_PASS();
+    mouse = dtr_mouse_create();
+    DTR_ASSERT(!dtr_mouse_btn(mouse, DTR_MOUSE_BTN_COUNT));
+    DTR_ASSERT(!dtr_mouse_btnp(mouse, DTR_MOUSE_BTN_COUNT));
+    DTR_ASSERT(!dtr_mouse_btn(mouse, (dtr_mouse_btn_t)-1));
+    dtr_mouse_destroy(mouse);
+    DTR_PASS();
 }
 
 static void test_mouse_set_mapping(void)
 {
-    mvn_mouse_state_t *mouse;
+    dtr_mouse_state_t *mouse;
 
-    mouse = mvn_mouse_create();
-    mvn_mouse_set_mapping(mouse, 2.0f, 3.0f, 10.0f, 20.0f);
-    MVN_ASSERT_NEAR(mouse->scale_x, 2.0f, 0.001f);
-    MVN_ASSERT_NEAR(mouse->scale_y, 3.0f, 0.001f);
-    MVN_ASSERT_NEAR(mouse->offset_x, 10.0f, 0.001f);
-    MVN_ASSERT_NEAR(mouse->offset_y, 20.0f, 0.001f);
-    mvn_mouse_destroy(mouse);
-    MVN_PASS();
+    mouse = dtr_mouse_create();
+    dtr_mouse_set_mapping(mouse, 2.0f, 3.0f, 10.0f, 20.0f);
+    DTR_ASSERT_NEAR(mouse->scale_x, 2.0f, 0.001f);
+    DTR_ASSERT_NEAR(mouse->scale_y, 3.0f, 0.001f);
+    DTR_ASSERT_NEAR(mouse->offset_x, 10.0f, 0.001f);
+    DTR_ASSERT_NEAR(mouse->offset_y, 20.0f, 0.001f);
+    dtr_mouse_destroy(mouse);
+    DTR_PASS();
 }
 
 static void test_mouse_update_copies_previous(void)
 {
-    mvn_mouse_state_t *mouse;
+    dtr_mouse_state_t *mouse;
 
-    mouse = mvn_mouse_create();
+    mouse = dtr_mouse_create();
 
-    mouse->btn_current[MVN_MOUSE_LEFT] = true;
-    mvn_mouse_update(mouse);
-    MVN_ASSERT(mouse->btn_previous[MVN_MOUSE_LEFT] == true);
+    mouse->btn_current[DTR_MOUSE_LEFT] = true;
+    dtr_mouse_update(mouse);
+    DTR_ASSERT(mouse->btn_previous[DTR_MOUSE_LEFT] == true);
 
-    mouse->btn_current[MVN_MOUSE_LEFT] = false;
-    mvn_mouse_update(mouse);
-    MVN_ASSERT(mouse->btn_previous[MVN_MOUSE_LEFT] == false);
+    mouse->btn_current[DTR_MOUSE_LEFT] = false;
+    dtr_mouse_update(mouse);
+    DTR_ASSERT(mouse->btn_previous[DTR_MOUSE_LEFT] == false);
 
-    mvn_mouse_destroy(mouse);
-    MVN_PASS();
+    dtr_mouse_destroy(mouse);
+    DTR_PASS();
 }
 
 /* ================================================================== */
@@ -144,90 +144,90 @@ static void test_mouse_update_copies_previous(void)
 
 static void test_gamepad_create_destroy(void)
 {
-    mvn_gamepad_state_t *gp;
+    dtr_gamepad_state_t *gp;
 
-    gp = mvn_gamepad_create();
-    MVN_ASSERT(gp != NULL);
-    MVN_ASSERT_EQ_INT(gp->count, 0);
+    gp = dtr_gamepad_create();
+    DTR_ASSERT(gp != NULL);
+    DTR_ASSERT_EQ_INT(gp->count, 0);
 
     /* All pads should have default deadzone */
-    for (int32_t i = 0; i < MVN_MAX_GAMEPADS; ++i) {
-        MVN_ASSERT_NEAR(gp->pads[i].deadzone, 0.15f, 0.001f);
-        MVN_ASSERT(!gp->pads[i].connected);
+    for (int32_t i = 0; i < DTR_MAX_GAMEPADS; ++i) {
+        DTR_ASSERT_NEAR(gp->pads[i].deadzone, 0.15f, 0.001f);
+        DTR_ASSERT(!gp->pads[i].connected);
     }
 
-    mvn_gamepad_destroy(gp);
-    MVN_PASS();
+    dtr_gamepad_destroy(gp);
+    DTR_PASS();
 }
 
 static void test_gamepad_destroy_null(void)
 {
-    mvn_gamepad_destroy(NULL); /* must not crash */
-    MVN_PASS();
+    dtr_gamepad_destroy(NULL); /* must not crash */
+    DTR_PASS();
 }
 
 static void test_gamepad_btn_default_false(void)
 {
-    mvn_gamepad_state_t *gp;
+    dtr_gamepad_state_t *gp;
 
-    gp = mvn_gamepad_create();
-    MVN_ASSERT(!mvn_gamepad_btn(gp, MVN_PAD_A, 0));
-    MVN_ASSERT(!mvn_gamepad_btn(gp, MVN_PAD_B, 0));
-    MVN_ASSERT(!mvn_gamepad_btnp(gp, MVN_PAD_A, 0));
-    mvn_gamepad_destroy(gp);
-    MVN_PASS();
+    gp = dtr_gamepad_create();
+    DTR_ASSERT(!dtr_gamepad_btn(gp, DTR_PAD_A, 0));
+    DTR_ASSERT(!dtr_gamepad_btn(gp, DTR_PAD_B, 0));
+    DTR_ASSERT(!dtr_gamepad_btnp(gp, DTR_PAD_A, 0));
+    dtr_gamepad_destroy(gp);
+    DTR_PASS();
 }
 
 static void test_gamepad_count_zero(void)
 {
-    mvn_gamepad_state_t *gp;
+    dtr_gamepad_state_t *gp;
 
-    gp = mvn_gamepad_create();
-    MVN_ASSERT_EQ_INT(mvn_gamepad_count(gp), 0);
-    mvn_gamepad_destroy(gp);
-    MVN_PASS();
+    gp = dtr_gamepad_create();
+    DTR_ASSERT_EQ_INT(dtr_gamepad_count(gp), 0);
+    dtr_gamepad_destroy(gp);
+    DTR_PASS();
 }
 
 static void test_gamepad_connected_false(void)
 {
-    mvn_gamepad_state_t *gp;
+    dtr_gamepad_state_t *gp;
 
-    gp = mvn_gamepad_create();
-    for (int32_t i = 0; i < MVN_MAX_GAMEPADS; ++i) {
-        MVN_ASSERT(!mvn_gamepad_connected(gp, i));
+    gp = dtr_gamepad_create();
+    for (int32_t i = 0; i < DTR_MAX_GAMEPADS; ++i) {
+        DTR_ASSERT(!dtr_gamepad_connected(gp, i));
     }
-    mvn_gamepad_destroy(gp);
-    MVN_PASS();
+    dtr_gamepad_destroy(gp);
+    DTR_PASS();
 }
 
 static void test_gamepad_deadzone(void)
 {
-    mvn_gamepad_state_t *gp;
+    dtr_gamepad_state_t *gp;
 
-    gp = mvn_gamepad_create();
-    MVN_ASSERT_NEAR(mvn_gamepad_get_deadzone(gp, 0), 0.15f, 0.001f);
+    gp = dtr_gamepad_create();
+    DTR_ASSERT_NEAR(dtr_gamepad_get_deadzone(gp, 0), 0.15f, 0.001f);
 
-    mvn_gamepad_set_deadzone(gp, 0.25f, 0);
-    MVN_ASSERT_NEAR(mvn_gamepad_get_deadzone(gp, 0), 0.25f, 0.001f);
+    dtr_gamepad_set_deadzone(gp, 0.25f, 0);
+    DTR_ASSERT_NEAR(dtr_gamepad_get_deadzone(gp, 0), 0.25f, 0.001f);
 
     /* Other pads should keep default */
-    MVN_ASSERT_NEAR(mvn_gamepad_get_deadzone(gp, 1), 0.15f, 0.001f);
+    DTR_ASSERT_NEAR(dtr_gamepad_get_deadzone(gp, 1), 0.15f, 0.001f);
 
-    mvn_gamepad_destroy(gp);
-    MVN_PASS();
+    dtr_gamepad_destroy(gp);
+    DTR_PASS();
 }
 
 static void test_gamepad_axis_default_zero(void)
 {
-    mvn_gamepad_state_t *gp;
+    dtr_gamepad_state_t *gp;
 
-    gp = mvn_gamepad_create();
-    MVN_ASSERT_NEAR(mvn_gamepad_axis(gp, MVN_PAD_AXIS_LX, 0), 0.0f, 0.001f);
-    MVN_ASSERT_NEAR(mvn_gamepad_axis(gp, MVN_PAD_AXIS_LY, 0), 0.0f, 0.001f);
-    MVN_ASSERT_NEAR(mvn_gamepad_axis(gp, MVN_PAD_AXIS_RX, 0), 0.0f, 0.001f);
-    MVN_ASSERT_NEAR(mvn_gamepad_axis(gp, MVN_PAD_AXIS_RY, 0), 0.0f, 0.001f);
-    mvn_gamepad_destroy(gp);
-    MVN_PASS();
+    gp = dtr_gamepad_create();
+    DTR_ASSERT_NEAR(dtr_gamepad_axis(gp, DTR_PAD_AXIS_LX, 0), 0.0f, 0.001f);
+    DTR_ASSERT_NEAR(dtr_gamepad_axis(gp, DTR_PAD_AXIS_LY, 0), 0.0f, 0.001f);
+    DTR_ASSERT_NEAR(dtr_gamepad_axis(gp, DTR_PAD_AXIS_RX, 0), 0.0f, 0.001f);
+    DTR_ASSERT_NEAR(dtr_gamepad_axis(gp, DTR_PAD_AXIS_RY, 0), 0.0f, 0.001f);
+    dtr_gamepad_destroy(gp);
+    DTR_PASS();
 }
 
 /* ================================================================== */

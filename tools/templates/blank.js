@@ -10,5 +10,5 @@ function _update(dt) {
 
 function _draw() {
     gfx.cls(0);
-    gfx.print("hello, mvngin!", 4, 4, 7);
+    gfx.print("hello, dithr!", 4, 4, 7);
 }

@@ -13,7 +13,7 @@
 /*  PNG / image loading via SDL_image                                   */
 /* ------------------------------------------------------------------ */
 
-uint8_t *mvn_import_png(const char *path, int32_t *out_w, int32_t *out_h)
+uint8_t *dtr_import_png(const char *path, int32_t *out_w, int32_t *out_h)
 {
     SDL_Surface *surface;
     SDL_Surface *rgba;
@@ -22,7 +22,7 @@ uint8_t *mvn_import_png(const char *path, int32_t *out_w, int32_t *out_h)
 
     surface = IMG_Load(path);
     if (surface == NULL) {
-        SDL_Log("mvn_import_png: failed to load '%s': %s", path, SDL_GetError());
+        SDL_Log("dtr_import_png: failed to load '%s': %s", path, SDL_GetError());
         *out_w = 0;
         *out_h = 0;
         return NULL;
@@ -33,7 +33,7 @@ uint8_t *mvn_import_png(const char *path, int32_t *out_w, int32_t *out_h)
     SDL_DestroySurface(surface);
 
     if (rgba == NULL) {
-        SDL_Log("mvn_import_png: RGBA conversion failed");
+        SDL_Log("dtr_import_png: RGBA conversion failed");
         *out_w = 0;
         *out_h = 0;
         return NULL;
@@ -43,7 +43,7 @@ uint8_t *mvn_import_png(const char *path, int32_t *out_w, int32_t *out_h)
     *out_h = rgba->h;
 
     size   = (size_t)rgba->w * (size_t)rgba->h * 4;
-    pixels = MVN_MALLOC(size);
+    pixels = DTR_MALLOC(size);
     if (pixels == NULL) {
         SDL_DestroySurface(rgba);
         return NULL;
@@ -59,7 +59,7 @@ uint8_t *mvn_import_png(const char *path, int32_t *out_w, int32_t *out_h)
 /*  Aseprite JSON importer                                             */
 /* ------------------------------------------------------------------ */
 
-bool mvn_import_aseprite(const char *json_path, mvn_cart_t *cart, JSContext *ctx)
+bool dtr_import_aseprite(const char *json_path, dtr_cart_t *cart, JSContext *ctx)
 {
     /*
      * Aseprite JSON export format:
@@ -83,7 +83,7 @@ bool mvn_import_aseprite(const char *json_path, mvn_cart_t *cart, JSContext *ctx
 
     json = (char *)SDL_LoadFile(json_path, &len);
     if (json == NULL) {
-        SDL_Log("mvn_import_aseprite: cannot read '%s'", json_path);
+        SDL_Log("dtr_import_aseprite: cannot read '%s'", json_path);
         return false;
     }
 
@@ -92,7 +92,7 @@ bool mvn_import_aseprite(const char *json_path, mvn_cart_t *cart, JSContext *ctx
 
     if (JS_IsException(root)) {
         JS_FreeValue(ctx, JS_GetException(ctx));
-        SDL_Log("mvn_import_aseprite: JSON parse error");
+        SDL_Log("dtr_import_aseprite: JSON parse error");
         return false;
     }
 
@@ -139,7 +139,7 @@ bool mvn_import_aseprite(const char *json_path, mvn_cart_t *cart, JSContext *ctx
                 int32_t w;
                 int32_t h;
 
-                cart->sprite_rgba   = mvn_import_png(image_path, &w, &h);
+                cart->sprite_rgba   = dtr_import_png(image_path, &w, &h);
                 cart->sprite_rgba_w = w;
                 cart->sprite_rgba_h = h;
             }
@@ -156,18 +156,18 @@ bool mvn_import_aseprite(const char *json_path, mvn_cart_t *cart, JSContext *ctx
 /*  Tiled JSON (.tmj) importer                                         */
 /* ------------------------------------------------------------------ */
 
-bool mvn_import_tiled(const char *tmj_path, mvn_map_level_t **out_level, JSContext *ctx)
+bool dtr_import_tiled(const char *tmj_path, dtr_map_level_t **out_level, JSContext *ctx)
 {
     char *           json;
     size_t           len;
     JSValue          root;
     JSValue          layers_arr;
     int32_t          layer_count;
-    mvn_map_level_t *level;
+    dtr_map_level_t *level;
 
     json = (char *)SDL_LoadFile(tmj_path, &len);
     if (json == NULL) {
-        SDL_Log("mvn_import_tiled: cannot read '%s'", tmj_path);
+        SDL_Log("dtr_import_tiled: cannot read '%s'", tmj_path);
         return false;
     }
 
@@ -176,11 +176,11 @@ bool mvn_import_tiled(const char *tmj_path, mvn_map_level_t **out_level, JSConte
 
     if (JS_IsException(root)) {
         JS_FreeValue(ctx, JS_GetException(ctx));
-        SDL_Log("mvn_import_tiled: JSON parse error");
+        SDL_Log("dtr_import_tiled: JSON parse error");
         return false;
     }
 
-    level = MVN_CALLOC(1, sizeof(mvn_map_level_t));
+    level = DTR_CALLOC(1, sizeof(dtr_map_level_t));
     if (level == NULL) {
         JS_FreeValue(ctx, root);
         return false;
@@ -221,7 +221,7 @@ bool mvn_import_tiled(const char *tmj_path, mvn_map_level_t **out_level, JSConte
         JS_FreeValue(ctx, len_val);
     }
 
-    level->layers      = MVN_CALLOC((size_t)layer_count, sizeof(mvn_map_layer_t));
+    level->layers      = DTR_CALLOC((size_t)layer_count, sizeof(dtr_map_layer_t));
     level->layer_count = layer_count;
 
     for (int32_t li = 0; li < layer_count; ++li) {
@@ -230,7 +230,7 @@ bool mvn_import_tiled(const char *tmj_path, mvn_map_level_t **out_level, JSConte
         JSValue          name_val;
         JSValue          data_arr;
         const char *     type_str;
-        mvn_map_layer_t *layer;
+        dtr_map_layer_t *layer;
 
         layer     = &level->layers[li];
         layer_obj = JS_GetPropertyUint32(ctx, layers_arr, (uint32_t)li);
@@ -273,7 +273,7 @@ bool mvn_import_tiled(const char *tmj_path, mvn_map_level_t **out_level, JSConte
                 int32_t tile_count;
 
                 tile_count   = layer->width * layer->height;
-                layer->tiles = MVN_CALLOC((size_t)tile_count, sizeof(int32_t));
+                layer->tiles = DTR_CALLOC((size_t)tile_count, sizeof(int32_t));
 
                 for (int32_t ti = 0; ti < tile_count; ++ti) {
                     JSValue tv;
@@ -300,12 +300,12 @@ bool mvn_import_tiled(const char *tmj_path, mvn_map_level_t **out_level, JSConte
                 JS_ToInt32(ctx, &obj_count, olen);
                 JS_FreeValue(ctx, olen);
 
-                layer->objects      = MVN_CALLOC((size_t)obj_count, sizeof(mvn_map_object_t));
+                layer->objects      = DTR_CALLOC((size_t)obj_count, sizeof(dtr_map_object_t));
                 layer->object_count = obj_count;
 
                 for (int32_t oi = 0; oi < obj_count; ++oi) {
                     JSValue           oobj;
-                    mvn_map_object_t *mobj;
+                    dtr_map_object_t *mobj;
                     JSValue           xv;
                     JSValue           yv;
                     JSValue           wv;
@@ -435,17 +435,17 @@ bool mvn_import_tiled(const char *tmj_path, mvn_map_level_t **out_level, JSConte
 /*  LDtk JSON (.ldtk) importer                                        */
 /* ------------------------------------------------------------------ */
 
-bool mvn_import_ldtk(const char *ldtk_path, mvn_map_level_t **out_level, JSContext *ctx)
+bool dtr_import_ldtk(const char *ldtk_path, dtr_map_level_t **out_level, JSContext *ctx)
 {
     char *           json;
     size_t           len;
     JSValue          root;
     JSValue          levels_arr;
-    mvn_map_level_t *level;
+    dtr_map_level_t *level;
 
     json = (char *)SDL_LoadFile(ldtk_path, &len);
     if (json == NULL) {
-        SDL_Log("mvn_import_ldtk: cannot read '%s'", ldtk_path);
+        SDL_Log("dtr_import_ldtk: cannot read '%s'", ldtk_path);
         return false;
     }
 
@@ -454,11 +454,11 @@ bool mvn_import_ldtk(const char *ldtk_path, mvn_map_level_t **out_level, JSConte
 
     if (JS_IsException(root)) {
         JS_FreeValue(ctx, JS_GetException(ctx));
-        SDL_Log("mvn_import_ldtk: JSON parse error");
+        SDL_Log("dtr_import_ldtk: JSON parse error");
         return false;
     }
 
-    level = MVN_CALLOC(1, sizeof(mvn_map_level_t));
+    level = DTR_CALLOC(1, sizeof(dtr_map_level_t));
     if (level == NULL) {
         JS_FreeValue(ctx, root);
         return false;
@@ -520,14 +520,14 @@ bool mvn_import_ldtk(const char *ldtk_path, mvn_map_level_t **out_level, JSConte
             JS_ToInt32(ctx, &li_count, li_len);
             JS_FreeValue(ctx, li_len);
 
-            level->layers      = MVN_CALLOC((size_t)li_count, sizeof(mvn_map_layer_t));
+            level->layers      = DTR_CALLOC((size_t)li_count, sizeof(dtr_map_layer_t));
             level->layer_count = li_count;
 
             for (int32_t idx = 0; idx < li_count; ++idx) {
                 JSValue          li_obj;
                 JSValue          type_val;
                 const char *     type_str;
-                mvn_map_layer_t *layer;
+                dtr_map_layer_t *layer;
 
                 layer  = &level->layers[idx];
                 li_obj = JS_GetPropertyUint32(ctx, layer_instances, (uint32_t)idx);
@@ -560,7 +560,7 @@ bool mvn_import_ldtk(const char *ldtk_path, mvn_map_level_t **out_level, JSConte
                         JS_ToInt32(ctx, &tile_count, gt_len);
                         JS_FreeValue(ctx, gt_len);
 
-                        layer->tiles = MVN_CALLOC((size_t)layer->width * (size_t)layer->height,
+                        layer->tiles = DTR_CALLOC((size_t)layer->width * (size_t)layer->height,
                                                   sizeof(int32_t));
 
                         for (int32_t ti = 0; ti < tile_count; ++ti) {

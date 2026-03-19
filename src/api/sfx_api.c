@@ -6,44 +6,44 @@
 #include "../audio.h"
 #include "api_common.h"
 
-#define AUD(ctx) (mvn_api_get_console(ctx)->audio)
+#define AUD(ctx) (dtr_api_get_console(ctx)->audio)
 
 static JSValue js_sfx_play(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
     (void)this_val;
-    mvn_sfx_play(AUD(ctx),
-                 mvn_api_opt_int(ctx, argc, argv, 0, 0),
-                 mvn_api_opt_int(ctx, argc, argv, 1, -1),
-                 mvn_api_opt_int(ctx, argc, argv, 2, 0));
+    dtr_sfx_play(AUD(ctx),
+                 dtr_api_opt_int(ctx, argc, argv, 0, 0),
+                 dtr_api_opt_int(ctx, argc, argv, 1, -1),
+                 dtr_api_opt_int(ctx, argc, argv, 2, 0));
     return JS_UNDEFINED;
 }
 
 static JSValue js_sfx_stop(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
     (void)this_val;
-    mvn_sfx_stop(AUD(ctx), mvn_api_opt_int(ctx, argc, argv, 0, -1));
+    dtr_sfx_stop(AUD(ctx), dtr_api_opt_int(ctx, argc, argv, 0, -1));
     return JS_UNDEFINED;
 }
 
 static JSValue js_sfx_volume(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
     (void)this_val;
-    mvn_sfx_volume(AUD(ctx),
-                   (float)mvn_api_opt_float(ctx, argc, argv, 0, 1.0),
-                   mvn_api_opt_int(ctx, argc, argv, 1, -1));
+    dtr_sfx_volume(AUD(ctx),
+                   (float)dtr_api_opt_float(ctx, argc, argv, 0, 1.0),
+                   dtr_api_opt_int(ctx, argc, argv, 1, -1));
     return JS_UNDEFINED;
 }
 
 static JSValue js_sfx_getVolume(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
     (void)this_val;
-    return JS_NewFloat64(ctx, mvn_sfx_get_volume(AUD(ctx), mvn_api_opt_int(ctx, argc, argv, 0, 0)));
+    return JS_NewFloat64(ctx, dtr_sfx_get_volume(AUD(ctx), dtr_api_opt_int(ctx, argc, argv, 0, 0)));
 }
 
 static JSValue js_sfx_playing(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
     (void)this_val;
-    return JS_NewBool(ctx, mvn_sfx_playing(AUD(ctx), mvn_api_opt_int(ctx, argc, argv, 0, -1)));
+    return JS_NewBool(ctx, dtr_sfx_playing(AUD(ctx), dtr_api_opt_int(ctx, argc, argv, 0, -1)));
 }
 
 static const JSCFunctionListEntry js_sfx_funcs[] = {
@@ -54,7 +54,7 @@ static const JSCFunctionListEntry js_sfx_funcs[] = {
     JS_CFUNC_DEF("playing", 1, js_sfx_playing),
 };
 
-void mvn_sfx_api_register(JSContext *ctx, JSValue global)
+void dtr_sfx_api_register(JSContext *ctx, JSValue global)
 {
     JSValue ns;
 

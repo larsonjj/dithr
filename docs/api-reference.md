@@ -1,6 +1,6 @@
 # API Reference
 
-mvngin exposes **13 namespaces** to cart JavaScript code. All functions are
+dithr exposes **13 namespaces** to cart JavaScript code. All functions are
 available as globals on their namespace object (e.g. `gfx.cls()`).
 
 The engine calls three optional global callbacks each frame:

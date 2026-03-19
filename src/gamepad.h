@@ -3,8 +3,8 @@
  * \brief           Gamepad state — buttons, axes, hotplug, rumble
  */
 
-#ifndef MVN_GAMEPAD_H
-#define MVN_GAMEPAD_H
+#ifndef DTR_GAMEPAD_H
+#define DTR_GAMEPAD_H
 
 #include "console.h"
 #include "input.h"
@@ -13,64 +13,64 @@
 extern "C" {
 #endif /* __cplusplus */
 
-#define MVN_MAX_GAMEPADS 4
+#define DTR_MAX_GAMEPADS 4
 
 /**
  * \brief           State for a single gamepad
  */
-typedef struct mvn_gamepad {
+typedef struct dtr_gamepad {
     SDL_Gamepad *  handle;
     SDL_JoystickID joy_id;
     bool           connected;
     char           name[128];
 
-    bool  btn_current[MVN_PAD_BTN_COUNT];
-    bool  btn_previous[MVN_PAD_BTN_COUNT];
-    bool  btn_pressed[MVN_PAD_BTN_COUNT];
-    float axes[MVN_PAD_AXIS_COUNT];
+    bool  btn_current[DTR_PAD_BTN_COUNT];
+    bool  btn_previous[DTR_PAD_BTN_COUNT];
+    bool  btn_pressed[DTR_PAD_BTN_COUNT];
+    float axes[DTR_PAD_AXIS_COUNT];
 
     float deadzone;
     bool  supports_rumble;
     bool  supports_trigger_rumble;
-} mvn_gamepad_t;
+} dtr_gamepad_t;
 
 /**
- * \brief           Gamepad subsystem managing up to MVN_MAX_GAMEPADS
+ * \brief           Gamepad subsystem managing up to DTR_MAX_GAMEPADS
  */
-struct mvn_gamepad_state {
-    mvn_gamepad_t pads[MVN_MAX_GAMEPADS];
+struct dtr_gamepad_state {
+    dtr_gamepad_t pads[DTR_MAX_GAMEPADS];
     int32_t       count;
 };
 
-mvn_gamepad_state_t *mvn_gamepad_create(void);
-void                 mvn_gamepad_destroy(mvn_gamepad_state_t *gp);
-void                 mvn_gamepad_update(mvn_gamepad_state_t *gp);
+dtr_gamepad_state_t *dtr_gamepad_create(void);
+void                 dtr_gamepad_destroy(dtr_gamepad_state_t *gp);
+void                 dtr_gamepad_update(dtr_gamepad_state_t *gp);
 
 /* Hotplug */
-void mvn_gamepad_on_added(mvn_gamepad_state_t *gp, SDL_JoystickID id);
-void mvn_gamepad_on_removed(mvn_gamepad_state_t *gp, SDL_JoystickID id);
-void mvn_gamepad_on_button(mvn_gamepad_state_t *gp, SDL_JoystickID id,
+void dtr_gamepad_on_added(dtr_gamepad_state_t *gp, SDL_JoystickID id);
+void dtr_gamepad_on_removed(dtr_gamepad_state_t *gp, SDL_JoystickID id);
+void dtr_gamepad_on_button(dtr_gamepad_state_t *gp, SDL_JoystickID id,
                           SDL_GamepadButton btn, bool down);
-void mvn_gamepad_on_axis(mvn_gamepad_state_t *gp, SDL_JoystickID id,
+void dtr_gamepad_on_axis(dtr_gamepad_state_t *gp, SDL_JoystickID id,
                         SDL_GamepadAxis axis, int16_t value);
 
 /* Queries */
-bool        mvn_gamepad_btn(mvn_gamepad_state_t *gp, mvn_pad_btn_t b, int32_t index);
-bool        mvn_gamepad_btnp(mvn_gamepad_state_t *gp, mvn_pad_btn_t b, int32_t index);
-float       mvn_gamepad_axis(mvn_gamepad_state_t *gp, mvn_pad_axis_t a, int32_t index);
-bool        mvn_gamepad_connected(mvn_gamepad_state_t *gp, int32_t index);
-int32_t     mvn_gamepad_count(mvn_gamepad_state_t *gp);
-const char *mvn_gamepad_name(mvn_gamepad_state_t *gp, int32_t index);
-void        mvn_gamepad_set_deadzone(mvn_gamepad_state_t *gp, float val, int32_t index);
-float       mvn_gamepad_get_deadzone(mvn_gamepad_state_t *gp, int32_t index);
+bool        dtr_gamepad_btn(dtr_gamepad_state_t *gp, dtr_pad_btn_t b, int32_t index);
+bool        dtr_gamepad_btnp(dtr_gamepad_state_t *gp, dtr_pad_btn_t b, int32_t index);
+float       dtr_gamepad_axis(dtr_gamepad_state_t *gp, dtr_pad_axis_t a, int32_t index);
+bool        dtr_gamepad_connected(dtr_gamepad_state_t *gp, int32_t index);
+int32_t     dtr_gamepad_count(dtr_gamepad_state_t *gp);
+const char *dtr_gamepad_name(dtr_gamepad_state_t *gp, int32_t index);
+void        dtr_gamepad_set_deadzone(dtr_gamepad_state_t *gp, float val, int32_t index);
+float       dtr_gamepad_get_deadzone(dtr_gamepad_state_t *gp, int32_t index);
 
 /* Rumble */
-void mvn_gamepad_rumble(mvn_gamepad_state_t *gp,
+void dtr_gamepad_rumble(dtr_gamepad_state_t *gp,
                         int32_t              index,
                         uint16_t             low,
                         uint16_t             high,
                         uint32_t             duration_ms);
-void mvn_gamepad_rumble_triggers(mvn_gamepad_state_t *gp,
+void dtr_gamepad_rumble_triggers(dtr_gamepad_state_t *gp,
                                  int32_t              index,
                                  uint16_t             left,
                                  uint16_t             right,
@@ -80,4 +80,4 @@ void mvn_gamepad_rumble_triggers(mvn_gamepad_state_t *gp,
 }
 #endif /* __cplusplus */
 
-#endif /* MVN_GAMEPAD_H */
+#endif /* DTR_GAMEPAD_H */

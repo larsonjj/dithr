@@ -21,11 +21,11 @@
 /*  Lifecycle                                                          */
 /* ------------------------------------------------------------------ */
 
-mvn_postfx_t *mvn_postfx_create(int32_t width, int32_t height)
+dtr_postfx_t *dtr_postfx_create(int32_t width, int32_t height)
 {
-    mvn_postfx_t *pfx;
+    dtr_postfx_t *pfx;
 
-    pfx = MVN_CALLOC(1, sizeof(mvn_postfx_t));
+    pfx = DTR_CALLOC(1, sizeof(dtr_postfx_t));
     if (pfx != NULL) {
         pfx->width  = width;
         pfx->height = height;
@@ -33,21 +33,21 @@ mvn_postfx_t *mvn_postfx_create(int32_t width, int32_t height)
     return pfx;
 }
 
-void mvn_postfx_destroy(mvn_postfx_t *pfx)
+void dtr_postfx_destroy(dtr_postfx_t *pfx)
 {
     if (pfx != NULL) {
-        MVN_FREE(pfx->scratch);
+        DTR_FREE(pfx->scratch);
     }
-    MVN_FREE(pfx);
+    DTR_FREE(pfx);
 }
 
 /* ------------------------------------------------------------------ */
 /*  Stack management                                                   */
 /* ------------------------------------------------------------------ */
 
-void mvn_postfx_push(mvn_postfx_t *pfx, mvn_postfx_id_t id, float strength)
+void dtr_postfx_push(dtr_postfx_t *pfx, dtr_postfx_id_t id, float strength)
 {
-    if (pfx->count >= MVN_POSTFX_MAX_STACK) {
+    if (pfx->count >= DTR_POSTFX_MAX_STACK) {
         return;
     }
 
@@ -56,24 +56,24 @@ void mvn_postfx_push(mvn_postfx_t *pfx, mvn_postfx_id_t id, float strength)
     ++pfx->count;
 }
 
-void mvn_postfx_pop(mvn_postfx_t *pfx)
+void dtr_postfx_pop(dtr_postfx_t *pfx)
 {
     if (pfx->count > 0) {
         --pfx->count;
     }
 }
 
-void mvn_postfx_clear(mvn_postfx_t *pfx)
+void dtr_postfx_clear(dtr_postfx_t *pfx)
 {
     pfx->count = 0;
 }
 
-void mvn_postfx_set_param(mvn_postfx_t *pfx, int32_t index, int32_t param_idx, float value)
+void dtr_postfx_set_param(dtr_postfx_t *pfx, int32_t index, int32_t param_idx, float value)
 {
     if (index < 0 || index >= pfx->count) {
         return;
     }
-    if (param_idx < 0 || param_idx >= MVN_POSTFX_MAX_PARAMS) {
+    if (param_idx < 0 || param_idx >= DTR_POSTFX_MAX_PARAMS) {
         return;
     }
     pfx->stack[index].params[param_idx] = value;
@@ -260,7 +260,7 @@ static void prv_apply_bloom(uint32_t *pixels, int32_t w, int32_t h, float streng
  *
  * Reuses pfx->scratch instead of allocating every frame.
  */
-static void prv_apply_aberration(mvn_postfx_t *pfx, uint32_t *pixels, int32_t w, int32_t h,
+static void prv_apply_aberration(dtr_postfx_t *pfx, uint32_t *pixels, int32_t w, int32_t h,
                                  float strength)
 {
     int32_t   offset;
@@ -275,8 +275,8 @@ static void prv_apply_aberration(mvn_postfx_t *pfx, uint32_t *pixels, int32_t w,
     /* Ensure scratch buffer is large enough */
     buf_sz = (size_t)w * (size_t)h * sizeof(uint32_t);
     if (pfx->scratch == NULL || pfx->width != w || pfx->height != h) {
-        MVN_FREE(pfx->scratch);
-        pfx->scratch = MVN_MALLOC(buf_sz);
+        DTR_FREE(pfx->scratch);
+        pfx->scratch = DTR_MALLOC(buf_sz);
         pfx->width   = w;
         pfx->height  = h;
         if (pfx->scratch == NULL) {
@@ -328,37 +328,37 @@ static void prv_apply_aberration(mvn_postfx_t *pfx, uint32_t *pixels, int32_t w,
 /*  Apply full pipeline                                                */
 /* ------------------------------------------------------------------ */
 
-void mvn_postfx_apply(mvn_postfx_t *pfx, uint32_t *pixels, int32_t w, int32_t h)
+void dtr_postfx_apply(dtr_postfx_t *pfx, uint32_t *pixels, int32_t w, int32_t h)
 {
     if (pfx == NULL || pfx->count == 0) {
         return;
     }
 
     for (int32_t idx = 0; idx < pfx->count; ++idx) {
-        mvn_postfx_entry_t *entry;
+        dtr_postfx_entry_t *entry;
         float               strength;
 
         entry    = &pfx->stack[idx];
         strength = entry->strength;
 
         switch (entry->id) {
-            case MVN_POSTFX_SCANLINES:
+            case DTR_POSTFX_SCANLINES:
                 prv_apply_scanlines(pixels, w, h, strength);
                 break;
 
-            case MVN_POSTFX_CRT:
+            case DTR_POSTFX_CRT:
                 prv_apply_crt(pixels, w, h, strength);
                 break;
 
-            case MVN_POSTFX_BLOOM:
+            case DTR_POSTFX_BLOOM:
                 prv_apply_bloom(pixels, w, h, strength);
                 break;
 
-            case MVN_POSTFX_ABERRATION:
+            case DTR_POSTFX_ABERRATION:
                 prv_apply_aberration(pfx, pixels, w, h, strength);
                 break;
 
-            case MVN_POSTFX_NONE:
+            case DTR_POSTFX_NONE:
             default:
                 break;
         }
@@ -372,35 +372,35 @@ void mvn_postfx_apply(mvn_postfx_t *pfx, uint32_t *pixels, int32_t w, int32_t h)
 
 static const char *prv_effect_names[] = {"none", "crt", "scanlines", "bloom", "aberration"};
 
-mvn_postfx_id_t mvn_postfx_id_from_name(const char *name)
+dtr_postfx_id_t dtr_postfx_id_from_name(const char *name)
 {
     if (name == NULL) {
-        return MVN_POSTFX_NONE;
+        return DTR_POSTFX_NONE;
     }
-    for (int32_t idx = 0; idx < MVN_POSTFX_BUILTIN_COUNT; ++idx) {
+    for (int32_t idx = 0; idx < DTR_POSTFX_BUILTIN_COUNT; ++idx) {
         if (SDL_strcasecmp(name, prv_effect_names[idx]) == 0) {
-            return (mvn_postfx_id_t)idx;
+            return (dtr_postfx_id_t)idx;
         }
     }
-    return MVN_POSTFX_NONE;
+    return DTR_POSTFX_NONE;
 }
 
-const char **mvn_postfx_available(int32_t *out_count)
+const char **dtr_postfx_available(int32_t *out_count)
 {
     if (out_count != NULL) {
-        *out_count = MVN_POSTFX_BUILTIN_COUNT;
+        *out_count = DTR_POSTFX_BUILTIN_COUNT;
     }
     return prv_effect_names;
 }
 
-int32_t mvn_postfx_use(mvn_postfx_t *pfx, const char *name)
+int32_t dtr_postfx_use(dtr_postfx_t *pfx, const char *name)
 {
-    mvn_postfx_id_t id;
+    dtr_postfx_id_t id;
 
-    id                     = mvn_postfx_id_from_name(name);
+    id                     = dtr_postfx_id_from_name(name);
     pfx->count             = 1;
     pfx->stack[0].id       = id;
     pfx->stack[0].strength = 1.0f;
-    SDL_strlcpy(pfx->stack[0].name, name, MVN_POSTFX_NAME_LEN);
+    SDL_strlcpy(pfx->stack[0].name, name, DTR_POSTFX_NAME_LEN);
     return 0;
 }

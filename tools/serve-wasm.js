@@ -50,8 +50,8 @@ const server = http.createServer((req, res) => {
     const url = new URL(req.url, `http://localhost:${PORT}`);
     let relPath = decodeURIComponent(url.pathname);
 
-    // Default to index → mvngin.html
-    if (relPath === "/") relPath = "/mvngin.html";
+    // Default to index → dithr.html
+    if (relPath === "/") relPath = "/dithr.html";
 
     // Prevent path traversal
     const filePath = path.join(SERVE_DIR, relPath);

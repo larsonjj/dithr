@@ -39,9 +39,9 @@ static void prv_teardown(void)
 
 static void test_cart_defaults(void)
 {
-    mvn_cart_t *cart;
+    dtr_cart_t *cart;
 
-    cart = mvn_cart_create();
+    cart = dtr_cart_create();
     assert(cart != NULL);
     assert(cart->display.width == CONSOLE_FB_WIDTH);
     assert(cart->display.height == CONSOLE_FB_HEIGHT);
@@ -51,7 +51,7 @@ static void test_cart_defaults(void)
     assert(cart->audio.frequency == CONSOLE_AUDIO_FREQ);
     assert(cart->sprites.tile_w == CONSOLE_TILE_W);
     assert(strcmp(cart->meta.title, "Untitled") == 0);
-    mvn_cart_destroy(cart);
+    dtr_cart_destroy(cart);
     printf("  PASS test_cart_defaults\n");
 }
 
@@ -61,19 +61,19 @@ static void test_cart_defaults(void)
 
 static void test_cart_parse_minimal(void)
 {
-    mvn_cart_t *cart;
+    dtr_cart_t *cart;
     bool        ok;
     const char *json = "{}";
 
-    cart = mvn_cart_create();
+    cart = dtr_cart_create();
     prv_setup();
-    ok = mvn_cart_parse(cart, s_ctx, json, strlen(json));
+    ok = dtr_cart_parse(cart, s_ctx, json, strlen(json));
     assert(ok);
     /* Should keep defaults */
     assert(cart->display.width == CONSOLE_FB_WIDTH);
     assert(cart->timing.fps == CONSOLE_FPS);
     prv_teardown();
-    mvn_cart_destroy(cart);
+    dtr_cart_destroy(cart);
     printf("  PASS test_cart_parse_minimal\n");
 }
 
@@ -83,7 +83,7 @@ static void test_cart_parse_minimal(void)
 
 static void test_cart_parse_display(void)
 {
-    mvn_cart_t *cart;
+    dtr_cart_t *cart;
     bool        ok;
     const char *json =
         "{"
@@ -94,15 +94,15 @@ static void test_cart_parse_display(void)
         "  }"
         "}";
 
-    cart = mvn_cart_create();
+    cart = dtr_cart_create();
     prv_setup();
-    ok = mvn_cart_parse(cart, s_ctx, json, strlen(json));
+    ok = dtr_cart_parse(cart, s_ctx, json, strlen(json));
     assert(ok);
     assert(cart->display.width == 128);
     assert(cart->display.height == 128);
     assert(cart->display.scale == 2);
     prv_teardown();
-    mvn_cart_destroy(cart);
+    dtr_cart_destroy(cart);
     printf("  PASS test_cart_parse_display\n");
 }
 
@@ -112,7 +112,7 @@ static void test_cart_parse_display(void)
 
 static void test_cart_parse_meta(void)
 {
-    mvn_cart_t *cart;
+    dtr_cart_t *cart;
     bool        ok;
     const char *json =
         "{"
@@ -123,15 +123,15 @@ static void test_cart_parse_meta(void)
         "  }"
         "}";
 
-    cart = mvn_cart_create();
+    cart = dtr_cart_create();
     prv_setup();
-    ok = mvn_cart_parse(cart, s_ctx, json, strlen(json));
+    ok = dtr_cart_parse(cart, s_ctx, json, strlen(json));
     assert(ok);
     assert(strcmp(cart->meta.title, "My Game") == 0);
     assert(strcmp(cart->meta.author, "Dev") == 0);
     assert(strcmp(cart->meta.version, "1.0.0") == 0);
     prv_teardown();
-    mvn_cart_destroy(cart);
+    dtr_cart_destroy(cart);
     printf("  PASS test_cart_parse_meta\n");
 }
 
@@ -141,7 +141,7 @@ static void test_cart_parse_meta(void)
 
 static void test_cart_parse_input(void)
 {
-    mvn_cart_t *cart;
+    dtr_cart_t *cart;
     bool        ok;
     const char *json =
         "{"
@@ -153,9 +153,9 @@ static void test_cart_parse_input(void)
         "  }"
         "}";
 
-    cart = mvn_cart_create();
+    cart = dtr_cart_create();
     prv_setup();
-    ok = mvn_cart_parse(cart, s_ctx, json, strlen(json));
+    ok = dtr_cart_parse(cart, s_ctx, json, strlen(json));
     assert(ok);
     assert(cart->input.mapping_count == 2);
 
@@ -174,7 +174,7 @@ static void test_cart_parse_input(void)
     }
 
     prv_teardown();
-    mvn_cart_destroy(cart);
+    dtr_cart_destroy(cart);
     printf("  PASS test_cart_parse_input\n");
 }
 
@@ -184,15 +184,15 @@ static void test_cart_parse_input(void)
 
 static void test_cart_parse_invalid_json(void)
 {
-    mvn_cart_t *cart;
+    dtr_cart_t *cart;
     bool        ok;
 
-    cart = mvn_cart_create();
+    cart = dtr_cart_create();
     prv_setup();
-    ok = mvn_cart_parse(cart, s_ctx, "{bad json!!!", 13);
+    ok = dtr_cart_parse(cart, s_ctx, "{bad json!!!", 13);
     assert(!ok);
     prv_teardown();
-    mvn_cart_destroy(cart);
+    dtr_cart_destroy(cart);
     printf("  PASS test_cart_parse_invalid_json\n");
 }
 
@@ -202,11 +202,11 @@ static void test_cart_parse_invalid_json(void)
 
 static void test_cart_validate_defaults(void)
 {
-    mvn_cart_t *cart;
+    dtr_cart_t *cart;
 
-    cart = mvn_cart_create();
-    assert(mvn_cart_validate(cart));
-    mvn_cart_destroy(cart);
+    cart = dtr_cart_create();
+    assert(dtr_cart_validate(cart));
+    dtr_cart_destroy(cart);
     printf("  PASS test_cart_validate_defaults\n");
 }
 
@@ -216,13 +216,13 @@ static void test_cart_validate_defaults(void)
 
 static void test_cart_validate_clamp_width(void)
 {
-    mvn_cart_t *cart;
+    dtr_cart_t *cart;
 
-    cart = mvn_cart_create();
+    cart = dtr_cart_create();
     cart->display.width = 9999;
-    mvn_cart_validate(cart);
+    dtr_cart_validate(cart);
     assert(cart->display.width == CONSOLE_FB_WIDTH);
-    mvn_cart_destroy(cart);
+    dtr_cart_destroy(cart);
     printf("  PASS test_cart_validate_clamp_width\n");
 }
 
@@ -232,13 +232,13 @@ static void test_cart_validate_clamp_width(void)
 
 static void test_cart_validate_clamp_fps(void)
 {
-    mvn_cart_t *cart;
+    dtr_cart_t *cart;
 
-    cart = mvn_cart_create();
+    cart = dtr_cart_create();
     cart->timing.fps = 1;
-    mvn_cart_validate(cart);
+    dtr_cart_validate(cart);
     assert(cart->timing.fps == 15);
-    mvn_cart_destroy(cart);
+    dtr_cart_destroy(cart);
     printf("  PASS test_cart_validate_clamp_fps\n");
 }
 
@@ -248,15 +248,15 @@ static void test_cart_validate_clamp_fps(void)
 
 static void test_cart_validate_clamp_tile(void)
 {
-    mvn_cart_t *cart;
+    dtr_cart_t *cart;
 
-    cart = mvn_cart_create();
+    cart = dtr_cart_create();
     cart->sprites.tile_w = 2;
     cart->sprites.tile_h = 128;
-    mvn_cart_validate(cart);
+    dtr_cart_validate(cart);
     assert(cart->sprites.tile_w == CONSOLE_TILE_W);
     assert(cart->sprites.tile_h == CONSOLE_TILE_H);
-    mvn_cart_destroy(cart);
+    dtr_cart_destroy(cart);
     printf("  PASS test_cart_validate_clamp_tile\n");
 }
 

@@ -1,7 +1,7 @@
-# Example carts are JS-only and loaded at runtime by the mvngin engine.
+# Example carts are JS-only and loaded at runtime by the dithr engine.
 # No build targets are needed; run them with:
-#   mvngin <cart-folder>
-# e.g.  mvngin examples/hello_world
+#   dithr <cart-folder>
+# e.g.  dithr examples/hello_world
 #
 # Available examples:
 #   hello_world        - Minimal starter cart

@@ -17,7 +17,7 @@ static JSValue js_sys_time(JSContext *ctx, JSValueConst this_val, int argc, JSVa
     (void)this_val;
     (void)argc;
     (void)argv;
-    return JS_NewFloat64(ctx, (double)mvn_api_get_console(ctx)->time);
+    return JS_NewFloat64(ctx, (double)dtr_api_get_console(ctx)->time);
 }
 
 static JSValue js_sys_delta(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
@@ -25,7 +25,7 @@ static JSValue js_sys_delta(JSContext *ctx, JSValueConst this_val, int argc, JSV
     (void)this_val;
     (void)argc;
     (void)argv;
-    return JS_NewFloat64(ctx, (double)mvn_api_get_console(ctx)->delta);
+    return JS_NewFloat64(ctx, (double)dtr_api_get_console(ctx)->delta);
 }
 
 static JSValue js_sys_frame(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
@@ -33,17 +33,17 @@ static JSValue js_sys_frame(JSContext *ctx, JSValueConst this_val, int argc, JSV
     (void)this_val;
     (void)argc;
     (void)argv;
-    return JS_NewFloat64(ctx, (double)mvn_api_get_console(ctx)->frame_count);
+    return JS_NewFloat64(ctx, (double)dtr_api_get_console(ctx)->frame_count);
 }
 
 static JSValue js_sys_fps(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
-    mvn_console_t *con;
+    dtr_console_t *con;
 
     (void)this_val;
     (void)argc;
     (void)argv;
-    con = mvn_api_get_console(ctx);
+    con = dtr_api_get_console(ctx);
     return JS_NewFloat64(ctx, 1.0 / (con->delta > 0.0f ? con->delta : 0.016f));
 }
 
@@ -53,7 +53,7 @@ js_sys_target_fps(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst 
     (void)this_val;
     (void)argc;
     (void)argv;
-    return JS_NewInt32(ctx, mvn_api_get_console(ctx)->target_fps);
+    return JS_NewInt32(ctx, dtr_api_get_console(ctx)->target_fps);
 }
 
 static JSValue
@@ -62,14 +62,14 @@ js_sys_set_target_fps(JSContext *ctx, JSValueConst this_val, int argc, JSValueCo
     int32_t fps;
 
     (void)this_val;
-    fps = mvn_api_opt_int(ctx, argc, argv, 0, CONSOLE_TARGET_FPS);
+    fps = dtr_api_opt_int(ctx, argc, argv, 0, CONSOLE_TARGET_FPS);
     if (fps < 1) {
         fps = 1;
     }
     if (fps > 240) {
         fps = 240;
     }
-    mvn_api_get_console(ctx)->target_fps = fps;
+    dtr_api_get_console(ctx)->target_fps = fps;
     return JS_UNDEFINED;
 }
 
@@ -82,7 +82,7 @@ static JSValue js_sys_width(JSContext *ctx, JSValueConst this_val, int argc, JSV
     (void)this_val;
     (void)argc;
     (void)argv;
-    return JS_NewInt32(ctx, mvn_api_get_console(ctx)->fb_width);
+    return JS_NewInt32(ctx, dtr_api_get_console(ctx)->fb_width);
 }
 
 static JSValue js_sys_height(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
@@ -90,7 +90,7 @@ static JSValue js_sys_height(JSContext *ctx, JSValueConst this_val, int argc, JS
     (void)this_val;
     (void)argc;
     (void)argv;
-    return JS_NewInt32(ctx, mvn_api_get_console(ctx)->fb_height);
+    return JS_NewInt32(ctx, dtr_api_get_console(ctx)->fb_height);
 }
 
 /* ------------------------------------------------------------------ */
@@ -187,7 +187,7 @@ static JSValue js_sys_pause(JSContext *ctx, JSValueConst this_val, int argc, JSV
     (void)this_val;
     (void)argc;
     (void)argv;
-    mvn_api_get_console(ctx)->paused = true;
+    dtr_api_get_console(ctx)->paused = true;
     return JS_UNDEFINED;
 }
 
@@ -196,7 +196,7 @@ static JSValue js_sys_resume(JSContext *ctx, JSValueConst this_val, int argc, JS
     (void)this_val;
     (void)argc;
     (void)argv;
-    mvn_api_get_console(ctx)->paused = false;
+    dtr_api_get_console(ctx)->paused = false;
     return JS_UNDEFINED;
 }
 
@@ -205,18 +205,18 @@ static JSValue js_sys_quit(JSContext *ctx, JSValueConst this_val, int argc, JSVa
     (void)this_val;
     (void)argc;
     (void)argv;
-    mvn_api_get_console(ctx)->running = false;
+    dtr_api_get_console(ctx)->running = false;
     return JS_UNDEFINED;
 }
 
 static JSValue js_sys_restart(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
-    mvn_console_t *con;
+    dtr_console_t *con;
 
     (void)this_val;
     (void)argc;
     (void)argv;
-    con             = mvn_api_get_console(ctx);
+    con             = dtr_api_get_console(ctx);
     con->restart    = true;
     con->running    = false;
     return JS_UNDEFINED;
@@ -227,17 +227,17 @@ static JSValue js_sys_paused(JSContext *ctx, JSValueConst this_val, int argc, JS
     (void)this_val;
     (void)argc;
     (void)argv;
-    return JS_NewBool(ctx, mvn_api_get_console(ctx)->paused);
+    return JS_NewBool(ctx, dtr_api_get_console(ctx)->paused);
 }
 
 static JSValue
 js_sys_fullscreen(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
-    mvn_console_t *con;
+    dtr_console_t *con;
     bool           fs;
 
     (void)this_val;
-    con = mvn_api_get_console(ctx);
+    con = dtr_api_get_console(ctx);
 
     if (argc >= 1) {
         fs = JS_ToBool(ctx, argv[0]);
@@ -250,12 +250,12 @@ js_sys_fullscreen(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst 
 static JSValue
 js_sys_set_fullscreen(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
-    mvn_console_t *con;
+    dtr_console_t *con;
     bool           fs;
 
     (void)this_val;
     (void)argc;
-    con = mvn_api_get_console(ctx);
+    con = dtr_api_get_console(ctx);
     fs  = JS_ToBool(ctx, argv[0]);
     SDL_SetWindowFullscreen(con->window, fs);
     con->fullscreen = fs;
@@ -268,10 +268,10 @@ js_sys_set_fullscreen(JSContext *ctx, JSValueConst this_val, int argc, JSValueCo
 
 static JSValue js_sys_config(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
-    mvn_console_t *con;
+    dtr_console_t *con;
 
     (void)this_val;
-    con = mvn_api_get_console(ctx);
+    con = dtr_api_get_console(ctx);
 
     if (argc >= 1 && JS_IsString(argv[0])) {
         const char *path;
@@ -385,12 +385,12 @@ static JSValue js_sys_limit(JSContext *ctx, JSValueConst this_val, int argc, JSV
 
 static JSValue js_sys_stat(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
-    mvn_console_t *con;
+    dtr_console_t *con;
     int32_t        n;
 
     (void)this_val;
-    con = mvn_api_get_console(ctx);
-    n   = mvn_api_opt_int(ctx, argc, argv, 0, 0);
+    con = dtr_api_get_console(ctx);
+    n   = dtr_api_opt_int(ctx, argc, argv, 0, 0);
 
     switch (n) {
         case 0:
@@ -441,16 +441,16 @@ static JSValue js_sys_stat(JSContext *ctx, JSValueConst this_val, int argc, JSVa
 
 static JSValue js_sys_volume(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
-    mvn_console_t *con;
+    dtr_console_t *con;
 
     (void)this_val;
-    con = mvn_api_get_console(ctx);
+    con = dtr_api_get_console(ctx);
 
     if (argc >= 1) {
-        float vol = (float)mvn_api_opt_float(ctx, argc, argv, 0, 1.0);
-        mvn_audio_set_master_volume(con->audio, vol);
+        float vol = (float)dtr_api_opt_float(ctx, argc, argv, 0, 1.0);
+        dtr_audio_set_master_volume(con->audio, vol);
     }
-    return JS_NewFloat64(ctx, (double)mvn_audio_get_master_volume(con->audio));
+    return JS_NewFloat64(ctx, (double)dtr_audio_get_master_volume(con->audio));
 }
 
 /* ---- Function list ---------------------------------------------------- */
@@ -458,11 +458,11 @@ static JSValue js_sys_volume(JSContext *ctx, JSValueConst this_val, int argc, JS
 static JSValue
 js_sys_text_input(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
-    mvn_console_t *con;
+    dtr_console_t *con;
     bool           enabled;
 
     (void)this_val;
-    con     = mvn_api_get_console(ctx);
+    con     = dtr_api_get_console(ctx);
     enabled = (argc >= 1) ? JS_ToBool(ctx, argv[0]) : true;
 
     if (enabled) {
@@ -501,7 +501,7 @@ static const JSCFunctionListEntry js_sys_funcs[] = {
     JS_CFUNC_DEF("volume", 1, js_sys_volume),
 };
 
-void mvn_sys_api_register(JSContext *ctx, JSValue global)
+void dtr_sys_api_register(JSContext *ctx, JSValue global)
 {
     JSValue ns;
 

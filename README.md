@@ -1,4 +1,4 @@
-# mvngin (Maven Engine)
+# dithr (Maven Engine)
 
 A fantasy console engine for building retro games. Write game logic in
 JavaScript, and the engine handles rendering, audio, input, and tilemaps
@@ -45,7 +45,7 @@ cmake --build build/debug --config Debug
 ### Run
 
 ```bash
-./build/debug/Debug/mvngin examples/hello_world/cart.json
+./build/debug/Debug/dithr examples/hello_world/cart.json
 ```
 
 See [docs/building.md](docs/building.md) for all presets (release, retro,
@@ -80,7 +80,7 @@ function _draw() {
 Run it:
 
 ```bash
-mvngin cart.json
+dithr cart.json
 ```
 
 ## Documentation

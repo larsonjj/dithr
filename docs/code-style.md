@@ -9,7 +9,7 @@ Modifications:
 - Change to use `stdbool.h` library for `true` or `false` values insteed of `0` or `1`
 - Declare all local variables of the same type on a separate line
 - Always prefer SDL equivalent of stdlib functions
-- Prefer using MVN_MALLOC, MVN_CALLOC, MVN_REALLOC, and MVN_FREE for memory managment as they are aliases for SDL memory management functions
+- Prefer using DTR_MALLOC, DTR_CALLOC, DTR_REALLOC, and DTR_FREE for memory managment as they are aliases for SDL memory management functions
 - Include instructions to document macros in header file
 - Ensure that all variables are at least 3 characters long
 - Ensure that code is compatible with MSVC, GCC, and Clang

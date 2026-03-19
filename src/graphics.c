@@ -56,11 +56,11 @@ static const uint32_t DEFAULT_PALETTE[CONSOLE_PALETTE_SIZE] = {
 /*  Lifecycle                                                          */
 /* ------------------------------------------------------------------ */
 
-mvn_graphics_t *mvn_gfx_create(int32_t width, int32_t height)
+dtr_graphics_t *dtr_gfx_create(int32_t width, int32_t height)
 {
-    mvn_graphics_t *gfx;
+    dtr_graphics_t *gfx;
 
-    gfx = MVN_CALLOC(1, sizeof(mvn_graphics_t));
+    gfx = DTR_CALLOC(1, sizeof(dtr_graphics_t));
     if (gfx == NULL) {
         return NULL;
     }
@@ -68,24 +68,24 @@ mvn_graphics_t *mvn_gfx_create(int32_t width, int32_t height)
     gfx->width  = width;
     gfx->height = height;
 
-    mvn_gfx_init_default_palette(gfx);
-    mvn_gfx_reset(gfx);
+    dtr_gfx_init_default_palette(gfx);
+    dtr_gfx_reset(gfx);
 
     return gfx;
 }
 
-void mvn_gfx_destroy(mvn_graphics_t *gfx)
+void dtr_gfx_destroy(dtr_graphics_t *gfx)
 {
     if (gfx == NULL) {
         return;
     }
     if (gfx->sheet.pixels != NULL) {
-        MVN_FREE(gfx->sheet.pixels);
+        DTR_FREE(gfx->sheet.pixels);
     }
-    MVN_FREE(gfx);
+    DTR_FREE(gfx);
 }
 
-void mvn_gfx_reset(mvn_graphics_t *gfx)
+void dtr_gfx_reset(dtr_graphics_t *gfx)
 {
     gfx->color        = 7;
     gfx->cursor_x     = 0;
@@ -108,7 +108,7 @@ void mvn_gfx_reset(mvn_graphics_t *gfx)
     gfx->transparent[0] = true;
 }
 
-void mvn_gfx_init_default_palette(mvn_graphics_t *gfx)
+void dtr_gfx_init_default_palette(dtr_graphics_t *gfx)
 {
     int32_t idx;
 
@@ -190,7 +190,7 @@ void mvn_gfx_init_default_palette(mvn_graphics_t *gfx)
 /*  Internal: safe pixel write respecting clip, camera, fill pattern   */
 /* ------------------------------------------------------------------ */
 
-static void prv_put_pixel(mvn_graphics_t *gfx, int32_t raw_x, int32_t raw_y, uint8_t col)
+static void prv_put_pixel(dtr_graphics_t *gfx, int32_t raw_x, int32_t raw_y, uint8_t col)
 {
     int32_t scr_x;
     int32_t scr_y;
@@ -238,7 +238,7 @@ static void prv_put_pixel(mvn_graphics_t *gfx, int32_t raw_x, int32_t raw_y, uin
  * the span is written with SDL_memset for maximum throughput.
  */
 static void
-prv_hline(mvn_graphics_t *gfx, int32_t raw_x0, int32_t raw_x1, int32_t raw_y, uint8_t col)
+prv_hline(dtr_graphics_t *gfx, int32_t raw_x0, int32_t raw_x1, int32_t raw_y, uint8_t col)
 {
     int32_t scr_y;
     int32_t left;
@@ -297,7 +297,7 @@ prv_hline(mvn_graphics_t *gfx, int32_t raw_x0, int32_t raw_x1, int32_t raw_y, ui
 /* ------------------------------------------------------------------ */
 
 static void
-prv_vline(mvn_graphics_t *gfx, int32_t raw_x, int32_t raw_y0, int32_t raw_y1, uint8_t col)
+prv_vline(dtr_graphics_t *gfx, int32_t raw_x, int32_t raw_y0, int32_t raw_y1, uint8_t col)
 {
     int32_t scr_x;
     int32_t top;
@@ -359,17 +359,17 @@ prv_vline(mvn_graphics_t *gfx, int32_t raw_x, int32_t raw_y0, int32_t raw_y1, ui
 /*  Core drawing                                                       */
 /* ------------------------------------------------------------------ */
 
-void mvn_gfx_cls(mvn_graphics_t *gfx, uint8_t col)
+void dtr_gfx_cls(dtr_graphics_t *gfx, uint8_t col)
 {
     SDL_memset(gfx->framebuffer, col, (size_t)(gfx->width * gfx->height));
 }
 
-void mvn_gfx_pset(mvn_graphics_t *gfx, int32_t x, int32_t y, uint8_t col)
+void dtr_gfx_pset(dtr_graphics_t *gfx, int32_t x, int32_t y, uint8_t col)
 {
     prv_put_pixel(gfx, x, y, col);
 }
 
-uint8_t mvn_gfx_pget(mvn_graphics_t *gfx, int32_t x, int32_t y)
+uint8_t dtr_gfx_pget(dtr_graphics_t *gfx, int32_t x, int32_t y)
 {
     int32_t scr_x;
     int32_t scr_y;
@@ -387,7 +387,7 @@ uint8_t mvn_gfx_pget(mvn_graphics_t *gfx, int32_t x, int32_t y)
 /*  Primitives                                                         */
 /* ------------------------------------------------------------------ */
 
-void mvn_gfx_line(mvn_graphics_t *gfx, int32_t x0, int32_t y0, int32_t x1, int32_t y1, uint8_t col)
+void dtr_gfx_line(dtr_graphics_t *gfx, int32_t x0, int32_t y0, int32_t x1, int32_t y1, uint8_t col)
 {
     int32_t dx_val;
     int32_t dy_val;
@@ -420,7 +420,7 @@ void mvn_gfx_line(mvn_graphics_t *gfx, int32_t x0, int32_t y0, int32_t x1, int32
     }
 }
 
-void mvn_gfx_rect(mvn_graphics_t *gfx, int32_t x0, int32_t y0, int32_t x1, int32_t y1, uint8_t col)
+void dtr_gfx_rect(dtr_graphics_t *gfx, int32_t x0, int32_t y0, int32_t x1, int32_t y1, uint8_t col)
 {
     int32_t min_x;
     int32_t max_x;
@@ -447,7 +447,7 @@ void mvn_gfx_rect(mvn_graphics_t *gfx, int32_t x0, int32_t y0, int32_t x1, int32
     }
 }
 
-void mvn_gfx_rectfill(mvn_graphics_t *gfx,
+void dtr_gfx_rectfill(dtr_graphics_t *gfx,
                       int32_t         x0,
                       int32_t         y0,
                       int32_t         x1,
@@ -469,7 +469,7 @@ void mvn_gfx_rectfill(mvn_graphics_t *gfx,
     }
 }
 
-void mvn_gfx_tilemap(mvn_graphics_t *gfx,
+void dtr_gfx_tilemap(dtr_graphics_t *gfx,
                      const uint8_t  *tiles,
                      int32_t         map_w,
                      int32_t         map_h,
@@ -532,7 +532,7 @@ void mvn_gfx_tilemap(mvn_graphics_t *gfx,
     }
 }
 
-void mvn_gfx_circ(mvn_graphics_t *gfx, int32_t x, int32_t y, int32_t r, uint8_t col)
+void dtr_gfx_circ(dtr_graphics_t *gfx, int32_t x, int32_t y, int32_t r, uint8_t col)
 {
     int32_t dx_val;
     int32_t dy_val;
@@ -564,7 +564,7 @@ void mvn_gfx_circ(mvn_graphics_t *gfx, int32_t x, int32_t y, int32_t r, uint8_t 
     } while (dx_val < 0);
 }
 
-void mvn_gfx_circfill(mvn_graphics_t *gfx, int32_t x, int32_t y, int32_t r, uint8_t col)
+void dtr_gfx_circfill(dtr_graphics_t *gfx, int32_t x, int32_t y, int32_t r, uint8_t col)
 {
     int32_t dx_val;
     int32_t dy_val;
@@ -597,7 +597,7 @@ void mvn_gfx_circfill(mvn_graphics_t *gfx, int32_t x, int32_t y, int32_t r, uint
     }
 }
 
-void mvn_gfx_tri(mvn_graphics_t *gfx,
+void dtr_gfx_tri(dtr_graphics_t *gfx,
                  int32_t         x0,
                  int32_t         y0,
                  int32_t         x1,
@@ -606,12 +606,12 @@ void mvn_gfx_tri(mvn_graphics_t *gfx,
                  int32_t         y2,
                  uint8_t         col)
 {
-    mvn_gfx_line(gfx, x0, y0, x1, y1, col);
-    mvn_gfx_line(gfx, x1, y1, x2, y2, col);
-    mvn_gfx_line(gfx, x2, y2, x0, y0, col);
+    dtr_gfx_line(gfx, x0, y0, x1, y1, col);
+    dtr_gfx_line(gfx, x1, y1, x2, y2, col);
+    dtr_gfx_line(gfx, x2, y2, x0, y0, col);
 }
 
-void mvn_gfx_trifill(mvn_graphics_t *gfx,
+void dtr_gfx_trifill(dtr_graphics_t *gfx,
                      int32_t         x0,
                      int32_t         y0,
                      int32_t         x1,
@@ -687,7 +687,7 @@ void mvn_gfx_trifill(mvn_graphics_t *gfx,
     }
 }
 
-void mvn_gfx_poly(mvn_graphics_t *gfx, const int32_t *pts, int32_t count, uint8_t col)
+void dtr_gfx_poly(dtr_graphics_t *gfx, const int32_t *pts, int32_t count, uint8_t col)
 {
     if (count < 2) {
         return;
@@ -696,25 +696,25 @@ void mvn_gfx_poly(mvn_graphics_t *gfx, const int32_t *pts, int32_t count, uint8_
         int32_t next;
 
         next = (idx + 1) % count;
-        mvn_gfx_line(gfx,
+        dtr_gfx_line(gfx,
                      pts[idx * 2], pts[idx * 2 + 1],
                      pts[next * 2], pts[next * 2 + 1],
                      col);
     }
 }
 
-void mvn_gfx_polyfill(mvn_graphics_t *gfx, const int32_t *pts, int32_t count, uint8_t col)
+void dtr_gfx_polyfill(dtr_graphics_t *gfx, const int32_t *pts, int32_t count, uint8_t col)
 {
     if (count < 3) {
         if (count == 2) {
-            mvn_gfx_line(gfx, pts[0], pts[1], pts[2], pts[3], col);
+            dtr_gfx_line(gfx, pts[0], pts[1], pts[2], pts[3], col);
         }
         return;
     }
 
     /* Fan-of-triangles from vertex 0 */
     for (int32_t idx = 1; idx < count - 1; ++idx) {
-        mvn_gfx_trifill(gfx,
+        dtr_gfx_trifill(gfx,
                         pts[0], pts[1],
                         pts[idx * 2], pts[idx * 2 + 1],
                         pts[(idx + 1) * 2], pts[(idx + 1) * 2 + 1],
@@ -730,10 +730,10 @@ void mvn_gfx_polyfill(mvn_graphics_t *gfx, const int32_t *pts, int32_t count, ui
  * \\brief           Print a single character using the custom sprite-sheet font
  */
 static void
-prv_print_custom_char(mvn_graphics_t *gfx, uint8_t chr, int32_t x, int32_t y, uint8_t col)
+prv_print_custom_char(dtr_graphics_t *gfx, uint8_t chr, int32_t x, int32_t y, uint8_t col)
 {
-    mvn_custom_font_t *  font;
-    mvn_sprite_sheet_t * sht;
+    dtr_custom_font_t *  font;
+    dtr_sprite_sheet_t * sht;
     int32_t              glyph_idx;
     int32_t              gx;
     int32_t              gy;
@@ -774,7 +774,7 @@ prv_print_custom_char(mvn_graphics_t *gfx, uint8_t chr, int32_t x, int32_t y, ui
     }
 }
 
-int32_t mvn_gfx_print(mvn_graphics_t *gfx, const char *str, int32_t x, int32_t y, uint8_t col)
+int32_t dtr_gfx_print(dtr_graphics_t *gfx, const char *str, int32_t x, int32_t y, uint8_t col)
 {
     int32_t     ox;
     const char *ptr;
@@ -782,8 +782,8 @@ int32_t mvn_gfx_print(mvn_graphics_t *gfx, const char *str, int32_t x, int32_t y
     int32_t     ch;
 
     ox = x;
-    cw = gfx->custom_font.active ? gfx->custom_font.char_w : MVN_FONT_W;
-    ch = gfx->custom_font.active ? gfx->custom_font.char_h : MVN_FONT_H;
+    cw = gfx->custom_font.active ? gfx->custom_font.char_w : DTR_FONT_W;
+    ch = gfx->custom_font.active ? gfx->custom_font.char_h : DTR_FONT_H;
 
     for (ptr = str; *ptr != '\0'; ++ptr) {
         uint8_t chr;
@@ -805,7 +805,7 @@ int32_t mvn_gfx_print(mvn_graphics_t *gfx, const char *str, int32_t x, int32_t y
             }
             prv_print_custom_char(gfx, chr, x, y, col);
         } else {
-            if (chr < MVN_FONT_FIRST || chr > MVN_FONT_LAST) {
+            if (chr < DTR_FONT_FIRST || chr > DTR_FONT_LAST) {
                 x += cw + 1;
                 continue;
             }
@@ -814,11 +814,11 @@ int32_t mvn_gfx_print(mvn_graphics_t *gfx, const char *str, int32_t x, int32_t y
                 const unsigned char *glyph;
                 int32_t              glyph_idx;
 
-                glyph_idx = chr - MVN_FONT_FIRST;
-                glyph     = MVN_FONT_DATA[glyph_idx];
+                glyph_idx = chr - DTR_FONT_FIRST;
+                glyph     = DTR_FONT_DATA[glyph_idx];
 
-                for (int32_t row = 0; row < MVN_FONT_H; ++row) {
-                    for (int32_t bit = 0; bit < MVN_FONT_W; ++bit) {
+                for (int32_t row = 0; row < DTR_FONT_H; ++row) {
+                    for (int32_t bit = 0; bit < DTR_FONT_W; ++bit) {
                         if (glyph[row] & (0x8 >> bit)) {
                             prv_put_pixel(gfx, x + bit, y + row, col);
                         }
@@ -837,7 +837,7 @@ int32_t mvn_gfx_print(mvn_graphics_t *gfx, const char *str, int32_t x, int32_t y
     return x - ox;
 }
 
-void mvn_gfx_font(mvn_graphics_t *gfx,
+void dtr_gfx_font(dtr_graphics_t *gfx,
                   int32_t         sx,
                   int32_t         sy,
                   int32_t         char_w,
@@ -845,7 +845,7 @@ void mvn_gfx_font(mvn_graphics_t *gfx,
                   char            first,
                   int32_t         count)
 {
-    mvn_custom_font_t *font;
+    dtr_custom_font_t *font;
 
     font = &gfx->custom_font;
 
@@ -874,7 +874,7 @@ void mvn_gfx_font(mvn_graphics_t *gfx,
     font->active = true;
 }
 
-void mvn_gfx_font_reset(mvn_graphics_t *gfx)
+void dtr_gfx_font_reset(dtr_graphics_t *gfx)
 {
     gfx->custom_font.active = false;
 }
@@ -883,7 +883,7 @@ void mvn_gfx_font_reset(mvn_graphics_t *gfx)
 /*  Sprites                                                            */
 /* ------------------------------------------------------------------ */
 
-void mvn_gfx_spr(mvn_graphics_t *gfx,
+void dtr_gfx_spr(dtr_graphics_t *gfx,
                  int32_t         idx,
                  int32_t         x,
                  int32_t         y,
@@ -892,7 +892,7 @@ void mvn_gfx_spr(mvn_graphics_t *gfx,
                  bool            flip_x,
                  bool            flip_y)
 {
-    mvn_sprite_sheet_t *sht;
+    dtr_sprite_sheet_t *sht;
     int32_t             sx0;
     int32_t             sy0;
     int32_t             tile_w;
@@ -942,7 +942,7 @@ void mvn_gfx_spr(mvn_graphics_t *gfx,
     }
 }
 
-void mvn_gfx_sspr(mvn_graphics_t *gfx,
+void dtr_gfx_sspr(dtr_graphics_t *gfx,
                   int32_t         sx,
                   int32_t         sy,
                   int32_t         sw,
@@ -952,7 +952,7 @@ void mvn_gfx_sspr(mvn_graphics_t *gfx,
                   int32_t         dw,
                   int32_t         dh)
 {
-    mvn_sprite_sheet_t *sht;
+    dtr_sprite_sheet_t *sht;
 
     sht = &gfx->sheet;
     if (sht->pixels == NULL || sw <= 0 || sh <= 0 || dw <= 0 || dh <= 0) {
@@ -981,7 +981,7 @@ void mvn_gfx_sspr(mvn_graphics_t *gfx,
     }
 }
 
-void mvn_gfx_spr_rot(mvn_graphics_t *gfx,
+void dtr_gfx_spr_rot(dtr_graphics_t *gfx,
                      int32_t         idx,
                      int32_t         x,
                      int32_t         y,
@@ -989,7 +989,7 @@ void mvn_gfx_spr_rot(mvn_graphics_t *gfx,
                      int32_t         cx,
                      int32_t         cy)
 {
-    mvn_sprite_sheet_t *sht;
+    dtr_sprite_sheet_t *sht;
     int32_t             sx0;
     int32_t             sy0;
     int32_t             tile_w;
@@ -1046,7 +1046,7 @@ void mvn_gfx_spr_rot(mvn_graphics_t *gfx,
     }
 }
 
-void mvn_gfx_spr_affine(mvn_graphics_t *gfx,
+void dtr_gfx_spr_affine(dtr_graphics_t *gfx,
                         int32_t         idx,
                         int32_t         x,
                         int32_t         y,
@@ -1056,7 +1056,7 @@ void mvn_gfx_spr_affine(mvn_graphics_t *gfx,
                         float           rot_y)
 {
     /* Simplified affine: rot_x/rot_y define the 2D rotation basis */
-    mvn_sprite_sheet_t *sht;
+    dtr_sprite_sheet_t *sht;
     int32_t             sx0;
     int32_t             sy0;
     int32_t             tile_w;
@@ -1117,7 +1117,7 @@ void mvn_gfx_spr_affine(mvn_graphics_t *gfx,
 /*  Sprite flags                                                       */
 /* ------------------------------------------------------------------ */
 
-uint8_t mvn_gfx_fget(mvn_graphics_t *gfx, int32_t idx)
+uint8_t dtr_gfx_fget(dtr_graphics_t *gfx, int32_t idx)
 {
     if (idx < 0 || idx >= CONSOLE_MAX_SPRITES) {
         return 0;
@@ -1125,7 +1125,7 @@ uint8_t mvn_gfx_fget(mvn_graphics_t *gfx, int32_t idx)
     return gfx->sheet.flags[idx];
 }
 
-bool mvn_gfx_fget_bit(mvn_graphics_t *gfx, int32_t idx, int32_t flag)
+bool dtr_gfx_fget_bit(dtr_graphics_t *gfx, int32_t idx, int32_t flag)
 {
     if (idx < 0 || idx >= CONSOLE_MAX_SPRITES || flag < 0 || flag >= CONSOLE_SPRITE_FLAGS) {
         return false;
@@ -1133,7 +1133,7 @@ bool mvn_gfx_fget_bit(mvn_graphics_t *gfx, int32_t idx, int32_t flag)
     return (gfx->sheet.flags[idx] & (1 << flag)) != 0;
 }
 
-void mvn_gfx_fset(mvn_graphics_t *gfx, int32_t idx, uint8_t mask)
+void dtr_gfx_fset(dtr_graphics_t *gfx, int32_t idx, uint8_t mask)
 {
     if (idx < 0 || idx >= CONSOLE_MAX_SPRITES) {
         return;
@@ -1141,7 +1141,7 @@ void mvn_gfx_fset(mvn_graphics_t *gfx, int32_t idx, uint8_t mask)
     gfx->sheet.flags[idx] = mask;
 }
 
-void mvn_gfx_fset_bit(mvn_graphics_t *gfx, int32_t idx, int32_t flag, bool val)
+void dtr_gfx_fset_bit(dtr_graphics_t *gfx, int32_t idx, int32_t flag, bool val)
 {
     if (idx < 0 || idx >= CONSOLE_MAX_SPRITES || flag < 0 || flag >= CONSOLE_SPRITE_FLAGS) {
         return;
@@ -1157,7 +1157,7 @@ void mvn_gfx_fset_bit(mvn_graphics_t *gfx, int32_t idx, int32_t flag, bool val)
 /*  Palette                                                            */
 /* ------------------------------------------------------------------ */
 
-void mvn_gfx_pal(mvn_graphics_t *gfx, uint8_t src, uint8_t dst, bool screen)
+void dtr_gfx_pal(dtr_graphics_t *gfx, uint8_t src, uint8_t dst, bool screen)
 {
     if (screen) {
         gfx->screen_pal[src] = dst;
@@ -1166,7 +1166,7 @@ void mvn_gfx_pal(mvn_graphics_t *gfx, uint8_t src, uint8_t dst, bool screen)
     }
 }
 
-void mvn_gfx_pal_reset(mvn_graphics_t *gfx)
+void dtr_gfx_pal_reset(dtr_graphics_t *gfx)
 {
     for (int32_t idx = 0; idx < CONSOLE_PALETTE_SIZE; ++idx) {
         gfx->draw_pal[idx]   = (uint8_t)idx;
@@ -1174,12 +1174,12 @@ void mvn_gfx_pal_reset(mvn_graphics_t *gfx)
     }
 }
 
-void mvn_gfx_palt(mvn_graphics_t *gfx, uint8_t col, bool trans)
+void dtr_gfx_palt(dtr_graphics_t *gfx, uint8_t col, bool trans)
 {
     gfx->transparent[col] = trans;
 }
 
-void mvn_gfx_palt_reset(mvn_graphics_t *gfx)
+void dtr_gfx_palt_reset(dtr_graphics_t *gfx)
 {
     for (int32_t idx = 0; idx < CONSOLE_PALETTE_SIZE; ++idx) {
         gfx->transparent[idx] = (idx == 0);
@@ -1190,13 +1190,13 @@ void mvn_gfx_palt_reset(mvn_graphics_t *gfx)
 /*  State                                                              */
 /* ------------------------------------------------------------------ */
 
-void mvn_gfx_camera(mvn_graphics_t *gfx, int32_t x, int32_t y)
+void dtr_gfx_camera(dtr_graphics_t *gfx, int32_t x, int32_t y)
 {
     gfx->camera_x = x;
     gfx->camera_y = y;
 }
 
-void mvn_gfx_clip(mvn_graphics_t *gfx, int32_t x, int32_t y, int32_t w, int32_t h)
+void dtr_gfx_clip(dtr_graphics_t *gfx, int32_t x, int32_t y, int32_t w, int32_t h)
 {
     gfx->clip_x = x;
     gfx->clip_y = y;
@@ -1204,7 +1204,7 @@ void mvn_gfx_clip(mvn_graphics_t *gfx, int32_t x, int32_t y, int32_t w, int32_t 
     gfx->clip_h = h;
 }
 
-void mvn_gfx_clip_reset(mvn_graphics_t *gfx)
+void dtr_gfx_clip_reset(dtr_graphics_t *gfx)
 {
     gfx->clip_x = 0;
     gfx->clip_y = 0;
@@ -1212,17 +1212,17 @@ void mvn_gfx_clip_reset(mvn_graphics_t *gfx)
     gfx->clip_h = gfx->height;
 }
 
-void mvn_gfx_fillp(mvn_graphics_t *gfx, uint16_t pattern)
+void dtr_gfx_fillp(dtr_graphics_t *gfx, uint16_t pattern)
 {
     gfx->fill_pattern = pattern;
 }
 
-void mvn_gfx_color(mvn_graphics_t *gfx, uint8_t col)
+void dtr_gfx_color(dtr_graphics_t *gfx, uint8_t col)
 {
     gfx->color = col;
 }
 
-void mvn_gfx_cursor(mvn_graphics_t *gfx, int32_t x, int32_t y)
+void dtr_gfx_cursor(dtr_graphics_t *gfx, int32_t x, int32_t y)
 {
     gfx->cursor_x = x;
     gfx->cursor_y = y;
@@ -1232,43 +1232,43 @@ void mvn_gfx_cursor(mvn_graphics_t *gfx, int32_t x, int32_t y)
 /*  Screen transitions                                                 */
 /* ------------------------------------------------------------------ */
 
-void mvn_gfx_fade(mvn_graphics_t *gfx, uint8_t color, int32_t frames)
+void dtr_gfx_fade(dtr_graphics_t *gfx, uint8_t color, int32_t frames)
 {
     if (frames < 1) {
         frames = 1;
     }
-    gfx->transition.type     = MVN_TRANS_FADE;
+    gfx->transition.type     = DTR_TRANS_FADE;
     gfx->transition.color    = color;
     gfx->transition.duration = frames;
     gfx->transition.frame    = 0;
 }
 
-void mvn_gfx_wipe(mvn_graphics_t *gfx, int32_t direction, uint8_t color, int32_t frames)
+void dtr_gfx_wipe(dtr_graphics_t *gfx, int32_t direction, uint8_t color, int32_t frames)
 {
     if (frames < 1) {
         frames = 1;
     }
-    gfx->transition.type      = MVN_TRANS_WIPE;
-    gfx->transition.direction = (mvn_wipe_dir_t)direction;
+    gfx->transition.type      = DTR_TRANS_WIPE;
+    gfx->transition.direction = (dtr_wipe_dir_t)direction;
     gfx->transition.color     = color;
     gfx->transition.duration  = frames;
     gfx->transition.frame     = 0;
 }
 
-void mvn_gfx_dissolve(mvn_graphics_t *gfx, uint8_t color, int32_t frames)
+void dtr_gfx_dissolve(dtr_graphics_t *gfx, uint8_t color, int32_t frames)
 {
     if (frames < 1) {
         frames = 1;
     }
-    gfx->transition.type     = MVN_TRANS_DISSOLVE;
+    gfx->transition.type     = DTR_TRANS_DISSOLVE;
     gfx->transition.color    = color;
     gfx->transition.duration = frames;
     gfx->transition.frame    = 0;
 }
 
-bool mvn_gfx_transitioning(mvn_graphics_t *gfx)
+bool dtr_gfx_transitioning(dtr_graphics_t *gfx)
 {
-    return gfx->transition.type != MVN_TRANS_NONE;
+    return gfx->transition.type != DTR_TRANS_NONE;
 }
 
 /**
@@ -1284,13 +1284,13 @@ static uint32_t prv_hash_pixel(int32_t x, int32_t y, int32_t seed)
     return h;
 }
 
-void mvn_gfx_transition_update_buf(mvn_graphics_t *gfx, uint32_t *pixels)
+void dtr_gfx_transition_update_buf(dtr_graphics_t *gfx, uint32_t *pixels)
 {
-    mvn_transition_t *tr;
+    dtr_transition_t *tr;
     float             t;
 
     tr = &gfx->transition;
-    if (tr->type == MVN_TRANS_NONE) {
+    if (tr->type == DTR_TRANS_NONE) {
         return;
     }
 
@@ -1301,7 +1301,7 @@ void mvn_gfx_transition_update_buf(mvn_graphics_t *gfx, uint32_t *pixels)
     }
 
     switch (tr->type) {
-        case MVN_TRANS_FADE: {
+        case DTR_TRANS_FADE: {
             /* Blend already-flipped RGBA pixels towards target colour */
             uint32_t target_rgba;
             int32_t  tr_val;
@@ -1339,7 +1339,7 @@ void mvn_gfx_transition_update_buf(mvn_graphics_t *gfx, uint32_t *pixels)
             break;
         }
 
-        case MVN_TRANS_WIPE: {
+        case DTR_TRANS_WIPE: {
             /* Progressive fill from one edge over flipped pixels */
             int32_t  limit;
             uint32_t col_rgba;
@@ -1347,7 +1347,7 @@ void mvn_gfx_transition_update_buf(mvn_graphics_t *gfx, uint32_t *pixels)
             col_rgba = gfx->colors[tr->color];
 
             switch (tr->direction) {
-                case MVN_WIPE_LEFT:
+                case DTR_WIPE_LEFT:
                     limit = (int32_t)((float)gfx->width * t);
                     for (int32_t y = 0; y < gfx->height; ++y) {
                         for (int32_t x = 0; x < limit; ++x) {
@@ -1355,7 +1355,7 @@ void mvn_gfx_transition_update_buf(mvn_graphics_t *gfx, uint32_t *pixels)
                         }
                     }
                     break;
-                case MVN_WIPE_RIGHT:
+                case DTR_WIPE_RIGHT:
                     limit = gfx->width - (int32_t)((float)gfx->width * t);
                     for (int32_t y = 0; y < gfx->height; ++y) {
                         for (int32_t x = limit; x < gfx->width; ++x) {
@@ -1363,7 +1363,7 @@ void mvn_gfx_transition_update_buf(mvn_graphics_t *gfx, uint32_t *pixels)
                         }
                     }
                     break;
-                case MVN_WIPE_UP:
+                case DTR_WIPE_UP:
                     limit = (int32_t)((float)gfx->height * t);
                     for (int32_t y = 0; y < limit; ++y) {
                         for (int32_t x = 0; x < gfx->width; ++x) {
@@ -1371,7 +1371,7 @@ void mvn_gfx_transition_update_buf(mvn_graphics_t *gfx, uint32_t *pixels)
                         }
                     }
                     break;
-                case MVN_WIPE_DOWN:
+                case DTR_WIPE_DOWN:
                     limit = gfx->height - (int32_t)((float)gfx->height * t);
                     for (int32_t y = limit; y < gfx->height; ++y) {
                         for (int32_t x = 0; x < gfx->width; ++x) {
@@ -1383,7 +1383,7 @@ void mvn_gfx_transition_update_buf(mvn_graphics_t *gfx, uint32_t *pixels)
             break;
         }
 
-        case MVN_TRANS_DISSOLVE: {
+        case DTR_TRANS_DISSOLVE: {
             /* Random pixel replacement over flipped pixels */
             uint32_t col_rgba;
             uint32_t threshold;
@@ -1407,20 +1407,20 @@ void mvn_gfx_transition_update_buf(mvn_graphics_t *gfx, uint32_t *pixels)
 
     /* Complete when done */
     if (tr->frame >= tr->duration) {
-        tr->type = MVN_TRANS_NONE;
+        tr->type = DTR_TRANS_NONE;
     }
 }
 
-void mvn_gfx_transition_update(mvn_graphics_t *gfx)
+void dtr_gfx_transition_update(dtr_graphics_t *gfx)
 {
-    mvn_gfx_transition_update_buf(gfx, gfx->pixels);
+    dtr_gfx_transition_update_buf(gfx, gfx->pixels);
 }
 
 /* ------------------------------------------------------------------ */
 /*  Draw list (sprite batch)                                            */
 /* ------------------------------------------------------------------ */
 
-void mvn_gfx_dl_begin(mvn_graphics_t *gfx)
+void dtr_gfx_dl_begin(dtr_graphics_t *gfx)
 {
     gfx->draw_list.count  = 0;
     gfx->draw_list.active = true;
@@ -1428,18 +1428,18 @@ void mvn_gfx_dl_begin(mvn_graphics_t *gfx)
 
 static int prv_draw_cmd_cmp(const void *a, const void *b)
 {
-    const mvn_draw_cmd_t *ca;
-    const mvn_draw_cmd_t *cb;
+    const dtr_draw_cmd_t *ca;
+    const dtr_draw_cmd_t *cb;
 
-    ca = (const mvn_draw_cmd_t *)a;
-    cb = (const mvn_draw_cmd_t *)b;
+    ca = (const dtr_draw_cmd_t *)a;
+    cb = (const dtr_draw_cmd_t *)b;
     if (ca->layer != cb->layer) {
         return (ca->layer < cb->layer) ? -1 : 1;
     }
     return (ca->order < cb->order) ? -1 : 1;
 }
 
-void mvn_gfx_dl_spr(mvn_graphics_t *gfx,
+void dtr_gfx_dl_spr(dtr_graphics_t *gfx,
                     int32_t         layer,
                     int32_t         idx,
                     int32_t         x,
@@ -1449,13 +1449,13 @@ void mvn_gfx_dl_spr(mvn_graphics_t *gfx,
                     bool            flip_x,
                     bool            flip_y)
 {
-    mvn_draw_cmd_t *cmd;
+    dtr_draw_cmd_t *cmd;
 
     if (gfx->draw_list.count >= CONSOLE_MAX_DRAW_CMDS) {
         return;
     }
     cmd        = &gfx->draw_list.cmds[gfx->draw_list.count];
-    cmd->type  = MVN_DRAW_SPR;
+    cmd->type  = DTR_DRAW_SPR;
     cmd->layer = layer;
     cmd->order = gfx->draw_list.count;
     cmd->u.spr.idx = idx;
@@ -1468,7 +1468,7 @@ void mvn_gfx_dl_spr(mvn_graphics_t *gfx,
     ++gfx->draw_list.count;
 }
 
-void mvn_gfx_dl_sspr(mvn_graphics_t *gfx,
+void dtr_gfx_dl_sspr(dtr_graphics_t *gfx,
                      int32_t         layer,
                      int32_t         sx,
                      int32_t         sy,
@@ -1479,13 +1479,13 @@ void mvn_gfx_dl_sspr(mvn_graphics_t *gfx,
                      int32_t         dw,
                      int32_t         dh)
 {
-    mvn_draw_cmd_t *cmd;
+    dtr_draw_cmd_t *cmd;
 
     if (gfx->draw_list.count >= CONSOLE_MAX_DRAW_CMDS) {
         return;
     }
     cmd         = &gfx->draw_list.cmds[gfx->draw_list.count];
-    cmd->type   = MVN_DRAW_SSPR;
+    cmd->type   = DTR_DRAW_SSPR;
     cmd->layer  = layer;
     cmd->order  = gfx->draw_list.count;
     cmd->u.sspr.sx = sx;
@@ -1499,7 +1499,7 @@ void mvn_gfx_dl_sspr(mvn_graphics_t *gfx,
     ++gfx->draw_list.count;
 }
 
-void mvn_gfx_dl_spr_rot(mvn_graphics_t *gfx,
+void dtr_gfx_dl_spr_rot(dtr_graphics_t *gfx,
                         int32_t         layer,
                         int32_t         idx,
                         int32_t         x,
@@ -1508,13 +1508,13 @@ void mvn_gfx_dl_spr_rot(mvn_graphics_t *gfx,
                         int32_t         cx,
                         int32_t         cy)
 {
-    mvn_draw_cmd_t *cmd;
+    dtr_draw_cmd_t *cmd;
 
     if (gfx->draw_list.count >= CONSOLE_MAX_DRAW_CMDS) {
         return;
     }
     cmd             = &gfx->draw_list.cmds[gfx->draw_list.count];
-    cmd->type       = MVN_DRAW_SPR_ROT;
+    cmd->type       = DTR_DRAW_SPR_ROT;
     cmd->layer      = layer;
     cmd->order      = gfx->draw_list.count;
     cmd->u.spr_rot.idx   = idx;
@@ -1526,7 +1526,7 @@ void mvn_gfx_dl_spr_rot(mvn_graphics_t *gfx,
     ++gfx->draw_list.count;
 }
 
-void mvn_gfx_dl_spr_affine(mvn_graphics_t *gfx,
+void dtr_gfx_dl_spr_affine(dtr_graphics_t *gfx,
                            int32_t         layer,
                            int32_t         idx,
                            int32_t         x,
@@ -1536,13 +1536,13 @@ void mvn_gfx_dl_spr_affine(mvn_graphics_t *gfx,
                            float           rot_x,
                            float           rot_y)
 {
-    mvn_draw_cmd_t *cmd;
+    dtr_draw_cmd_t *cmd;
 
     if (gfx->draw_list.count >= CONSOLE_MAX_DRAW_CMDS) {
         return;
     }
     cmd                = &gfx->draw_list.cmds[gfx->draw_list.count];
-    cmd->type          = MVN_DRAW_SPR_AFFINE;
+    cmd->type          = DTR_DRAW_SPR_AFFINE;
     cmd->layer         = layer;
     cmd->order         = gfx->draw_list.count;
     cmd->u.spr_affine.idx = idx;
@@ -1555,7 +1555,7 @@ void mvn_gfx_dl_spr_affine(mvn_graphics_t *gfx,
     ++gfx->draw_list.count;
 }
 
-void mvn_gfx_dl_end(mvn_graphics_t *gfx)
+void dtr_gfx_dl_end(dtr_graphics_t *gfx)
 {
     gfx->draw_list.active = false;
     if (gfx->draw_list.count == 0) {
@@ -1565,17 +1565,17 @@ void mvn_gfx_dl_end(mvn_graphics_t *gfx)
     /* Sort by layer then insertion order */
     qsort(gfx->draw_list.cmds,
           (size_t)gfx->draw_list.count,
-          sizeof(mvn_draw_cmd_t),
+          sizeof(dtr_draw_cmd_t),
           prv_draw_cmd_cmp);
 
     /* Flush all commands */
     for (int32_t i = 0; i < gfx->draw_list.count; ++i) {
-        mvn_draw_cmd_t *cmd;
+        dtr_draw_cmd_t *cmd;
 
         cmd = &gfx->draw_list.cmds[i];
         switch (cmd->type) {
-            case MVN_DRAW_SPR:
-                mvn_gfx_spr(gfx,
+            case DTR_DRAW_SPR:
+                dtr_gfx_spr(gfx,
                             cmd->u.spr.idx,
                             cmd->u.spr.x,
                             cmd->u.spr.y,
@@ -1584,8 +1584,8 @@ void mvn_gfx_dl_end(mvn_graphics_t *gfx)
                             cmd->u.spr.fx,
                             cmd->u.spr.fy);
                 break;
-            case MVN_DRAW_SSPR:
-                mvn_gfx_sspr(gfx,
+            case DTR_DRAW_SSPR:
+                dtr_gfx_sspr(gfx,
                              cmd->u.sspr.sx,
                              cmd->u.sspr.sy,
                              cmd->u.sspr.sw,
@@ -1595,8 +1595,8 @@ void mvn_gfx_dl_end(mvn_graphics_t *gfx)
                              cmd->u.sspr.dw,
                              cmd->u.sspr.dh);
                 break;
-            case MVN_DRAW_SPR_ROT:
-                mvn_gfx_spr_rot(gfx,
+            case DTR_DRAW_SPR_ROT:
+                dtr_gfx_spr_rot(gfx,
                                 cmd->u.spr_rot.idx,
                                 cmd->u.spr_rot.x,
                                 cmd->u.spr_rot.y,
@@ -1604,8 +1604,8 @@ void mvn_gfx_dl_end(mvn_graphics_t *gfx)
                                 cmd->u.spr_rot.cx,
                                 cmd->u.spr_rot.cy);
                 break;
-            case MVN_DRAW_SPR_AFFINE:
-                mvn_gfx_spr_affine(gfx,
+            case DTR_DRAW_SPR_AFFINE:
+                dtr_gfx_spr_affine(gfx,
                                    cmd->u.spr_affine.idx,
                                    cmd->u.spr_affine.x,
                                    cmd->u.spr_affine.y,
@@ -1624,7 +1624,7 @@ void mvn_gfx_dl_end(mvn_graphics_t *gfx)
 /*  Flip — palette framebuffer → RGBA                                  */
 /* ------------------------------------------------------------------ */
 
-void mvn_gfx_flip_to(mvn_graphics_t *gfx, uint32_t *dst)
+void dtr_gfx_flip_to(dtr_graphics_t *gfx, uint32_t *dst)
 {
     int32_t total;
 
@@ -1638,36 +1638,36 @@ void mvn_gfx_flip_to(mvn_graphics_t *gfx, uint32_t *dst)
     }
 }
 
-void mvn_gfx_flip(mvn_graphics_t *gfx)
+void dtr_gfx_flip(dtr_graphics_t *gfx)
 {
-    mvn_gfx_flip_to(gfx, gfx->pixels);
+    dtr_gfx_flip_to(gfx, gfx->pixels);
 }
 
 /* ------------------------------------------------------------------ */
 /*  Sprite sheet loading                                               */
 /* ------------------------------------------------------------------ */
 
-bool mvn_gfx_load_sheet(mvn_graphics_t *gfx,
+bool dtr_gfx_load_sheet(dtr_graphics_t *gfx,
                         const uint8_t * rgba,
                         int32_t         width,
                         int32_t         height,
                         int32_t         tile_w,
                         int32_t         tile_h)
 {
-    mvn_sprite_sheet_t *sht;
+    dtr_sprite_sheet_t *sht;
     int32_t             total;
     size_t              alloc_sz;
 
     sht = &gfx->sheet;
 
     if (sht->pixels != NULL) {
-        MVN_FREE(sht->pixels);
+        DTR_FREE(sht->pixels);
         sht->pixels = NULL;
     }
 
     total       = width * height;
     alloc_sz    = (size_t)total;
-    sht->pixels = MVN_MALLOC(alloc_sz);
+    sht->pixels = DTR_MALLOC(alloc_sz);
     if (sht->pixels == NULL) {
         return false;
     }

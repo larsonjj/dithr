@@ -1,7 +1,7 @@
 {
   "meta": {
     "title": "PostFX Demo",
-    "author": "mvngin",
+    "author": "dithr",
     "version": "1.0.0",
     "description": "Demonstrates the post-processing pipeline: CRT, scanlines, bloom, aberration"
   },
