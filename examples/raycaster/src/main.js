@@ -43,14 +43,15 @@ var WALL_COL_NS = 12; // light blue
 var WALL_COL_EW = 1; // dark blue
 
 // Palette indices used for distance shading (light → dark)
-var SHADE_NS = [12, 13, 5, 1];
-var SHADE_EW = [6, 13, 5, 1];
+var SHADE_NS = [12, 13, 2, 1];
+var SHADE_EW = [6, 13, 2, 1];
 
 // --- Player state ----------------------------------------------------
 
 var px = 2.5;
 var py = 2.5;
 var pa = 0; // angle in radians
+var show_minimap = true; // toggle with M key
 
 // --- Helpers ---------------------------------------------------------
 
@@ -75,6 +76,9 @@ function _init() {
 }
 
 function _update(dt) {
+    // Toggle minimap
+    if (key.btnp(key.M)) show_minimap = !show_minimap;
+
     // Turning
     if (input.btn("turn_left")) pa -= TURN_SPEED * dt;
     if (input.btn("turn_right")) pa += TURN_SPEED * dt;
@@ -140,114 +144,132 @@ function _draw() {
     // Floor
     gfx.rectfill(0, HALF_H, SCREEN_W - 1, SCREEN_H - 1, 5);
 
-    // --- Cast rays ---------------------------------------------------
+    // --- Cast rays (batched drawing) ---------------------------------
 
-    for (var i = 0; i < NUM_RAYS; i++) {
-        var ray_angle = pa - HALF_FOV + (i / NUM_RAYS) * FOV;
-        var ray_cos = Math.cos(ray_angle);
-        var ray_sin = Math.sin(ray_angle);
+    var angle_step = FOV / NUM_RAYS;
+    var start_angle = pa - HALF_FOV;
+    var ipx = math.flr(px);
+    var ipy = math.flr(py);
 
-        // DDA setup
-        var map_x = math.flr(px);
-        var map_y = math.flr(py);
+    // State for batching adjacent columns with same color & height
+    var batch_x0 = 0;
+    var batch_start = 0;
+    var batch_end = 0;
+    var batch_col = -1;
 
-        // Step direction
-        var step_x = ray_cos >= 0 ? 1 : -1;
-        var step_y = ray_sin >= 0 ? 1 : -1;
+    for (var i = 0; i <= NUM_RAYS; i++) {
+        var col = -1;
+        var draw_start = 0;
+        var draw_end = 0;
 
-        // Distance between consecutive X / Y grid crossings
-        var delta_x = ray_cos === 0 ? 1e30 : math.abs(1 / ray_cos);
-        var delta_y = ray_sin === 0 ? 1e30 : math.abs(1 / ray_sin);
+        if (i < NUM_RAYS) {
+            var ray_angle = start_angle + i * angle_step;
+            var ray_cos = Math.cos(ray_angle);
+            var ray_sin = Math.sin(ray_angle);
 
-        // Distance to first X / Y crossing
-        var side_x, side_y;
-        if (ray_cos < 0) {
-            side_x = (px - map_x) * delta_x;
-        } else {
-            side_x = (map_x + 1 - px) * delta_x;
-        }
-        if (ray_sin < 0) {
-            side_y = (py - map_y) * delta_y;
-        } else {
-            side_y = (map_y + 1 - py) * delta_y;
-        }
+            // DDA setup
+            var map_x = ipx;
+            var map_y = ipy;
 
-        // DDA traversal
-        var hit = 0;
-        var side = 0; // 0 = NS wall (vertical), 1 = EW wall (horizontal)
-        while (hit === 0) {
-            if (side_x < side_y) {
-                side_x += delta_x;
-                map_x += step_x;
-                side = 0;
+            var step_x = ray_cos >= 0 ? 1 : -1;
+            var step_y = ray_sin >= 0 ? 1 : -1;
+
+            var delta_x = ray_cos === 0 ? 1e30 : ray_cos > 0 ? 1 / ray_cos : -1 / ray_cos;
+            var delta_y = ray_sin === 0 ? 1e30 : ray_sin > 0 ? 1 / ray_sin : -1 / ray_sin;
+
+            var side_x = ray_cos < 0 ? (px - map_x) * delta_x : (map_x + 1 - px) * delta_x;
+            var side_y = ray_sin < 0 ? (py - map_y) * delta_y : (map_y + 1 - py) * delta_y;
+
+            // DDA traversal — inline map lookup
+            var side = 0;
+            for (;;) {
+                if (side_x < side_y) {
+                    side_x += delta_x;
+                    map_x += step_x;
+                    side = 0;
+                } else {
+                    side_y += delta_y;
+                    map_y += step_y;
+                    side = 1;
+                }
+                if (
+                    map_x < 0 ||
+                    map_x >= MAP_W ||
+                    map_y < 0 ||
+                    map_y >= MAP_H ||
+                    world_map[map_y * MAP_W + map_x] !== 0
+                ) {
+                    break;
+                }
+            }
+
+            // Perpendicular distance (fixes fisheye)
+            var perp_dist;
+            if (side === 0) {
+                perp_dist = (map_x - px + (1 - step_x) / 2) / ray_cos;
             } else {
-                side_y += delta_y;
-                map_y += step_y;
-                side = 1;
+                perp_dist = (map_y - py + (1 - step_y) / 2) / ray_sin;
             }
-            if (map_at(map_x, map_y) !== 0) {
-                hit = 1;
-            }
+            if (perp_dist < 0.01) perp_dist = 0.01;
+
+            // Wall column height
+            var line_h = math.flr(SCREEN_H / perp_dist);
+            draw_start = math.flr(HALF_H - line_h / 2);
+            draw_end = draw_start + line_h - 1;
+            if (draw_start < 0) draw_start = 0;
+            if (draw_end >= SCREEN_H) draw_end = SCREEN_H - 1;
+
+            // Shade by distance + side
+            col = shade_color(perp_dist, side === 0);
         }
 
-        // Perpendicular distance (fixes fisheye)
-        var perp_dist;
-        if (side === 0) {
-            perp_dist = (map_x - px + (1 - step_x) / 2) / ray_cos;
-        } else {
-            perp_dist = (map_y - py + (1 - step_y) / 2) / ray_sin;
-        }
-        if (perp_dist < 0.01) perp_dist = 0.01;
-
-        // Wall column height
-        var line_h = math.flr(SCREEN_H / perp_dist);
-        var draw_start = math.flr(HALF_H - line_h / 2);
-        var draw_end = draw_start + line_h - 1;
-
-        // Clamp to screen
-        if (draw_start < 0) draw_start = 0;
-        if (draw_end >= SCREEN_H) draw_end = SCREEN_H - 1;
-
-        // Shade by distance + side
-        var col = shade_color(perp_dist, side === 0);
-
-        // Draw vertical wall strip
-        gfx.line(i, draw_start, i, draw_end, col);
-    }
-
-    // --- Minimap overlay (top-left) ----------------------------------
-
-    var mm_scale = 4;
-    var mm_x0 = 4;
-    var mm_y0 = 4;
-
-    for (var my = 0; my < MAP_H; my++) {
-        for (var mx = 0; mx < MAP_W; mx++) {
-            var c = world_map[my * MAP_W + mx] !== 0 ? 6 : 0;
-            gfx.rectfill(
-                mm_x0 + mx * mm_scale,
-                mm_y0 + my * mm_scale,
-                mm_x0 + mx * mm_scale + mm_scale - 1,
-                mm_y0 + my * mm_scale + mm_scale - 1,
-                c,
-            );
+        // Flush batch when color or height changes (or last column)
+        if (col !== batch_col || draw_start !== batch_start || draw_end !== batch_end) {
+            if (batch_col >= 0) {
+                gfx.rectfill(batch_x0, batch_start, i - 1, batch_end, batch_col);
+            }
+            batch_x0 = i;
+            batch_start = draw_start;
+            batch_end = draw_end;
+            batch_col = col;
         }
     }
 
-    // Player dot on minimap
-    var pp_x = mm_x0 + math.flr(px * mm_scale);
-    var pp_y = mm_y0 + math.flr(py * mm_scale);
-    gfx.rectfill(pp_x - 1, pp_y - 1, pp_x + 1, pp_y + 1, 8);
+    // --- Minimap overlay (top-left, toggleable with M) ---------------
 
-    // Direction line on minimap
-    var dir_len = 6;
-    gfx.line(
-        pp_x,
-        pp_y,
-        pp_x + math.flr(Math.cos(pa) * dir_len),
-        pp_y + math.flr(Math.sin(pa) * dir_len),
-        11,
-    );
+    if (show_minimap) {
+        var mm_scale = 4;
+        var mm_x0 = 4;
+        var mm_y0 = 4;
+
+        for (var my = 0; my < MAP_H; my++) {
+            for (var mx = 0; mx < MAP_W; mx++) {
+                var c = world_map[my * MAP_W + mx] !== 0 ? 6 : 0;
+                gfx.rectfill(
+                    mm_x0 + mx * mm_scale,
+                    mm_y0 + my * mm_scale,
+                    mm_x0 + mx * mm_scale + mm_scale - 1,
+                    mm_y0 + my * mm_scale + mm_scale - 1,
+                    c,
+                );
+            }
+        }
+
+        // Player dot on minimap
+        var pp_x = mm_x0 + math.flr(px * mm_scale);
+        var pp_y = mm_y0 + math.flr(py * mm_scale);
+        gfx.rectfill(pp_x - 1, pp_y - 1, pp_x + 1, pp_y + 1, 8);
+
+        // Direction line on minimap
+        var dir_len = 6;
+        gfx.line(
+            pp_x,
+            pp_y,
+            pp_x + math.flr(Math.cos(pa) * dir_len),
+            pp_y + math.flr(Math.sin(pa) * dir_len),
+            11,
+        );
+    }
 
     // --- Left stick debug overlay ------------------------------------
 
@@ -263,7 +285,7 @@ function _draw() {
 
     // --- HUD ---------------------------------------------------------
 
-    gfx.print("WASD/Arrows: Move & Turn", 76, 2, 7);
+    gfx.print("WASD/Arrows: Move  M: Map", 72, 2, 7);
 
     var fps_str = "FPS:" + math.flr(sys.fps());
     var fps_w = fps_str.length * 6 + 2;
