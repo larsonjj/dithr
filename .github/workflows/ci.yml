@@ -36,7 +36,7 @@ jobs:
             - name: Install dependencies
               run: |
                   sudo apt-get update
-                  sudo apt-get install -y ninja-build \
+                  sudo apt-get install -y ninja-build xvfb \
                     libx11-dev libxext-dev libxcursor-dev libxi-dev \
                     libxfixes-dev libxrandr-dev libxrender-dev libxss-dev \
                     libxtst-dev libxxf86vm-dev \
@@ -60,7 +60,7 @@ jobs:
               env:
                   SDL_VIDEODRIVER: dummy
                   SDL_AUDIODRIVER: dummy
-              run: ctest --output-on-failure --timeout 60
+              run: xvfb-run ctest --output-on-failure --timeout 60
 
     # ---------------------------------------------------------------------------
     #  macOS — AppleClang
@@ -69,9 +69,6 @@ jobs:
         runs-on: macos-latest
         steps:
             - uses: actions/checkout@v6
-
-            - name: Install Ninja
-              run: brew install ninja
 
             - name: Configure
               run: >
