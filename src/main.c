@@ -11,6 +11,10 @@
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_main.h>
 
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+#endif
+
 /* ------------------------------------------------------------------ */
 /*  App state                                                          */
 /* ------------------------------------------------------------------ */
@@ -121,6 +125,17 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char **argv)
     app->cart_path = opts.cart_path;
 #endif
     SDL_Log("dithr %s — loading %s", CONSOLE_VERSION, app->cart_path);
+
+#ifdef __EMSCRIPTEN__
+    /* Mount IDBFS so SDL_GetPrefPath writes persist to IndexedDB */
+    EM_ASM(
+        FS.mkdir('/libsdl');
+        FS.mount(IDBFS, {}, '/libsdl');
+        FS.syncfs(true, function(err) {
+            if (err) console.warn('IDBFS initial sync failed:', err);
+        });
+    );
+#endif
 
     app->con = dtr_console_create(app->cart_path);
     if (app->con == NULL) {

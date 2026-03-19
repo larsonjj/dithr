@@ -25,6 +25,7 @@ static JSValue js_cart_save(JSContext *ctx, JSValueConst this_val, int argc, JSV
 
     if (key != NULL && value != NULL) {
         dtr_cart_save(CART(ctx), key, value);
+        dtr_cart_persist_save(CART(ctx));
     }
 
     if (key != NULL) {
@@ -95,6 +96,7 @@ static JSValue js_cart_delete(JSContext *ctx, JSValueConst this_val, int argc, J
     }
 
     dtr_cart_delete_key(CART(ctx), key);
+    dtr_cart_persist_save(CART(ctx));
     JS_FreeCString(ctx, key);
     return JS_UNDEFINED;
 }
@@ -111,6 +113,7 @@ static JSValue js_cart_dset(JSContext *ctx, JSValueConst this_val, int argc, JSV
     value = dtr_api_opt_float(ctx, argc, argv, 1, 0.0);
 
     dtr_cart_dset(CART(ctx), slot, value);
+    dtr_cart_persist_save(CART(ctx));
     return JS_UNDEFINED;
 }
 

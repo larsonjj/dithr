@@ -759,6 +759,18 @@ bool dtr_cart_persist_save(dtr_cart_t *cart)
             SDL_Log("persist: failed to write %s: %s", path, SDL_GetError());
         }
         DTR_FREE(buf);
+
+#ifdef __EMSCRIPTEN__
+        /* Flush virtual FS to IndexedDB so data survives tab close */
+        if (ok) {
+            EM_ASM(
+                FS.syncfs(false, function(err) {
+                    if (err) console.warn('IDBFS sync failed:', err);
+                });
+            );
+        }
+#endif
+
         return ok;
     }
 }

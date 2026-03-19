@@ -238,6 +238,7 @@ if (EMSCRIPTEN)
         -sSTACK_SIZE=1048576
         -sINITIAL_MEMORY=67108864
         -sENVIRONMENT=web
+        -lidbfs.js
         -flto
         -Oz
     )
