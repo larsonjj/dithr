@@ -12,6 +12,7 @@
 #   postfx_demo        - Post-processing effect stack
 #   persistence        - Save/load data with cart.dset/dget
 #   platformer         - Simple side-scrolling platformer
+#   raycaster          - Wolfenstein-style raycaster
 
 # Install example carts alongside the executable
 install(DIRECTORY
@@ -23,6 +24,7 @@ install(DIRECTORY
     postfx_demo
     persistence
     platformer
+    raycaster
     DESTINATION examples
     PATTERN "node_modules" EXCLUDE
 )

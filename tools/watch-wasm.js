@@ -1,0 +1,289 @@
+#!/usr/bin/env node
+/**
+ * @file  watch-wasm.js
+ * @brief Watch cart source directory, auto-rebuild WASM, and serve with
+ *        live reload.  Combines file watching, cmake rebuild, static
+ *        serving, and SSE-based browser reload into one process.
+ *
+ * Usage:  node tools/watch-wasm.js <cartDir> [port]
+ *
+ * Environment:
+ *   Expects the WASM build to already be configured
+ *   (cmake --preset wasm -DDTR_WASM_CART_DIR=<cartDir>).
+ */
+
+const http = require("node:http");
+const fs = require("node:fs");
+const path = require("node:path");
+const zlib = require("node:zlib");
+const { execSync, spawn } = require("node:child_process");
+
+const CART_DIR = process.argv[2];
+if (!CART_DIR) {
+    console.error("Usage: node tools/watch-wasm.js <cartDir> [port]");
+    process.exit(1);
+}
+
+const PORT = parseInt(process.argv[3], 10) || 8080;
+const ROOT = path.resolve(__dirname, "..");
+const BUILD_DIR = path.join(ROOT, "build", "wasm");
+const CART_ABS = path.resolve(CART_DIR);
+
+/* ------------------------------------------------------------------ */
+/*  SSE live-reload                                                    */
+/* ------------------------------------------------------------------ */
+
+/** @type {Set<import("node:http").ServerResponse>} */
+const sseClients = new Set();
+
+const RELOAD_SNIPPET = `
+<script>
+(function(){
+  var es = new EventSource("/__livereload");
+  es.onmessage = function(){ location.reload(); };
+  es.onerror = function(){ es.close(); setTimeout(function(){ location.reload(); }, 2000); };
+})();
+</script>
+</head>`;
+
+/* ------------------------------------------------------------------ */
+/*  Static file server                                                 */
+/* ------------------------------------------------------------------ */
+
+const MIME_TYPES = {
+    ".html": "text/html; charset=utf-8",
+    ".js": "application/javascript; charset=utf-8",
+    ".wasm": "application/wasm",
+    ".data": "application/octet-stream",
+    ".json": "application/json; charset=utf-8",
+    ".css": "text/css; charset=utf-8",
+    ".png": "image/png",
+    ".ico": "image/x-icon",
+    ".svg": "image/svg+xml",
+    ".txt": "text/plain; charset=utf-8",
+};
+
+function getMime(fp) {
+    return MIME_TYPES[path.extname(fp).toLowerCase()] || "application/octet-stream";
+}
+
+function pickEncoding(accept) {
+    if (accept.includes("br")) return "br";
+    if (accept.includes("gzip")) return "gzip";
+    return null;
+}
+
+function compressStream(enc) {
+    if (enc === "br") return zlib.createBrotliCompress();
+    if (enc === "gzip") return zlib.createGzip();
+    return null;
+}
+
+const server = http.createServer((req, res) => {
+    const url = new URL(req.url, `http://localhost:${PORT}`);
+    let relPath = decodeURIComponent(url.pathname);
+
+    /* SSE endpoint for live reload */
+    if (relPath === "/__livereload") {
+        res.writeHead(200, {
+            "Content-Type": "text/event-stream",
+            "Cache-Control": "no-cache",
+            Connection: "keep-alive",
+            "Cross-Origin-Opener-Policy": "same-origin",
+            "Cross-Origin-Embedder-Policy": "require-corp",
+        });
+        res.write(":\n\n"); // SSE comment to keep connection alive
+        sseClients.add(res);
+        req.on("close", () => sseClients.delete(res));
+        return;
+    }
+
+    if (relPath === "/") relPath = "/dithr.html";
+
+    // Prevent path traversal
+    const filePath = path.join(BUILD_DIR, relPath);
+    if (!filePath.startsWith(BUILD_DIR)) {
+        res.writeHead(403);
+        res.end("Forbidden");
+        return;
+    }
+
+    fs.stat(filePath, (err, stat) => {
+        if (err || !stat.isFile()) {
+            res.writeHead(404);
+            res.end("Not Found");
+            return;
+        }
+
+        const mime = getMime(filePath);
+        const accept = req.headers["accept-encoding"] || "";
+        const encoding = pickEncoding(accept);
+
+        res.setHeader("Content-Type", mime);
+        res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0");
+        res.setHeader("Pragma", "no-cache");
+        res.setHeader("Expires", "0");
+        res.setHeader("Cross-Origin-Opener-Policy", "same-origin");
+        res.setHeader("Cross-Origin-Embedder-Policy", "require-corp");
+
+        /* Inject live-reload snippet into HTML */
+        if (mime.startsWith("text/html")) {
+            fs.readFile(filePath, "utf8", (readErr, html) => {
+                if (readErr) {
+                    res.writeHead(500);
+                    res.end("Read error");
+                    return;
+                }
+                html = html.replace("</head>", RELOAD_SNIPPET);
+
+                const buf = Buffer.from(html, "utf8");
+                const comp = compressStream(encoding);
+                if (comp) {
+                    res.setHeader("Content-Encoding", encoding);
+                    res.writeHead(200);
+                    comp.end(buf);
+                    comp.pipe(res);
+                } else {
+                    res.setHeader("Content-Length", buf.length);
+                    res.writeHead(200);
+                    res.end(buf);
+                }
+            });
+            return;
+        }
+
+        const stream = fs.createReadStream(filePath);
+        const comp = compressStream(encoding);
+        if (comp) {
+            res.setHeader("Content-Encoding", encoding);
+            res.writeHead(200);
+            stream.pipe(comp).pipe(res);
+        } else {
+            res.setHeader("Content-Length", stat.size);
+            res.writeHead(200);
+            stream.pipe(res);
+        }
+    });
+});
+
+/* ------------------------------------------------------------------ */
+/*  Auto-rebuild on cart file changes                                  */
+/* ------------------------------------------------------------------ */
+
+let building = false;
+let pendingRebuild = false;
+
+function rebuild(openBrowser) {
+    if (building) {
+        pendingRebuild = true;
+        return;
+    }
+    building = true;
+    console.log("\n[watch] Rebuilding…");
+
+    const proc = spawn("cmake", ["--build", BUILD_DIR], {
+        cwd: ROOT,
+        stdio: "inherit",
+        shell: true,
+    });
+
+    proc.on("close", (code) => {
+        building = false;
+        if (code === 0) {
+            console.log("[watch] Build succeeded");
+            if (openBrowser) {
+                startServer();
+            } else {
+                console.log("[watch] Reloading browser");
+                for (const client of sseClients) {
+                    client.write("data: reload\n\n");
+                }
+            }
+        } else {
+            console.log(`[watch] Build failed (exit ${code})`);
+            if (openBrowser) {
+                startServer(); // still start server so user can iterate
+            }
+        }
+
+        if (pendingRebuild) {
+            pendingRebuild = false;
+            rebuild(false);
+        }
+    });
+}
+
+/* Debounce: collect rapid changes into a single rebuild */
+let debounceTimer = null;
+
+function onCartChange(eventType, filename) {
+    if (filename && (filename.endsWith("~") || filename.startsWith("."))) return;
+    if (debounceTimer) clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(() => rebuild(false), 300);
+}
+
+fs.watch(CART_ABS, { recursive: true }, onCartChange);
+console.log(`[watch] Watching ${CART_ABS} for changes`);
+
+/* ------------------------------------------------------------------ */
+/*  Start server                                                       */
+/* ------------------------------------------------------------------ */
+
+function startServer() {
+    server.listen(PORT, () => {
+        const url = `http://localhost:${PORT}`;
+        console.log(`[watch] Serving ${BUILD_DIR}`);
+        console.log(`[watch]   → ${url}`);
+        console.log("[watch] Press Ctrl+C to stop.\n");
+
+        try {
+            const cmd =
+                process.platform === "win32"
+                    ? `start ${url}`
+                    : process.platform === "darwin"
+                      ? `open ${url}`
+                      : `xdg-open ${url}`;
+            execSync(cmd, { stdio: "ignore" });
+        } catch {
+            /* ignore */
+        }
+    });
+
+    server.on("error", (err) => {
+        if (err.code === "EADDRINUSE") {
+            console.log(`[watch] Port ${PORT} in use — killing previous process…`);
+            try {
+                if (process.platform === "win32") {
+                    const out = execSync(`netstat -ano | findstr :${PORT} | findstr LISTENING`, {
+                        encoding: "utf8",
+                    });
+                    const pids = new Set(
+                        out
+                            .trim()
+                            .split(/\r?\n/)
+                            .map((l) => l.trim().split(/\s+/).pop()),
+                    );
+                    for (const pid of pids) {
+                        execSync(`taskkill /F /PID ${pid}`, { stdio: "ignore" });
+                    }
+                } else {
+                    execSync(`fuser -k ${PORT}/tcp`, { stdio: "ignore" });
+                }
+            } catch {
+                /* ignore */
+            }
+            setTimeout(startServer, 500);
+        } else {
+            throw err;
+        }
+    });
+}
+
+/* Force a fresh build before serving — delete the .data file so Ninja
+ * must relink even if it thinks sources are up to date. */
+const dataFile = path.join(BUILD_DIR, "dithr.data");
+if (fs.existsSync(dataFile)) {
+    fs.unlinkSync(dataFile);
+    console.log("[watch] Removed stale dithr.data to force relink");
+}
+rebuild(true);

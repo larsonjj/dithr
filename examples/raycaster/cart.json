@@ -1,0 +1,34 @@
+{
+  "meta": {
+    "title": "Raycaster",
+    "author": "dithr",
+    "version": "1.0.0",
+    "description": "Basic Wolfenstein-style raycaster demo"
+  },
+  "display": {
+    "width": 320,
+    "height": 180,
+    "scale": 3
+  },
+  "timing": {
+    "fps": 60
+  },
+  "sprites": {
+    "tileW": 8,
+    "tileH": 8
+  },
+  "audio": {
+    "channels": 8
+  },
+  "input": {
+    "default_mappings": {
+      "forward": ["KEY_UP", "KEY_W", "PAD_UP"],
+      "back": ["KEY_DOWN", "KEY_S", "PAD_DOWN"],
+      "strafe_left": ["KEY_A", "PAD_L1"],
+      "strafe_right": ["KEY_D", "PAD_R1"],
+      "turn_left": ["KEY_LEFT", "PAD_LEFT"],
+      "turn_right": ["KEY_RIGHT", "PAD_RIGHT"]
+    }
+  },
+  "code": "src/main.js"
+}

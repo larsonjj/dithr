@@ -73,6 +73,9 @@ const server = http.createServer((req, res) => {
         const encoding = pickEncoding(accept);
 
         res.setHeader("Content-Type", mime);
+        res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0");
+        res.setHeader("Pragma", "no-cache");
+        res.setHeader("Expires", "0");
         res.setHeader("Cross-Origin-Opener-Policy", "same-origin");
         res.setHeader("Cross-Origin-Embedder-Policy", "require-corp");
 

@@ -48,17 +48,24 @@
       "dependsOn": "Build (Release)"
     },
     {
+      "label": "WASM: Clean Data",
+      "type": "shell",
+      "command": "if (Test-Path build/wasm/dithr.data) { Remove-Item build/wasm/dithr.data }",
+      "problemMatcher": [],
+      "dependsOn": "WASM: Configure"
+    },
+    {
       "label": "WASM: Build",
       "type": "shell",
       "command": "cmake --build build/wasm",
       "group": "build",
       "problemMatcher": "$gcc",
-      "dependsOn": "WASM: Configure"
+      "dependsOn": "WASM: Clean Data"
     },
     {
       "label": "WASM: Configure",
       "type": "shell",
-      "command": "cmake --preset wasm -DDTR_WASM_CART_DIR=${input:wasmCart}",
+      "command": "cmake --preset wasm -DDTR_WASM_CART_DIR=${input:ExampleCartWeb}",
       "problemMatcher": []
     },
     {
@@ -68,11 +75,26 @@
       "dependsOn": "WASM: Build",
       "problemMatcher": [],
       "isBackground": true
+    },
+    {
+      "label": "WASM: Dev",
+      "type": "shell",
+      "command": "node tools/watch-wasm.js ${input:ExampleCartWeb}",
+      "dependsOn": "WASM: Configure",
+      "problemMatcher": [],
+      "isBackground": true
+    },
+    {
+      "label": "Run Example",
+      "type": "shell",
+      "command": "build/debug/Debug/dithr.exe ${input:ExampleCart}",
+      "dependsOn": "Build (Debug)",
+      "problemMatcher": []
     }
   ],
   "inputs": [
     {
-      "id": "wasmCart",
+      "id": "ExampleCartWeb",
       "type": "pickString",
       "description": "Select cart to embed in WASM build",
       "options": [
@@ -84,9 +106,27 @@
         "${workspaceFolder}/examples/audio_demo",
         "${workspaceFolder}/examples/postfx_demo",
         "${workspaceFolder}/examples/persistence",
-        "${workspaceFolder}/examples/platformer"
+        "${workspaceFolder}/examples/platformer",
+        "${workspaceFolder}/examples/raycaster"
       ],
-      "default": ""
+      "default": "examples/hello_world"
+    },
+    {
+      "id": "ExampleCart",
+      "type": "pickString",
+      "description": "Select example cartridge to run",
+      "options": [
+        "${workspaceFolder}/examples/hello_world/cart.json",
+        "${workspaceFolder}/examples/sprite_animation/cart.json",
+        "${workspaceFolder}/examples/input_demo/cart.json",
+        "${workspaceFolder}/examples/tilemap/cart.json",
+        "${workspaceFolder}/examples/audio_demo/cart.json",
+        "${workspaceFolder}/examples/postfx_demo/cart.json",
+        "${workspaceFolder}/examples/persistence/cart.json",
+        "${workspaceFolder}/examples/platformer/cart.json",
+        "${workspaceFolder}/examples/raycaster/cart.json"
+      ],
+      "default": "${workspaceFolder}/examples/hello_world/cart.json"
     }
   ]
 }

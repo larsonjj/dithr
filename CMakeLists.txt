@@ -245,6 +245,10 @@ if (EMSCRIPTEN)
             "SHELL:--preload-file ${DTR_WASM_CART_DIR}@/cart"
         )
         target_compile_definitions(dithr PRIVATE DTR_WASM_CART_PATH="/cart/cart.json")
+
+        # Track cart directory contents so Ninja relinks when assets change
+        file(GLOB_RECURSE DTR_CART_FILES "${DTR_WASM_CART_DIR}/*")
+        set_property(TARGET dithr PROPERTY LINK_DEPENDS ${DTR_CART_FILES})
     endif()
 
     # Produce .html output so the Emscripten shell page is generated
