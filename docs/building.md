@@ -9,7 +9,7 @@ dithr uses CMake with presets for easy configuration. All library dependencies
 | Tool           | Minimum version                   | Notes                                                           |
 | -------------- | --------------------------------- | --------------------------------------------------------------- |
 | CMake          | 3.22.1                            |                                                                 |
-| C compiler     | MSVC 2019+, GCC 10+, or Clang 13+ | C99 support required                                            |
+| C compiler     | MSVC 2019+, GCC 10+, or Clang 13+ | C11 support required                                            |
 | Git            | any                               | Used by FetchContent to clone dependencies                      |
 | Ninja          | 1.10+                             | Required for WASM presets; recommended for all builds           |
 | Node.js        | 18+                               | Optional — only needed for cart tooling and the WASM dev server |
@@ -125,16 +125,16 @@ cmake --preset debug -DDTR_FB_WIDTH=128 -DDTR_FB_HEIGHT=128 -DDTR_WINDOW_SCALE=4
 
 ## CMake targets
 
-| Target               | Type           | Description                              |
-| -------------------- | -------------- | ---------------------------------------- |
-| `dithr_core`        | Static library | All engine source except `main.c`        |
-| `dithr`             | Executable     | Links `dithr_core` + SDL main callbacks |
-| `test_input`         | Test exe       | Keyboard / virtual input tests           |
-| `test_cart`          | Test exe       | Cart loading tests                       |
-| `test_graphics`      | Test exe       | Graphics primitives tests                |
-| `test_event`         | Test exe       | Event bus tests                          |
-| `test_mouse_gamepad` | Test exe       | Mouse and gamepad state tests            |
-| `test_runtime`       | Test exe       | QuickJS runtime wrapper tests            |
+| Target               | Type           | Description                             |
+| -------------------- | -------------- | --------------------------------------- |
+| `dithr_core`         | Static library | All engine source except `main.c`       |
+| `dithr`              | Executable     | Links `dithr_core` + SDL main callbacks |
+| `test_input`         | Test exe       | Keyboard / virtual input tests          |
+| `test_cart`          | Test exe       | Cart loading tests                      |
+| `test_graphics`      | Test exe       | Graphics primitives tests               |
+| `test_event`         | Test exe       | Event bus tests                         |
+| `test_mouse_gamepad` | Test exe       | Mouse and gamepad state tests           |
+| `test_runtime`       | Test exe       | QuickJS runtime wrapper tests           |
 
 ## Tooling
 

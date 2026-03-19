@@ -6,7 +6,7 @@ project(dithr
     LANGUAGES C
 )
 
-set(CMAKE_C_STANDARD 99)
+set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 if (EMSCRIPTEN)
     set(CMAKE_C_EXTENSIONS ON)   # EM_ASM requires GNU extensions (-std=gnu99)
@@ -122,10 +122,6 @@ add_library(quickjs STATIC
     ${quickjs_SOURCE_DIR}/dtoa.c
 )
 target_include_directories(quickjs PUBLIC ${quickjs_SOURCE_DIR})
-set_target_properties(quickjs PROPERTIES
-    C_STANDARD 11
-    C_STANDARD_REQUIRED ON
-)
 target_compile_definitions(quickjs PRIVATE
     QUICKJS_NG_BUILD
     _GNU_SOURCE

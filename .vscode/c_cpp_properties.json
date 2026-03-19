@@ -13,7 +13,7 @@
       "macFrameworkPath": [
         "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/System/Library/Frameworks"
       ],
-      "cStandard": "c99",
+      "cStandard": "c11",
       "cppStandard": "c++20",
       "intelliSenseMode": "macos-clang-arm64",
       "configurationProvider": "ms-vscode.cmake-tools"
@@ -28,7 +28,7 @@
         "${workspaceFolder}/build/debug/_deps/quickjs-src"
       ],
       "defines": [],
-      "cStandard": "c99",
+      "cStandard": "c11",
       "cppStandard": "c++20",
       "intelliSenseMode": "windows-msvc-x64",
       "configurationProvider": "ms-vscode.cmake-tools"
@@ -43,7 +43,7 @@
         "${workspaceFolder}/build/debug/_deps/quickjs-src"
       ],
       "defines": [],
-      "cStandard": "c99",
+      "cStandard": "c11",
       "cppStandard": "c++20",
       "intelliSenseMode": "linux-gcc-x64",
       "configurationProvider": "ms-vscode.cmake-tools"

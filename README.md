@@ -27,7 +27,7 @@ in the browser via WebAssembly.
 | Tool       | Version             | Notes                                       |
 | ---------- | ------------------- | ------------------------------------------- |
 | CMake      | >= 3.22.1           |                                             |
-| C compiler | MSVC, GCC, or Clang | C99                                         |
+| C compiler | MSVC, GCC, or Clang | C11                                         |
 | Git        | any                 | For FetchContent                            |
 | Node.js    | >= 18               | Optional — cart tooling and WASM dev server |
 | Emscripten | >= 3.x              | Optional — WASM builds only                 |

@@ -7,7 +7,7 @@ contributing to the engine source code.
 
 dithr is a **fantasy console**: a small, opinionated game runtime with
 fixed-size framebuffer rendering, a built-in sprite/tilemap pipeline, and a
-JavaScript scripting layer powered by QuickJS-NG. The engine is written in C99
+JavaScript scripting layer powered by QuickJS-NG. The engine is written in C11
 and uses SDL3 for windowing, rendering, input, and audio.
 
 ```
