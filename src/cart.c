@@ -7,6 +7,10 @@
 
 #include "runtime.h"
 
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+#endif
+
 /* ------------------------------------------------------------------ */
 /*  Create                                                             */
 /* ------------------------------------------------------------------ */
@@ -763,11 +767,14 @@ bool dtr_cart_persist_save(dtr_cart_t *cart)
 #ifdef __EMSCRIPTEN__
         /* Flush virtual FS to IndexedDB so data survives tab close */
         if (ok) {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wvariadic-macro-arguments-omitted"
             EM_ASM(
                 FS.syncfs(false, function(err) {
                     if (err) console.warn('IDBFS sync failed:', err);
                 });
             );
+#pragma clang diagnostic pop
         }
 #endif
 

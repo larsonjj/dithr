@@ -22,7 +22,23 @@
 typedef struct app_state {
     dtr_console_t *con;
     const char *   cart_path;
+#ifdef __EMSCRIPTEN__
+    bool           idbfs_ready; /* true once IDBFS initial sync completes */
+#endif
 } app_state_t;
+
+#ifdef __EMSCRIPTEN__
+/* Global pointer so the IDBFS callback can set the ready flag */
+static app_state_t *s_wasm_app;
+
+/* Called from JS when FS.syncfs(true) finishes */
+EMSCRIPTEN_KEEPALIVE void dtr_idbfs_ready(void)
+{
+    if (s_wasm_app != NULL) {
+        s_wasm_app->idbfs_ready = true;
+    }
+}
+#endif
 
 /* ------------------------------------------------------------------ */
 /*  CLI options                                                        */
@@ -127,14 +143,25 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char **argv)
     SDL_Log("dithr %s — loading %s", CONSOLE_VERSION, app->cart_path);
 
 #ifdef __EMSCRIPTEN__
-    /* Mount IDBFS so SDL_GetPrefPath writes persist to IndexedDB */
+    /* Mount IDBFS so SDL_GetPrefPath writes persist to IndexedDB.
+     * syncfs(true) is async — console creation is deferred to SDL_AppIterate
+     * so the virtual FS is populated before persist_load runs. */
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wvariadic-macro-arguments-omitted"
     EM_ASM(
         FS.mkdir('/libsdl');
         FS.mount(IDBFS, {}, '/libsdl');
         FS.syncfs(true, function(err) {
             if (err) console.warn('IDBFS initial sync failed:', err);
+            Module._dtr_idbfs_ready();
         });
     );
+#pragma clang diagnostic pop
+
+    app->idbfs_ready = false;
+    s_wasm_app = app;
+    *appstate = app;
+    return SDL_APP_CONTINUE;
 #endif
 
     app->con = dtr_console_create(app->cart_path);
@@ -174,6 +201,10 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event)
 {
     app_state_t *app = (app_state_t *)appstate;
 
+    if (app->con == NULL) {
+        return SDL_APP_CONTINUE;
+    }
+
     dtr_console_event(app->con, event);
 
     if (!app->con->running) {
@@ -190,6 +221,20 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event)
 SDL_AppResult SDL_AppIterate(void *appstate)
 {
     app_state_t *app = (app_state_t *)appstate;
+
+#ifdef __EMSCRIPTEN__
+    /* Deferred console creation: wait for IDBFS sync to finish */
+    if (app->con == NULL) {
+        if (!app->idbfs_ready) {
+            return SDL_APP_CONTINUE; /* still waiting */
+        }
+        app->con = dtr_console_create(app->cart_path);
+        if (app->con == NULL) {
+            SDL_Log("Failed to create console");
+            return SDL_APP_FAILURE;
+        }
+    }
+#endif
 
     dtr_console_iterate(app->con);
 

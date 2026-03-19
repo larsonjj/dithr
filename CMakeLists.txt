@@ -9,7 +9,7 @@ project(dithr
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 if (EMSCRIPTEN)
-    set(CMAKE_C_EXTENSIONS ON)   # EM_ASM requires GNU extensions (-std=gnu99)
+    set(CMAKE_C_EXTENSIONS ON)   # EM_ASM requires GNU extensions (-std=gnu11)
 else()
     set(CMAKE_C_EXTENSIONS OFF)
 endif()
