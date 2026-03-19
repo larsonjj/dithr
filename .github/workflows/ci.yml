@@ -53,7 +53,10 @@ jobs:
 
             - name: Test
               working-directory: build/debug
-              run: ctest --output-on-failure
+              env:
+                  SDL_VIDEODRIVER: dummy
+                  SDL_AUDIODRIVER: dummy
+              run: ctest --output-on-failure --timeout 60
 
     # ---------------------------------------------------------------------------
     #  macOS — AppleClang
