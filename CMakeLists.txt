@@ -44,6 +44,12 @@ set(DTR_VERSION_STR       "0.1.0" CACHE STRING "Engine version string")
 include(FetchContent)
 
 # SDL3
+set(SDL_HAPTIC  OFF)
+set(SDL_POWER   OFF)
+set(SDL_SENSOR  OFF)
+set(SDL_CAMERA  OFF)
+set(SDL_HIDAPI  OFF)
+set(SDL_LOCALE  ON)
 FetchContent_Declare(
     SDL3
     GIT_REPOSITORY https://github.com/libsdl-org/SDL.git
@@ -53,11 +59,12 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(SDL3)
 
 # SDL3_mixer
-set(SDLMIXER_FLAC OFF)
-set(SDLMIXER_GME  OFF)
-set(SDLMIXER_MOD  OFF)
-set(SDLMIXER_MIDI OFF)
-set(SDLMIXER_OPUS OFF)
+set(SDLMIXER_FLAC    OFF)
+set(SDLMIXER_GME     OFF)
+set(SDLMIXER_MOD     OFF)
+set(SDLMIXER_MIDI    OFF)
+set(SDLMIXER_OPUS    OFF)
+set(SDLMIXER_WAVPACK OFF)
 set(MPG123_NO_ASM  ON CACHE BOOL "Disable mpg123 asm to suppress yasm warning")
 FetchContent_Declare(
     SDL3_mixer
@@ -223,10 +230,16 @@ if (EMSCRIPTEN)
     # Cart directory to embed in the virtual filesystem
     set(DTR_WASM_CART_DIR "" CACHE PATH "Cart directory to preload for WASM builds")
 
+    target_compile_options(dithr PRIVATE -Oz -flto)
+    target_compile_options(dithr_core PRIVATE -Oz -flto)
+
     target_link_options(dithr PRIVATE
         -sALLOW_MEMORY_GROWTH=1
         -sSTACK_SIZE=1048576
         -sINITIAL_MEMORY=67108864
+        -sENVIRONMENT=web
+        -flto
+        -Oz
     )
 
     # Preload cart assets into the Emscripten virtual FS
