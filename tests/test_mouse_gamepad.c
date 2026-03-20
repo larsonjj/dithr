@@ -3,7 +3,7 @@
  * \brief           Unit tests for mouse and gamepad state subsystems
  */
 
-#include <SDL3/SDL.h>
+
 #include <stdio.h>
 
 #include "test_harness.h"
@@ -239,9 +239,6 @@ int main(int argc, char *argv[])
     (void)argc;
     (void)argv;
 
-    SDL_SetHint(SDL_HINT_VIDEO_DRIVER, "dummy");
-    SDL_SetHint(SDL_HINT_AUDIO_DRIVER, "dummy");
-    SDL_Init(0);
 
     printf("test_mouse_gamepad\n");
 
@@ -265,6 +262,5 @@ int main(int argc, char *argv[])
     test_gamepad_axis_default_zero();
 
     printf("All tests passed.\n");
-    SDL_Quit();
     return 0;
 }

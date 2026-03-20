@@ -271,9 +271,6 @@ static void test_postfx_apply_aberration(void)
 
 int main(void)
 {
-    SDL_SetHint(SDL_HINT_VIDEO_DRIVER, "dummy");
-    SDL_SetHint(SDL_HINT_AUDIO_DRIVER, "dummy");
-    SDL_Init(0);
 
     printf("test_postfx\n");
 
@@ -303,6 +300,5 @@ int main(void)
     test_postfx_apply_aberration();
 
     printf("test_postfx: all passed\n");
-    SDL_Quit();
     return 0;
 }
