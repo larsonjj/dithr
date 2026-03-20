@@ -69,7 +69,7 @@
       "problemMatcher": []
     },
     {
-      "label": "WASM: Run",
+      "label": "WASM: Run Example",
       "type": "shell",
       "command": "node tools/serve-wasm.js",
       "dependsOn": "WASM: Build",
@@ -77,7 +77,7 @@
       "isBackground": true
     },
     {
-      "label": "WASM: Dev",
+      "label": "WASM: Dev Example",
       "type": "shell",
       "command": "node tools/watch-wasm.js ${input:ExampleCartWeb}",
       "dependsOn": "WASM: Configure",

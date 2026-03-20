@@ -271,18 +271,6 @@ function _draw() {
         );
     }
 
-    // --- Left stick debug overlay ------------------------------------
-
-    if (pad.connected(0)) {
-        var ls_cx = 20;
-        var ls_cy = SCREEN_H - 20;
-        var lx = pad.axis(pad.LX, 0);
-        var ly = pad.axis(pad.LY, 0);
-        gfx.circ(ls_cx, ls_cy, 10, 5);
-        gfx.circfill(ls_cx + lx * 10, ls_cy + ly * 10, 2, 11);
-        gfx.print("L", ls_cx - 2, ls_cy + 12, 6);
-    }
-
     // --- HUD ---------------------------------------------------------
 
     gfx.print("WASD/Arrows: Move  M: Map", 72, 2, 7);
