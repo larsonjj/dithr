@@ -12,7 +12,9 @@ if (WIN32)
     )
 endif()
 add_test(NAME test_input COMMAND test_input)
-set_tests_properties(test_input PROPERTIES TIMEOUT 30)
+set_tests_properties(test_input PROPERTIES
+    TIMEOUT 30
+    ENVIRONMENT "SDL_VIDEODRIVER=dummy;SDL_AUDIODRIVER=dummy")
 
 # --- Cart tests ---
 add_executable(test_cart test_cart.c)
@@ -28,7 +30,9 @@ if (WIN32)
     )
 endif()
 add_test(NAME test_cart COMMAND test_cart)
-set_tests_properties(test_cart PROPERTIES TIMEOUT 30)
+set_tests_properties(test_cart PROPERTIES
+    TIMEOUT 30
+    ENVIRONMENT "SDL_VIDEODRIVER=dummy;SDL_AUDIODRIVER=dummy")
 
 # --- Graphics tests ---
 add_executable(test_graphics test_graphics.c)
@@ -44,7 +48,9 @@ if (WIN32)
     )
 endif()
 add_test(NAME test_graphics COMMAND test_graphics)
-set_tests_properties(test_graphics PROPERTIES TIMEOUT 30)
+set_tests_properties(test_graphics PROPERTIES
+    TIMEOUT 30
+    ENVIRONMENT "SDL_VIDEODRIVER=dummy;SDL_AUDIODRIVER=dummy")
 
 # --- Event tests ---
 add_executable(test_event test_event.c)
@@ -60,7 +66,9 @@ if (WIN32)
     )
 endif()
 add_test(NAME test_event COMMAND test_event)
-set_tests_properties(test_event PROPERTIES TIMEOUT 30)
+set_tests_properties(test_event PROPERTIES
+    TIMEOUT 30
+    ENVIRONMENT "SDL_VIDEODRIVER=dummy;SDL_AUDIODRIVER=dummy")
 
 # --- Mouse / Gamepad tests ---
 add_executable(test_mouse_gamepad test_mouse_gamepad.c)
@@ -76,7 +84,9 @@ if (WIN32)
     )
 endif()
 add_test(NAME test_mouse_gamepad COMMAND test_mouse_gamepad)
-set_tests_properties(test_mouse_gamepad PROPERTIES TIMEOUT 30)
+set_tests_properties(test_mouse_gamepad PROPERTIES
+    TIMEOUT 30
+    ENVIRONMENT "SDL_VIDEODRIVER=dummy;SDL_AUDIODRIVER=dummy")
 
 # --- Runtime tests ---
 add_executable(test_runtime test_runtime.c)
@@ -92,7 +102,9 @@ if (WIN32)
     )
 endif()
 add_test(NAME test_runtime COMMAND test_runtime)
-set_tests_properties(test_runtime PROPERTIES TIMEOUT 30)
+set_tests_properties(test_runtime PROPERTIES
+    TIMEOUT 30
+    ENVIRONMENT "SDL_VIDEODRIVER=dummy;SDL_AUDIODRIVER=dummy")
 
 # --- Audio tests ---
 add_executable(test_audio test_audio.c)
@@ -108,7 +120,9 @@ if (WIN32)
     )
 endif()
 add_test(NAME test_audio COMMAND test_audio)
-set_tests_properties(test_audio PROPERTIES TIMEOUT 30)
+set_tests_properties(test_audio PROPERTIES
+    TIMEOUT 30
+    ENVIRONMENT "SDL_VIDEODRIVER=dummy;SDL_AUDIODRIVER=dummy")
 
 # --- PostFX tests ---
 add_executable(test_postfx test_postfx.c)
@@ -124,4 +138,6 @@ if (WIN32)
     )
 endif()
 add_test(NAME test_postfx COMMAND test_postfx)
-set_tests_properties(test_postfx PROPERTIES TIMEOUT 30)
+set_tests_properties(test_postfx PROPERTIES
+    TIMEOUT 30
+    ENVIRONMENT "SDL_VIDEODRIVER=dummy;SDL_AUDIODRIVER=dummy")
