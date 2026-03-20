@@ -269,6 +269,10 @@ int main(int argc, char *argv[])
     (void)argc;
     (void)argv;
 
+    SDL_SetHint(SDL_HINT_VIDEO_DRIVER, "dummy");
+    SDL_SetHint(SDL_HINT_AUDIO_DRIVER, "dummy");
+    SDL_Init(0);
+
     printf("=== test_cart ===\n");
 
     test_cart_defaults();
@@ -283,5 +287,6 @@ int main(int argc, char *argv[])
     test_cart_validate_clamp_tile();
 
     printf("All cart tests passed.\n");
+    SDL_Quit();
     return 0;
 }

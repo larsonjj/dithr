@@ -290,6 +290,10 @@ int main(int argc, char *argv[])
     (void)argc;
     (void)argv;
 
+    SDL_SetHint(SDL_HINT_VIDEO_DRIVER, "dummy");
+    SDL_SetHint(SDL_HINT_AUDIO_DRIVER, "dummy");
+    SDL_Init(0);
+
     printf("test_runtime\n");
 
     /* Lifecycle */
@@ -318,5 +322,6 @@ int main(int argc, char *argv[])
     test_drain_jobs();
 
     printf("All tests passed.\n");
+    SDL_Quit();
     return 0;
 }

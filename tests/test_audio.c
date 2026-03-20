@@ -289,6 +289,10 @@ static void test_audio_master_volume(void)
 
 int main(void)
 {
+    SDL_SetHint(SDL_HINT_VIDEO_DRIVER, "dummy");
+    SDL_SetHint(SDL_HINT_AUDIO_DRIVER, "dummy");
+    SDL_Init(0);
+
     printf("test_audio\n");
 
     /* NULL safety (always run) */
@@ -318,5 +322,6 @@ int main(void)
     test_audio_master_volume();
 
     printf("test_audio: all passed\n");
+    SDL_Quit();
     return 0;
 }
