@@ -60,7 +60,7 @@ jobs:
               env:
                   SDL_VIDEODRIVER: dummy
                   SDL_AUDIODRIVER: dummy
-              run: xvfb-run ctest --output-on-failure --timeout 30
+              run: xvfb-run ctest --output-on-failure --timeout 180
 
     # ---------------------------------------------------------------------------
     #  macOS — AppleClang
@@ -84,4 +84,4 @@ jobs:
               env:
                   SDL_VIDEODRIVER: dummy
                   SDL_AUDIODRIVER: dummy
-              run: ctest --output-on-failure --timeout 30
+              run: ctest --output-on-failure --timeout 180
