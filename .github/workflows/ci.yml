@@ -50,7 +50,6 @@ jobs:
               run: >
                   cmake -B build/debug -G Ninja
                   -DCMAKE_BUILD_TYPE=Debug
-                  -DDTR_DEV_BUILD=ON
 
             - name: Build
               run: cmake --build build/debug
@@ -74,7 +73,6 @@ jobs:
               run: >
                   cmake -B build/debug -G Ninja
                   -DCMAKE_BUILD_TYPE=Debug
-                  -DDTR_DEV_BUILD=ON
 
             - name: Build
               run: cmake --build build/debug
