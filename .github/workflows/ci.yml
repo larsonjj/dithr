@@ -101,7 +101,7 @@ jobs:
                     libdecor-0-dev
 
             - name: Configure
-              run: cmake --preset asan
+              run: cmake --preset asan -G Ninja
 
             - name: Build
               run: cmake --build build/asan

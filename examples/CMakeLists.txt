@@ -13,6 +13,7 @@
 #   persistence        - Save/load data with cart.dset/dget
 #   platformer         - Simple side-scrolling platformer
 #   raycaster          - Wolfenstein-style raycaster
+#   spritemark         - Bunnymark-style sprite benchmark
 
 # Install example carts alongside the executable
 install(DIRECTORY
@@ -25,6 +26,7 @@ install(DIRECTORY
     persistence
     platformer
     raycaster
+    spritemark
     DESTINATION examples
     PATTERN "node_modules" EXCLUDE
 )

@@ -112,174 +112,108 @@ static void test_sfx_playing_out_of_bounds(void)
 
 /* ------------------------------------------------------------------ */
 /*  Live audio tests (skipped if device unavailable)                   */
+/*                                                                     */
+/*  All live tests share a single audio context created once in main() */
+/*  to avoid leaking SDL global state from repeated MIX_Init/Quit      */
+/*  cycles.                                                            */
 /* ------------------------------------------------------------------ */
 
-static dtr_audio_t *prv_try_create(void)
-{
-    return dtr_audio_create(4, CONSOLE_AUDIO_FREQ, CONSOLE_AUDIO_BUFFER);
-}
+static dtr_audio_t *live_aud;    /* set in main() */
 
 static void test_audio_create_destroy(void)
 {
-    dtr_audio_t *aud;
+    DTR_ASSERT(live_aud->initialized);
+    DTR_ASSERT_EQ_INT(live_aud->num_channels, 4);
+    DTR_ASSERT_EQ_INT(live_aud->frequency, CONSOLE_AUDIO_FREQ);
+    DTR_ASSERT(live_aud->mixer != NULL);
+    DTR_ASSERT(live_aud->music_track != NULL);
 
-    aud = prv_try_create();
-    if (aud == NULL) {
-        printf("  SKIP %s (no audio device)\n", __func__);
-        return;
-    }
-
-    DTR_ASSERT(aud->initialized);
-    DTR_ASSERT_EQ_INT(aud->num_channels, 4);
-    DTR_ASSERT_EQ_INT(aud->frequency, CONSOLE_AUDIO_FREQ);
-    DTR_ASSERT(aud->mixer != NULL);
-    DTR_ASSERT(aud->music_track != NULL);
-
-    dtr_audio_destroy(aud);
     DTR_PASS();
 }
 
 static void test_audio_channel_volume(void)
 {
-    dtr_audio_t *aud;
-
-    aud = prv_try_create();
-    if (aud == NULL) {
-        printf("  SKIP %s (no audio device)\n", __func__);
-        return;
-    }
-
     /* Default volumes should be 1.0 */
-    DTR_ASSERT_NEAR(dtr_sfx_get_volume(aud, 0), 1.0f, 0.001);
+    DTR_ASSERT_NEAR(dtr_sfx_get_volume(live_aud, 0), 1.0f, 0.001);
 
-    dtr_sfx_volume(aud, 0.5f, 0);
-    DTR_ASSERT_NEAR(dtr_sfx_get_volume(aud, 0), 0.5f, 0.001);
+    dtr_sfx_volume(live_aud, 0.5f, 0);
+    DTR_ASSERT_NEAR(dtr_sfx_get_volume(live_aud, 0), 0.5f, 0.001);
 
     /* Out-of-range channel returns 0 */
-    DTR_ASSERT_NEAR(dtr_sfx_get_volume(aud, -1), 0.0f, 0.001);
-    DTR_ASSERT_NEAR(dtr_sfx_get_volume(aud, CONSOLE_MAX_CHANNELS), 0.0f, 0.001);
+    DTR_ASSERT_NEAR(dtr_sfx_get_volume(live_aud, -1), 0.0f, 0.001);
+    DTR_ASSERT_NEAR(dtr_sfx_get_volume(live_aud, CONSOLE_MAX_CHANNELS),
+                    0.0f, 0.001);
 
-    dtr_audio_destroy(aud);
+    /* Restore default */
+    dtr_sfx_volume(live_aud, 1.0f, 0);
     DTR_PASS();
 }
 
 static void test_audio_music_volume(void)
 {
-    dtr_audio_t *aud;
+    DTR_ASSERT_NEAR(dtr_mus_get_volume(live_aud), 1.0f, 0.001);
 
-    aud = prv_try_create();
-    if (aud == NULL) {
-        printf("  SKIP %s (no audio device)\n", __func__);
-        return;
-    }
+    dtr_mus_volume(live_aud, 0.3f);
+    DTR_ASSERT_NEAR(dtr_mus_get_volume(live_aud), 0.3f, 0.001);
 
-    DTR_ASSERT_NEAR(dtr_mus_get_volume(aud), 1.0f, 0.001);
-
-    dtr_mus_volume(aud, 0.3f);
-    DTR_ASSERT_NEAR(dtr_mus_get_volume(aud), 0.3f, 0.001);
-
-    dtr_audio_destroy(aud);
+    /* Restore default */
+    dtr_mus_volume(live_aud, 1.0f);
     DTR_PASS();
 }
 
 static void test_audio_sfx_play_invalid_idx(void)
 {
-    dtr_audio_t *aud;
-
-    aud = prv_try_create();
-    if (aud == NULL) {
-        printf("  SKIP %s (no audio device)\n", __func__);
-        return;
-    }
-
     /* No SFX loaded — idx 0 is out-of-range, should not crash */
-    dtr_sfx_play(aud, 0, 0, 0);
-    dtr_sfx_play(aud, -1, 0, 0);
-    dtr_sfx_play(aud, 999, 0, 0);
+    dtr_sfx_play(live_aud, 0, 0, 0);
+    dtr_sfx_play(live_aud, -1, 0, 0);
+    dtr_sfx_play(live_aud, 999, 0, 0);
 
-    dtr_audio_destroy(aud);
     DTR_PASS();
 }
 
 static void test_audio_sfx_play_invalid_channel(void)
 {
-    dtr_audio_t *aud;
-
-    aud = prv_try_create();
-    if (aud == NULL) {
-        printf("  SKIP %s (no audio device)\n", __func__);
-        return;
-    }
-
     /* Channel out-of-range — should silently return */
-    dtr_sfx_play(aud, 0, -1, 0);
-    dtr_sfx_play(aud, 0, 999, 0);
+    dtr_sfx_play(live_aud, 0, -1, 0);
+    dtr_sfx_play(live_aud, 0, 999, 0);
 
-    dtr_audio_destroy(aud);
     DTR_PASS();
 }
 
 static void test_audio_music_not_playing(void)
 {
-    dtr_audio_t *aud;
+    DTR_ASSERT(!dtr_mus_playing(live_aud));
+    dtr_mus_stop(live_aud, 0);   /* stop when nothing playing — safe */
+    dtr_mus_stop(live_aud, 100); /* fade stop when nothing playing — safe */
 
-    aud = prv_try_create();
-    if (aud == NULL) {
-        printf("  SKIP %s (no audio device)\n", __func__);
-        return;
-    }
-
-    DTR_ASSERT(!dtr_mus_playing(aud));
-    dtr_mus_stop(aud, 0);   /* stop when nothing playing — safe */
-    dtr_mus_stop(aud, 100); /* fade stop when nothing playing — safe */
-
-    dtr_audio_destroy(aud);
     DTR_PASS();
 }
 
 static void test_audio_sfx_stop_all(void)
 {
-    dtr_audio_t *aud;
-
-    aud = prv_try_create();
-    if (aud == NULL) {
-        printf("  SKIP %s (no audio device)\n", __func__);
-        return;
-    }
-
     /* Stop-all with channel = -1 */
-    dtr_sfx_stop(aud, -1);
+    dtr_sfx_stop(live_aud, -1);
 
-    dtr_audio_destroy(aud);
     DTR_PASS();
 }
 
 static void test_audio_master_volume(void)
 {
-    dtr_audio_t *aud;
-
-    aud = prv_try_create();
-    if (aud == NULL) {
-        printf("  SKIP %s (no audio device)\n", __func__);
-        return;
-    }
-
     /* Default master volume should be 1.0 */
-    DTR_ASSERT_NEAR(dtr_audio_get_master_volume(aud), 1.0f, 0.001);
+    DTR_ASSERT_NEAR(dtr_audio_get_master_volume(live_aud), 1.0f, 0.001);
 
     /* Set to 0.5 */
-    dtr_audio_set_master_volume(aud, 0.5f);
-    DTR_ASSERT_NEAR(dtr_audio_get_master_volume(aud), 0.5f, 0.001);
+    dtr_audio_set_master_volume(live_aud, 0.5f);
+    DTR_ASSERT_NEAR(dtr_audio_get_master_volume(live_aud), 0.5f, 0.001);
 
     /* Clamp below 0 */
-    dtr_audio_set_master_volume(aud, -0.5f);
-    DTR_ASSERT_NEAR(dtr_audio_get_master_volume(aud), 0.0f, 0.001);
+    dtr_audio_set_master_volume(live_aud, -0.5f);
+    DTR_ASSERT_NEAR(dtr_audio_get_master_volume(live_aud), 0.0f, 0.001);
 
     /* Clamp above 1 */
-    dtr_audio_set_master_volume(aud, 2.0f);
-    DTR_ASSERT_NEAR(dtr_audio_get_master_volume(aud), 1.0f, 0.001);
+    dtr_audio_set_master_volume(live_aud, 2.0f);
+    DTR_ASSERT_NEAR(dtr_audio_get_master_volume(live_aud), 1.0f, 0.001);
 
-    dtr_audio_destroy(aud);
     DTR_PASS();
 }
 
@@ -307,15 +241,22 @@ int main(void)
     DTR_RUN_TEST(test_load_music_null_audio);
     DTR_RUN_TEST(test_sfx_playing_out_of_bounds);
 
-    /* Live tests (skip if no audio device) */
-    DTR_RUN_TEST(test_audio_create_destroy);
-    DTR_RUN_TEST(test_audio_channel_volume);
-    DTR_RUN_TEST(test_audio_music_volume);
-    DTR_RUN_TEST(test_audio_sfx_play_invalid_idx);
-    DTR_RUN_TEST(test_audio_sfx_play_invalid_channel);
-    DTR_RUN_TEST(test_audio_music_not_playing);
-    DTR_RUN_TEST(test_audio_sfx_stop_all);
-    DTR_RUN_TEST(test_audio_master_volume);
+    /* Live tests: create one shared audio context */
+    live_aud = dtr_audio_create(4, CONSOLE_AUDIO_FREQ, CONSOLE_AUDIO_BUFFER);
+    if (live_aud == NULL) {
+        printf("  SKIP live tests (no audio device)\n");
+    } else {
+        DTR_RUN_TEST(test_audio_create_destroy);
+        DTR_RUN_TEST(test_audio_channel_volume);
+        DTR_RUN_TEST(test_audio_music_volume);
+        DTR_RUN_TEST(test_audio_sfx_play_invalid_idx);
+        DTR_RUN_TEST(test_audio_sfx_play_invalid_channel);
+        DTR_RUN_TEST(test_audio_music_not_playing);
+        DTR_RUN_TEST(test_audio_sfx_stop_all);
+        DTR_RUN_TEST(test_audio_master_volume);
+        dtr_audio_destroy(live_aud);
+    }
 
+    SDL_Quit();
     DTR_TEST_END();
 }

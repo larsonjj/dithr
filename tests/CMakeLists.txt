@@ -5,19 +5,41 @@ if (APPLE)
     add_compile_definitions(SDL_MAIN_HANDLED)
 endif()
 
+# When using MSVC ASan, locate the runtime DLL so it can be copied beside
+# test executables.  The DLL lives next to cl.exe.
+if (MSVC AND DTR_ENABLE_ASAN)
+    get_filename_component(_msvc_compiler_dir "${CMAKE_C_COMPILER}" DIRECTORY)
+    set(_asan_dll "${_msvc_compiler_dir}/clang_rt.asan_dynamic-x86_64.dll")
+    if (NOT EXISTS "${_asan_dll}")
+        message(WARNING "ASan DLL not found at ${_asan_dll}")
+        set(_asan_dll "")
+    endif()
+endif()
+
+# Helper: copy runtime DLLs (and ASan DLL when applicable) beside a test target.
+function(dtr_copy_test_dlls target)
+    if (WIN32)
+        add_custom_command(TARGET ${target} POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                $<TARGET_RUNTIME_DLLS:${target}> $<TARGET_FILE_DIR:${target}>
+            COMMAND_EXPAND_LISTS
+        )
+        if (MSVC AND DTR_ENABLE_ASAN AND _asan_dll)
+            add_custom_command(TARGET ${target} POST_BUILD
+                COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                    "${_asan_dll}" $<TARGET_FILE_DIR:${target}>
+            )
+        endif()
+    endif()
+endfunction()
+
 # --- Input tests ---
 add_executable(test_input test_input.c)
 target_link_libraries(test_input PRIVATE dithr_core)
 if (MSVC)
     target_compile_options(test_input PRIVATE /wd4244)
 endif()
-if (WIN32)
-    add_custom_command(TARGET test_input POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different
-            $<TARGET_RUNTIME_DLLS:test_input> $<TARGET_FILE_DIR:test_input>
-        COMMAND_EXPAND_LISTS
-    )
-endif()
+dtr_copy_test_dlls(test_input)
 add_test(NAME test_input COMMAND test_input)
 
 # --- Cart tests ---
@@ -26,13 +48,7 @@ target_link_libraries(test_cart PRIVATE dithr_core)
 if (MSVC)
     target_compile_options(test_cart PRIVATE /wd4244)
 endif()
-if (WIN32)
-    add_custom_command(TARGET test_cart POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different
-            $<TARGET_RUNTIME_DLLS:test_cart> $<TARGET_FILE_DIR:test_cart>
-        COMMAND_EXPAND_LISTS
-    )
-endif()
+dtr_copy_test_dlls(test_cart)
 add_test(NAME test_cart COMMAND test_cart)
 
 # --- Graphics tests ---
@@ -41,13 +57,7 @@ target_link_libraries(test_graphics PRIVATE dithr_core)
 if (MSVC)
     target_compile_options(test_graphics PRIVATE /wd4244)
 endif()
-if (WIN32)
-    add_custom_command(TARGET test_graphics POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different
-            $<TARGET_RUNTIME_DLLS:test_graphics> $<TARGET_FILE_DIR:test_graphics>
-        COMMAND_EXPAND_LISTS
-    )
-endif()
+dtr_copy_test_dlls(test_graphics)
 add_test(NAME test_graphics COMMAND test_graphics)
 
 # --- Event tests ---
@@ -56,13 +66,7 @@ target_link_libraries(test_event PRIVATE dithr_core)
 if (MSVC)
     target_compile_options(test_event PRIVATE /wd4244)
 endif()
-if (WIN32)
-    add_custom_command(TARGET test_event POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different
-            $<TARGET_RUNTIME_DLLS:test_event> $<TARGET_FILE_DIR:test_event>
-        COMMAND_EXPAND_LISTS
-    )
-endif()
+dtr_copy_test_dlls(test_event)
 add_test(NAME test_event COMMAND test_event)
 
 # --- Mouse / Gamepad tests ---
@@ -71,13 +75,7 @@ target_link_libraries(test_mouse_gamepad PRIVATE dithr_core)
 if (MSVC)
     target_compile_options(test_mouse_gamepad PRIVATE /wd4244)
 endif()
-if (WIN32)
-    add_custom_command(TARGET test_mouse_gamepad POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different
-            $<TARGET_RUNTIME_DLLS:test_mouse_gamepad> $<TARGET_FILE_DIR:test_mouse_gamepad>
-        COMMAND_EXPAND_LISTS
-    )
-endif()
+dtr_copy_test_dlls(test_mouse_gamepad)
 add_test(NAME test_mouse_gamepad COMMAND test_mouse_gamepad)
 
 # --- Runtime tests ---
@@ -86,13 +84,7 @@ target_link_libraries(test_runtime PRIVATE dithr_core)
 if (MSVC)
     target_compile_options(test_runtime PRIVATE /wd4244)
 endif()
-if (WIN32)
-    add_custom_command(TARGET test_runtime POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different
-            $<TARGET_RUNTIME_DLLS:test_runtime> $<TARGET_FILE_DIR:test_runtime>
-        COMMAND_EXPAND_LISTS
-    )
-endif()
+dtr_copy_test_dlls(test_runtime)
 add_test(NAME test_runtime COMMAND test_runtime)
 
 # --- Audio tests ---
@@ -101,13 +93,7 @@ target_link_libraries(test_audio PRIVATE dithr_core)
 if (MSVC)
     target_compile_options(test_audio PRIVATE /wd4244)
 endif()
-if (WIN32)
-    add_custom_command(TARGET test_audio POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different
-            $<TARGET_RUNTIME_DLLS:test_audio> $<TARGET_FILE_DIR:test_audio>
-        COMMAND_EXPAND_LISTS
-    )
-endif()
+dtr_copy_test_dlls(test_audio)
 add_test(NAME test_audio COMMAND test_audio)
 
 # --- PostFX tests ---
@@ -116,11 +102,5 @@ target_link_libraries(test_postfx PRIVATE dithr_core)
 if (MSVC)
     target_compile_options(test_postfx PRIVATE /wd4244)
 endif()
-if (WIN32)
-    add_custom_command(TARGET test_postfx POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different
-            $<TARGET_RUNTIME_DLLS:test_postfx> $<TARGET_FILE_DIR:test_postfx>
-        COMMAND_EXPAND_LISTS
-    )
-endif()
+dtr_copy_test_dlls(test_postfx)
 add_test(NAME test_postfx COMMAND test_postfx)

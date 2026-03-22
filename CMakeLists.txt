@@ -210,12 +210,16 @@ target_compile_definitions(dithr_core PUBLIC
     CONSOLE_VERSION="${DTR_VERSION_STR}"
 )
 
-# Sanitizers (GCC/Clang only)
+# Sanitizers
 option(DTR_ENABLE_ASAN  "Enable AddressSanitizer"           OFF)
 option(DTR_ENABLE_UBSAN "Enable UndefinedBehaviorSanitizer" OFF)
-if (DTR_ENABLE_ASAN AND NOT MSVC)
-    add_compile_options(-fsanitize=address -fno-omit-frame-pointer)
-    add_link_options(-fsanitize=address)
+if (DTR_ENABLE_ASAN)
+    if (MSVC)
+        add_compile_options(/fsanitize=address)
+    else()
+        add_compile_options(-fsanitize=address -fno-omit-frame-pointer)
+        add_link_options(-fsanitize=address)
+    endif()
 endif()
 if (DTR_ENABLE_UBSAN AND NOT MSVC)
     add_compile_options(-fsanitize=undefined)
@@ -274,6 +278,16 @@ if (WIN32)
             $<TARGET_RUNTIME_DLLS:dithr> $<TARGET_FILE_DIR:dithr>
         COMMAND_EXPAND_LISTS
     )
+    if (MSVC AND DTR_ENABLE_ASAN)
+        get_filename_component(_msvc_compiler_dir "${CMAKE_C_COMPILER}" DIRECTORY)
+        set(_asan_dll "${_msvc_compiler_dir}/clang_rt.asan_dynamic-x86_64.dll")
+        if (EXISTS "${_asan_dll}")
+            add_custom_command(TARGET dithr POST_BUILD
+                COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                    "${_asan_dll}" $<TARGET_FILE_DIR:dithr>
+            )
+        endif()
+    endif()
 endif()
 
 # --- Install rules ---

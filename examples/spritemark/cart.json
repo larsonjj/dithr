@@ -1,0 +1,29 @@
+{
+  "meta": {
+    "title": "Spritemark",
+    "author": "dithr",
+    "version": "1.0.0",
+    "description": "Bunnymark-style sprite benchmark using Kenney 1-bit platformer characters"
+  },
+  "display": {
+    "width": 320,
+    "height": 180,
+    "scale": 3
+  },
+  "timing": {
+    "fps": 60
+  },
+  "sprites": {
+    "sheet": "assets/sprites/spritesheet.png",
+    "tileW": 16,
+    "tileH": 16
+  },
+  "audio": {
+    "channels": 8
+  },
+  "input": {
+    "default_mappings": {}
+  },
+  "code": "src/main.js",
+  "maps": []
+}

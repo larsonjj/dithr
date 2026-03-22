@@ -69,7 +69,6 @@
       "name": "asan",
       "displayName": "Debug + Sanitizers",
       "description": "Debug build with AddressSanitizer and UndefinedBehaviorSanitizer",
-      "generator": "Ninja",
       "binaryDir": "${sourceDir}/build/asan",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
