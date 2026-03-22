@@ -115,14 +115,3 @@ if (MSVC)
 endif()
 dtr_copy_test_dlls(test_postfx)
 add_test(NAME test_postfx COMMAND test_postfx)
-
-# Use dummy SDL backends for all tests so they can run in headless CI.
-# Set both SDL3 names (SDL_AUDIO_DRIVER, SDL_VIDEO_DRIVER) and legacy SDL2
-# names (SDL_AUDIODRIVER, SDL_VIDEODRIVER) for maximum compatibility.
-set_tests_properties(
-    test_input test_cart test_graphics test_event
-    test_mouse_gamepad test_runtime test_audio test_postfx
-    PROPERTIES
-        ENVIRONMENT "SDL_AUDIO_DRIVER=dummy;SDL_VIDEO_DRIVER=dummy;SDL_AUDIODRIVER=dummy;SDL_VIDEODRIVER=dummy"
-        TIMEOUT 30
-)
