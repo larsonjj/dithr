@@ -675,10 +675,10 @@ int main(int argc, char *argv[])
     test_gfx_font_custom_and_reset();
     test_gfx_fade();
     test_gfx_wipe();
-    // test_gfx_dissolve();
-    // test_gfx_transition_clamp_frames();
-    // test_gfx_dl_begin_end();
-    // test_gfx_dl_queue_and_sort();
+    test_gfx_dissolve();
+    test_gfx_transition_clamp_frames();
+    test_gfx_dl_begin_end();
+    test_gfx_dl_queue_and_sort();
     // test_gfx_dl_overflow();
 
     printf("All graphics tests passed.\n");
