@@ -96,7 +96,7 @@ jobs:
             - uses: actions/checkout@v6
 
             - name: Download all example artifacts
-              uses: actions/download-artifact@v4
+              uses: actions/download-artifact@v7
               with:
                   pattern: example-*
                   path: site
@@ -115,10 +115,10 @@ jobs:
               run: node tools/generate-pages-index.js site
 
             - name: Upload Pages artifact
-              uses: actions/upload-pages-artifact@v3
+              uses: actions/upload-pages-artifact@v4
               with:
                   path: site
 
             - name: Deploy to GitHub Pages
               id: deployment
-              uses: actions/deploy-pages@v4
+              uses: actions/deploy-pages@v5
