@@ -16,7 +16,7 @@ jobs:
             - uses: actions/checkout@v6
 
             - name: Cache build
-              uses: actions/cache@v4
+              uses: actions/cache@v5
               with:
                   path: build/debug/_deps
                   key: win-deps-${{ hashFiles('CMakeLists.txt') }}
@@ -41,7 +41,7 @@ jobs:
             - uses: actions/checkout@v6
 
             - name: Cache build
-              uses: actions/cache@v4
+              uses: actions/cache@v5
               with:
                   path: build/debug/_deps
                   key: linux-deps-${{ hashFiles('CMakeLists.txt') }}
@@ -71,6 +71,8 @@ jobs:
             - name: Test
               working-directory: build/debug
               run: ctest --output-on-failure --timeout 300
+              env:
+                  SDL_AUDIODRIVER: dummy
 
     # ---------------------------------------------------------------------------
     #  Linux — GCC + ASan / UBSan
@@ -81,7 +83,7 @@ jobs:
             - uses: actions/checkout@v6
 
             - name: Cache build
-              uses: actions/cache@v4
+              uses: actions/cache@v5
               with:
                   path: build/asan/_deps
                   key: linux-asan-deps-${{ hashFiles('CMakeLists.txt') }}
@@ -109,6 +111,9 @@ jobs:
             - name: Test
               working-directory: build/asan
               run: ctest --output-on-failure --timeout 300
+              env:
+                  SDL_AUDIODRIVER: dummy
+                  LSAN_OPTIONS: suppressions=${{ github.workspace }}/tests/lsan_suppressions.txt
 
     # ---------------------------------------------------------------------------
     #  macOS — AppleClang
@@ -119,7 +124,7 @@ jobs:
             - uses: actions/checkout@v6
 
             - name: Cache build
-              uses: actions/cache@v4
+              uses: actions/cache@v5
               with:
                   path: build/debug/_deps
                   key: macos-deps-${{ hashFiles('CMakeLists.txt') }}

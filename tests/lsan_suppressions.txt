@@ -1,0 +1,7 @@
+# Suppress known leaks inside third-party libraries (SDL, ALSA, PipeWire)
+# that we cannot fix ourselves.
+leak:ALSA_OpenDevice
+leak:ALSA_DetectDevices
+leak:ALSA_guess_device_prefix
+leak:pw_conf_load_conf_for_context
+leak:SDL_InitAudio
