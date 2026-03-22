@@ -1,0 +1,117 @@
+name: GitHub Pages
+
+on:
+    push:
+        branches: [main]
+    workflow_dispatch:
+
+# Allow only one concurrent deployment
+concurrency:
+    group: pages
+    cancel-in-progress: true
+
+permissions:
+    contents: read
+    pages: write
+    id-token: write
+
+jobs:
+    # --------------------------------------------------------------------------
+    #  Build each example as a WASM binary
+    # --------------------------------------------------------------------------
+    build:
+        runs-on: ubuntu-latest
+        strategy:
+            fail-fast: false
+            matrix:
+                example:
+                    - hello_world
+                    - sprite_animation
+                    - input_demo
+                    - tilemap
+                    - audio_demo
+                    - postfx_demo
+                    - persistence
+                    - platformer
+                    - raycaster
+                    - spritemark
+        steps:
+            - uses: actions/checkout@v6
+
+            - name: Install Ninja
+              run: sudo apt-get update && sudo apt-get install -y ninja-build
+
+            - name: Setup Emscripten
+              uses: mymindstorm/setup-emsdk@v14
+
+            - name: Cache build
+              uses: actions/cache@v5
+              with:
+                  path: build/wasm/_deps
+                  key: wasm-deps-${{ hashFiles('CMakeLists.txt') }}
+                  restore-keys: wasm-deps-
+
+            - name: Configure
+              run: >
+                  cmake --preset wasm
+                  -DDTR_WASM_CART_DIR=${{ github.workspace }}/examples/${{ matrix.example }}
+
+            - name: Build
+              run: cmake --build build/wasm
+
+            - name: Stage output
+              run: |
+                  mkdir -p site/${{ matrix.example }}
+                  cp build/wasm/dithr.html site/${{ matrix.example }}/index.html
+                  cp build/wasm/dithr.js   site/${{ matrix.example }}/
+                  cp build/wasm/dithr.wasm site/${{ matrix.example }}/
+                  if [ -f build/wasm/dithr.data ]; then
+                    cp build/wasm/dithr.data site/${{ matrix.example }}/
+                  fi
+
+            - name: Upload example artifact
+              uses: actions/upload-artifact@v4
+              with:
+                  name: example-${{ matrix.example }}
+                  path: site/${{ matrix.example }}
+                  retention-days: 1
+
+    # --------------------------------------------------------------------------
+    #  Assemble the site and deploy to GitHub Pages
+    # --------------------------------------------------------------------------
+    deploy:
+        needs: build
+        runs-on: ubuntu-latest
+        environment:
+            name: github-pages
+            url: ${{ steps.deployment.outputs.page_url }}
+        steps:
+            - uses: actions/checkout@v6
+
+            - name: Download all example artifacts
+              uses: actions/download-artifact@v4
+              with:
+                  pattern: example-*
+                  path: site
+                  merge-multiple: false
+
+            # download-artifact creates site/example-<name>/ — rename to site/<name>/
+            - name: Flatten artifact directories
+              run: |
+                  cd site
+                  for dir in example-*; do
+                    name="${dir#example-}"
+                    mv "$dir" "$name"
+                  done
+
+            - name: Generate index page
+              run: node tools/generate-pages-index.js site
+
+            - name: Upload Pages artifact
+              uses: actions/upload-pages-artifact@v3
+              with:
+                  path: site
+
+            - name: Deploy to GitHub Pages
+              id: deployment
+              uses: actions/deploy-pages@v4
