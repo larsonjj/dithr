@@ -210,6 +210,18 @@ target_compile_definitions(dithr_core PUBLIC
     CONSOLE_VERSION="${DTR_VERSION_STR}"
 )
 
+# Sanitizers (GCC/Clang only)
+option(DTR_ENABLE_ASAN  "Enable AddressSanitizer"           OFF)
+option(DTR_ENABLE_UBSAN "Enable UndefinedBehaviorSanitizer" OFF)
+if (DTR_ENABLE_ASAN AND NOT MSVC)
+    add_compile_options(-fsanitize=address -fno-omit-frame-pointer)
+    add_link_options(-fsanitize=address)
+endif()
+if (DTR_ENABLE_UBSAN AND NOT MSVC)
+    add_compile_options(-fsanitize=undefined)
+    add_link_options(-fsanitize=undefined)
+endif()
+
 # Dev build flag
 option(DTR_DEV_BUILD "Enable development features (hot reload, debug overlays)" OFF)
 if (DTR_DEV_BUILD)

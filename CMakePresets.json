@@ -64,6 +64,19 @@
         "DTR_BUILD_TESTS": "OFF",
         "DTR_WASM_CART_DIR": "${sourceDir}/examples/hello_world"
       }
+    },
+    {
+      "name": "asan",
+      "displayName": "Debug + Sanitizers",
+      "description": "Debug build with AddressSanitizer and UndefinedBehaviorSanitizer",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/asan",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "DTR_DEV_BUILD": "ON",
+        "DTR_ENABLE_ASAN": "ON",
+        "DTR_ENABLE_UBSAN": "ON"
+      }
     }
   ],
   "buildPresets": [
@@ -86,6 +99,10 @@
     {
       "name": "wasm-dev",
       "configurePreset": "wasm-dev"
+    },
+    {
+      "name": "asan",
+      "configurePreset": "asan"
     }
   ]
 }

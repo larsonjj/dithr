@@ -8,6 +8,10 @@
 #include "cart.h"
 
 #include <SDL3_image/SDL_image.h>
+#include <limits.h>
+
+/* Maximum pixel dimension for imported images (4096x4096 RGBA = 64 MB). */
+#define IMPORT_MAX_IMAGE_DIM 4096
 
 /* ------------------------------------------------------------------ */
 /*  PNG / image loading via SDL_image                                   */
@@ -41,6 +45,15 @@ uint8_t *dtr_import_png(const char *path, int32_t *out_w, int32_t *out_h)
 
     *out_w = rgba->w;
     *out_h = rgba->h;
+
+    if (rgba->w > IMPORT_MAX_IMAGE_DIM || rgba->h > IMPORT_MAX_IMAGE_DIM) {
+        SDL_Log("dtr_import_png: image too large (%dx%d, max %d)",
+                rgba->w, rgba->h, IMPORT_MAX_IMAGE_DIM);
+        SDL_DestroySurface(rgba);
+        *out_w = 0;
+        *out_h = 0;
+        return NULL;
+    }
 
     size   = (size_t)rgba->w * (size_t)rgba->h * 4;
     pixels = DTR_MALLOC(size);
@@ -221,6 +234,15 @@ bool dtr_import_tiled(const char *tmj_path, dtr_map_level_t **out_level, JSConte
         JS_FreeValue(ctx, len_val);
     }
 
+    if (layer_count < 0 || layer_count > CONSOLE_MAX_MAP_LAYERS) {
+        SDL_Log("dtr_import_tiled: layer count %d exceeds limit %d",
+                layer_count, CONSOLE_MAX_MAP_LAYERS);
+        JS_FreeValue(ctx, layers_arr);
+        JS_FreeValue(ctx, root);
+        DTR_FREE(level);
+        return false;
+    }
+
     level->layers      = DTR_CALLOC((size_t)layer_count, sizeof(dtr_map_layer_t));
     level->layer_count = layer_count;
 
@@ -272,6 +294,16 @@ bool dtr_import_tiled(const char *tmj_path, dtr_map_level_t **out_level, JSConte
             if (JS_IsArray(data_arr)) {
                 int32_t tile_count;
 
+                if (layer->width <= 0 || layer->height <= 0 ||
+                    layer->width > INT32_MAX / layer->height) {
+                    JS_FreeValue(ctx, data_arr);
+                    if (type_str != NULL) {
+                        JS_FreeCString(ctx, type_str);
+                    }
+                    JS_FreeValue(ctx, type_val);
+                    JS_FreeValue(ctx, layer_obj);
+                    continue;
+                }
                 tile_count   = layer->width * layer->height;
                 layer->tiles = DTR_CALLOC((size_t)tile_count, sizeof(int32_t));
 
@@ -299,6 +331,12 @@ bool dtr_import_tiled(const char *tmj_path, dtr_map_level_t **out_level, JSConte
                 olen = JS_GetPropertyStr(ctx, obj_arr, "length");
                 JS_ToInt32(ctx, &obj_count, olen);
                 JS_FreeValue(ctx, olen);
+
+                if (obj_count < 0 || obj_count > CONSOLE_MAX_MAP_OBJECTS) {
+                    SDL_Log("dtr_import_tiled: object count %d exceeds limit %d",
+                            obj_count, CONSOLE_MAX_MAP_OBJECTS);
+                    obj_count = CONSOLE_MAX_MAP_OBJECTS;
+                }
 
                 layer->objects      = DTR_CALLOC((size_t)obj_count, sizeof(dtr_map_object_t));
                 layer->object_count = obj_count;
@@ -520,6 +558,17 @@ bool dtr_import_ldtk(const char *ldtk_path, dtr_map_level_t **out_level, JSConte
             JS_ToInt32(ctx, &li_count, li_len);
             JS_FreeValue(ctx, li_len);
 
+            if (li_count < 0 || li_count > CONSOLE_MAX_MAP_LAYERS) {
+                SDL_Log("dtr_import_ldtk: layer count %d exceeds limit %d",
+                        li_count, CONSOLE_MAX_MAP_LAYERS);
+                JS_FreeValue(ctx, layer_instances);
+                JS_FreeValue(ctx, first_level);
+                JS_FreeValue(ctx, levels_arr);
+                JS_FreeValue(ctx, root);
+                DTR_FREE(level);
+                return false;
+            }
+
             level->layers      = DTR_CALLOC((size_t)li_count, sizeof(dtr_map_layer_t));
             level->layer_count = li_count;
 
@@ -559,6 +608,17 @@ bool dtr_import_ldtk(const char *ldtk_path, dtr_map_level_t **out_level, JSConte
                         gt_len = JS_GetPropertyStr(ctx, grid_tiles, "length");
                         JS_ToInt32(ctx, &tile_count, gt_len);
                         JS_FreeValue(ctx, gt_len);
+
+                        if (layer->width <= 0 || layer->height <= 0 ||
+                            layer->width > INT32_MAX / layer->height) {
+                            JS_FreeValue(ctx, grid_tiles);
+                            if (type_str != NULL) {
+                                JS_FreeCString(ctx, type_str);
+                            }
+                            JS_FreeValue(ctx, type_val);
+                            JS_FreeValue(ctx, li_obj);
+                            continue;
+                        }
 
                         layer->tiles = DTR_CALLOC((size_t)layer->width * (size_t)layer->height,
                                                   sizeof(int32_t));

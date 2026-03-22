@@ -15,6 +15,13 @@ jobs:
         steps:
             - uses: actions/checkout@v6
 
+            - name: Cache build
+              uses: actions/cache@v4
+              with:
+                  path: build/debug/_deps
+                  key: win-deps-${{ hashFiles('CMakeLists.txt') }}
+                  restore-keys: win-deps-
+
             - name: Configure
               run: cmake --preset debug
 
@@ -32,6 +39,13 @@ jobs:
         runs-on: ubuntu-latest
         steps:
             - uses: actions/checkout@v6
+
+            - name: Cache build
+              uses: actions/cache@v4
+              with:
+                  path: build/debug/_deps
+                  key: linux-deps-${{ hashFiles('CMakeLists.txt') }}
+                  restore-keys: linux-deps-
 
             - name: Install dependencies
               run: |
@@ -59,12 +73,57 @@ jobs:
               run: ctest --output-on-failure --timeout 300
 
     # ---------------------------------------------------------------------------
+    #  Linux — GCC + ASan / UBSan
+    # ---------------------------------------------------------------------------
+    linux-sanitizers:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v6
+
+            - name: Cache build
+              uses: actions/cache@v4
+              with:
+                  path: build/asan/_deps
+                  key: linux-asan-deps-${{ hashFiles('CMakeLists.txt') }}
+                  restore-keys: linux-asan-deps-
+
+            - name: Install dependencies
+              run: |
+                  sudo apt-get update
+                  sudo apt-get install -y ninja-build \
+                    libx11-dev libxext-dev libxcursor-dev libxi-dev \
+                    libxfixes-dev libxrandr-dev libxrender-dev libxss-dev \
+                    libxtst-dev libxxf86vm-dev \
+                    libwayland-dev libxkbcommon-dev \
+                    libdrm-dev libgbm-dev libgl1-mesa-dev libgles2-mesa-dev \
+                    libegl1-mesa-dev libdbus-1-dev libudev-dev \
+                    libasound2-dev libpulse-dev libpipewire-0.3-dev \
+                    libdecor-0-dev
+
+            - name: Configure
+              run: cmake --preset asan
+
+            - name: Build
+              run: cmake --build build/asan
+
+            - name: Test
+              working-directory: build/asan
+              run: ctest --output-on-failure --timeout 300
+
+    # ---------------------------------------------------------------------------
     #  macOS — AppleClang
     # ---------------------------------------------------------------------------
     macos:
         runs-on: macos-latest
         steps:
             - uses: actions/checkout@v6
+
+            - name: Cache build
+              uses: actions/cache@v4
+              with:
+                  path: build/debug/_deps
+                  key: macos-deps-${{ hashFiles('CMakeLists.txt') }}
+                  restore-keys: macos-deps-
 
             - name: Configure
               run: >
