@@ -1,9 +1,7 @@
 # Prevent SDL from redefining main() in test binaries.
-# On macOS, SDL3 renames main → SDL_main and injects its own entry point
-# (Cocoa/NSApplication setup) which can hang in headless CI environments.
-if (APPLE)
-    add_compile_definitions(SDL_MAIN_HANDLED)
-endif()
+# SDL3 renames main → SDL_main and injects its own entry point, which can
+# hang in headless CI environments (macOS Cocoa/NSApplication, Linux/Wayland).
+add_compile_definitions(SDL_MAIN_HANDLED)
 
 # When using MSVC ASan, locate the runtime DLL so it can be copied beside
 # test executables.  The DLL lives next to cl.exe.
