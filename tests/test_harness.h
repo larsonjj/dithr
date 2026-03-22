@@ -48,4 +48,28 @@
 /** Print a passing test name. */
 #define DTR_PASS() printf("  PASS %s\n", __func__)
 
+/* ------------------------------------------------------------------ */
+/*  Test runner helpers — optional counter / summary                    */
+/* ------------------------------------------------------------------ */
+
+/** Declare a test counter (call once at the top of main). */
+#define DTR_TEST_BEGIN(suite_name)                                                 \
+    int _dtr_test_count = 0;                                                      \
+    printf("=== %s ===\n", (suite_name))
+
+/** Run a single test function and bump the counter. */
+#define DTR_RUN_TEST(fn)                                                           \
+    do {                                                                           \
+        ++_dtr_test_count;                                                         \
+        fn();                                                                      \
+    } while (0)
+
+/** Print a summary line and return 0 (tests abort on failure, so reaching       */
+/** this point means everything passed).                                         */
+#define DTR_TEST_END()                                                             \
+    do {                                                                           \
+        printf("%d/%d tests passed.\n", _dtr_test_count, _dtr_test_count);        \
+        return 0;                                                                  \
+    } while (0)
+
 #endif /* DTR_TEST_HARNESS_H */

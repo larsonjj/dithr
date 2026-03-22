@@ -290,34 +290,32 @@ int main(int argc, char *argv[])
     (void)argc;
     (void)argv;
 
-
-    printf("test_runtime\n");
+    DTR_TEST_BEGIN("test_runtime");
 
     /* Lifecycle */
-    test_create_destroy();
-    test_destroy_null();
+    DTR_RUN_TEST(test_create_destroy);
+    DTR_RUN_TEST(test_destroy_null);
 
     /* Eval */
-    test_eval_valid();
-    test_eval_syntax_error();
-    test_eval_runtime_error();
+    DTR_RUN_TEST(test_eval_valid);
+    DTR_RUN_TEST(test_eval_syntax_error);
+    DTR_RUN_TEST(test_eval_runtime_error);
 
     /* Call */
-    test_call_existing();
-    test_call_missing_function();
-    test_call_throwing_function();
-    test_call_blocked_after_error();
+    DTR_RUN_TEST(test_call_existing);
+    DTR_RUN_TEST(test_call_missing_function);
+    DTR_RUN_TEST(test_call_throwing_function);
+    DTR_RUN_TEST(test_call_blocked_after_error);
 
     /* Error management */
-    test_clear_error();
+    DTR_RUN_TEST(test_clear_error);
 
     /* JSON */
-    test_parse_json_valid();
-    test_parse_json_invalid();
+    DTR_RUN_TEST(test_parse_json_valid);
+    DTR_RUN_TEST(test_parse_json_invalid);
 
     /* Microtasks */
-    test_drain_jobs();
+    DTR_RUN_TEST(test_drain_jobs);
 
-    printf("All tests passed.\n");
-    return 0;
+    DTR_TEST_END();
 }

@@ -271,34 +271,32 @@ static void test_postfx_apply_aberration(void)
 
 int main(void)
 {
-
-    printf("test_postfx\n");
+    DTR_TEST_BEGIN("test_postfx");
 
     /* Lifecycle */
-    test_postfx_create_destroy();
-    test_postfx_destroy_null();
+    DTR_RUN_TEST(test_postfx_create_destroy);
+    DTR_RUN_TEST(test_postfx_destroy_null);
 
     /* Stack management */
-    test_postfx_push_pop();
-    test_postfx_pop_empty();
-    test_postfx_push_overflow();
-    test_postfx_clear();
+    DTR_RUN_TEST(test_postfx_push_pop);
+    DTR_RUN_TEST(test_postfx_pop_empty);
+    DTR_RUN_TEST(test_postfx_push_overflow);
+    DTR_RUN_TEST(test_postfx_clear);
 
     /* Parameters */
-    test_postfx_set_param();
-    test_postfx_set_param_out_of_bounds();
+    DTR_RUN_TEST(test_postfx_set_param);
+    DTR_RUN_TEST(test_postfx_set_param_out_of_bounds);
 
     /* Name resolution */
-    test_postfx_id_from_name();
-    test_postfx_available();
-    test_postfx_use();
+    DTR_RUN_TEST(test_postfx_id_from_name);
+    DTR_RUN_TEST(test_postfx_available);
+    DTR_RUN_TEST(test_postfx_use);
 
     /* Apply pipeline */
-    test_postfx_apply_empty_noop();
-    test_postfx_apply_null_noop();
-    test_postfx_apply_scanlines();
-    test_postfx_apply_aberration();
+    DTR_RUN_TEST(test_postfx_apply_empty_noop);
+    DTR_RUN_TEST(test_postfx_apply_null_noop);
+    DTR_RUN_TEST(test_postfx_apply_scanlines);
+    DTR_RUN_TEST(test_postfx_apply_aberration);
 
-    printf("test_postfx: all passed\n");
-    return 0;
+    DTR_TEST_END();
 }

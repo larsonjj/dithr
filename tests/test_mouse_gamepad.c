@@ -239,28 +239,26 @@ int main(int argc, char *argv[])
     (void)argc;
     (void)argv;
 
-
-    printf("test_mouse_gamepad\n");
+    DTR_TEST_BEGIN("test_mouse_gamepad");
 
     /* Mouse tests */
-    test_mouse_create_destroy();
-    test_mouse_destroy_null();
-    test_mouse_btn_default_false();
-    test_mouse_btn_set_and_query();
-    test_mouse_btnp();
-    test_mouse_btn_out_of_range();
-    test_mouse_set_mapping();
-    test_mouse_update_copies_previous();
+    DTR_RUN_TEST(test_mouse_create_destroy);
+    DTR_RUN_TEST(test_mouse_destroy_null);
+    DTR_RUN_TEST(test_mouse_btn_default_false);
+    DTR_RUN_TEST(test_mouse_btn_set_and_query);
+    DTR_RUN_TEST(test_mouse_btnp);
+    DTR_RUN_TEST(test_mouse_btn_out_of_range);
+    DTR_RUN_TEST(test_mouse_set_mapping);
+    DTR_RUN_TEST(test_mouse_update_copies_previous);
 
     /* Gamepad tests */
-    test_gamepad_create_destroy();
-    test_gamepad_destroy_null();
-    test_gamepad_btn_default_false();
-    test_gamepad_count_zero();
-    test_gamepad_connected_false();
-    test_gamepad_deadzone();
-    test_gamepad_axis_default_zero();
+    DTR_RUN_TEST(test_gamepad_create_destroy);
+    DTR_RUN_TEST(test_gamepad_destroy_null);
+    DTR_RUN_TEST(test_gamepad_btn_default_false);
+    DTR_RUN_TEST(test_gamepad_count_zero);
+    DTR_RUN_TEST(test_gamepad_connected_false);
+    DTR_RUN_TEST(test_gamepad_deadzone);
+    DTR_RUN_TEST(test_gamepad_axis_default_zero);
 
-    printf("All tests passed.\n");
-    return 0;
+    DTR_TEST_END();
 }

@@ -1,5 +1,7 @@
 # dithr (Maven Engine)
 
+[![CI](https://github.com/larsonjj/dithr/actions/workflows/ci.yml/badge.svg)](https://github.com/larsonjj/dithr/actions/workflows/ci.yml)
+
 A fantasy console engine for building retro games. Write game logic in
 JavaScript, and the engine handles rendering, audio, input, and tilemaps
 through a concise built-in API. Runs natively on Windows, macOS and Linux, or
@@ -102,6 +104,32 @@ tests/         Unit tests (CTest)
 examples/      Example carts
 tools/         Node.js tooling (cart scaffold, export, WASM dev server)
 docs/          Documentation
+```
+
+## Testing
+
+Build and run the test suite with CTest:
+
+```bash
+cmake --preset debug
+cmake --build build/debug --config Debug
+cd build/debug
+ctest --output-on-failure -C Debug
+```
+
+Run a single test by name:
+
+```bash
+ctest --output-on-failure -C Debug -R test_graphics
+```
+
+For a sanitized build (Linux/macOS — AddressSanitizer + UBSan):
+
+```bash
+cmake --preset asan
+cmake --build build/asan
+cd build/asan
+ctest --output-on-failure
 ```
 
 ## License

@@ -8,6 +8,7 @@
 #include <stdio.h>
 
 #include "input.h"
+#include "test_harness.h"
 
 /* ------------------------------------------------------------------ */
 /*  Keyboard state tests                                               */
@@ -235,27 +236,25 @@ int main(int argc, char *argv[])
     (void)argc;
     (void)argv;
 
-
-    printf("=== test_input ===\n");
+    DTR_TEST_BEGIN("test_input");
 
     /* Keyboard state */
-    test_key_btn_default_false();
-    test_key_set_and_btn();
-    test_key_btnp();
-    test_key_out_of_range();
+    DTR_RUN_TEST(test_key_btn_default_false);
+    DTR_RUN_TEST(test_key_set_and_btn);
+    DTR_RUN_TEST(test_key_btnp);
+    DTR_RUN_TEST(test_key_out_of_range);
 
     /* Binding parser */
-    test_parse_key_binding();
-    test_parse_pad_binding();
-    test_parse_axis_binding();
-    test_parse_mouse_binding();
-    test_parse_invalid_prefix();
+    DTR_RUN_TEST(test_parse_key_binding);
+    DTR_RUN_TEST(test_parse_pad_binding);
+    DTR_RUN_TEST(test_parse_axis_binding);
+    DTR_RUN_TEST(test_parse_mouse_binding);
+    DTR_RUN_TEST(test_parse_invalid_prefix);
 
     /* Virtual input mapping */
-    test_input_map_and_query();
-    test_input_unknown_action();
-    test_input_clear();
+    DTR_RUN_TEST(test_input_map_and_query);
+    DTR_RUN_TEST(test_input_unknown_action);
+    DTR_RUN_TEST(test_input_clear);
 
-    printf("All input tests passed.\n");
-    return 0;
+    DTR_TEST_END();
 }

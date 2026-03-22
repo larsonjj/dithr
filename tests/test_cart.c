@@ -11,6 +11,7 @@
 
 #include "cart.h"
 #include "quickjs.h"
+#include "test_harness.h"
 
 /* ------------------------------------------------------------------ */
 /*  Helper: create a minimal QuickJS context for JSON parsing          */
@@ -269,20 +270,18 @@ int main(int argc, char *argv[])
     (void)argc;
     (void)argv;
 
+    DTR_TEST_BEGIN("test_cart");
 
-    printf("=== test_cart ===\n");
+    DTR_RUN_TEST(test_cart_defaults);
+    DTR_RUN_TEST(test_cart_parse_minimal);
+    DTR_RUN_TEST(test_cart_parse_display);
+    DTR_RUN_TEST(test_cart_parse_meta);
+    DTR_RUN_TEST(test_cart_parse_input);
+    DTR_RUN_TEST(test_cart_parse_invalid_json);
+    DTR_RUN_TEST(test_cart_validate_defaults);
+    DTR_RUN_TEST(test_cart_validate_clamp_width);
+    DTR_RUN_TEST(test_cart_validate_clamp_fps);
+    DTR_RUN_TEST(test_cart_validate_clamp_tile);
 
-    test_cart_defaults();
-    test_cart_parse_minimal();
-    test_cart_parse_display();
-    test_cart_parse_meta();
-    test_cart_parse_input();
-    test_cart_parse_invalid_json();
-    test_cart_validate_defaults();
-    test_cart_validate_clamp_width();
-    test_cart_validate_clamp_fps();
-    test_cart_validate_clamp_tile();
-
-    printf("All cart tests passed.\n");
-    return 0;
+    DTR_TEST_END();
 }

@@ -289,35 +289,33 @@ static void test_audio_master_volume(void)
 
 int main(void)
 {
-
-    printf("test_audio\n");
+    DTR_TEST_BEGIN("test_audio");
 
     /* NULL safety (always run) */
-    test_audio_destroy_null();
-    test_sfx_play_null();
-    test_sfx_stop_null();
-    test_sfx_volume_null();
-    test_sfx_get_volume_null();
-    test_sfx_playing_null();
-    test_mus_play_null();
-    test_mus_stop_null();
-    test_mus_volume_null();
-    test_mus_get_volume_null();
-    test_mus_playing_null();
-    test_load_sfx_null_audio();
-    test_load_music_null_audio();
-    test_sfx_playing_out_of_bounds();
+    DTR_RUN_TEST(test_audio_destroy_null);
+    DTR_RUN_TEST(test_sfx_play_null);
+    DTR_RUN_TEST(test_sfx_stop_null);
+    DTR_RUN_TEST(test_sfx_volume_null);
+    DTR_RUN_TEST(test_sfx_get_volume_null);
+    DTR_RUN_TEST(test_sfx_playing_null);
+    DTR_RUN_TEST(test_mus_play_null);
+    DTR_RUN_TEST(test_mus_stop_null);
+    DTR_RUN_TEST(test_mus_volume_null);
+    DTR_RUN_TEST(test_mus_get_volume_null);
+    DTR_RUN_TEST(test_mus_playing_null);
+    DTR_RUN_TEST(test_load_sfx_null_audio);
+    DTR_RUN_TEST(test_load_music_null_audio);
+    DTR_RUN_TEST(test_sfx_playing_out_of_bounds);
 
     /* Live tests (skip if no audio device) */
-    test_audio_create_destroy();
-    test_audio_channel_volume();
-    test_audio_music_volume();
-    test_audio_sfx_play_invalid_idx();
-    test_audio_sfx_play_invalid_channel();
-    test_audio_music_not_playing();
-    test_audio_sfx_stop_all();
-    test_audio_master_volume();
+    DTR_RUN_TEST(test_audio_create_destroy);
+    DTR_RUN_TEST(test_audio_channel_volume);
+    DTR_RUN_TEST(test_audio_music_volume);
+    DTR_RUN_TEST(test_audio_sfx_play_invalid_idx);
+    DTR_RUN_TEST(test_audio_sfx_play_invalid_channel);
+    DTR_RUN_TEST(test_audio_music_not_playing);
+    DTR_RUN_TEST(test_audio_sfx_stop_all);
+    DTR_RUN_TEST(test_audio_master_volume);
 
-    printf("test_audio: all passed\n");
-    return 0;
+    DTR_TEST_END();
 }

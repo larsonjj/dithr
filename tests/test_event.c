@@ -240,16 +240,14 @@ int main(int argc, char *argv[])
     (void)argc;
     (void)argv;
 
+    DTR_TEST_BEGIN("test_event");
 
-    printf("=== test_event ===\n");
+    DTR_RUN_TEST(test_event_create_destroy);
+    DTR_RUN_TEST(test_event_emit_no_handlers);
+    DTR_RUN_TEST(test_event_on_and_flush);
+    DTR_RUN_TEST(test_event_once);
+    DTR_RUN_TEST(test_event_off);
+    DTR_RUN_TEST(test_event_wrong_name);
 
-    test_event_create_destroy();
-    test_event_emit_no_handlers();
-    test_event_on_and_flush();
-    test_event_once();
-    test_event_off();
-    test_event_wrong_name();
-
-    printf("All event tests passed.\n");
-    return 0;
+    DTR_TEST_END();
 }
