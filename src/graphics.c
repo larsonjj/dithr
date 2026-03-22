@@ -900,6 +900,17 @@ void dtr_gfx_spr(dtr_graphics_t *gfx,
     int32_t             tile_h;
     int32_t             px_w;
     int32_t             px_h;
+    int32_t             cam_x;
+    int32_t             cam_y;
+    int32_t             clip_l;
+    int32_t             clip_t;
+    int32_t             clip_r;
+    int32_t             clip_b;
+    int32_t             dst_x0;
+    int32_t             dst_y0;
+    int32_t             dst_x1;
+    int32_t             dst_y1;
+    int32_t             sht_w;
 
     sht = &gfx->sheet;
     if (sht->pixels == NULL || idx < 0 || idx >= sht->count) {
@@ -918,27 +929,89 @@ void dtr_gfx_spr(dtr_graphics_t *gfx,
     sy0    = (idx / sht->cols) * tile_h;
     px_w   = w_tiles * tile_w;
     px_h   = h_tiles * tile_h;
+    sht_w  = sht->width;
 
-    for (int32_t row = 0; row < px_h; ++row) {
-        for (int32_t px = 0; px < px_w; ++px) {
-            int32_t src_x;
-            int32_t src_y;
-            uint8_t col;
+    /* Precompute camera-adjusted destination rect */
+    cam_x  = gfx->camera_x;
+    cam_y  = gfx->camera_y;
+    dst_x0 = x - cam_x;
+    dst_y0 = y - cam_y;
+    dst_x1 = dst_x0 + px_w - 1;
+    dst_y1 = dst_y0 + px_h - 1;
 
-            src_x = flip_x ? (px_w - 1 - px) : px;
+    /* Clip rect bounds */
+    clip_l = gfx->clip_x;
+    clip_t = gfx->clip_y;
+    clip_r = clip_l + gfx->clip_w - 1;
+    clip_b = clip_t + gfx->clip_h - 1;
+
+    /* Early reject: sprite entirely outside clip rect */
+    if (dst_x1 < clip_l || dst_x0 > clip_r
+        || dst_y1 < clip_t || dst_y0 > clip_b) {
+        return;
+    }
+
+    /* Clamp visible region to clip rect */
+    {
+        int32_t vis_x0;
+        int32_t vis_y0;
+        int32_t vis_x1;
+        int32_t vis_y1;
+        int32_t fb_w;
+
+        vis_x0 = (dst_x0 > clip_l) ? dst_x0 : clip_l;
+        vis_y0 = (dst_y0 > clip_t) ? dst_y0 : clip_t;
+        vis_x1 = (dst_x1 < clip_r) ? dst_x1 : clip_r;
+        vis_y1 = (dst_y1 < clip_b) ? dst_y1 : clip_b;
+        fb_w   = gfx->width;
+
+        for (int32_t scr_y = vis_y0; scr_y <= vis_y1; ++scr_y) {
+            int32_t  row;
+            int32_t  src_y;
+            int32_t  row_off;
+            uint8_t *dst_row;
+
+            row   = scr_y - dst_y0;
             src_y = flip_y ? (px_h - 1 - row) : row;
-            src_x += sx0;
             src_y += sy0;
-
-            if (src_x < 0 || src_x >= sht->width || src_y < 0 || src_y >= sht->height) {
+            if (src_y < 0 || src_y >= sht->height) {
                 continue;
             }
+            row_off = src_y * sht_w;
+            dst_row = &gfx->framebuffer[scr_y * fb_w];
 
-            col = sht->pixels[src_y * sht->width + src_x];
-            if (gfx->transparent[col]) {
-                continue;
+            for (int32_t scr_x = vis_x0; scr_x <= vis_x1;
+                 ++scr_x) {
+                int32_t col_idx;
+                int32_t src_x;
+                uint8_t col;
+
+                col_idx = scr_x - dst_x0;
+                src_x   = flip_x
+                              ? (px_w - 1 - col_idx)
+                              : col_idx;
+                src_x  += sx0;
+                if (src_x < 0 || src_x >= sht_w) {
+                    continue;
+                }
+
+                col = sht->pixels[row_off + src_x];
+                if (gfx->transparent[col]) {
+                    continue;
+                }
+                col = gfx->draw_pal[col];
+
+                if (gfx->fill_pattern != 0) {
+                    int32_t bit;
+
+                    bit = (scr_y & 3) * 4 + (scr_x & 3);
+                    if (!(gfx->fill_pattern & (1 << bit))) {
+                        continue;
+                    }
+                }
+
+                dst_row[scr_x] = col;
             }
-            prv_put_pixel(gfx, x + px, y + row, col);
         }
     }
 }
