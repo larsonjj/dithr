@@ -90,6 +90,13 @@ node tools/serve-wasm.js
 This serves `build/wasm/` on `http://localhost:8080` with the required
 COOP/COEP headers and gzip/Brotli content negotiation.
 
+### GitHub Pages
+
+Pushing to `main` triggers the `.github/workflows/pages.yml` workflow, which
+builds every example as a standalone WASM binary and deploys them to GitHub
+Pages. Each example is available at `/<example-name>/` with a generated index
+page linking to all of them.
+
 ## CMake cache variables
 
 All console defaults can be overridden at configure time:
@@ -125,21 +132,30 @@ cmake --preset debug -DDTR_FB_WIDTH=128 -DDTR_FB_HEIGHT=128 -DDTR_WINDOW_SCALE=4
 
 ## CMake targets
 
-| Target               | Type           | Description                             |
-| -------------------- | -------------- | --------------------------------------- |
-| `dithr_core`         | Static library | All engine source except `main.c`       |
-| `dithr`              | Executable     | Links `dithr_core` + SDL main callbacks |
-| `test_input`         | Test exe       | Keyboard / virtual input tests          |
-| `test_cart`          | Test exe       | Cart loading tests                      |
-| `test_graphics`      | Test exe       | Graphics primitives tests               |
-| `test_event`         | Test exe       | Event bus tests                         |
-| `test_mouse_gamepad` | Test exe       | Mouse and gamepad state tests           |
-| `test_runtime`       | Test exe       | QuickJS runtime wrapper tests           |
+| Target               | Type           | Description                                                    |
+| -------------------- | -------------- | -------------------------------------------------------------- |
+| `dithr_core`         | Static library | All engine source except `main.c`; SDL linked PUBLIC           |
+| `dithr_core_test`    | Static library | Same sources as `dithr_core`; SDL linked PRIVATE (test builds) |
+| `dithr`              | Executable     | Links `dithr_core` + SDL main callbacks                        |
+| `test_input`         | Test exe       | Keyboard / virtual input tests                                 |
+| `test_cart`          | Test exe       | Cart loading tests                                             |
+| `test_graphics`      | Test exe       | Graphics primitives tests (links `dithr_core_test`)            |
+| `test_event`         | Test exe       | Event bus tests                                                |
+| `test_mouse_gamepad` | Test exe       | Mouse and gamepad state tests                                  |
+| `test_runtime`       | Test exe       | QuickJS runtime wrapper tests                                  |
+| `test_audio`         | Test exe       | Audio subsystem tests                                          |
+| `test_postfx`        | Test exe       | Post-processing pipeline tests                                 |
+
+`dithr_core_test` is marked `EXCLUDE_FROM_ALL` — it is only built when a test
+target depends on it. Because SDL is linked PRIVATE, test binaries that only
+exercise SDL-free code (like `test_graphics`) won't load SDL shared libraries
+at runtime.
 
 ## Tooling
 
-| Script                 | Usage                                                     | Description                                                                  |
-| ---------------------- | --------------------------------------------------------- | ---------------------------------------------------------------------------- |
-| `tools/create-cart.js` | `node tools/create-cart.js <name> [--template <t>]`       | Scaffold a new cart project (templates: `blank`, `platformer`, `pico8-port`) |
-| `tools/cart-export.js` | `node tools/cart-export.js <cart.json> [--out file.html]` | Export a cart to standalone HTML                                             |
-| `tools/serve-wasm.js`  | `node tools/serve-wasm.js [port]`                         | WASM dev server (default port 8080)                                          |
+| Script                          | Usage                                                     | Description                                                                  |
+| ------------------------------- | --------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| `tools/create-cart.js`          | `node tools/create-cart.js <name> [--template <t>]`       | Scaffold a new cart project (templates: `blank`, `platformer`, `pico8-port`) |
+| `tools/cart-export.js`          | `node tools/cart-export.js <cart.json> [--out file.html]` | Export a cart to standalone HTML                                             |
+| `tools/serve-wasm.js`           | `node tools/serve-wasm.js [port]`                         | WASM dev server (default port 8080)                                          |
+| `tools/generate-pages-index.js` | `node tools/generate-pages-index.js <siteDir>`            | Generate index.html linking to all built WASM examples (used by CI)          |

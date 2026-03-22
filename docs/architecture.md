@@ -178,17 +178,27 @@ See [cart-format.md](cart-format.md) for the full schema.
 ## Memory Management
 
 All allocations go through `DTR_MALLOC`, `DTR_CALLOC`, `DTR_REALLOC`, and
-`DTR_FREE` — thin macros over SDL's allocator. This keeps allocation
-consistent across engine and dependency code.
+`DTR_FREE`. These macros are defined in two layers:
+
+- **`console_defs.h`** — maps them to standard C `malloc`/`free`. This header
+  is SDL-free and can be included by modules that don't need SDL (e.g.
+  `graphics.h`).
+- **`console.h`** — includes `console_defs.h`, then overrides the macros to
+  use SDL's allocator (`SDL_malloc`, `SDL_free`, etc.). Any code that includes
+  `console.h` gets SDL-backed allocation.
+
+This split keeps `graphics.c` completely self-contained — it can be compiled
+and tested without linking SDL.
 
 ## File Layout
 
 ```
 src/
 ├── main.c              SDL_MAIN_USE_CALLBACKS entry point
+├── console_defs.h      SDL-free constants, forward types, stdlib memory macros
 ├── console.c/h         Top-level state, create/event/iterate/destroy
 ├── runtime.c/h         QuickJS-NG wrapper
-├── graphics.c/h        Software framebuffer renderer
+├── graphics.c/h        Software framebuffer renderer (includes console_defs.h, not console.h)
 ├── audio.c/h           SDL3_mixer wrapper
 ├── input.c/h           Virtual input mapping
 ├── event.c/h           Event bus
