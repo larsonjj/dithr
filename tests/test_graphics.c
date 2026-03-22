@@ -454,7 +454,7 @@ static void test_gfx_polyfill(void)
 static void test_gfx_poly_degenerate(void)
 {
     dtr_graphics_t *gfx = dtr_gfx_create(TW, TH);
-    int32_t pts[] = { 0, 0 };
+    int32_t pts[] = { 0, 0, 1, 1 };
 
     dtr_gfx_cls(gfx, 0);
 
