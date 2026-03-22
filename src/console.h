@@ -6,138 +6,23 @@
 #ifndef DTR_CONSOLE_H
 #define DTR_CONSOLE_H
 
+#include "console_defs.h"
 #include <SDL3/SDL.h>
-#include <stdbool.h>
-#include <stddef.h>
-#include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
 
-/* ------------------------------------------------------------------------ */
-/*  Compile-time defaults — every value overridable via CMake cache          */
-/* ------------------------------------------------------------------------ */
-
-/* Display */
-#ifndef CONSOLE_FB_WIDTH
-#define CONSOLE_FB_WIDTH 320
-#endif
-#ifndef CONSOLE_FB_HEIGHT
-#define CONSOLE_FB_HEIGHT 180
-#endif
-#ifndef CONSOLE_PALETTE_SIZE
-#define CONSOLE_PALETTE_SIZE 256
-#endif
-#ifndef CONSOLE_WINDOW_SCALE
-#define CONSOLE_WINDOW_SCALE 3
-#endif
-
-/* Sprites */
-#ifndef CONSOLE_MAX_SPRITES
-#define CONSOLE_MAX_SPRITES 256
-#endif
-#ifndef CONSOLE_SPRITE_FLAGS
-#define CONSOLE_SPRITE_FLAGS 8
-#endif
-
-/* Maps */
-#ifndef CONSOLE_MAX_MAPS
-#define CONSOLE_MAX_MAPS 32
-#endif
-#ifndef CONSOLE_MAX_MAP_LAYERS
-#define CONSOLE_MAX_MAP_LAYERS 8
-#endif
-#ifndef CONSOLE_MAX_MAP_OBJECTS
-#define CONSOLE_MAX_MAP_OBJECTS 512
-#endif
-
-/* Audio */
-#ifndef CONSOLE_MAX_CHANNELS
-#define CONSOLE_MAX_CHANNELS 16
-#endif
-
-/* Draw list */
-#ifndef CONSOLE_MAX_DRAW_CMDS
-#define CONSOLE_MAX_DRAW_CMDS 1024
-#endif
-#ifndef CONSOLE_AUDIO_FREQ
-#define CONSOLE_AUDIO_FREQ 44100
-#endif
-#ifndef CONSOLE_AUDIO_BUFFER
-#define CONSOLE_AUDIO_BUFFER 2048
-#endif
-
-/* Runtime */
-#ifndef CONSOLE_TARGET_FPS
-#define CONSOLE_TARGET_FPS 60
-#endif
-#ifndef CONSOLE_JS_HEAP_MB
-#define CONSOLE_JS_HEAP_MB 64
-#endif
-#ifndef CONSOLE_JS_STACK_KB
-#define CONSOLE_JS_STACK_KB 512
-#endif
-#ifndef CONSOLE_VERSION
-#define CONSOLE_VERSION "0.1.0"
-#endif
-
-/* Convenience aliases used by subsystem code */
-#ifndef CONSOLE_DEFAULT_SCALE
-#define CONSOLE_DEFAULT_SCALE CONSOLE_WINDOW_SCALE
-#endif
-#ifndef CONSOLE_FPS
-#define CONSOLE_FPS CONSOLE_TARGET_FPS
-#endif
-#ifndef CONSOLE_TILE_W
-#define CONSOLE_TILE_W 8
-#endif
-#ifndef CONSOLE_TILE_H
-#define CONSOLE_TILE_H 8
-#endif
-#ifndef CONSOLE_AUDIO_CHANNELS
-#define CONSOLE_AUDIO_CHANNELS CONSOLE_MAX_CHANNELS
-#endif
-#ifndef CONSOLE_MAP_SLOTS
-#define CONSOLE_MAP_SLOTS CONSOLE_MAX_MAPS
-#endif
-#ifndef CONSOLE_JS_MEM_MB
-#define CONSOLE_JS_MEM_MB CONSOLE_JS_HEAP_MB
-#endif
-
-/* Dev */
-#ifndef DEV_BUILD
-#define DEV_BUILD 0
-#endif
-
-/* Array element count helper */
-#ifndef countof
-#define countof(x) (sizeof(x) / sizeof((x)[0]))
-#endif
-
-/* ------------------------------------------------------------------------ */
-/*  Memory macros — thin wrappers around SDL allocation                      */
-/* ------------------------------------------------------------------------ */
-
+/* Override the stdlib-based memory macros with SDL equivalents so that all  */
+/* allocations go through SDL's allocator (custom allocator support, etc.).  */
+#undef DTR_MALLOC
+#undef DTR_CALLOC
+#undef DTR_REALLOC
+#undef DTR_FREE
 #define DTR_MALLOC(size)        SDL_malloc(size)
 #define DTR_CALLOC(nmemb, size) SDL_calloc((nmemb), (size))
 #define DTR_REALLOC(ptr, size)  SDL_realloc((ptr), (size))
 #define DTR_FREE(ptr)           SDL_free(ptr)
-
-/* ------------------------------------------------------------------------ */
-/*  Forward declarations (typedef once — subsystem headers define bodies)    */
-/* ------------------------------------------------------------------------ */
-
-typedef struct dtr_graphics      dtr_graphics_t;
-typedef struct dtr_audio         dtr_audio_t;
-typedef struct dtr_key_state     dtr_key_state_t;
-typedef struct dtr_mouse_state   dtr_mouse_state_t;
-typedef struct dtr_gamepad_state dtr_gamepad_state_t;
-typedef struct dtr_input_state   dtr_input_state_t;
-typedef struct dtr_event_bus     dtr_event_bus_t;
-typedef struct dtr_cart          dtr_cart_t;
-typedef struct dtr_postfx        dtr_postfx_t;
-typedef struct dtr_runtime       dtr_runtime_t;
 
 /* ------------------------------------------------------------------------ */
 /*  Console — top-level state                                                */

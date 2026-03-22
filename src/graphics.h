@@ -6,7 +6,7 @@
 #ifndef DTR_GRAPHICS_H
 #define DTR_GRAPHICS_H
 
-#include "console.h"
+#include "console_defs.h"
 
 #ifdef __cplusplus
 extern "C" {
