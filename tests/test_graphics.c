@@ -669,12 +669,12 @@ int main(int argc, char *argv[])
     test_gfx_fill_pattern();
     test_gfx_flip();
     test_gfx_reset();
-    // test_gfx_poly_outline();
-    // test_gfx_polyfill();
-    // test_gfx_poly_degenerate();
-    // test_gfx_font_custom_and_reset();
-    // test_gfx_fade();
-    // test_gfx_wipe();
+    test_gfx_poly_outline();
+    test_gfx_polyfill();
+    test_gfx_poly_degenerate();
+    test_gfx_font_custom_and_reset();
+    test_gfx_fade();
+    test_gfx_wipe();
     // test_gfx_dissolve();
     // test_gfx_transition_clamp_frames();
     // test_gfx_dl_begin_end();
