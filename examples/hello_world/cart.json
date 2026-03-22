@@ -1,9 +1,9 @@
 {
   "meta": {
-    "title": "hello_world",
-    "author": "",
+    "title": "Hello World",
+    "author": "dithr",
     "version": "1.0.0",
-    "description": ""
+    "description": "Demonstrates displaying 'Hello, World!' on the screen"
   },
   "display": {
     "width": 320,
