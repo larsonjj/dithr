@@ -633,6 +633,8 @@ static void test_gfx_dl_overflow(void)
     dtr_gfx_dl_spr(gfx, 0, 0, 0, 0, 1, 1, false, false);
     DTR_ASSERT_EQ_INT(gfx->draw_list.count, CONSOLE_MAX_DRAW_CMDS);
 
+    /* Clear queue before dl_end to avoid rendering 1024 sprites */
+    gfx->draw_list.count = 0;
     dtr_gfx_dl_end(gfx);
     dtr_gfx_destroy(gfx);
     DTR_PASS();
