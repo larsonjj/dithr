@@ -50,25 +50,12 @@ dtr_copy_test_dlls(test_cart)
 add_test(NAME test_cart COMMAND test_cart)
 
 # --- Graphics tests ---
-# Compile graphics.c directly instead of linking dithr_core so that
-# test_graphics has NO dependency on SDL shared libraries.  This avoids
-# intermittent CI hangs caused by loading libSDL3/libSDL3_mixer/libSDL3_image
-# in headless environments.
-add_executable(test_graphics test_graphics.c ${CMAKE_SOURCE_DIR}/src/graphics.c)
-target_include_directories(test_graphics PRIVATE ${CMAKE_SOURCE_DIR}/src)
-target_compile_definitions(test_graphics PRIVATE
-    CONSOLE_FB_WIDTH=${DTR_FB_WIDTH}
-    CONSOLE_FB_HEIGHT=${DTR_FB_HEIGHT}
-    CONSOLE_PALETTE_SIZE=${DTR_PALETTE_SIZE}
-    CONSOLE_MAX_SPRITES=${DTR_MAX_SPRITES}
-    CONSOLE_SPRITE_FLAGS=${DTR_SPRITE_FLAGS}
-)
+add_executable(test_graphics test_graphics.c)
+target_link_libraries(test_graphics PRIVATE dithr_core_test)
 if (MSVC)
     target_compile_options(test_graphics PRIVATE /wd4244)
 endif()
-if (NOT MSVC)
-    target_link_libraries(test_graphics PRIVATE m)
-endif()
+dtr_copy_test_dlls(test_graphics)
 add_test(NAME test_graphics COMMAND test_graphics)
 
 # --- Event tests ---

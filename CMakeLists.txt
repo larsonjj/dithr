@@ -140,7 +140,8 @@ else()
 endif()
 
 # --- Engine static library (everything except main.c) ---
-add_library(dithr_core STATIC
+# Shared source list and compile definitions for engine libraries.
+set(DITHR_CORE_SOURCES
     src/console.c
     src/runtime.c
     src/graphics.c
@@ -168,30 +169,7 @@ add_library(dithr_core STATIC
     src/api/sys_api.c
 )
 
-target_include_directories(dithr_core PUBLIC
-    ${CMAKE_CURRENT_SOURCE_DIR}/src
-)
-
-target_compile_options(dithr_core PRIVATE ${DTR_WARN_FLAGS})
-
-# Suppress C4244 from QuickJS inline functions in quickjs.h
-if (MSVC)
-    target_compile_options(dithr_core PRIVATE /wd4244)
-endif()
-
-target_link_libraries(dithr_core PUBLIC
-    SDL3::SDL3
-    SDL3_mixer::SDL3_mixer
-    SDL3_image::SDL3_image
-    quickjs
-)
-
-if (NOT MSVC)
-    target_link_libraries(dithr_core PUBLIC m)
-endif()
-
-# Pass compile-time defaults as definitions
-target_compile_definitions(dithr_core PUBLIC
+set(DITHR_COMPILE_DEFS
     CONSOLE_FB_WIDTH=${DTR_FB_WIDTH}
     CONSOLE_FB_HEIGHT=${DTR_FB_HEIGHT}
     CONSOLE_PALETTE_SIZE=${DTR_PALETTE_SIZE}
@@ -209,6 +187,46 @@ target_compile_definitions(dithr_core PUBLIC
     CONSOLE_JS_STACK_KB=${DTR_JS_STACK_KB}
     CONSOLE_VERSION="${DTR_VERSION_STR}"
 )
+
+# --- Engine static library (everything except main.c) ---
+add_library(dithr_core STATIC ${DITHR_CORE_SOURCES})
+target_include_directories(dithr_core PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
+target_compile_options(dithr_core PRIVATE ${DTR_WARN_FLAGS})
+if (MSVC)
+    target_compile_options(dithr_core PRIVATE /wd4244)
+endif()
+target_link_libraries(dithr_core PUBLIC
+    SDL3::SDL3
+    SDL3_mixer::SDL3_mixer
+    SDL3_image::SDL3_image
+    quickjs
+)
+if (NOT MSVC)
+    target_link_libraries(dithr_core PUBLIC m)
+endif()
+target_compile_definitions(dithr_core PUBLIC ${DITHR_COMPILE_DEFS})
+
+# --- Test-only engine library (same sources, SDL not in link interface) ---
+# SDL is linked PRIVATE so it is available during compilation but not
+# propagated to consumers.  The linker only pulls object files whose symbols
+# are actually referenced, so test binaries that only exercise SDL-free code
+# paths (e.g. graphics) won't load SDL shared libraries at runtime.
+add_library(dithr_core_test STATIC EXCLUDE_FROM_ALL ${DITHR_CORE_SOURCES})
+target_include_directories(dithr_core_test PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
+target_compile_options(dithr_core_test PRIVATE ${DTR_WARN_FLAGS})
+if (MSVC)
+    target_compile_options(dithr_core_test PRIVATE /wd4244)
+endif()
+target_link_libraries(dithr_core_test PRIVATE
+    SDL3::SDL3
+    SDL3_mixer::SDL3_mixer
+    SDL3_image::SDL3_image
+    quickjs
+)
+if (NOT MSVC)
+    target_link_libraries(dithr_core_test PUBLIC m)
+endif()
+target_compile_definitions(dithr_core_test PUBLIC ${DITHR_COMPILE_DEFS})
 
 # Sanitizers
 option(DTR_ENABLE_ASAN  "Enable AddressSanitizer"           OFF)
