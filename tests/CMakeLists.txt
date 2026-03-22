@@ -1,3 +1,8 @@
+# Prevent SDL from redefining main() in test binaries.
+# On macOS, SDL3 renames main → SDL_main and injects its own entry point
+# (Cocoa/NSApplication setup) which can hang in headless CI environments.
+add_compile_definitions(SDL_MAIN_HANDLED)
+
 # --- Input tests ---
 add_executable(test_input test_input.c)
 target_link_libraries(test_input PRIVATE dithr_core)
