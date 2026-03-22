@@ -71,11 +71,6 @@ jobs:
             - name: Test
               working-directory: build/debug
               run: ctest --output-on-failure --timeout 300
-              env:
-                  SDL_AUDIO_DRIVER: dummy
-                  SDL_VIDEO_DRIVER: dummy
-                  SDL_AUDIODRIVER: dummy
-                  SDL_VIDEODRIVER: dummy
 
     # ---------------------------------------------------------------------------
     #  Linux — GCC + ASan / UBSan
@@ -115,10 +110,6 @@ jobs:
               working-directory: build/asan
               run: ctest --output-on-failure --timeout 300
               env:
-                  SDL_AUDIO_DRIVER: dummy
-                  SDL_VIDEO_DRIVER: dummy
-                  SDL_AUDIODRIVER: dummy
-                  SDL_VIDEODRIVER: dummy
                   LSAN_OPTIONS: suppressions=${{ github.workspace }}/tests/lsan_suppressions.txt
 
     # ---------------------------------------------------------------------------
@@ -147,8 +138,3 @@ jobs:
             - name: Test
               working-directory: build/debug
               run: ctest --output-on-failure --timeout 300
-              env:
-                  SDL_AUDIO_DRIVER: dummy
-                  SDL_VIDEO_DRIVER: dummy
-                  SDL_AUDIODRIVER: dummy
-                  SDL_VIDEODRIVER: dummy
