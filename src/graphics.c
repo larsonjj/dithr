@@ -9,6 +9,7 @@
 
 #include <math.h>
 #include <stdlib.h>
+#include <string.h>
 
 /* ------------------------------------------------------------------ */
 /*  Default 256-colour palette (first 16 inspired by PICO-8)           */
@@ -235,7 +236,7 @@ static void prv_put_pixel(dtr_graphics_t *gfx, int32_t raw_x, int32_t raw_y, uin
  *
  * Camera transform, Y-clipping, and X-clipping are done once per span
  * rather than per pixel.  When the fill pattern is zero (solid fill)
- * the span is written with SDL_memset for maximum throughput.
+ * the span is written with memset for maximum throughput.
  */
 static void
 prv_hline(dtr_graphics_t *gfx, int32_t raw_x0, int32_t raw_x1, int32_t raw_y, uint8_t col)
@@ -274,8 +275,8 @@ prv_hline(dtr_graphics_t *gfx, int32_t raw_x0, int32_t raw_x1, int32_t raw_y, ui
 
     if (gfx->fill_pattern == 0) {
         /* Solid fill — memset the span */
-        SDL_memset(&gfx->framebuffer[scr_y * gfx->width + left], col,
-                   (size_t)(right - left + 1));
+        memset(&gfx->framebuffer[scr_y * gfx->width + left], col,
+               (size_t)(right - left + 1));
     } else {
         /* Patterned fill */
         int32_t pat_y_bits;
@@ -361,7 +362,7 @@ prv_vline(dtr_graphics_t *gfx, int32_t raw_x, int32_t raw_y0, int32_t raw_y1, ui
 
 void dtr_gfx_cls(dtr_graphics_t *gfx, uint8_t col)
 {
-    SDL_memset(gfx->framebuffer, col, (size_t)(gfx->width * gfx->height));
+    memset(gfx->framebuffer, col, (size_t)(gfx->width * gfx->height));
 }
 
 void dtr_gfx_pset(dtr_graphics_t *gfx, int32_t x, int32_t y, uint8_t col)

@@ -74,6 +74,8 @@ jobs:
               env:
                   SDL_AUDIO_DRIVER: dummy
                   SDL_VIDEO_DRIVER: dummy
+                  SDL_AUDIODRIVER: dummy
+                  SDL_VIDEODRIVER: dummy
 
     # ---------------------------------------------------------------------------
     #  Linux — GCC + ASan / UBSan
@@ -115,6 +117,8 @@ jobs:
               env:
                   SDL_AUDIO_DRIVER: dummy
                   SDL_VIDEO_DRIVER: dummy
+                  SDL_AUDIODRIVER: dummy
+                  SDL_VIDEODRIVER: dummy
                   LSAN_OPTIONS: suppressions=${{ github.workspace }}/tests/lsan_suppressions.txt
 
     # ---------------------------------------------------------------------------
@@ -146,3 +150,5 @@ jobs:
               env:
                   SDL_AUDIO_DRIVER: dummy
                   SDL_VIDEO_DRIVER: dummy
+                  SDL_AUDIODRIVER: dummy
+                  SDL_VIDEODRIVER: dummy
