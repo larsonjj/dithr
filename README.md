@@ -1,4 +1,4 @@
-# dithr (Maven Engine)
+# dithr (Game Toolkit)
 
 [![CI](https://github.com/larsonjj/dithr/actions/workflows/ci.yml/badge.svg)](https://github.com/larsonjj/dithr/actions/workflows/ci.yml)
 
