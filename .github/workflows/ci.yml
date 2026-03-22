@@ -141,3 +141,5 @@ jobs:
               env:
                   SDL_AUDIO_DRIVER: dummy
                   SDL_VIDEO_DRIVER: dummy
+                  SDL_AUDIODRIVER: dummy
+                  SDL_VIDEODRIVER: dummy
