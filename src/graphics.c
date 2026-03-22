@@ -1731,20 +1731,21 @@ bool dtr_gfx_load_sheet(dtr_graphics_t *gfx,
     dtr_sprite_sheet_t *sht;
     int32_t             total;
     size_t              alloc_sz;
+    uint8_t            *new_pixels;
 
     sht = &gfx->sheet;
 
-    if (sht->pixels != NULL) {
-        DTR_FREE(sht->pixels);
-        sht->pixels = NULL;
-    }
-
     total       = width * height;
     alloc_sz    = (size_t)total;
-    sht->pixels = DTR_MALLOC(alloc_sz);
-    if (sht->pixels == NULL) {
+    new_pixels  = DTR_MALLOC(alloc_sz);
+    if (new_pixels == NULL) {
         return false;
     }
+
+    if (sht->pixels != NULL) {
+        DTR_FREE(sht->pixels);
+    }
+    sht->pixels = new_pixels;
 
     /* Quantise RGBA to nearest palette colour */
     for (int32_t idx = 0; idx < total; ++idx) {

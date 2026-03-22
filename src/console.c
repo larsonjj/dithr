@@ -22,9 +22,45 @@
 /*  Forward declarations for internal helpers                          */
 /* ------------------------------------------------------------------ */
 
+static void prv_console_cleanup(dtr_console_t *con);
 static bool prv_load_cart_assets(dtr_console_t *con);
 static void prv_render_pause_overlay(dtr_console_t *con);
 static void prv_render_error_overlay(dtr_console_t *con);
+
+/**
+ * \brief           Free all subsystem resources without event emission or
+ *                  persistence save.  Safe to call when any subset of fields
+ *                  is still NULL (e.g. during a partially-constructed console).
+ */
+static void prv_console_cleanup(dtr_console_t *con)
+{
+    if (con == NULL) {
+        return;
+    }
+
+    dtr_postfx_destroy(con->postfx);
+    dtr_event_destroy(con->events);
+    dtr_input_destroy(con->input);
+    dtr_gamepad_destroy(con->gamepads);
+    dtr_mouse_destroy(con->mouse);
+    dtr_key_destroy(con->keys);
+    dtr_audio_destroy(con->audio);
+    dtr_gfx_destroy(con->graphics);
+    dtr_cart_destroy(con->cart);
+    dtr_runtime_destroy(con->runtime);
+
+    if (con->screen_tex != NULL) {
+        SDL_DestroyTexture(con->screen_tex);
+    }
+    if (con->renderer != NULL) {
+        SDL_DestroyRenderer(con->renderer);
+    }
+    if (con->window != NULL) {
+        SDL_DestroyWindow(con->window);
+    }
+
+    DTR_FREE(con);
+}
 
 /* ------------------------------------------------------------------ */
 /*  Create                                                             */
@@ -47,7 +83,7 @@ dtr_console_t *dtr_console_create(const char *cart_path)
     /* --- Cart (create + defaults) --- */
     con->cart = dtr_cart_create();
     if (con->cart == NULL) {
-        DTR_FREE(con);
+        prv_console_cleanup(con);
         return NULL;
     }
     dtr_cart_defaults(con->cart);
@@ -57,8 +93,7 @@ dtr_console_t *dtr_console_create(const char *cart_path)
                                       (int32_t)(con->cart->runtime.mem_limit / (1024u * 1024u)),
                                       (int32_t)(con->cart->runtime.stack_limit / 1024u));
     if (con->runtime == NULL) {
-        dtr_cart_destroy(con->cart);
-        DTR_FREE(con);
+        prv_console_cleanup(con);
         return NULL;
     }
 
@@ -114,19 +149,14 @@ dtr_console_t *dtr_console_create(const char *cart_path)
                                    SDL_WINDOW_RESIZABLE);
     if (con->window == NULL) {
         SDL_Log("SDL_CreateWindow failed: %s", SDL_GetError());
-        dtr_runtime_destroy(con->runtime);
-        dtr_cart_destroy(con->cart);
-        DTR_FREE(con);
+        prv_console_cleanup(con);
         return NULL;
     }
 
     con->renderer = SDL_CreateRenderer(con->window, NULL);
     if (con->renderer == NULL) {
         SDL_Log("SDL_CreateRenderer failed: %s", SDL_GetError());
-        SDL_DestroyWindow(con->window);
-        dtr_runtime_destroy(con->runtime);
-        dtr_cart_destroy(con->cart);
-        DTR_FREE(con);
+        prv_console_cleanup(con);
         return NULL;
     }
 
@@ -143,11 +173,7 @@ dtr_console_t *dtr_console_create(const char *cart_path)
                                         con->fb_height);
     if (con->screen_tex == NULL) {
         SDL_Log("SDL_CreateTexture failed: %s", SDL_GetError());
-        SDL_DestroyRenderer(con->renderer);
-        SDL_DestroyWindow(con->window);
-        dtr_runtime_destroy(con->runtime);
-        dtr_cart_destroy(con->cart);
-        DTR_FREE(con);
+        prv_console_cleanup(con);
         return NULL;
     }
     SDL_SetTextureScaleMode(con->screen_tex, SDL_SCALEMODE_NEAREST);
@@ -155,12 +181,7 @@ dtr_console_t *dtr_console_create(const char *cart_path)
     /* --- Graphics subsystem --- */
     con->graphics = dtr_gfx_create(con->fb_width, con->fb_height);
     if (con->graphics == NULL) {
-        SDL_DestroyTexture(con->screen_tex);
-        SDL_DestroyRenderer(con->renderer);
-        SDL_DestroyWindow(con->window);
-        dtr_runtime_destroy(con->runtime);
-        dtr_cart_destroy(con->cart);
-        DTR_FREE(con);
+        prv_console_cleanup(con);
         return NULL;
     }
 
@@ -541,31 +562,10 @@ void dtr_console_destroy(dtr_console_t *con)
         dtr_event_flush(con->events);
     }
 
-    /* Subsystems */
-    dtr_postfx_destroy(con->postfx);
-    dtr_event_destroy(con->events);
-    dtr_input_destroy(con->input);
-    dtr_gamepad_destroy(con->gamepads);
-    dtr_mouse_destroy(con->mouse);
-    dtr_key_destroy(con->keys);
-    dtr_audio_destroy(con->audio);
-    dtr_gfx_destroy(con->graphics);
+    /* Persist before teardown */
     dtr_cart_persist_save(con->cart);
-    dtr_cart_destroy(con->cart);
-    dtr_runtime_destroy(con->runtime);
 
-    /* SDL */
-    if (con->screen_tex != NULL) {
-        SDL_DestroyTexture(con->screen_tex);
-    }
-    if (con->renderer != NULL) {
-        SDL_DestroyRenderer(con->renderer);
-    }
-    if (con->window != NULL) {
-        SDL_DestroyWindow(con->window);
-    }
-
-    DTR_FREE(con);
+    prv_console_cleanup(con);
 }
 
 /* ------------------------------------------------------------------ */
@@ -580,8 +580,11 @@ static bool prv_load_cart_assets(dtr_console_t *con)
     cart = con->cart;
 
     /* Sprites: load PNG → RGBA → quantise to palette sheet */
-    if (cart->sprite_rgba == NULL && cart->sprite_sheet_path[0] != '\0') {
+    if (cart->sprite_sheet_path[0] != '\0') {
         int32_t w = 0, h = 0;
+
+        DTR_FREE(cart->sprite_rgba);
+        cart->sprite_rgba = NULL;
 
         SDL_snprintf(path_buf, sizeof(path_buf), "%s%s",
                      cart->base_path, cart->sprite_sheet_path);

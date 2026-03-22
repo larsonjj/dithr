@@ -231,6 +231,7 @@ target_compile_definitions(dithr_core_test PUBLIC ${DITHR_COMPILE_DEFS})
 # Sanitizers
 option(DTR_ENABLE_ASAN  "Enable AddressSanitizer"           OFF)
 option(DTR_ENABLE_UBSAN "Enable UndefinedBehaviorSanitizer" OFF)
+option(DTR_ENABLE_COVERAGE "Enable code coverage (gcov)"    OFF)
 if (DTR_ENABLE_ASAN)
     if (MSVC)
         add_compile_options(/fsanitize=address)
@@ -243,6 +244,10 @@ if (DTR_ENABLE_UBSAN AND NOT MSVC)
     add_compile_options(-fsanitize=undefined)
     add_link_options(-fsanitize=undefined)
 endif()
+if (DTR_ENABLE_COVERAGE AND NOT MSVC)
+    add_compile_options(--coverage -fno-inline)
+    add_link_options(--coverage)
+endif()
 
 # Dev build flag
 option(DTR_DEV_BUILD "Enable development features (hot reload, debug overlays)" OFF)
@@ -253,6 +258,7 @@ endif()
 # --- Executable ---
 add_executable(dithr src/main.c)
 target_compile_definitions(dithr PRIVATE SDL_MAIN_USE_CALLBACKS=1)
+target_compile_options(dithr PRIVATE ${DTR_WARN_FLAGS})
 target_link_libraries(dithr PRIVATE dithr_core)
 
 # --- Emscripten / WASM ---

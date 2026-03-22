@@ -31,74 +31,53 @@ function(dtr_copy_test_dlls target)
     endif()
 endfunction()
 
+# Helper: create a test executable, apply common options, and register with CTest.
+# Usage: dtr_add_test(<name> <source> [LINK_LIB <library>])
+# Defaults to linking against dithr_core if LINK_LIB is not specified.
+function(dtr_add_test name source)
+    cmake_parse_arguments(ARG "" "LINK_LIB" "" ${ARGN})
+    if (NOT ARG_LINK_LIB)
+        set(ARG_LINK_LIB dithr_core)
+    endif()
+
+    add_executable(${name} ${source})
+    target_link_libraries(${name} PRIVATE ${ARG_LINK_LIB})
+    if (MSVC)
+        target_compile_options(${name} PRIVATE /wd4244)
+    endif()
+    dtr_copy_test_dlls(${name})
+    add_test(NAME ${name} COMMAND ${name})
+endfunction()
+
 # --- Input tests ---
-add_executable(test_input test_input.c)
-target_link_libraries(test_input PRIVATE dithr_core)
-if (MSVC)
-    target_compile_options(test_input PRIVATE /wd4244)
-endif()
-dtr_copy_test_dlls(test_input)
-add_test(NAME test_input COMMAND test_input)
+dtr_add_test(test_input test_input.c)
 
 # --- Cart tests ---
-add_executable(test_cart test_cart.c)
-target_link_libraries(test_cart PRIVATE dithr_core)
-if (MSVC)
-    target_compile_options(test_cart PRIVATE /wd4244)
-endif()
-dtr_copy_test_dlls(test_cart)
-add_test(NAME test_cart COMMAND test_cart)
+dtr_add_test(test_cart test_cart.c)
 
 # --- Graphics tests ---
-add_executable(test_graphics test_graphics.c)
-target_link_libraries(test_graphics PRIVATE dithr_core_test)
-if (MSVC)
-    target_compile_options(test_graphics PRIVATE /wd4244)
-endif()
-dtr_copy_test_dlls(test_graphics)
-add_test(NAME test_graphics COMMAND test_graphics)
+dtr_add_test(test_graphics test_graphics.c LINK_LIB dithr_core_test)
 
 # --- Event tests ---
-add_executable(test_event test_event.c)
-target_link_libraries(test_event PRIVATE dithr_core)
-if (MSVC)
-    target_compile_options(test_event PRIVATE /wd4244)
-endif()
-dtr_copy_test_dlls(test_event)
-add_test(NAME test_event COMMAND test_event)
+dtr_add_test(test_event test_event.c)
 
 # --- Mouse / Gamepad tests ---
-add_executable(test_mouse_gamepad test_mouse_gamepad.c)
-target_link_libraries(test_mouse_gamepad PRIVATE dithr_core)
-if (MSVC)
-    target_compile_options(test_mouse_gamepad PRIVATE /wd4244)
-endif()
-dtr_copy_test_dlls(test_mouse_gamepad)
-add_test(NAME test_mouse_gamepad COMMAND test_mouse_gamepad)
+dtr_add_test(test_mouse_gamepad test_mouse_gamepad.c)
 
 # --- Runtime tests ---
-add_executable(test_runtime test_runtime.c)
-target_link_libraries(test_runtime PRIVATE dithr_core)
-if (MSVC)
-    target_compile_options(test_runtime PRIVATE /wd4244)
-endif()
-dtr_copy_test_dlls(test_runtime)
-add_test(NAME test_runtime COMMAND test_runtime)
+dtr_add_test(test_runtime test_runtime.c)
 
 # --- Audio tests ---
-add_executable(test_audio test_audio.c)
-target_link_libraries(test_audio PRIVATE dithr_core)
-if (MSVC)
-    target_compile_options(test_audio PRIVATE /wd4244)
-endif()
-dtr_copy_test_dlls(test_audio)
-add_test(NAME test_audio COMMAND test_audio)
+dtr_add_test(test_audio test_audio.c)
 
 # --- PostFX tests ---
-add_executable(test_postfx test_postfx.c)
-target_link_libraries(test_postfx PRIVATE dithr_core)
-if (MSVC)
-    target_compile_options(test_postfx PRIVATE /wd4244)
-endif()
-dtr_copy_test_dlls(test_postfx)
-add_test(NAME test_postfx COMMAND test_postfx)
+dtr_add_test(test_postfx test_postfx.c)
+
+# --- CTest properties ---
+set_tests_properties(
+    test_input test_cart test_graphics test_event
+    test_mouse_gamepad test_runtime test_audio test_postfx
+    PROPERTIES
+        TIMEOUT 30
+        ENVIRONMENT "SDL_AUDIO_DRIVER=dummy;SDL_VIDEO_DRIVER=dummy;SDL_AUDIODRIVER=dummy;SDL_VIDEODRIVER=dummy"
+)

@@ -90,6 +90,14 @@
       "command": "build/debug/Debug/dithr.exe ${input:ExampleCart}",
       "dependsOn": "Build (Debug)",
       "problemMatcher": []
+    },
+    {
+      "label": "Coverage (Windows)",
+      "type": "shell",
+      "command": "if (Test-Path build/coverage-parts) { Remove-Item -Recurse build/coverage-parts }; New-Item -ItemType Directory build/coverage-parts -Force | Out-Null; foreach ($t in Get-ChildItem build/debug/tests/Debug/test_*.exe) { OpenCppCoverage --quiet --sources \"${workspaceFolder}\\src\" --export_type \"binary:build/coverage-parts/$($t.BaseName).cov\" -- $t.FullName }; $inputs = (Get-ChildItem build/coverage-parts/*.cov | ForEach-Object { '--input_coverage'; $_.FullName }); OpenCppCoverage @inputs --export_type html:build/coverage-report",
+      "dependsOn": "Build (Debug)",
+      "problemMatcher": [],
+      "detail": "Run all tests under OpenCppCoverage and generate an HTML report in build/coverage-report/"
     }
   ],
   "inputs": [

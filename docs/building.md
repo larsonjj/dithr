@@ -53,6 +53,54 @@ cmake --build build/release --config Release
 ctest --test-dir build/debug -C Debug --output-on-failure
 ```
 
+### Code coverage
+
+Coverage is collected automatically in CI on Linux using `gcov` + `lcov`. To
+run coverage locally on **Windows**, install
+[OpenCppCoverage](https://github.com/OpenCppCoverage/OpenCppCoverage):
+
+```powershell
+winget install OpenCppCoverage.OpenCppCoverage
+```
+
+After installing, restart your terminal (and VS Code if using the integrated
+terminal) so the updated PATH is picked up. Then use the **Coverage (Windows)**
+VS Code task, or run manually:
+
+```powershell
+# Build first
+cmake --preset debug
+cmake --build build/debug --config Debug
+
+# Collect coverage and generate HTML report
+New-Item -ItemType Directory build/coverage-parts -Force | Out-Null
+foreach ($t in Get-ChildItem build/debug/tests/Debug/test_*.exe) {
+    OpenCppCoverage --quiet --sources "$PWD\src" `
+        --export_type "binary:build/coverage-parts/$($t.BaseName).cov" `
+        -- $t.FullName
+}
+$inputs = Get-ChildItem build/coverage-parts/*.cov |
+    ForEach-Object { '--input_coverage'; $_.FullName }
+OpenCppCoverage @inputs --export_type html:build/coverage-report
+```
+
+The report is generated in `build/coverage-report/`. Open `index.html` to view
+it.
+
+On **Linux / macOS**, use the `DTR_ENABLE_COVERAGE` CMake option (requires
+`lcov` and `genhtml`):
+
+```bash
+cmake -B build/coverage -G Ninja -DCMAKE_BUILD_TYPE=Debug -DDTR_ENABLE_COVERAGE=ON
+cmake --build build/coverage
+ctest --test-dir build/coverage --output-on-failure
+lcov --capture --directory build/coverage --include '*/src/*' \
+     --output-file build/coverage.info --ignore-errors mismatch
+lcov --remove build/coverage.info '*/tests/*' '*/_deps/*' \
+     --output-file build/coverage.info
+genhtml build/coverage.info --output-directory build/coverage-report
+```
+
 ## WASM build
 
 ### One-time setup

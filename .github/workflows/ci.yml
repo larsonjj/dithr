@@ -113,6 +113,74 @@ jobs:
                   LSAN_OPTIONS: suppressions=${{ github.workspace }}/tests/lsan_suppressions.txt
 
     # ---------------------------------------------------------------------------
+    #  Linux — GCC + Coverage (lcov)
+    # ---------------------------------------------------------------------------
+    coverage:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v6
+
+            - name: Cache build
+              uses: actions/cache@v5
+              with:
+                  path: build/coverage/_deps
+                  key: linux-cov-deps-${{ hashFiles('CMakeLists.txt') }}
+                  restore-keys: linux-cov-deps-
+
+            - name: Install dependencies
+              run: |
+                  sudo apt-get update
+                  sudo apt-get install -y ninja-build lcov \
+                    libx11-dev libxext-dev libxcursor-dev libxi-dev \
+                    libxfixes-dev libxrandr-dev libxrender-dev libxss-dev \
+                    libxtst-dev libxxf86vm-dev \
+                    libwayland-dev libxkbcommon-dev \
+                    libdrm-dev libgbm-dev libgl1-mesa-dev libgles2-mesa-dev \
+                    libegl1-mesa-dev libdbus-1-dev libudev-dev \
+                    libasound2-dev libpulse-dev libpipewire-0.3-dev \
+                    libdecor-0-dev
+
+            - name: Configure
+              run: >
+                  cmake -B build/coverage -G Ninja
+                  -DCMAKE_BUILD_TYPE=Debug
+                  -DDTR_ENABLE_COVERAGE=ON
+
+            - name: Build
+              run: cmake --build build/coverage
+
+            - name: Test
+              working-directory: build/coverage
+              run: ctest --output-on-failure --timeout 300
+
+            - name: Collect coverage
+              run: |
+                  lcov --capture --directory build/coverage \
+                       --include '*/src/*' \
+                       --output-file build/coverage.info \
+                       --ignore-errors mismatch
+                  lcov --remove build/coverage.info '*/tests/*' '*/_deps/*' \
+                       --output-file build/coverage.info
+                  genhtml build/coverage.info \
+                       --output-directory build/coverage-report
+
+            - name: Check coverage threshold
+              run: |
+                  COVERAGE=$(lcov --summary build/coverage.info 2>&1 \
+                    | grep -Po 'lines\.*:\s*\K[0-9]+(\.[0-9]+)?')
+                  echo "Line coverage: ${COVERAGE}%"
+                  if [ "$(echo "$COVERAGE < 50" | bc)" -eq 1 ]; then
+                    echo "::error::Coverage ${COVERAGE}% is below the 50% threshold"
+                    exit 1
+                  fi
+
+            - name: Upload coverage report
+              uses: actions/upload-artifact@v4
+              with:
+                  name: coverage-report
+                  path: build/coverage-report/
+
+    # ---------------------------------------------------------------------------
     #  macOS — AppleClang
     # ---------------------------------------------------------------------------
     macos:

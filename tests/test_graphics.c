@@ -244,6 +244,59 @@ static void test_gfx_line_horizontal(void)
     DTR_PASS();
 }
 
+static void test_gfx_line_vertical(void)
+{
+    dtr_graphics_t *gfx = dtr_gfx_create(TW, TH);
+    dtr_gfx_cls(gfx, 0);
+
+    dtr_gfx_line(gfx, 5, 2, 5, 10, 6);
+
+    /* All pixels in column 5 from y=2..10 should be colour 6 */
+    for (int y = 2; y <= 10; ++y) {
+        DTR_ASSERT_EQ_INT(gfx->framebuffer[y * TW + 5], 6);
+    }
+    /* Pixels just outside */
+    DTR_ASSERT_EQ_INT(gfx->framebuffer[1 * TW + 5], 0);
+    DTR_ASSERT_EQ_INT(gfx->framebuffer[11 * TW + 5], 0);
+
+    dtr_gfx_destroy(gfx);
+    DTR_PASS();
+}
+
+static void test_gfx_line_diagonal_clip(void)
+{
+    dtr_graphics_t *gfx = dtr_gfx_create(TW, TH);
+    dtr_gfx_cls(gfx, 0);
+
+    /* Draw a diagonal line that extends well outside the framebuffer */
+    dtr_gfx_line(gfx, -10, -10, TW + 10, TH + 10, 3);
+
+    /* Should not corrupt memory — just verify no crash and some pixels drawn */
+    int count = 0;
+    for (int i = 0; i < TW * TH; ++i) {
+        if (gfx->framebuffer[i] == 3) {
+            ++count;
+        }
+    }
+    DTR_ASSERT(count > 0);
+
+    dtr_gfx_destroy(gfx);
+    DTR_PASS();
+}
+
+static void test_gfx_line_single_point(void)
+{
+    dtr_graphics_t *gfx = dtr_gfx_create(TW, TH);
+    dtr_gfx_cls(gfx, 0);
+
+    /* Line from a point to itself — should draw a single pixel */
+    dtr_gfx_line(gfx, 7, 7, 7, 7, 5);
+    DTR_ASSERT_EQ_INT(gfx->framebuffer[7 * TW + 7], 5);
+
+    dtr_gfx_destroy(gfx);
+    DTR_PASS();
+}
+
 static void test_gfx_rectfill(void)
 {
     dtr_graphics_t *gfx = dtr_gfx_create(TW, TH);
@@ -286,6 +339,120 @@ static void test_gfx_rect_outline(void)
 }
 
 /* ------------------------------------------------------------------ */
+/*  Circle                                                             */
+/* ------------------------------------------------------------------ */
+
+static void test_gfx_circ_basic(void)
+{
+    dtr_graphics_t *gfx = dtr_gfx_create(TW, TH);
+    dtr_gfx_cls(gfx, 0);
+
+    dtr_gfx_circ(gfx, 8, 8, 3, 2);
+
+    /* Top, bottom, left, right of circle should be drawn */
+    DTR_ASSERT_EQ_INT(dtr_gfx_pget(gfx, 8, 5), 2);  /* top */
+    DTR_ASSERT_EQ_INT(dtr_gfx_pget(gfx, 8, 11), 2); /* bottom */
+    DTR_ASSERT_EQ_INT(dtr_gfx_pget(gfx, 5, 8), 2);  /* left */
+    DTR_ASSERT_EQ_INT(dtr_gfx_pget(gfx, 11, 8), 2); /* right */
+
+    /* Centre should not be filled (outline only) */
+    DTR_ASSERT_EQ_INT(dtr_gfx_pget(gfx, 8, 8), 0);
+
+    dtr_gfx_destroy(gfx);
+    DTR_PASS();
+}
+
+static void test_gfx_circfill_basic(void)
+{
+    dtr_graphics_t *gfx = dtr_gfx_create(TW, TH);
+    dtr_gfx_cls(gfx, 0);
+
+    dtr_gfx_circfill(gfx, 8, 8, 3, 4);
+
+    /* Centre should be filled */
+    DTR_ASSERT_EQ_INT(dtr_gfx_pget(gfx, 8, 8), 4);
+
+    /* Cardinal edges should be filled */
+    DTR_ASSERT_EQ_INT(dtr_gfx_pget(gfx, 8, 5), 4);
+    DTR_ASSERT_EQ_INT(dtr_gfx_pget(gfx, 5, 8), 4);
+
+    dtr_gfx_destroy(gfx);
+    DTR_PASS();
+}
+
+static void test_gfx_circ_at_boundary(void)
+{
+    dtr_graphics_t *gfx = dtr_gfx_create(TW, TH);
+    dtr_gfx_cls(gfx, 0);
+
+    /* Circle centred at corner — should clip without crashing */
+    dtr_gfx_circ(gfx, 0, 0, 5, 1);
+    dtr_gfx_circfill(gfx, TW - 1, TH - 1, 5, 2);
+
+    /* Just verify no crash and some pixels were drawn */
+    int count = 0;
+    for (int i = 0; i < TW * TH; ++i) {
+        if (gfx->framebuffer[i] != 0) {
+            ++count;
+        }
+    }
+    DTR_ASSERT(count > 0);
+
+    dtr_gfx_destroy(gfx);
+    DTR_PASS();
+}
+
+static void test_gfx_circ_zero_radius(void)
+{
+    dtr_graphics_t *gfx = dtr_gfx_create(TW, TH);
+    dtr_gfx_cls(gfx, 0);
+
+    /* Radius 0 — should draw a single pixel */
+    dtr_gfx_circ(gfx, 8, 8, 0, 6);
+    DTR_ASSERT_EQ_INT(dtr_gfx_pget(gfx, 8, 8), 6);
+
+    dtr_gfx_destroy(gfx);
+    DTR_PASS();
+}
+
+/* ------------------------------------------------------------------ */
+/*  Rect boundary tests                                                */
+/* ------------------------------------------------------------------ */
+
+static void test_gfx_rectfill_clipped(void)
+{
+    dtr_graphics_t *gfx = dtr_gfx_create(TW, TH);
+    dtr_gfx_cls(gfx, 0);
+
+    /* Rect that extends beyond all edges — should not crash */
+    dtr_gfx_rectfill(gfx, -5, -5, TW + 5, TH + 5, 1);
+
+    /* Entire framebuffer should be filled */
+    for (int i = 0; i < TW * TH; ++i) {
+        DTR_ASSERT_EQ_INT(gfx->framebuffer[i], 1);
+    }
+
+    dtr_gfx_destroy(gfx);
+    DTR_PASS();
+}
+
+static void test_gfx_rect_fully_outside(void)
+{
+    dtr_graphics_t *gfx = dtr_gfx_create(TW, TH);
+    dtr_gfx_cls(gfx, 0);
+
+    /* Rect completely outside the framebuffer — should draw nothing */
+    dtr_gfx_rectfill(gfx, TW + 1, TH + 1, TW + 10, TH + 10, 5);
+
+    for (int i = 0; i < TW * TH; ++i) {
+        DTR_ASSERT_EQ_INT(gfx->framebuffer[i], 0);
+    }
+
+    dtr_gfx_destroy(gfx);
+    DTR_PASS();
+}
+
+/* ------------------------------------------------------------------ */
 /*  Sprite flags                                                       */
 /* ------------------------------------------------------------------ */
 
@@ -307,6 +474,27 @@ static void test_gfx_sprite_flags(void)
 
     dtr_gfx_fset_bit(gfx, 1, 2, false);
     DTR_ASSERT(!dtr_gfx_fget_bit(gfx, 1, 2));
+
+    dtr_gfx_destroy(gfx);
+    DTR_PASS();
+}
+
+static void test_gfx_sprite_flags_oob(void)
+{
+    dtr_graphics_t *gfx = dtr_gfx_create(TW, TH);
+
+    /* Out-of-bounds index should return 0 and not crash */
+    DTR_ASSERT_EQ_INT(dtr_gfx_fget(gfx, -1), 0);
+    DTR_ASSERT_EQ_INT(dtr_gfx_fget(gfx, CONSOLE_MAX_SPRITES), 0);
+    DTR_ASSERT_EQ_INT(dtr_gfx_fget(gfx, CONSOLE_MAX_SPRITES + 100), 0);
+
+    /* Out-of-bounds set should not crash */
+    dtr_gfx_fset(gfx, -1, 0xFF);
+    dtr_gfx_fset(gfx, CONSOLE_MAX_SPRITES, 0xFF);
+
+    /* Out-of-bounds bit flag should return false */
+    DTR_ASSERT(!dtr_gfx_fget_bit(gfx, 0, -1));
+    DTR_ASSERT(!dtr_gfx_fget_bit(gfx, 0, CONSOLE_SPRITE_FLAGS));
 
     dtr_gfx_destroy(gfx);
     DTR_PASS();
@@ -664,9 +852,19 @@ int main(int argc, char *argv[])
     DTR_RUN_TEST(test_gfx_color);
     DTR_RUN_TEST(test_gfx_cursor);
     DTR_RUN_TEST(test_gfx_line_horizontal);
+    DTR_RUN_TEST(test_gfx_line_vertical);
+    DTR_RUN_TEST(test_gfx_line_diagonal_clip);
+    DTR_RUN_TEST(test_gfx_line_single_point);
     DTR_RUN_TEST(test_gfx_rectfill);
     DTR_RUN_TEST(test_gfx_rect_outline);
+    DTR_RUN_TEST(test_gfx_circ_basic);
+    DTR_RUN_TEST(test_gfx_circfill_basic);
+    DTR_RUN_TEST(test_gfx_circ_at_boundary);
+    DTR_RUN_TEST(test_gfx_circ_zero_radius);
+    DTR_RUN_TEST(test_gfx_rectfill_clipped);
+    DTR_RUN_TEST(test_gfx_rect_fully_outside);
     DTR_RUN_TEST(test_gfx_sprite_flags);
+    DTR_RUN_TEST(test_gfx_sprite_flags_oob);
     DTR_RUN_TEST(test_gfx_fill_pattern);
     DTR_RUN_TEST(test_gfx_flip);
     DTR_RUN_TEST(test_gfx_reset);

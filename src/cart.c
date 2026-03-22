@@ -414,6 +414,12 @@ bool dtr_cart_parse(dtr_cart_t *cart, JSContext *ctx, const char *json, size_t l
                     JS_FreeCString(ctx, action_name);
                 }
 
+                if (prop_count > DTR_CART_MAX_INPUT_ACTIONS) {
+                    SDL_Log("Warning: cart defines %u input actions, max is %d — "
+                            "excess mappings ignored",
+                            (unsigned)prop_count, DTR_CART_MAX_INPUT_ACTIONS);
+                }
+
                 for (uint32_t pi = 0; pi < prop_count; ++pi) {
                     JS_FreeAtom(ctx, props[pi].atom);
                 }
@@ -692,6 +698,8 @@ static bool prv_save_path(dtr_cart_t *cart, char *out, size_t out_sz)
 {
     const char *title;
     char *      pref;
+
+    out[0] = '\0';
 
     title = cart->meta.title;
     if (title[0] == '\0') {

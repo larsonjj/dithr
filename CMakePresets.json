@@ -76,6 +76,23 @@
         "DTR_ENABLE_ASAN": "ON",
         "DTR_ENABLE_UBSAN": "ON"
       }
+    },
+    {
+      "name": "coverage",
+      "displayName": "Debug + Coverage",
+      "description": "Debug build with code coverage instrumentation (GCC/Clang only)",
+      "binaryDir": "${sourceDir}/build/coverage",
+      "condition": {
+        "type": "notEquals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Windows"
+      },
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "DTR_DEV_BUILD": "ON",
+        "CMAKE_C_FLAGS": "--coverage",
+        "CMAKE_EXE_LINKER_FLAGS": "--coverage"
+      }
     }
   ],
   "buildPresets": [
@@ -102,6 +119,10 @@
     {
       "name": "asan",
       "configurePreset": "asan"
+    },
+    {
+      "name": "coverage",
+      "configurePreset": "coverage"
     }
   ]
 }

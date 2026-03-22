@@ -14,3 +14,6 @@ build/
 *.exe
 *.dSYM/
 compile_commands.json
+
+# Logs
+*.log
