@@ -272,10 +272,10 @@ dtr_console_t *dtr_console_create(const char *cart_path)
 
 #if DEV_BUILD
     /* Set up file watcher for the JS source */
-    con->watch_path[0] = '\0';
-    con->watch_mtime   = 0;
-    con->watch_timer   = 0.2f;
-    con->reload_toast  = 0.0f;
+    con->watch_path[0]    = '\0';
+    con->watch_mtime     = 0;
+    con->watch_last_poll = SDL_GetPerformanceCounter();
+    con->reload_toast    = 0.0f;
     if (con->cart->code_path[0] != '\0') {
         SDL_PathInfo info;
 
@@ -284,6 +284,10 @@ dtr_console_t *dtr_console_create(const char *cart_path)
         if (SDL_GetPathInfo(con->watch_path, &info)) {
             con->watch_mtime = info.modify_time;
             SDL_Log("hot-reload: watching %s", con->watch_path);
+        } else {
+            SDL_Log("hot-reload: WARNING: cannot access %s — file watching disabled",
+                    con->watch_path);
+            con->watch_path[0] = '\0';
         }
     }
 #endif
@@ -554,13 +558,19 @@ void dtr_console_iterate(dtr_console_t *con)
     ++con->frame_count;
 
 #if DEV_BUILD
-    /* Hot-reload: poll JS source file for changes */
+    /* Hot-reload: poll JS source file for changes (every 200 ms, absolute time) */
     if (con->watch_path[0] != '\0') {
-        con->watch_timer -= con->delta;
-        if (con->watch_timer <= 0.0f) {
+        uint64_t now_ticks;
+        double   elapsed_ms;
+
+        now_ticks  = SDL_GetPerformanceCounter();
+        elapsed_ms = (double)(now_ticks - con->watch_last_poll)
+                     / (double)SDL_GetPerformanceFrequency() * 1000.0;
+
+        if (elapsed_ms >= 200.0) {
             SDL_PathInfo info;
 
-            con->watch_timer = 0.2f; /* poll every 200 ms */
+            con->watch_last_poll = now_ticks;
             if (SDL_GetPathInfo(con->watch_path, &info)) {
                 if (info.modify_time != con->watch_mtime) {
                     SDL_Log("hot-reload: %s changed, reloading", con->watch_path);
@@ -578,16 +588,30 @@ void dtr_console_iterate(dtr_console_t *con)
 
 bool dtr_console_reload(dtr_console_t *con)
 {
-    char   *saved_json = NULL;
-    char   *new_code   = NULL;
-    size_t  new_len    = 0;
-    char    code_full[1024];
+    char           *saved_json  = NULL;
+    char           *new_code    = NULL;
+    size_t          new_len     = 0;
+    char            code_full[1024];
+    dtr_runtime_t  *new_rt      = NULL;
+    dtr_event_bus_t *new_events = NULL;
+    uint64_t        t_start;
 
     if (con == NULL) {
         return false;
     }
 
-    /* ---- 1. Call _save() to capture game state (optional) ---- */
+    t_start = SDL_GetPerformanceCounter();
+
+    /* ---- 1. Read new JS source from disk (before destroying anything) ---- */
+    SDL_snprintf(code_full, sizeof(code_full),
+                 "%s%s", con->cart->base_path, con->cart->code_path);
+    new_code = (char *)SDL_LoadFile(code_full, &new_len);
+    if (new_code == NULL) {
+        SDL_Log("hot-reload: failed to read %s", code_full);
+        return false;
+    }
+
+    /* ---- 2. Call _save() to capture game state (optional) ---- */
     if (con->runtime != NULL && con->runtime->ctx != NULL && !con->runtime->error_active) {
         JSValue global;
         JSValue func;
@@ -628,62 +652,53 @@ bool dtr_console_reload(dtr_console_t *con)
         JS_FreeValue(con->runtime->ctx, global);
     }
 
-    /* ---- 2. Fire sys:cart_unload ---- */
+    /* ---- 3. Create new runtime + event bus in temporaries ---- */
+    new_rt = dtr_runtime_create(
+        con,
+        (int32_t)(con->cart->runtime.mem_limit / (1024u * 1024u)),
+        (int32_t)(con->cart->runtime.stack_limit / 1024u));
+    if (new_rt == NULL) {
+        SDL_Log("hot-reload: failed to create runtime");
+        SDL_free(new_code);
+        SDL_free(saved_json);
+        return false;
+    }
+
+    new_events = dtr_event_create(new_rt->ctx);
+
+    /* ---- 4. Register APIs and evaluate new code on temp runtime ---- */
+    dtr_api_register_all(new_rt);
+
+    if (!dtr_runtime_eval(new_rt, new_code, new_len, "main.js")) {
+        SDL_Log("hot-reload: eval failed — keeping old code");
+        dtr_event_destroy(new_events);
+        dtr_runtime_destroy(new_rt);
+        SDL_free(new_code);
+        SDL_free(saved_json);
+        /* Old runtime + events stay intact; engine keeps running */
+        return false;
+    }
+
+    /* ---- 5. Eval succeeded — commit: tear down old runtime ---- */
     if (con->events != NULL && con->runtime != NULL && con->runtime->ctx != NULL) {
         dtr_event_emit(con->events, "sys:cart_unload", JS_UNDEFINED);
         dtr_event_flush(con->events);
     }
 
-    /* ---- 3. Destroy event bus + runtime (JS context goes away) ---- */
     dtr_event_destroy(con->events);
-    con->events = NULL;
-
     dtr_runtime_destroy(con->runtime);
-    con->runtime = NULL;
-
-    /* ---- 4. Re-read JS source from disk ---- */
-    SDL_snprintf(code_full, sizeof(code_full),
-                 "%s%s", con->cart->base_path, con->cart->code_path);
-    new_code = (char *)SDL_LoadFile(code_full, &new_len);
-    if (new_code == NULL) {
-        SDL_Log("hot-reload: failed to read %s", code_full);
-        SDL_free(saved_json);
-        return false;
-    }
 
     /* Replace cart code buffer */
     SDL_free(con->cart->code);
     con->cart->code     = new_code;
     con->cart->code_len = new_len;
 
-    /* ---- 5. Create fresh runtime + context ---- */
-    con->runtime = dtr_runtime_create(
-        con,
-        (int32_t)(con->cart->runtime.mem_limit / (1024u * 1024u)),
-        (int32_t)(con->cart->runtime.stack_limit / 1024u));
-    if (con->runtime == NULL) {
-        SDL_Log("hot-reload: failed to create runtime");
-        SDL_free(saved_json);
-        return false;
-    }
-
-    /* ---- 6. Recreate event bus ---- */
-    con->events = dtr_event_create(con->runtime->ctx);
-
-    /* ---- 7. Update cart context reference ---- */
+    /* Install new runtime + events */
+    con->runtime = new_rt;
+    con->events  = new_events;
     con->cart->ctx = con->runtime->ctx;
 
-    /* ---- 8. Register all JS APIs ---- */
-    dtr_api_register_all(con->runtime);
-
-    /* ---- 9. Evaluate JS source ---- */
-    if (!dtr_runtime_eval(con->runtime, con->cart->code, con->cart->code_len, "main.js")) {
-        SDL_Log("hot-reload: eval failed");
-        SDL_free(saved_json);
-        return false;
-    }
-
-    /* ---- 10. Call _restore(state) if we have saved state ---- */
+    /* ---- 6. Call _restore(state) if we have saved state ---- */
     if (saved_json != NULL) {
         JSValue global;
         JSValue func;
@@ -723,14 +738,14 @@ bool dtr_console_reload(dtr_console_t *con)
         SDL_free(saved_json);
     }
 
-    /* ---- 11. Call _init() ---- */
+    /* ---- 7. Call _init() ---- */
     dtr_runtime_call(con->runtime, con->runtime->atom_init);
 
-    /* ---- 12. Fire sys:cart_load ---- */
+    /* ---- 8. Fire sys:cart_load ---- */
     dtr_event_emit(con->events, "sys:cart_load", JS_UNDEFINED);
     dtr_event_flush(con->events);
 
-    /* ---- 13. Clear error state + update watch mtime ---- */
+    /* ---- 9. Clear error state + update watch mtime ---- */
     con->has_error = false;
 
 #if DEV_BUILD
@@ -742,7 +757,15 @@ bool dtr_console_reload(dtr_console_t *con)
     }
 #endif
 
-    SDL_Log("hot-reload: success");
+    /* ---- 10. Log result with timing ---- */
+    {
+        uint64_t t_end;
+        double   elapsed_ms;
+
+        t_end      = SDL_GetPerformanceCounter();
+        elapsed_ms = (double)(t_end - t_start) / (double)SDL_GetPerformanceFrequency() * 1000.0;
+        SDL_Log("hot-reload: success (%.1f ms)", elapsed_ms);
+    }
 
 #if DEV_BUILD
     con->reload_toast = 1.0f; /* show "RELOADED" for 1 second */
