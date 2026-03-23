@@ -15,8 +15,9 @@ if (MSVC AND DTR_ENABLE_ASAN)
 endif()
 
 # Helper: copy runtime DLLs (and ASan DLL when applicable) beside a test target.
+# This is a no-op for static builds (no shared DLLs to copy).
 function(dtr_copy_test_dlls target)
-    if (WIN32)
+    if (WIN32 AND TARGET SDL3-shared)
         add_custom_command(TARGET ${target} POST_BUILD
             COMMAND ${CMAKE_COMMAND} -E copy_if_different
                 $<TARGET_RUNTIME_DLLS:${target}> $<TARGET_FILE_DIR:${target}>

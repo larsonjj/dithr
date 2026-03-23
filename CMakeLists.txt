@@ -295,8 +295,8 @@ if (EMSCRIPTEN)
     set_target_properties(dithr PROPERTIES SUFFIX ".html")
 endif()
 
-# Copy shared library DLLs next to the executable (Windows only)
-if (WIN32)
+# Copy shared library DLLs next to the executable (Windows + shared builds only)
+if (WIN32 AND TARGET SDL3-shared)
     add_custom_command(TARGET dithr POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
             $<TARGET_RUNTIME_DLLS:dithr> $<TARGET_FILE_DIR:dithr>

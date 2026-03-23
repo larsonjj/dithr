@@ -64,6 +64,7 @@ jobs:
               run: >
                   cmake -B build/debug -G Ninja
                   -DCMAKE_BUILD_TYPE=Debug
+                  -DBUILD_SHARED_LIBS=OFF
 
             - name: Build
               run: cmake --build build/debug
@@ -145,6 +146,7 @@ jobs:
                   cmake -B build/coverage -G Ninja
                   -DCMAKE_BUILD_TYPE=Debug
                   -DDTR_ENABLE_COVERAGE=ON
+                  -DBUILD_SHARED_LIBS=OFF
 
             - name: Build
               run: cmake --build build/coverage
@@ -197,6 +199,7 @@ jobs:
               run: >
                   cmake -B build/debug -G Ninja
                   -DCMAKE_BUILD_TYPE=Debug
+                  -DBUILD_SHARED_LIBS=OFF
 
             - name: Build
               run: cmake --build build/debug
