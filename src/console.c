@@ -38,6 +38,11 @@ static void prv_console_cleanup(dtr_console_t *con)
         return;
     }
 
+#if DEV_BUILD
+    SDL_free(con->prev_code);
+    con->prev_code     = NULL;
+    con->prev_code_len = 0;
+#endif
     dtr_postfx_destroy(con->postfx);
     dtr_event_destroy(con->events);
     dtr_input_destroy(con->input);
@@ -279,6 +284,9 @@ dtr_console_t *dtr_console_create(const char *cart_path)
     con->reload_toast    = 0.0f;
     con->reload_pending  = false;
     con->reload_detect_time = 0;
+    con->reload_count    = 0;
+    con->prev_code       = NULL;
+    con->prev_code_len   = 0;
     if (con->cart->code_path[0] != '\0') {
         SDL_PathInfo info;
 
@@ -350,6 +358,44 @@ void dtr_console_event(dtr_console_t *con, SDL_Event *event)
             /* Manual hot-reload: F5 */
             if (event->key.scancode == SDL_SCANCODE_F5) {
                 con->reload = true;
+                break;
+            }
+            /* Manual asset-reload: F6 */
+            if (event->key.scancode == SDL_SCANCODE_F6) {
+                SDL_Log("asset-reload: F6 pressed");
+                dtr_console_reload_assets(con);
+                break;
+            }
+            /* Undo last reload: F4 */
+            if (event->key.scancode == SDL_SCANCODE_F4) {
+                if (con->prev_code != NULL) {
+                    /* Swap current and previous code, then force a reload */
+                    char   *tmp_code;
+                    size_t  tmp_len;
+
+                    tmp_code = con->cart->code;
+                    tmp_len  = con->cart->code_len;
+
+                    con->cart->code     = con->prev_code;
+                    con->cart->code_len = con->prev_code_len;
+
+                    con->prev_code     = tmp_code;
+                    con->prev_code_len = tmp_len;
+
+                    /* Write the reverted code to disk so file watch doesn't re-trigger */
+                    {
+                        char full[1024];
+
+                        SDL_snprintf(full, sizeof(full), "%s%s",
+                                     con->cart->base_path, con->cart->code_path);
+                        SDL_SaveFile(full, con->cart->code, con->cart->code_len);
+                    }
+
+                    con->reload = true;
+                    SDL_Log("hot-reload: undo — reverting to previous code");
+                } else {
+                    SDL_Log("hot-reload: undo — no previous code available");
+                }
                 break;
             }
 #endif
@@ -487,6 +533,26 @@ static SDL_EnumerationResult SDLCALL prv_scan_js_cb(void *userdata,
 
     scan = (prv_dir_scan_t *)userdata;
 
+    /* Skip editor temp / backup files */
+    if (fname[0] == '.') {
+        return SDL_ENUM_CONTINUE;
+    }
+    ext = SDL_strrchr(fname, '.');
+    if (ext != NULL) {
+        if (SDL_strcasecmp(ext, ".tmp") == 0 || SDL_strcasecmp(ext, ".swp") == 0 ||
+            SDL_strcasecmp(ext, ".bak") == 0 || SDL_strcasecmp(ext, ".crswap") == 0) {
+            return SDL_ENUM_CONTINUE;
+        }
+    }
+    {
+        size_t name_len;
+
+        name_len = SDL_strlen(fname);
+        if (name_len > 0 && fname[name_len - 1] == '~') {
+            return SDL_ENUM_CONTINUE;
+        }
+    }
+
     SDL_snprintf(full, sizeof(full), "%s%s", dirname, fname);
 
     /* Recurse into subdirectories */
@@ -498,7 +564,6 @@ static SDL_EnumerationResult SDLCALL prv_scan_js_cb(void *userdata,
         return SDL_ENUM_CONTINUE;
     }
 
-    ext = SDL_strrchr(fname, '.');
     if (ext == NULL || SDL_strcasecmp(ext, ".js") != 0) {
         return SDL_ENUM_CONTINUE;
     }
@@ -622,8 +687,16 @@ void dtr_console_iterate(dtr_console_t *con)
             gfx->camera_x = 0;
             gfx->camera_y = 0;
 
-            dtr_gfx_rectfill(gfx, 0, 0, 54, 8, 11);
-            dtr_gfx_print(gfx, "RELOADED", 2, 1, 0);
+            {
+                char toast_buf[32];
+                int32_t toast_w;
+
+                SDL_snprintf(toast_buf, sizeof(toast_buf),
+                             "RELOADED (%d)", (int)con->reload_count);
+                toast_w = (int32_t)SDL_strlen(toast_buf) * 4 + 4;
+                dtr_gfx_rectfill(gfx, 0, 0, toast_w, 8, 11);
+                dtr_gfx_print(gfx, toast_buf, 2, 1, 0);
+            }
 
             gfx->camera_x = save_cx;
             gfx->camera_y = save_cy;
@@ -754,6 +827,18 @@ bool dtr_console_reload(dtr_console_t *con)
     dtr_postfx_entry_t saved_pfx[DTR_POSTFX_MAX_STACK];
     int32_t            saved_pfx_count = 0;
 
+    /* Camera / draw state snapshot */
+    int32_t  saved_cam_x     = 0;
+    int32_t  saved_cam_y     = 0;
+    uint8_t  saved_color     = 0;
+    int32_t  saved_clip_x    = 0;
+    int32_t  saved_clip_y    = 0;
+    int32_t  saved_clip_w    = 0;
+    int32_t  saved_clip_h    = 0;
+    int32_t  saved_cursor_x  = 0;
+    int32_t  saved_cursor_y  = 0;
+    uint16_t saved_fill_pat  = 0;
+
     if (con == NULL) {
         return false;
     }
@@ -810,7 +895,21 @@ bool dtr_console_reload(dtr_console_t *con)
         JS_FreeValue(con->runtime->ctx, global);
     }
 
-    /* ---- 2b. Snapshot postfx stack ---- */
+    /* ---- 2b. Snapshot camera / draw state ---- */
+    if (con->graphics != NULL) {
+        saved_cam_x    = con->graphics->camera_x;
+        saved_cam_y    = con->graphics->camera_y;
+        saved_color    = con->graphics->color;
+        saved_clip_x   = con->graphics->clip_x;
+        saved_clip_y   = con->graphics->clip_y;
+        saved_clip_w   = con->graphics->clip_w;
+        saved_clip_h   = con->graphics->clip_h;
+        saved_cursor_x = con->graphics->cursor_x;
+        saved_cursor_y = con->graphics->cursor_y;
+        saved_fill_pat = con->graphics->fill_pattern;
+    }
+
+    /* ---- 2c. Snapshot postfx stack ---- */
     if (con->postfx != NULL && con->postfx->count > 0) {
         saved_pfx_count = con->postfx->count;
         SDL_memcpy(saved_pfx, con->postfx->stack,
@@ -850,8 +949,16 @@ bool dtr_console_reload(dtr_console_t *con)
     dtr_event_clear(con->events, new_rt->ctx);
     dtr_runtime_destroy(con->runtime);
 
-    /* Replace cart code buffer */
+    /* Stash previous code for undo */
+#if DEV_BUILD
+    SDL_free(con->prev_code);
+    con->prev_code     = con->cart->code;   /* transfer ownership */
+    con->prev_code_len = con->cart->code_len;
+#else
     SDL_free(con->cart->code);
+#endif
+
+    /* Replace cart code buffer */
     con->cart->code     = new_code;
     con->cart->code_len = new_len;
 
@@ -906,6 +1013,20 @@ bool dtr_console_reload(dtr_console_t *con)
                    (size_t)saved_pfx_count * sizeof(dtr_postfx_entry_t));
     }
 
+    /* ---- 6c. Restore camera / draw state ---- */
+    if (con->graphics != NULL) {
+        con->graphics->camera_x    = saved_cam_x;
+        con->graphics->camera_y    = saved_cam_y;
+        con->graphics->color       = saved_color;
+        con->graphics->clip_x      = saved_clip_x;
+        con->graphics->clip_y      = saved_clip_y;
+        con->graphics->clip_w      = saved_clip_w;
+        con->graphics->clip_h      = saved_clip_h;
+        con->graphics->cursor_x    = saved_cursor_x;
+        con->graphics->cursor_y    = saved_cursor_y;
+        con->graphics->fill_pattern = saved_fill_pat;
+    }
+
     /* ---- 7. Call _init() ---- */
     dtr_runtime_call(con->runtime, con->runtime->atom_init);
 
@@ -947,6 +1068,7 @@ bool dtr_console_reload(dtr_console_t *con)
     }
 
 #if DEV_BUILD
+    ++con->reload_count;
     con->reload_toast = 1.0f; /* show "RELOADED" for 1 second */
 #endif
 

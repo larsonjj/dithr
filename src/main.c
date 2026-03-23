@@ -47,6 +47,14 @@ EMSCRIPTEN_KEEPALIVE void dtr_wasm_reload(void)
         s_wasm_app->con->reload = true;
     }
 }
+
+/* Called from JS live-reload client to reload cart assets without rebuild */
+EMSCRIPTEN_KEEPALIVE void dtr_wasm_reload_assets(void)
+{
+    if (s_wasm_app != NULL && s_wasm_app->con != NULL) {
+        dtr_console_reload_assets(s_wasm_app->con);
+    }
+}
 #endif
 
 /* ------------------------------------------------------------------ */

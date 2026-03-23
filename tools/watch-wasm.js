@@ -63,6 +63,27 @@ const RELOAD_SNIPPET = `
       })
       .catch(function(err){ console.warn("[hot-reload] failed, full reload", err); location.reload(); });
   });
+  es.addEventListener("assetreload", function(e){
+    var assetPath = e.data;
+    if (!Module || !Module.FS) {
+      console.warn("[asset-reload] Module.FS not available, full reload");
+      location.reload();
+      return;
+    }
+    if (typeof Module._dtr_wasm_reload_assets !== "function") {
+      console.warn("[asset-reload] _dtr_wasm_reload_assets not exported, full reload");
+      location.reload();
+      return;
+    }
+    fetch("/__cart/" + assetPath + "?t=" + Date.now())
+      .then(function(r){ return r.arrayBuffer(); })
+      .then(function(buf){
+        Module.FS.writeFile("/cart/" + assetPath, new Uint8Array(buf));
+        Module._dtr_wasm_reload_assets();
+        console.log("[asset-reload] reloaded " + assetPath);
+      })
+      .catch(function(err){ console.warn("[asset-reload] failed, full reload", err); location.reload(); });
+  });
   es.onerror = function(){ es.close(); setTimeout(function(){ location.reload(); }, 2000); };
 })();
 </script>
@@ -294,12 +315,28 @@ function onCartChange(eventType, filename) {
 
         const jsOnly = known.every((f) => f.endsWith(".js") || f.endsWith(".mjs"));
 
+        const ASSET_EXTS = [".png", ".tmj", ".ldtk", ".wav", ".ogg", ".mp3"];
+        const assetOnly =
+            !jsOnly &&
+            known.every((f) => {
+                const ext = path.extname(f).toLowerCase();
+                return ASSET_EXTS.includes(ext);
+            });
+
         if (jsOnly) {
             /* JS-only change — hot reload without cmake rebuild */
             console.log(`[watch] JS changed: ${known.join(", ")} — hot-reloading`);
             for (const client of sseClients) {
                 for (const f of known) {
                     client.write(`event: hotreload\ndata: ${f}\n\n`);
+                }
+            }
+        } else if (assetOnly) {
+            /* Asset-only change — reload assets without cmake rebuild */
+            console.log(`[watch] Assets changed: ${known.join(", ")} — asset-reloading`);
+            for (const client of sseClients) {
+                for (const f of known) {
+                    client.write(`event: assetreload\ndata: ${f}\n\n`);
                 }
             }
         } else {

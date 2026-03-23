@@ -79,8 +79,13 @@ typedef struct dtr_console {
     int64_t  watch_mtime;      /**< Newest modify_time across all .js files */
     uint64_t watch_last_poll;  /**< SDL_GetPerformanceCounter at last poll */
     float    reload_toast;     /**< Countdown for "RELOADED" toast overlay */
+    int32_t  reload_count;     /**< Running count of successful reloads */
     bool     reload_pending;   /**< A change was detected, debounce in progress */
     uint64_t reload_detect_time; /**< Time the first change was detected */
+
+    /* Undo: previous code buffer for one-step revert */
+    char    *prev_code;        /**< Previous JS code before last reload */
+    size_t   prev_code_len;    /**< Length of prev_code */
 #endif
 } dtr_console_t;
 
