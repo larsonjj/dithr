@@ -230,6 +230,169 @@ static void test_gamepad_axis_default_zero(void)
     DTR_PASS();
 }
 
+/* ------------------------------------------------------------------ */
+/*  Gamepad button / axis via direct struct manipulation                */
+/* ------------------------------------------------------------------ */
+
+static void test_gamepad_btn_set_and_query(void)
+{
+    dtr_gamepad_state_t *gp;
+
+    gp = dtr_gamepad_create();
+
+    /* Simulate a connected pad (without SDL handle) */
+    gp->pads[0].connected = true;
+    gp->count              = 1;
+
+    /* Press button A */
+    gp->pads[0].btn_current[DTR_PAD_A] = true;
+    DTR_ASSERT(dtr_gamepad_btn(gp, DTR_PAD_A, 0));
+    DTR_ASSERT(!dtr_gamepad_btn(gp, DTR_PAD_B, 0));
+
+    /* Release */
+    gp->pads[0].btn_current[DTR_PAD_A] = false;
+    DTR_ASSERT(!dtr_gamepad_btn(gp, DTR_PAD_A, 0));
+
+    dtr_gamepad_destroy(gp);
+    DTR_PASS();
+}
+
+static void test_gamepad_btnp(void)
+{
+    dtr_gamepad_state_t *gp;
+
+    gp = dtr_gamepad_create();
+    gp->pads[0].connected = true;
+    gp->count              = 1;
+
+    /* Frame 1: press A */
+    gp->pads[0].btn_pressed[DTR_PAD_A] = true;
+    DTR_ASSERT(dtr_gamepad_btnp(gp, DTR_PAD_A, 0));
+
+    /* Clear pressed flag (as update would) */
+    gp->pads[0].btn_pressed[DTR_PAD_A] = false;
+    DTR_ASSERT(!dtr_gamepad_btnp(gp, DTR_PAD_A, 0));
+
+    dtr_gamepad_destroy(gp);
+    DTR_PASS();
+}
+
+static void test_gamepad_btn_out_of_range(void)
+{
+    dtr_gamepad_state_t *gp;
+
+    gp = dtr_gamepad_create();
+
+    /* Index out of range */
+    DTR_ASSERT(!dtr_gamepad_btn(gp, DTR_PAD_A, -1));
+    DTR_ASSERT(!dtr_gamepad_btn(gp, DTR_PAD_A, DTR_MAX_GAMEPADS));
+    DTR_ASSERT(!dtr_gamepad_btnp(gp, DTR_PAD_A, -1));
+    DTR_ASSERT(!dtr_gamepad_btnp(gp, DTR_PAD_A, DTR_MAX_GAMEPADS));
+
+    /* Button out of range */
+    gp->pads[0].connected = true;
+    gp->count              = 1;
+    DTR_ASSERT(!dtr_gamepad_btn(gp, DTR_PAD_BTN_COUNT, 0));
+    DTR_ASSERT(!dtr_gamepad_btnp(gp, DTR_PAD_BTN_COUNT, 0));
+
+    dtr_gamepad_destroy(gp);
+    DTR_PASS();
+}
+
+static void test_gamepad_axis_set_and_query(void)
+{
+    dtr_gamepad_state_t *gp;
+
+    gp = dtr_gamepad_create();
+    gp->pads[0].connected = true;
+    gp->count              = 1;
+
+    gp->pads[0].axes[DTR_PAD_AXIS_LX] = 0.75f;
+    DTR_ASSERT_NEAR(dtr_gamepad_axis(gp, DTR_PAD_AXIS_LX, 0), 0.75f, 0.001f);
+
+    /* Out-of-range index */
+    DTR_ASSERT_NEAR(dtr_gamepad_axis(gp, DTR_PAD_AXIS_LX, -1), 0.0f, 0.001f);
+    DTR_ASSERT_NEAR(dtr_gamepad_axis(gp, DTR_PAD_AXIS_LX, DTR_MAX_GAMEPADS), 0.0f, 0.001f);
+
+    /* Out-of-range axis */
+    DTR_ASSERT_NEAR(dtr_gamepad_axis(gp, DTR_PAD_AXIS_COUNT, 0), 0.0f, 0.001f);
+
+    dtr_gamepad_destroy(gp);
+    DTR_PASS();
+}
+
+static void test_gamepad_connected_index_out_of_range(void)
+{
+    dtr_gamepad_state_t *gp;
+
+    gp = dtr_gamepad_create();
+    DTR_ASSERT(!dtr_gamepad_connected(gp, -1));
+    DTR_ASSERT(!dtr_gamepad_connected(gp, DTR_MAX_GAMEPADS));
+    dtr_gamepad_destroy(gp);
+    DTR_PASS();
+}
+
+static void test_gamepad_name_default(void)
+{
+    dtr_gamepad_state_t *gp;
+    const char         *name;
+
+    gp = dtr_gamepad_create();
+
+    /* Connected pad without a name set */
+    name = dtr_gamepad_name(gp, 0);
+    DTR_ASSERT(name != NULL);
+
+    /* Out-of-range returns empty string */
+    name = dtr_gamepad_name(gp, -1);
+    DTR_ASSERT(name != NULL);
+    DTR_ASSERT(name[0] == '\0');
+
+    name = dtr_gamepad_name(gp, DTR_MAX_GAMEPADS);
+    DTR_ASSERT(name != NULL);
+    DTR_ASSERT(name[0] == '\0');
+
+    dtr_gamepad_destroy(gp);
+    DTR_PASS();
+}
+
+static void test_gamepad_update_deadzone(void)
+{
+    dtr_gamepad_state_t *gp;
+
+    gp = dtr_gamepad_create();
+    gp->pads[0].connected = true;
+    gp->pads[0].handle    = NULL; /* update skips pads without handle */
+    gp->count              = 1;
+
+    /* Axis below deadzone should be zeroed — but update skips NULL handle */
+    gp->pads[0].axes[DTR_PAD_AXIS_LX] = 0.1f;
+    dtr_gamepad_update(gp);
+    /* With NULL handle, update skips this pad */
+    DTR_ASSERT_NEAR(gp->pads[0].axes[DTR_PAD_AXIS_LX], 0.1f, 0.001f);
+
+    dtr_gamepad_destroy(gp);
+    DTR_PASS();
+}
+
+static void test_gamepad_deadzone_out_of_range(void)
+{
+    dtr_gamepad_state_t *gp;
+
+    gp = dtr_gamepad_create();
+
+    /* Out-of-range set should not crash */
+    dtr_gamepad_set_deadzone(gp, 0.3f, -1);
+    dtr_gamepad_set_deadzone(gp, 0.3f, DTR_MAX_GAMEPADS);
+
+    /* Out-of-range get returns default-ish value (no crash) */
+    DTR_ASSERT_NEAR(dtr_gamepad_get_deadzone(gp, -1), 0.0f, 0.001f);
+    DTR_ASSERT_NEAR(dtr_gamepad_get_deadzone(gp, DTR_MAX_GAMEPADS), 0.0f, 0.001f);
+
+    dtr_gamepad_destroy(gp);
+    DTR_PASS();
+}
+
 /* ================================================================== */
 /*  Main                                                               */
 /* ================================================================== */
@@ -259,6 +422,14 @@ int main(int argc, char *argv[])
     DTR_RUN_TEST(test_gamepad_connected_false);
     DTR_RUN_TEST(test_gamepad_deadzone);
     DTR_RUN_TEST(test_gamepad_axis_default_zero);
+    DTR_RUN_TEST(test_gamepad_btn_set_and_query);
+    DTR_RUN_TEST(test_gamepad_btnp);
+    DTR_RUN_TEST(test_gamepad_btn_out_of_range);
+    DTR_RUN_TEST(test_gamepad_axis_set_and_query);
+    DTR_RUN_TEST(test_gamepad_connected_index_out_of_range);
+    DTR_RUN_TEST(test_gamepad_name_default);
+    DTR_RUN_TEST(test_gamepad_update_deadzone);
+    DTR_RUN_TEST(test_gamepad_deadzone_out_of_range);
 
     DTR_TEST_END();
 }

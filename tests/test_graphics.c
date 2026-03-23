@@ -829,6 +829,332 @@ static void test_gfx_dl_overflow(void)
 }
 
 /* ------------------------------------------------------------------ */
+/*  Triangle outline                                                   */
+/* ------------------------------------------------------------------ */
+
+static void test_gfx_tri_outline(void)
+{
+    dtr_graphics_t *gfx = dtr_gfx_create(TW, TH);
+    dtr_gfx_cls(gfx, 0);
+
+    dtr_gfx_tri(gfx, 2, 2, 10, 2, 6, 10, 5);
+
+    /* Vertices should be drawn */
+    DTR_ASSERT_EQ_INT(dtr_gfx_pget(gfx, 2, 2), 5);
+    DTR_ASSERT_EQ_INT(dtr_gfx_pget(gfx, 10, 2), 5);
+    DTR_ASSERT_EQ_INT(dtr_gfx_pget(gfx, 6, 10), 5);
+
+    /* Interior should not be filled */
+    DTR_ASSERT_EQ_INT(dtr_gfx_pget(gfx, 6, 5), 0);
+
+    dtr_gfx_destroy(gfx);
+    DTR_PASS();
+}
+
+static void test_gfx_trifill(void)
+{
+    dtr_graphics_t *gfx = dtr_gfx_create(TW, TH);
+    dtr_gfx_cls(gfx, 0);
+
+    dtr_gfx_trifill(gfx, 2, 2, 12, 2, 7, 12, 3);
+
+    /* Interior should be filled */
+    DTR_ASSERT_EQ_INT(dtr_gfx_pget(gfx, 7, 5), 3);
+
+    /* Vertices should be filled */
+    DTR_ASSERT_EQ_INT(dtr_gfx_pget(gfx, 2, 2), 3);
+    DTR_ASSERT_EQ_INT(dtr_gfx_pget(gfx, 12, 2), 3);
+
+    dtr_gfx_destroy(gfx);
+    DTR_PASS();
+}
+
+static void test_gfx_trifill_clipped(void)
+{
+    dtr_graphics_t *gfx = dtr_gfx_create(TW, TH);
+    dtr_gfx_cls(gfx, 0);
+
+    /* Triangle extending outside — should not crash */
+    dtr_gfx_trifill(gfx, -5, -5, TW + 5, 0, TW / 2, TH + 5, 2);
+
+    int count = 0;
+    for (int i = 0; i < TW * TH; ++i) {
+        if (gfx->framebuffer[i] == 2) ++count;
+    }
+    DTR_ASSERT(count > 0);
+
+    dtr_gfx_destroy(gfx);
+    DTR_PASS();
+}
+
+/* ------------------------------------------------------------------ */
+/*  Print (built-in font)                                              */
+/* ------------------------------------------------------------------ */
+
+static void test_gfx_print_basic(void)
+{
+    dtr_graphics_t *gfx = dtr_gfx_create(TW, TH);
+    int32_t         advance;
+
+    dtr_gfx_cls(gfx, 0);
+    advance = dtr_gfx_print(gfx, "AB", 0, 0, 7);
+
+    /* Each built-in char is 4px wide + 1px spacing = 5 per char, 2 chars = 10 */
+    DTR_ASSERT(advance > 0);
+
+    /* Some pixels should have been drawn */
+    int count = 0;
+    for (int i = 0; i < TW * TH; ++i) {
+        if (gfx->framebuffer[i] == 7) ++count;
+    }
+    DTR_ASSERT(count > 0);
+
+    dtr_gfx_destroy(gfx);
+    DTR_PASS();
+}
+
+static void test_gfx_print_newline(void)
+{
+    dtr_graphics_t *gfx = dtr_gfx_create(TW, TH);
+    dtr_gfx_cls(gfx, 0);
+
+    dtr_gfx_print(gfx, "A\nB", 0, 0, 7);
+
+    /* Cursor Y should have advanced past the first line */
+    DTR_ASSERT(gfx->cursor_y > 0);
+
+    dtr_gfx_destroy(gfx);
+    DTR_PASS();
+}
+
+static void test_gfx_print_empty(void)
+{
+    dtr_graphics_t *gfx = dtr_gfx_create(TW, TH);
+    int32_t         advance;
+
+    dtr_gfx_cls(gfx, 0);
+    advance = dtr_gfx_print(gfx, "", 0, 0, 7);
+    DTR_ASSERT_EQ_INT(advance, 0);
+
+    dtr_gfx_destroy(gfx);
+    DTR_PASS();
+}
+
+/* ------------------------------------------------------------------ */
+/*  Sprite drawing                                                     */
+/* ------------------------------------------------------------------ */
+
+static void test_gfx_spr_basic(void)
+{
+    dtr_graphics_t *gfx = dtr_gfx_create(TW, TH);
+    uint8_t         sheet_data[8 * 8];
+
+    dtr_gfx_cls(gfx, 0);
+
+    /* Set up a minimal 8x8 sprite sheet with one 8x8 tile */
+    memset(sheet_data, 0, sizeof(sheet_data));
+    sheet_data[0] = 5; /* top-left pixel */
+
+    gfx->sheet.pixels = sheet_data;
+    gfx->sheet.width  = 8;
+    gfx->sheet.height = 8;
+    gfx->sheet.tile_w = 8;
+    gfx->sheet.tile_h = 8;
+    gfx->sheet.cols   = 1;
+    gfx->sheet.rows   = 1;
+    gfx->sheet.count  = 1;
+
+    /* Draw sprite 0 at (0, 0) */
+    dtr_gfx_spr(gfx, 0, 0, 0, 1, 1, false, false);
+
+    /* Top-left pixel should be colour 5 */
+    DTR_ASSERT_EQ_INT(dtr_gfx_pget(gfx, 0, 0), 5);
+
+    /* Clean up */
+    gfx->sheet.pixels = NULL;
+    dtr_gfx_destroy(gfx);
+    DTR_PASS();
+}
+
+static void test_gfx_spr_null_sheet(void)
+{
+    dtr_graphics_t *gfx = dtr_gfx_create(TW, TH);
+    dtr_gfx_cls(gfx, 0);
+
+    /* Drawing with no sprite sheet should not crash */
+    dtr_gfx_spr(gfx, 0, 0, 0, 1, 1, false, false);
+
+    dtr_gfx_destroy(gfx);
+    DTR_PASS();
+}
+
+static void test_gfx_spr_out_of_range(void)
+{
+    dtr_graphics_t *gfx = dtr_gfx_create(TW, TH);
+    uint8_t         sheet_data[8 * 8];
+
+    dtr_gfx_cls(gfx, 0);
+    memset(sheet_data, 5, sizeof(sheet_data));
+
+    gfx->sheet.pixels = sheet_data;
+    gfx->sheet.width  = 8;
+    gfx->sheet.height = 8;
+    gfx->sheet.tile_w = 8;
+    gfx->sheet.tile_h = 8;
+    gfx->sheet.cols   = 1;
+    gfx->sheet.rows   = 1;
+    gfx->sheet.count  = 1;
+
+    /* Negative index and beyond-count index: should not crash or draw */
+    dtr_gfx_spr(gfx, -1, 0, 0, 1, 1, false, false);
+    dtr_gfx_spr(gfx, 1, 0, 0, 1, 1, false, false);
+
+    for (int i = 0; i < TW * TH; ++i) {
+        DTR_ASSERT_EQ_INT(gfx->framebuffer[i], 0);
+    }
+
+    gfx->sheet.pixels = NULL;
+    dtr_gfx_destroy(gfx);
+    DTR_PASS();
+}
+
+static void test_gfx_spr_flip(void)
+{
+    dtr_graphics_t *gfx = dtr_gfx_create(TW, TH);
+    uint8_t         sheet_data[8 * 8];
+
+    dtr_gfx_cls(gfx, 0);
+    memset(sheet_data, 0, sizeof(sheet_data));
+
+    /* Only top-left pixel has colour */
+    sheet_data[0] = 3;
+
+    gfx->sheet.pixels = sheet_data;
+    gfx->sheet.width  = 8;
+    gfx->sheet.height = 8;
+    gfx->sheet.tile_w = 8;
+    gfx->sheet.tile_h = 8;
+    gfx->sheet.cols   = 1;
+    gfx->sheet.rows   = 1;
+    gfx->sheet.count  = 1;
+
+    /* Flip X: top-left pixel should appear at top-right (x=7) */
+    dtr_gfx_spr(gfx, 0, 0, 0, 1, 1, true, false);
+    DTR_ASSERT_EQ_INT(dtr_gfx_pget(gfx, 7, 0), 3);
+    DTR_ASSERT_EQ_INT(dtr_gfx_pget(gfx, 0, 0), 0);
+
+    /* Flip Y: top-left pixel should appear at bottom-left (y=7) */
+    dtr_gfx_cls(gfx, 0);
+    dtr_gfx_spr(gfx, 0, 0, 0, 1, 1, false, true);
+    DTR_ASSERT_EQ_INT(dtr_gfx_pget(gfx, 0, 7), 3);
+    DTR_ASSERT_EQ_INT(dtr_gfx_pget(gfx, 0, 0), 0);
+
+    gfx->sheet.pixels = NULL;
+    dtr_gfx_destroy(gfx);
+    DTR_PASS();
+}
+
+/* ------------------------------------------------------------------ */
+/*  sspr (stretch sprite)                                              */
+/* ------------------------------------------------------------------ */
+
+static void test_gfx_sspr_basic(void)
+{
+    dtr_graphics_t *gfx = dtr_gfx_create(TW, TH);
+    uint8_t         sheet_data[8 * 8];
+
+    dtr_gfx_cls(gfx, 0);
+    memset(sheet_data, 4, sizeof(sheet_data));
+
+    gfx->sheet.pixels = sheet_data;
+    gfx->sheet.width  = 8;
+    gfx->sheet.height = 8;
+    gfx->sheet.tile_w = 8;
+    gfx->sheet.tile_h = 8;
+    gfx->sheet.cols   = 1;
+    gfx->sheet.rows   = 1;
+    gfx->sheet.count  = 1;
+
+    /* Copy 4x4 source region → 4x4 destination */
+    dtr_gfx_sspr(gfx, 0, 0, 4, 4, 2, 2, 4, 4);
+
+    /* Destination pixels should have colour 4 */
+    for (int y = 2; y < 6; ++y) {
+        for (int x = 2; x < 6; ++x) {
+            DTR_ASSERT_EQ_INT(dtr_gfx_pget(gfx, x, y), 4);
+        }
+    }
+
+    /* Outside should remain 0 */
+    DTR_ASSERT_EQ_INT(dtr_gfx_pget(gfx, 1, 2), 0);
+
+    gfx->sheet.pixels = NULL;
+    dtr_gfx_destroy(gfx);
+    DTR_PASS();
+}
+
+static void test_gfx_sspr_null_sheet(void)
+{
+    dtr_graphics_t *gfx = dtr_gfx_create(TW, TH);
+    dtr_gfx_cls(gfx, 0);
+
+    /* Should not crash with no sheet */
+    dtr_gfx_sspr(gfx, 0, 0, 4, 4, 0, 0, 4, 4);
+
+    dtr_gfx_destroy(gfx);
+    DTR_PASS();
+}
+
+/* ------------------------------------------------------------------ */
+/*  Tilemap                                                            */
+/* ------------------------------------------------------------------ */
+
+static void test_gfx_tilemap_basic(void)
+{
+    dtr_graphics_t *gfx = dtr_gfx_create(TW, TH);
+
+    /* 2x2 tile map, 8x8 tiles */
+    uint8_t tiles[]  = { 0, 1, 2, 0 };
+    uint8_t colors[] = { 1, 2, 3 };
+
+    dtr_gfx_cls(gfx, 0);
+    dtr_gfx_tilemap(gfx, tiles, 2, 2, 8, 8, colors, 3);
+
+    /* Tile (0,0) = index 0 → colour 1 */
+    DTR_ASSERT_EQ_INT(dtr_gfx_pget(gfx, 0, 0), 1);
+    /* Tile (1,0) = index 1 → colour 2 */
+    DTR_ASSERT_EQ_INT(dtr_gfx_pget(gfx, 8, 0), 2);
+    /* Tile (0,1) = index 2 → colour 3 */
+    DTR_ASSERT_EQ_INT(dtr_gfx_pget(gfx, 0, 8), 3);
+    /* Tile (1,1) = index 0 → colour 1 */
+    DTR_ASSERT_EQ_INT(dtr_gfx_pget(gfx, 8, 8), 1);
+
+    dtr_gfx_destroy(gfx);
+    DTR_PASS();
+}
+
+/* ------------------------------------------------------------------ */
+/*  Screen palette (display pal)                                       */
+/* ------------------------------------------------------------------ */
+
+static void test_gfx_screen_pal(void)
+{
+    dtr_graphics_t *gfx = dtr_gfx_create(TW, TH);
+    dtr_gfx_cls(gfx, 0);
+
+    /* Remap colour 1 → 5 in screen palette */
+    dtr_gfx_pal(gfx, 1, 5, true);
+    DTR_ASSERT_EQ_INT(gfx->screen_pal[1], 5);
+
+    /* Reset should restore identity */
+    dtr_gfx_pal_reset(gfx);
+    DTR_ASSERT_EQ_INT(gfx->screen_pal[1], 1);
+
+    dtr_gfx_destroy(gfx);
+    DTR_PASS();
+}
+
+/* ------------------------------------------------------------------ */
 /*  Main                                                               */
 /* ------------------------------------------------------------------ */
 
@@ -879,6 +1205,20 @@ int main(int argc, char *argv[])
     DTR_RUN_TEST(test_gfx_dl_begin_end);
     DTR_RUN_TEST(test_gfx_dl_queue_and_sort);
     DTR_RUN_TEST(test_gfx_dl_overflow);
+    DTR_RUN_TEST(test_gfx_tri_outline);
+    DTR_RUN_TEST(test_gfx_trifill);
+    DTR_RUN_TEST(test_gfx_trifill_clipped);
+    DTR_RUN_TEST(test_gfx_print_basic);
+    DTR_RUN_TEST(test_gfx_print_newline);
+    DTR_RUN_TEST(test_gfx_print_empty);
+    DTR_RUN_TEST(test_gfx_spr_basic);
+    DTR_RUN_TEST(test_gfx_spr_null_sheet);
+    DTR_RUN_TEST(test_gfx_spr_out_of_range);
+    DTR_RUN_TEST(test_gfx_spr_flip);
+    DTR_RUN_TEST(test_gfx_sspr_basic);
+    DTR_RUN_TEST(test_gfx_sspr_null_sheet);
+    DTR_RUN_TEST(test_gfx_tilemap_basic);
+    DTR_RUN_TEST(test_gfx_screen_pal);
 
     DTR_TEST_END();
 }

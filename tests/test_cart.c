@@ -262,6 +262,207 @@ static void test_cart_validate_clamp_tile(void)
 }
 
 /* ------------------------------------------------------------------ */
+/*  dset / dget — numeric persistence slots                            */
+/* ------------------------------------------------------------------ */
+
+static void test_cart_dset_dget(void)
+{
+    dtr_cart_t *cart;
+
+    cart = dtr_cart_create();
+
+    /* Default slot value is 0 */
+    DTR_ASSERT_NEAR(dtr_cart_dget(cart, 0), 0.0, 0.001);
+    DTR_ASSERT_NEAR(dtr_cart_dget(cart, 63), 0.0, 0.001);
+
+    /* Set and retrieve */
+    dtr_cart_dset(cart, 0, 42.5);
+    DTR_ASSERT_NEAR(dtr_cart_dget(cart, 0), 42.5, 0.001);
+
+    dtr_cart_dset(cart, 63, -100.0);
+    DTR_ASSERT_NEAR(dtr_cart_dget(cart, 63), -100.0, 0.001);
+
+    /* Overwrite */
+    dtr_cart_dset(cart, 0, 99.0);
+    DTR_ASSERT_NEAR(dtr_cart_dget(cart, 0), 99.0, 0.001);
+
+    dtr_cart_destroy(cart);
+    DTR_PASS();
+}
+
+static void test_cart_dset_dget_out_of_range(void)
+{
+    dtr_cart_t *cart;
+
+    cart = dtr_cart_create();
+
+    /* Out-of-range indices should be safe */
+    dtr_cart_dset(cart, -1, 1.0);
+    dtr_cart_dset(cart, DTR_CART_MAX_DSLOTS, 1.0);
+    DTR_ASSERT_NEAR(dtr_cart_dget(cart, -1), 0.0, 0.001);
+    DTR_ASSERT_NEAR(dtr_cart_dget(cart, DTR_CART_MAX_DSLOTS), 0.0, 0.001);
+
+    dtr_cart_destroy(cart);
+    DTR_PASS();
+}
+
+/* ------------------------------------------------------------------ */
+/*  Key-value persistence                                              */
+/* ------------------------------------------------------------------ */
+
+static void test_cart_kv_save_load(void)
+{
+    dtr_cart_t  *cart;
+    const char *val;
+
+    cart = dtr_cart_create();
+
+    /* No keys initially */
+    DTR_ASSERT(!dtr_cart_has_key(cart, "score"));
+    val = dtr_cart_load_key(cart, "score");
+    DTR_ASSERT(val == NULL);
+
+    /* Save and load */
+    dtr_cart_save(cart, "score", "100");
+    DTR_ASSERT(dtr_cart_has_key(cart, "score"));
+    val = dtr_cart_load_key(cart, "score");
+    DTR_ASSERT(val != NULL);
+    DTR_ASSERT(strcmp(val, "100") == 0);
+
+    /* Overwrite existing key */
+    dtr_cart_save(cart, "score", "200");
+    val = dtr_cart_load_key(cart, "score");
+    DTR_ASSERT(strcmp(val, "200") == 0);
+
+    dtr_cart_destroy(cart);
+    DTR_PASS();
+}
+
+static void test_cart_kv_delete(void)
+{
+    dtr_cart_t *cart;
+
+    cart = dtr_cart_create();
+
+    dtr_cart_save(cart, "a", "1");
+    dtr_cart_save(cart, "b", "2");
+    dtr_cart_save(cart, "c", "3");
+    DTR_ASSERT_EQ_INT(cart->kv_count, 3);
+
+    /* Delete middle key */
+    dtr_cart_delete_key(cart, "b");
+    DTR_ASSERT_EQ_INT(cart->kv_count, 2);
+    DTR_ASSERT(!dtr_cart_has_key(cart, "b"));
+    DTR_ASSERT(dtr_cart_has_key(cart, "a"));
+    DTR_ASSERT(dtr_cart_has_key(cart, "c"));
+
+    /* Delete non-existent key — no crash */
+    dtr_cart_delete_key(cart, "zzz");
+    DTR_ASSERT_EQ_INT(cart->kv_count, 2);
+
+    /* Delete remaining keys */
+    dtr_cart_delete_key(cart, "a");
+    dtr_cart_delete_key(cart, "c");
+    DTR_ASSERT_EQ_INT(cart->kv_count, 0);
+
+    dtr_cart_destroy(cart);
+    DTR_PASS();
+}
+
+static void test_cart_kv_max_keys(void)
+{
+    dtr_cart_t *cart;
+    char        key[DTR_CART_KEY_LEN];
+
+    cart = dtr_cart_create();
+
+    /* Fill to capacity */
+    for (int32_t i = 0; i < DTR_CART_MAX_KV; ++i) {
+        snprintf(key, sizeof(key), "key%d", i);
+        dtr_cart_save(cart, key, "val");
+    }
+    DTR_ASSERT_EQ_INT(cart->kv_count, DTR_CART_MAX_KV);
+
+    /* One more should be silently rejected */
+    dtr_cart_save(cart, "overflow", "nope");
+    DTR_ASSERT_EQ_INT(cart->kv_count, DTR_CART_MAX_KV);
+    DTR_ASSERT(!dtr_cart_has_key(cart, "overflow"));
+
+    dtr_cart_destroy(cart);
+    DTR_PASS();
+}
+
+/* ------------------------------------------------------------------ */
+/*  Validate — height out of range                                     */
+/* ------------------------------------------------------------------ */
+
+static void test_cart_validate_clamp_height(void)
+{
+    dtr_cart_t *cart;
+
+    cart = dtr_cart_create();
+    cart->display.height = 9999;
+    dtr_cart_validate(cart);
+    DTR_ASSERT_EQ_INT(cart->display.height, CONSOLE_FB_HEIGHT);
+    dtr_cart_destroy(cart);
+    DTR_PASS();
+}
+
+/* ------------------------------------------------------------------ */
+/*  Parse timing overrides                                             */
+/* ------------------------------------------------------------------ */
+
+static void test_cart_parse_timing(void)
+{
+    dtr_cart_t *cart;
+    bool        ok;
+    const char *json =
+        "{"
+        "  \"timing\": {"
+        "    \"fps\": 30,"
+        "    \"ups\": 2"
+        "  }"
+        "}";
+
+    cart = dtr_cart_create();
+    prv_setup();
+    ok = dtr_cart_parse(cart, s_ctx, json, strlen(json));
+    DTR_ASSERT(ok);
+    DTR_ASSERT_EQ_INT(cart->timing.fps, 30);
+    DTR_ASSERT_EQ_INT(cart->timing.ups, 2);
+    prv_teardown();
+    dtr_cart_destroy(cart);
+    DTR_PASS();
+}
+
+/* ------------------------------------------------------------------ */
+/*  Parse audio overrides                                              */
+/* ------------------------------------------------------------------ */
+
+static void test_cart_parse_audio(void)
+{
+    dtr_cart_t *cart;
+    bool        ok;
+    const char *json =
+        "{"
+        "  \"audio\": {"
+        "    \"channels\": 4,"
+        "    \"frequency\": 22050"
+        "  }"
+        "}";
+
+    cart = dtr_cart_create();
+    prv_setup();
+    ok = dtr_cart_parse(cart, s_ctx, json, strlen(json));
+    DTR_ASSERT(ok);
+    DTR_ASSERT_EQ_INT(cart->audio.channels, 4);
+    DTR_ASSERT_EQ_INT(cart->audio.frequency, 22050);
+    prv_teardown();
+    dtr_cart_destroy(cart);
+    DTR_PASS();
+}
+
+/* ------------------------------------------------------------------ */
 /*  Main                                                               */
 /* ------------------------------------------------------------------ */
 
@@ -282,6 +483,14 @@ int main(int argc, char *argv[])
     DTR_RUN_TEST(test_cart_validate_clamp_width);
     DTR_RUN_TEST(test_cart_validate_clamp_fps);
     DTR_RUN_TEST(test_cart_validate_clamp_tile);
+    DTR_RUN_TEST(test_cart_dset_dget);
+    DTR_RUN_TEST(test_cart_dset_dget_out_of_range);
+    DTR_RUN_TEST(test_cart_kv_save_load);
+    DTR_RUN_TEST(test_cart_kv_delete);
+    DTR_RUN_TEST(test_cart_kv_max_keys);
+    DTR_RUN_TEST(test_cart_validate_clamp_height);
+    DTR_RUN_TEST(test_cart_parse_timing);
+    DTR_RUN_TEST(test_cart_parse_audio);
 
     DTR_TEST_END();
 }

@@ -6,7 +6,9 @@
 
 #include <assert.h>
 #include <stdio.h>
+#include <string.h>
 
+#include "gamepad.h"
 #include "input.h"
 #include "test_harness.h"
 
@@ -228,6 +230,244 @@ static void test_input_clear(void)
 }
 
 /* ------------------------------------------------------------------ */
+/*  Key name / scancode mapping                                        */
+/* ------------------------------------------------------------------ */
+
+static void test_key_name(void)
+{
+    DTR_ASSERT(strcmp(dtr_key_name(DTR_KEY_UP), "UP") == 0);
+    DTR_ASSERT(strcmp(dtr_key_name(DTR_KEY_Z), "Z") == 0);
+    DTR_ASSERT(strcmp(dtr_key_name(DTR_KEY_SPACE), "SPACE") == 0);
+    DTR_ASSERT(strcmp(dtr_key_name(DTR_KEY_F12), "F12") == 0);
+
+    /* Out-of-range returns "NONE" */
+    DTR_ASSERT(strcmp(dtr_key_name(DTR_KEY_COUNT), "NONE") == 0);
+    DTR_ASSERT(strcmp(dtr_key_name((dtr_key_t)-1), "NONE") == 0);
+    DTR_PASS();
+}
+
+static void test_key_from_scancode(void)
+{
+    DTR_ASSERT_EQ_INT(dtr_key_from_scancode(SDL_SCANCODE_UP), DTR_KEY_UP);
+    DTR_ASSERT_EQ_INT(dtr_key_from_scancode(SDL_SCANCODE_Z), DTR_KEY_Z);
+    DTR_ASSERT_EQ_INT(dtr_key_from_scancode(SDL_SCANCODE_SPACE), DTR_KEY_SPACE);
+    DTR_ASSERT_EQ_INT(dtr_key_from_scancode(SDL_SCANCODE_RETURN), DTR_KEY_ENTER);
+    DTR_ASSERT_EQ_INT(dtr_key_from_scancode(SDL_SCANCODE_F1), DTR_KEY_F1);
+    DTR_ASSERT_EQ_INT(dtr_key_from_scancode(SDL_SCANCODE_0), DTR_KEY_0);
+    DTR_ASSERT_EQ_INT(dtr_key_from_scancode(SDL_SCANCODE_9), DTR_KEY_9);
+
+    /* Unmapped scancode returns NONE */
+    DTR_ASSERT_EQ_INT(dtr_key_from_scancode(SDL_SCANCODE_BACKSPACE), DTR_KEY_NONE);
+    DTR_PASS();
+}
+
+/* ------------------------------------------------------------------ */
+/*  Input remap (alias for map)                                        */
+/* ------------------------------------------------------------------ */
+
+static void test_input_remap(void)
+{
+    dtr_input_state_t *inp;
+    dtr_key_state_t   *keys;
+    dtr_binding_t      binds[1];
+
+    inp  = dtr_input_create();
+    keys = dtr_key_create();
+
+    /* Map "move" → KEY_LEFT */
+    binds[0].type      = DTR_BIND_KEY;
+    binds[0].code      = DTR_KEY_LEFT;
+    binds[0].threshold = 0.0f;
+    dtr_input_map(inp, "move", binds, 1);
+
+    dtr_key_set(keys, DTR_KEY_LEFT, true);
+    dtr_input_update(inp, keys, NULL);
+    DTR_ASSERT(dtr_input_btn(inp, "move"));
+
+    /* Remap "move" → KEY_RIGHT */
+    binds[0].code = DTR_KEY_RIGHT;
+    dtr_input_remap(inp, "move", binds, 1);
+
+    /* LEFT should no longer fire "move" */
+    dtr_key_set(keys, DTR_KEY_LEFT, true);
+    dtr_key_set(keys, DTR_KEY_RIGHT, false);
+    dtr_input_update(inp, keys, NULL);
+    DTR_ASSERT(!dtr_input_btn(inp, "move"));
+
+    /* RIGHT should fire "move" */
+    dtr_key_set(keys, DTR_KEY_RIGHT, true);
+    dtr_input_update(inp, keys, NULL);
+    DTR_ASSERT(dtr_input_btn(inp, "move"));
+
+    dtr_input_destroy(inp);
+    dtr_key_destroy(keys);
+    DTR_PASS();
+}
+
+/* ------------------------------------------------------------------ */
+/*  Input axis via gamepad binding                                     */
+/* ------------------------------------------------------------------ */
+
+static void test_input_axis_with_gamepad(void)
+{
+    dtr_input_state_t   *inp;
+    dtr_key_state_t     *keys;
+    dtr_gamepad_state_t *pads;
+    dtr_binding_t        binds[1];
+
+    inp  = dtr_input_create();
+    keys = dtr_key_create();
+    pads = dtr_gamepad_create();
+
+    /* Simulate connected pad */
+    pads->pads[0].connected = true;
+    pads->count              = 1;
+
+    /* Map "horizontal" → PAD_AXIS_LX */
+    binds[0].type      = DTR_BIND_PAD_AXIS;
+    binds[0].code      = DTR_PAD_AXIS_LX;
+    binds[0].threshold = 0.1f;
+    dtr_input_map(inp, "horizontal", binds, 1);
+
+    /* Axis at 0 — below threshold */
+    pads->pads[0].axes[DTR_PAD_AXIS_LX] = 0.0f;
+    dtr_input_update(inp, keys, pads);
+    DTR_ASSERT(!dtr_input_btn(inp, "horizontal"));
+    DTR_ASSERT_NEAR(dtr_input_axis(inp, "horizontal"), 0.0f, 0.001f);
+
+    /* Axis above threshold */
+    pads->pads[0].axes[DTR_PAD_AXIS_LX] = 0.8f;
+    dtr_input_update(inp, keys, pads);
+    DTR_ASSERT(dtr_input_btn(inp, "horizontal"));
+    DTR_ASSERT_NEAR(dtr_input_axis(inp, "horizontal"), 0.8f, 0.001f);
+
+    /* Negative axis */
+    pads->pads[0].axes[DTR_PAD_AXIS_LX] = -0.6f;
+    dtr_input_update(inp, keys, pads);
+    DTR_ASSERT(dtr_input_btn(inp, "horizontal"));
+    DTR_ASSERT_NEAR(dtr_input_axis(inp, "horizontal"), -0.6f, 0.001f);
+
+    dtr_input_destroy(inp);
+    dtr_key_destroy(keys);
+    dtr_gamepad_destroy(pads);
+    DTR_PASS();
+}
+
+/* ------------------------------------------------------------------ */
+/*  Input with gamepad button binding                                  */
+/* ------------------------------------------------------------------ */
+
+static void test_input_pad_button_binding(void)
+{
+    dtr_input_state_t   *inp;
+    dtr_key_state_t     *keys;
+    dtr_gamepad_state_t *pads;
+    dtr_binding_t        binds[1];
+
+    inp  = dtr_input_create();
+    keys = dtr_key_create();
+    pads = dtr_gamepad_create();
+
+    pads->pads[0].connected = true;
+    pads->count              = 1;
+
+    /* Map "jump" → PAD_A */
+    binds[0].type      = DTR_BIND_PAD_BTN;
+    binds[0].code      = DTR_PAD_A;
+    binds[0].threshold = 0.0f;
+    dtr_input_map(inp, "jump", binds, 1);
+
+    /* Not pressed */
+    dtr_input_update(inp, keys, pads);
+    DTR_ASSERT(!dtr_input_btn(inp, "jump"));
+
+    /* Press pad A */
+    pads->pads[0].btn_current[DTR_PAD_A] = true;
+    dtr_input_update(inp, keys, pads);
+    DTR_ASSERT(dtr_input_btn(inp, "jump"));
+
+    dtr_input_destroy(inp);
+    dtr_key_destroy(keys);
+    dtr_gamepad_destroy(pads);
+    DTR_PASS();
+}
+
+/* ------------------------------------------------------------------ */
+/*  Multiple bindings per action                                       */
+/* ------------------------------------------------------------------ */
+
+static void test_input_multiple_bindings(void)
+{
+    dtr_input_state_t *inp;
+    dtr_key_state_t   *keys;
+    dtr_binding_t      binds[2];
+
+    inp  = dtr_input_create();
+    keys = dtr_key_create();
+
+    /* Map "fire" → KEY_Z or KEY_X */
+    binds[0].type      = DTR_BIND_KEY;
+    binds[0].code      = DTR_KEY_Z;
+    binds[0].threshold = 0.0f;
+    binds[1].type      = DTR_BIND_KEY;
+    binds[1].code      = DTR_KEY_X;
+    binds[1].threshold = 0.0f;
+    dtr_input_map(inp, "fire", binds, 2);
+
+    /* Neither pressed */
+    dtr_input_update(inp, keys, NULL);
+    DTR_ASSERT(!dtr_input_btn(inp, "fire"));
+
+    /* Only second binding pressed */
+    dtr_key_set(keys, DTR_KEY_X, true);
+    dtr_input_update(inp, keys, NULL);
+    DTR_ASSERT(dtr_input_btn(inp, "fire"));
+
+    dtr_input_destroy(inp);
+    dtr_key_destroy(keys);
+    DTR_PASS();
+}
+
+/* ------------------------------------------------------------------ */
+/*  Input clear_action preserves other actions                         */
+/* ------------------------------------------------------------------ */
+
+static void test_input_clear_action_preserves_others(void)
+{
+    dtr_input_state_t *inp;
+    dtr_key_state_t   *keys;
+    dtr_binding_t      binds[1];
+
+    inp  = dtr_input_create();
+    keys = dtr_key_create();
+
+    binds[0].type      = DTR_BIND_KEY;
+    binds[0].code      = DTR_KEY_Z;
+    binds[0].threshold = 0.0f;
+    dtr_input_map(inp, "jump", binds, 1);
+
+    binds[0].code = DTR_KEY_X;
+    dtr_input_map(inp, "fire", binds, 1);
+
+    /* Clear only "jump" */
+    dtr_input_clear_action(inp, "jump");
+
+    /* "fire" should still work */
+    dtr_key_set(keys, DTR_KEY_X, true);
+    dtr_input_update(inp, keys, NULL);
+    DTR_ASSERT(dtr_input_btn(inp, "fire"));
+
+    /* "jump" should not fire (bindings cleared) */
+    dtr_key_set(keys, DTR_KEY_Z, true);
+    dtr_input_update(inp, keys, NULL);
+    DTR_ASSERT(!dtr_input_btn(inp, "jump"));
+
+    dtr_input_destroy(inp);
+    dtr_key_destroy(keys);
+    DTR_PASS();
+}
+
+/* ------------------------------------------------------------------ */
 /*  Main                                                               */
 /* ------------------------------------------------------------------ */
 
@@ -255,6 +495,13 @@ int main(int argc, char *argv[])
     DTR_RUN_TEST(test_input_map_and_query);
     DTR_RUN_TEST(test_input_unknown_action);
     DTR_RUN_TEST(test_input_clear);
+    DTR_RUN_TEST(test_key_name);
+    DTR_RUN_TEST(test_key_from_scancode);
+    DTR_RUN_TEST(test_input_remap);
+    DTR_RUN_TEST(test_input_axis_with_gamepad);
+    DTR_RUN_TEST(test_input_pad_button_binding);
+    DTR_RUN_TEST(test_input_multiple_bindings);
+    DTR_RUN_TEST(test_input_clear_action_preserves_others);
 
     DTR_TEST_END();
 }
