@@ -96,8 +96,6 @@ cmake --build build/coverage
 ctest --test-dir build/coverage --output-on-failure
 lcov --capture --directory build/coverage --include '*/src/*' \
      --output-file build/coverage.info --ignore-errors mismatch
-lcov --remove build/coverage.info '*/tests/*' '*/_deps/*' \
-     --output-file build/coverage.info
 genhtml build/coverage.info --output-directory build/coverage-report
 ```
 
