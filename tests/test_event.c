@@ -232,6 +232,81 @@ static void test_event_wrong_name(void)
 }
 
 /* ------------------------------------------------------------------ */
+/*  Queue overflow — events beyond limit are dropped                   */
+/* ------------------------------------------------------------------ */
+
+static void test_event_queue_overflow(void)
+{
+    dtr_event_bus_t *bus;
+
+    prv_setup();
+    bus = dtr_event_create(s_ctx);
+
+    /* Fill the queue to capacity */
+    for (int32_t idx = 0; idx < DTR_EVENT_MAX_QUEUED; ++idx) {
+        dtr_event_emit(bus, "test:flood", JS_UNDEFINED);
+    }
+    DTR_ASSERT_EQ_INT(bus->queue_count, DTR_EVENT_MAX_QUEUED);
+
+    /* One more emit should be silently dropped */
+    dtr_event_emit(bus, "test:overflow", JS_UNDEFINED);
+    DTR_ASSERT_EQ_INT(bus->queue_count, DTR_EVENT_MAX_QUEUED);
+
+    /* Flush to clean up */
+    dtr_event_flush(bus);
+    DTR_ASSERT_EQ_INT(bus->queue_count, 0);
+
+    dtr_event_destroy(bus);
+    prv_teardown();
+    DTR_PASS();
+}
+
+/* ------------------------------------------------------------------ */
+/*  Handler slot exhaustion                                            */
+/* ------------------------------------------------------------------ */
+
+static void test_event_handler_overflow(void)
+{
+    dtr_event_bus_t *bus;
+    JSValue          handler;
+    int32_t          handle;
+
+    prv_setup();
+    {
+        JSValue r = JS_Eval(s_ctx, HANDLER_SRC, strlen(HANDLER_SRC), "<test>", JS_EVAL_TYPE_GLOBAL);
+        JS_FreeValue(s_ctx, r);
+    }
+
+    bus     = dtr_event_create(s_ctx);
+    handler = prv_get_handler(s_ctx);
+
+    /* Register max handlers */
+    for (int32_t idx = 0; idx < DTR_EVENT_MAX_HANDLERS; ++idx) {
+        handle = dtr_event_on(bus, "test:slot", handler);
+        DTR_ASSERT(handle >= 0);
+    }
+
+    /* Next registration should fail */
+    handle = dtr_event_on(bus, "test:slot", handler);
+    DTR_ASSERT_EQ_INT(handle, -1);
+
+    JS_FreeValue(s_ctx, handler);
+    dtr_event_destroy(bus);
+    prv_teardown();
+    DTR_PASS();
+}
+
+/* ------------------------------------------------------------------ */
+/*  destroy(NULL) — must not crash                                     */
+/* ------------------------------------------------------------------ */
+
+static void test_event_destroy_null(void)
+{
+    dtr_event_destroy(NULL);
+    DTR_PASS();
+}
+
+/* ------------------------------------------------------------------ */
 /*  Main                                                               */
 /* ------------------------------------------------------------------ */
 
@@ -248,6 +323,9 @@ int main(int argc, char *argv[])
     DTR_RUN_TEST(test_event_once);
     DTR_RUN_TEST(test_event_off);
     DTR_RUN_TEST(test_event_wrong_name);
+    DTR_RUN_TEST(test_event_queue_overflow);
+    DTR_RUN_TEST(test_event_handler_overflow);
+    DTR_RUN_TEST(test_event_destroy_null);
 
     DTR_TEST_END();
 }

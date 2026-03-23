@@ -265,6 +265,123 @@ static void test_postfx_apply_aberration(void)
     DTR_PASS();
 }
 
+static void test_postfx_apply_crt(void)
+{
+    dtr_postfx_t *pfx = dtr_postfx_create(TW, TH);
+    uint32_t      pixels[TW * TH];
+
+    /* Fill with uniform gray (R=0x80, G=0x80, B=0x80, A=0xFF) */
+    for (int32_t idx = 0; idx < TW * TH; ++idx) {
+        pixels[idx] = 0x808080FFu;
+    }
+
+    /* Use strength > 0.3 to trigger color bleeding path */
+    dtr_postfx_push(pfx, DTR_POSTFX_CRT, 1.0f);
+    dtr_postfx_apply(pfx, pixels, TW, TH);
+
+    /* Center pixel should be brighter than corner due to vignette */
+    uint32_t center_r = (pixels[(TH / 2) * TW + (TW / 2)] >> 24) & 0xFF;
+    uint32_t corner_r = (pixels[0] >> 24) & 0xFF;
+    DTR_ASSERT(center_r > corner_r);
+
+    dtr_postfx_destroy(pfx);
+    DTR_PASS();
+}
+
+static void test_postfx_apply_bloom(void)
+{
+    dtr_postfx_t *pfx = dtr_postfx_create(TW, TH);
+    uint32_t      pixels[TW * TH];
+
+    /* Fill with bright pixels (above threshold) */
+    for (int32_t idx = 0; idx < TW * TH; ++idx) {
+        pixels[idx] = 0xF0F0F0FFu; /* R=0xF0, G=0xF0, B=0xF0, A=0xFF */
+    }
+
+    uint32_t before_r = (pixels[0] >> 24) & 0xFF;
+
+    dtr_postfx_push(pfx, DTR_POSTFX_BLOOM, 1.0f);
+    dtr_postfx_apply(pfx, pixels, TW, TH);
+
+    /* Bright pixels should be boosted (or clamped at 255) */
+    uint32_t after_r = (pixels[0] >> 24) & 0xFF;
+    DTR_ASSERT(after_r >= before_r);
+
+    dtr_postfx_destroy(pfx);
+    DTR_PASS();
+}
+
+static void test_postfx_apply_bloom_below_threshold(void)
+{
+    dtr_postfx_t *pfx = dtr_postfx_create(TW, TH);
+    uint32_t      pixels[TW * TH];
+
+    /* Fill with dim pixels (below bloom threshold) */
+    for (int32_t idx = 0; idx < TW * TH; ++idx) {
+        pixels[idx] = 0x202020FFu; /* R=0x20, G=0x20, B=0x20, A=0xFF */
+    }
+
+    uint32_t before = pixels[0];
+
+    dtr_postfx_push(pfx, DTR_POSTFX_BLOOM, 0.5f);
+    dtr_postfx_apply(pfx, pixels, TW, TH);
+
+    /* Dim pixels should be unchanged */
+    DTR_ASSERT_EQ_INT(pixels[0], before);
+
+    dtr_postfx_destroy(pfx);
+    DTR_PASS();
+}
+
+static void test_postfx_apply_multiple_stacked(void)
+{
+    dtr_postfx_t *pfx = dtr_postfx_create(TW, TH);
+    uint32_t      pixels[TW * TH];
+
+    /* Fill with mid-gray */
+    for (int32_t idx = 0; idx < TW * TH; ++idx) {
+        pixels[idx] = 0x808080FFu;
+    }
+
+    uint32_t before = pixels[0];
+
+    /* Stack scanlines + CRT */
+    dtr_postfx_push(pfx, DTR_POSTFX_SCANLINES, 0.8f);
+    dtr_postfx_push(pfx, DTR_POSTFX_CRT, 0.5f);
+    DTR_ASSERT_EQ_INT(pfx->count, 2);
+
+    dtr_postfx_apply(pfx, pixels, TW, TH);
+
+    /* Both effects should have modified the corner pixel */
+    DTR_ASSERT(pixels[0] != before);
+
+    dtr_postfx_destroy(pfx);
+    DTR_PASS();
+}
+
+static void test_postfx_apply_crt_low_strength(void)
+{
+    dtr_postfx_t *pfx = dtr_postfx_create(TW, TH);
+    uint32_t      pixels[TW * TH];
+
+    /* Fill with uniform gray */
+    for (int32_t idx = 0; idx < TW * TH; ++idx) {
+        pixels[idx] = 0x808080FFu;
+    }
+
+    /* Use strength <= 0.3 to skip color bleeding path */
+    dtr_postfx_push(pfx, DTR_POSTFX_CRT, 0.2f);
+    dtr_postfx_apply(pfx, pixels, TW, TH);
+
+    /* Should still apply vignette (corner darker than center) */
+    uint32_t center_r = (pixels[(TH / 2) * TW + (TW / 2)] >> 24) & 0xFF;
+    uint32_t corner_r = (pixels[0] >> 24) & 0xFF;
+    DTR_ASSERT(center_r >= corner_r);
+
+    dtr_postfx_destroy(pfx);
+    DTR_PASS();
+}
+
 /* ------------------------------------------------------------------ */
 /*  Runner                                                             */
 /* ------------------------------------------------------------------ */
@@ -297,6 +414,11 @@ int main(void)
     DTR_RUN_TEST(test_postfx_apply_null_noop);
     DTR_RUN_TEST(test_postfx_apply_scanlines);
     DTR_RUN_TEST(test_postfx_apply_aberration);
+    DTR_RUN_TEST(test_postfx_apply_crt);
+    DTR_RUN_TEST(test_postfx_apply_bloom);
+    DTR_RUN_TEST(test_postfx_apply_bloom_below_threshold);
+    DTR_RUN_TEST(test_postfx_apply_multiple_stacked);
+    DTR_RUN_TEST(test_postfx_apply_crt_low_strength);
 
     DTR_TEST_END();
 }

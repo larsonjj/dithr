@@ -1106,6 +1106,172 @@ static void test_gfx_sspr_null_sheet(void)
 }
 
 /* ------------------------------------------------------------------ */
+/*  spr_rot — rotated sprite drawing                                   */
+/* ------------------------------------------------------------------ */
+
+static void test_gfx_spr_rot_basic(void)
+{
+    dtr_graphics_t *gfx = dtr_gfx_create(TW, TH);
+    uint8_t         sheet_data[8 * 8];
+    int32_t         found;
+
+    dtr_gfx_cls(gfx, 0);
+
+    /* Fill sheet with colour 3 */
+    memset(sheet_data, 3, sizeof(sheet_data));
+
+    gfx->sheet.pixels = sheet_data;
+    gfx->sheet.width  = 8;
+    gfx->sheet.height = 8;
+    gfx->sheet.tile_w = 8;
+    gfx->sheet.tile_h = 8;
+    gfx->sheet.cols   = 1;
+    gfx->sheet.rows   = 1;
+    gfx->sheet.count  = 1;
+
+    /* Rotate 0 radians around center (4,4): should draw sprite normally */
+    dtr_gfx_spr_rot(gfx, 0, 4, 4, 0.0f, 4, 4);
+
+    /* At least some pixels should be drawn with colour 3 */
+    found = 0;
+    for (int32_t idx = 0; idx < TW * TH; ++idx) {
+        if (gfx->framebuffer[idx] == 3) {
+            ++found;
+        }
+    }
+    DTR_ASSERT(found > 0);
+
+    gfx->sheet.pixels = NULL;
+    dtr_gfx_destroy(gfx);
+    DTR_PASS();
+}
+
+static void test_gfx_spr_rot_null_sheet(void)
+{
+    dtr_graphics_t *gfx = dtr_gfx_create(TW, TH);
+    dtr_gfx_cls(gfx, 0);
+
+    /* Should not crash with no sheet */
+    dtr_gfx_spr_rot(gfx, 0, 4, 4, 1.0f, 4, 4);
+
+    dtr_gfx_destroy(gfx);
+    DTR_PASS();
+}
+
+static void test_gfx_spr_rot_out_of_range(void)
+{
+    dtr_graphics_t *gfx = dtr_gfx_create(TW, TH);
+    uint8_t         sheet_data[8 * 8];
+
+    dtr_gfx_cls(gfx, 0);
+    memset(sheet_data, 2, sizeof(sheet_data));
+
+    gfx->sheet.pixels = sheet_data;
+    gfx->sheet.width  = 8;
+    gfx->sheet.height = 8;
+    gfx->sheet.tile_w = 8;
+    gfx->sheet.tile_h = 8;
+    gfx->sheet.cols   = 1;
+    gfx->sheet.rows   = 1;
+    gfx->sheet.count  = 1;
+
+    /* Invalid index: negative and beyond count */
+    dtr_gfx_spr_rot(gfx, -1, 4, 4, 0.0f, 4, 4);
+    dtr_gfx_spr_rot(gfx, 99, 4, 4, 0.0f, 4, 4);
+
+    /* Framebuffer should be untouched */
+    for (int32_t idx = 0; idx < TW * TH; ++idx) {
+        DTR_ASSERT_EQ_INT(gfx->framebuffer[idx], 0);
+    }
+
+    gfx->sheet.pixels = NULL;
+    dtr_gfx_destroy(gfx);
+    DTR_PASS();
+}
+
+/* ------------------------------------------------------------------ */
+/*  spr_affine — affine-transformed sprite drawing                     */
+/* ------------------------------------------------------------------ */
+
+static void test_gfx_spr_affine_basic(void)
+{
+    dtr_graphics_t *gfx = dtr_gfx_create(TW, TH);
+    uint8_t         sheet_data[8 * 8];
+    int32_t         found;
+
+    dtr_gfx_cls(gfx, 0);
+
+    /* Fill sheet with colour 6 */
+    memset(sheet_data, 6, sizeof(sheet_data));
+
+    gfx->sheet.pixels = sheet_data;
+    gfx->sheet.width  = 8;
+    gfx->sheet.height = 8;
+    gfx->sheet.tile_w = 8;
+    gfx->sheet.tile_h = 8;
+    gfx->sheet.cols   = 1;
+    gfx->sheet.rows   = 1;
+    gfx->sheet.count  = 1;
+
+    /* Identity affine: rot_x=1, rot_y=0 → no rotation */
+    dtr_gfx_spr_affine(gfx, 0, 4, 4, 4.0f, 4.0f, 1.0f, 0.0f);
+
+    /* Some pixels should have been drawn */
+    found = 0;
+    for (int32_t idx = 0; idx < TW * TH; ++idx) {
+        if (gfx->framebuffer[idx] == 6) {
+            ++found;
+        }
+    }
+    DTR_ASSERT(found > 0);
+
+    gfx->sheet.pixels = NULL;
+    dtr_gfx_destroy(gfx);
+    DTR_PASS();
+}
+
+static void test_gfx_spr_affine_null_sheet(void)
+{
+    dtr_graphics_t *gfx = dtr_gfx_create(TW, TH);
+    dtr_gfx_cls(gfx, 0);
+
+    /* Should not crash with no sheet */
+    dtr_gfx_spr_affine(gfx, 0, 4, 4, 4.0f, 4.0f, 1.0f, 0.0f);
+
+    dtr_gfx_destroy(gfx);
+    DTR_PASS();
+}
+
+static void test_gfx_spr_affine_zero_det(void)
+{
+    dtr_graphics_t *gfx = dtr_gfx_create(TW, TH);
+    uint8_t         sheet_data[8 * 8];
+
+    dtr_gfx_cls(gfx, 0);
+    memset(sheet_data, 7, sizeof(sheet_data));
+
+    gfx->sheet.pixels = sheet_data;
+    gfx->sheet.width  = 8;
+    gfx->sheet.height = 8;
+    gfx->sheet.tile_w = 8;
+    gfx->sheet.tile_h = 8;
+    gfx->sheet.cols   = 1;
+    gfx->sheet.rows   = 1;
+    gfx->sheet.count  = 1;
+
+    /* Zero determinant (rot_x=0, rot_y=0) → nothing should draw */
+    dtr_gfx_spr_affine(gfx, 0, 4, 4, 4.0f, 4.0f, 0.0f, 0.0f);
+
+    for (int32_t idx = 0; idx < TW * TH; ++idx) {
+        DTR_ASSERT_EQ_INT(gfx->framebuffer[idx], 0);
+    }
+
+    gfx->sheet.pixels = NULL;
+    dtr_gfx_destroy(gfx);
+    DTR_PASS();
+}
+
+/* ------------------------------------------------------------------ */
 /*  Tilemap                                                            */
 /* ------------------------------------------------------------------ */
 
@@ -1217,6 +1383,12 @@ int main(int argc, char *argv[])
     DTR_RUN_TEST(test_gfx_spr_flip);
     DTR_RUN_TEST(test_gfx_sspr_basic);
     DTR_RUN_TEST(test_gfx_sspr_null_sheet);
+    DTR_RUN_TEST(test_gfx_spr_rot_basic);
+    DTR_RUN_TEST(test_gfx_spr_rot_null_sheet);
+    DTR_RUN_TEST(test_gfx_spr_rot_out_of_range);
+    DTR_RUN_TEST(test_gfx_spr_affine_basic);
+    DTR_RUN_TEST(test_gfx_spr_affine_null_sheet);
+    DTR_RUN_TEST(test_gfx_spr_affine_zero_det);
     DTR_RUN_TEST(test_gfx_tilemap_basic);
     DTR_RUN_TEST(test_gfx_screen_pal);
 

@@ -281,6 +281,102 @@ static void test_drain_jobs(void)
     DTR_PASS();
 }
 
+/* ------------------------------------------------------------------ */
+/*  call_argv — call function with arguments                           */
+/* ------------------------------------------------------------------ */
+
+static void test_call_argv_existing(void)
+{
+    dtr_runtime_t *rt;
+    bool           ok;
+    const char    *code =
+        "globalThis.__sum = 0;\n"
+        "function _init(a) { globalThis.__sum = a; }\n";
+    JSValue argv[1];
+
+    rt = prv_make_rt();
+    ok = dtr_runtime_eval(rt, code, strlen(code), "<test>");
+    DTR_ASSERT(ok);
+
+    argv[0] = JS_NewInt32(rt->ctx, 99);
+    ok = dtr_runtime_call_argv(rt, rt->atom_init, 1, argv);
+    JS_FreeValue(rt->ctx, argv[0]);
+    DTR_ASSERT(ok);
+
+    /* Verify the argument was received */
+    {
+        JSValue global;
+        JSValue val;
+        int32_t result;
+
+        global = JS_GetGlobalObject(rt->ctx);
+        val    = JS_GetPropertyStr(rt->ctx, global, "__sum");
+        JS_ToInt32(rt->ctx, &result, val);
+        DTR_ASSERT_EQ_INT(result, 99);
+        JS_FreeValue(rt->ctx, val);
+        JS_FreeValue(rt->ctx, global);
+    }
+
+    dtr_runtime_destroy(rt);
+    DTR_PASS();
+}
+
+static void test_call_argv_missing(void)
+{
+    dtr_runtime_t *rt;
+    bool           ok;
+
+    rt = prv_make_rt();
+    /* _init not defined — should silently succeed */
+    ok = dtr_runtime_call_argv(rt, rt->atom_init, 0, NULL);
+    DTR_ASSERT(ok);
+    DTR_ASSERT(!rt->error_active);
+    dtr_runtime_destroy(rt);
+    DTR_PASS();
+}
+
+static void test_call_argv_throwing(void)
+{
+    dtr_runtime_t *rt;
+    bool           ok;
+    const char    *code = "function _init(x) { throw new Error('arg_fail'); }";
+    JSValue argv[1];
+
+    rt = prv_make_rt();
+    ok = dtr_runtime_eval(rt, code, strlen(code), "<test>");
+    DTR_ASSERT(ok);
+
+    argv[0] = JS_NewInt32(rt->ctx, 1);
+    ok = dtr_runtime_call_argv(rt, rt->atom_init, 1, argv);
+    JS_FreeValue(rt->ctx, argv[0]);
+
+    DTR_ASSERT(!ok);
+    DTR_ASSERT(rt->error_active);
+    DTR_ASSERT(strstr(rt->error_msg, "arg_fail") != NULL);
+
+    dtr_runtime_destroy(rt);
+    DTR_PASS();
+}
+
+static void test_call_argv_blocked_after_error(void)
+{
+    dtr_runtime_t *rt;
+    bool           ok;
+    const char    *code = "function _init() { throw new Error('e'); }";
+
+    rt = prv_make_rt();
+    dtr_runtime_eval(rt, code, strlen(code), "<test>");
+    dtr_runtime_call(rt, rt->atom_init); /* trigger error */
+    DTR_ASSERT(rt->error_active);
+
+    /* call_argv should also be blocked */
+    ok = dtr_runtime_call_argv(rt, rt->atom_update, 0, NULL);
+    DTR_ASSERT(!ok);
+
+    dtr_runtime_destroy(rt);
+    DTR_PASS();
+}
+
 /* ================================================================== */
 /*  Main                                                               */
 /* ================================================================== */
@@ -316,6 +412,12 @@ int main(int argc, char *argv[])
 
     /* Microtasks */
     DTR_RUN_TEST(test_drain_jobs);
+
+    /* call_argv */
+    DTR_RUN_TEST(test_call_argv_existing);
+    DTR_RUN_TEST(test_call_argv_missing);
+    DTR_RUN_TEST(test_call_argv_throwing);
+    DTR_RUN_TEST(test_call_argv_blocked_after_error);
 
     DTR_TEST_END();
 }
