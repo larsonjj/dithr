@@ -156,7 +156,7 @@ jobs:
             - name: Collect coverage
               run: |
                   lcov --capture --directory build/coverage \
-                       --include '*/src/*' \
+                       --include '${{ github.workspace }}/src/*' \
                        --output-file build/coverage.info \
                        --ignore-errors mismatch
                   genhtml build/coverage.info \
