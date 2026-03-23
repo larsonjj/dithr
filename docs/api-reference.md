@@ -38,8 +38,8 @@ the active colour.
 
 ```js
 /* Draw a HUD panel with a border */
-gfx.rectfill(0, 0, 80, 16, 1);   /* dark-blue fill */
-gfx.rect(0, 0, 80, 16, 7);       /* white border   */
+gfx.rectfill(0, 0, 80, 16, 1); /* dark-blue fill */
+gfx.rect(0, 0, 80, 16, 7); /* white border   */
 gfx.print("HP: 100", 2, 5, 7);
 ```
 
@@ -494,13 +494,13 @@ if (score > hi) {
 All functions return a boolean: `true` if the shapes overlap, `false`
 otherwise.
 
-| Function    | Parameters                          | Returns | Description                                      |
-| ----------- | ----------------------------------- | ------- | ------------------------------------------------ |
-| `rect`      | `x1, y1, w1, h1, x2, y2, w2, h2`  | `bool`  | AABB rectangle vs rectangle                      |
-| `circ`      | `x1, y1, r1, x2, y2, r2`          | `bool`  | Circle vs circle                                 |
-| `pointRect` | `px, py, rx, ry, rw, rh`          | `bool`  | Point inside rectangle                           |
-| `pointCirc` | `px, py, cx, cy, r`               | `bool`  | Point inside circle                              |
-| `circRect`  | `cx, cy, cr, rx, ry, rw, rh`      | `bool`  | Circle vs rectangle (nearest-point clamping)     |
+| Function    | Parameters                       | Returns | Description                                  |
+| ----------- | -------------------------------- | ------- | -------------------------------------------- |
+| `rect`      | `x1, y1, w1, h1, x2, y2, w2, h2` | `bool`  | AABB rectangle vs rectangle                  |
+| `circ`      | `x1, y1, r1, x2, y2, r2`         | `bool`  | Circle vs circle                             |
+| `pointRect` | `px, py, rx, ry, rw, rh`         | `bool`  | Point inside rectangle                       |
+| `pointCirc` | `px, py, cx, cy, r`              | `bool`  | Point inside circle                          |
+| `circRect`  | `cx, cy, cr, rx, ry, rw, rh`     | `bool`  | Circle vs rectangle (nearest-point clamping) |
 
 ```js
 /* Check player vs coin overlap */
@@ -516,12 +516,12 @@ if (col.rect(player.x, player.y, 8, 8, coin.x, coin.y, 8, 8)) {
 Convenience wrappers around `gfx.camera()`. Call `cam.follow()` each frame
 in `_update()` for smooth tracking.
 
-| Function | Parameters       | Returns     | Description                                                    |
-| -------- | ---------------- | ----------- | -------------------------------------------------------------- |
-| `set`    | `x, y`           | —           | Set the camera position (same as `gfx.camera`)                |
-| `get`    |                  | `{x, y}`    | Return the current camera position as an object               |
-| `reset`  |                  | —           | Reset camera to (0, 0)                                        |
-| `follow` | `tx, ty, speed?` | —           | Lerp camera toward target. `speed` defaults to 0.1 (0–1)      |
+| Function | Parameters       | Returns  | Description                                              |
+| -------- | ---------------- | -------- | -------------------------------------------------------- |
+| `set`    | `x, y`           | —        | Set the camera position (same as `gfx.camera`)           |
+| `get`    |                  | `{x, y}` | Return the current camera position as an object          |
+| `reset`  |                  | —        | Reset camera to (0, 0)                                   |
+| `follow` | `tx, ty, speed?` | —        | Lerp camera toward target. `speed` defaults to 0.1 (0–1) |
 
 ```js
 function _update(dt) {

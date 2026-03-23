@@ -390,7 +390,31 @@ function _draw() {
 
     // FPS counter
     var fps_str = "FPS:" + math.flr(sys.fps());
-    var fps_w = fps_str.length * 6 + 2;
+    var fps_w = gfx.textWidth(fps_str) + 2;
     gfx.rectfill(320 - fps_w, 0, 319, 8, 0);
     gfx.print(fps_str, 321 - fps_w, 1, 7);
+}
+
+// --- Hot reload state preservation -----------------------------------
+
+function _save() {
+    return {
+        tiles: tiles,
+        coins_left: coins_left,
+        player: player,
+        high_score: high_score,
+        cam_x: cam_x,
+        cam_y: cam_y,
+        enemies: enemies,
+    };
+}
+
+function _restore(state) {
+    tiles = state.tiles;
+    coins_left = state.coins_left;
+    player = state.player;
+    high_score = state.high_score;
+    cam_x = state.cam_x;
+    cam_y = state.cam_y;
+    enemies = state.enemies;
 }

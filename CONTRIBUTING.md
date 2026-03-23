@@ -9,15 +9,15 @@ conventions used in the project.
 2. Install the [prerequisites](docs/building.md) — CMake >= 3.22.1, a C11
    compiler (MSVC, GCC, or Clang), and Git.
 3. Configure and build:
-   ```bash
-   cmake --preset debug
-   cmake --build build/debug --config Debug
-   ```
+    ```bash
+    cmake --preset debug
+    cmake --build build/debug --config Debug
+    ```
 4. Run the tests:
-   ```bash
-   cd build/debug
-   ctest --output-on-failure -C Debug
-   ```
+    ```bash
+    cd build/debug
+    ctest --output-on-failure -C Debug
+    ```
 
 ## Code Style
 
@@ -34,18 +34,18 @@ Follow the rules in [docs/code-style.md](docs/code-style.md). The key points:
 The engine exposes JS namespaces (e.g. `gfx`, `sfx`, `col`). To add one:
 
 1. Create `src/api/my_api.c` following the pattern in existing files:
-   - Include `"api_common.h"`
-   - Write `static JSValue` wrapper functions
-   - Define a `JSCFunctionListEntry` array
-   - Implement `dtr_my_api_register(JSContext *ctx, JSValue global)`
+    - Include `"api_common.h"`
+    - Write `static JSValue` wrapper functions
+    - Define a `JSCFunctionListEntry` array
+    - Implement `dtr_my_api_register(JSContext *ctx, JSValue global)`
 2. Add the declaration to `src/api/api_common.h`:
-   ```c
-   void dtr_my_api_register(JSContext *ctx, JSValue global);
-   ```
+    ```c
+    void dtr_my_api_register(JSContext *ctx, JSValue global);
+    ```
 3. Call it from `src/api/api_register.c`:
-   ```c
-   dtr_my_api_register(ctx, global);
-   ```
+    ```c
+    dtr_my_api_register(ctx, global);
+    ```
 4. Add the source file to `CMakeLists.txt` under the `dithr_core` sources.
 5. Document the namespace in `docs/api-reference.md`.
 
@@ -54,11 +54,11 @@ The engine exposes JS namespaces (e.g. `gfx`, `sfx`, `col`). To add one:
 - Test files live in `tests/` and are named `test_<module>.c`.
 - Each test uses the lightweight harness in `tests/test_harness.h`.
 - Build and run all tests:
-  ```bash
-  cmake --build build/debug --config Debug
-  cd build/debug
-  ctest --output-on-failure -C Debug
-  ```
+    ```bash
+    cmake --build build/debug --config Debug
+    cd build/debug
+    ctest --output-on-failure -C Debug
+    ```
 - Run a single suite: `ctest -R test_graphics`
 - On Linux/macOS you can use the `asan` preset for AddressSanitizer + UBSan.
 
