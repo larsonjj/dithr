@@ -274,7 +274,8 @@ dtr_console_t *dtr_console_create(const char *cart_path)
     /* Set up file watcher for the JS source */
     con->watch_path[0] = '\0';
     con->watch_mtime   = 0;
-    con->watch_timer   = 0.5f;
+    con->watch_timer   = 0.2f;
+    con->reload_toast  = 0.0f;
     if (con->cart->code_path[0] != '\0') {
         SDL_PathInfo info;
 
@@ -317,6 +318,13 @@ void dtr_console_event(dtr_console_t *con, SDL_Event *event)
                 }
                 break;
             }
+#if DEV_BUILD
+            /* Manual hot-reload: F5 */
+            if (event->key.scancode == SDL_SCANCODE_F5) {
+                con->reload = true;
+                break;
+            }
+#endif
             /* Fullscreen toggle: F11 */
             if (event->key.scancode == SDL_SCANCODE_F11) {
                 con->fullscreen = !con->fullscreen;
@@ -471,6 +479,30 @@ void dtr_console_iterate(dtr_console_t *con)
     /* JS _draw */
     dtr_runtime_call(con->runtime, con->runtime->atom_draw);
 
+#if DEV_BUILD
+    /* Reload toast overlay */
+    if (con->reload_toast > 0.0f) {
+        con->reload_toast -= con->delta;
+        {
+            dtr_graphics_t *gfx;
+            int32_t         save_cx;
+            int32_t         save_cy;
+
+            gfx     = con->graphics;
+            save_cx = gfx->camera_x;
+            save_cy = gfx->camera_y;
+            gfx->camera_x = 0;
+            gfx->camera_y = 0;
+
+            dtr_gfx_rectfill(gfx, 0, 0, 54, 8, 11);
+            dtr_gfx_print(gfx, "RELOADED", 2, 1, 0);
+
+            gfx->camera_x = save_cx;
+            gfx->camera_y = save_cy;
+        }
+    }
+#endif
+
     /* Flip + transition + postfx directly into the streaming texture */
     {
         void   *locked;
@@ -528,7 +560,7 @@ void dtr_console_iterate(dtr_console_t *con)
         if (con->watch_timer <= 0.0f) {
             SDL_PathInfo info;
 
-            con->watch_timer = 0.5f; /* poll every 500 ms */
+            con->watch_timer = 0.2f; /* poll every 200 ms */
             if (SDL_GetPathInfo(con->watch_path, &info)) {
                 if (info.modify_time != con->watch_mtime) {
                     SDL_Log("hot-reload: %s changed, reloading", con->watch_path);
@@ -711,6 +743,11 @@ bool dtr_console_reload(dtr_console_t *con)
 #endif
 
     SDL_Log("hot-reload: success");
+
+#if DEV_BUILD
+    con->reload_toast = 1.0f; /* show "RELOADED" for 1 second */
+#endif
+
     return true;
 }
 

@@ -161,6 +161,54 @@ A stack of software post-processing effects applied to the framebuffer after
 `_draw()`. Built-in effects: CRT, scanlines, bloom, chromatic aberration. Each
 effect has configurable intensity. The stack can be saved/restored.
 
+## Collision Helpers (`api/col_api.c`)
+
+Pure-math collision functions exposed as the `col` JS namespace:
+
+- **`col.rect()`** — AABB rectangle vs rectangle.
+- **`col.circ()`** — circle vs circle.
+- **`col.pointRect()`** — point inside rectangle.
+- **`col.pointCirc()`** — point inside circle.
+- **`col.circRect()`** — circle vs rectangle (nearest-point clamping).
+
+These functions are stateless — they don't touch engine state and return
+`true` / `false`.
+
+## Camera Helpers (`api/cam_api.c`)
+
+Convenience wrappers around `dtr_gfx_camera()` exposed as the `cam` JS
+namespace:
+
+- **`cam.set(x, y)`** — set camera position.
+- **`cam.get()`** — return `{ x, y }` object.
+- **`cam.reset()`** — reset camera to (0, 0).
+- **`cam.follow(tx, ty, speed)`** — lerp camera toward a target position.
+
+## Hot Reload (`console.c`)
+
+During development (`DEV_BUILD`), the engine polls the JS source file for
+changes every 200 ms. When a change is detected (or the user presses **F5**),
+`dtr_console_reload()` executes a 13-step process:
+
+1. Call the JS `_save()` callback (if defined) to capture game state.
+2. Emit `"unload"` event.
+3. Destroy the QuickJS runtime.
+4. Re-read the JS source from disk.
+5. Create a fresh QuickJS runtime.
+6. Re-register all API namespaces.
+7. Evaluate the new source.
+8. Call `_restore(state)` with the saved state (if `_save` returned a value).
+9. Call `_init()`.
+10. Emit `"cart_load"` event.
+11. Update the file modification timestamp.
+
+Graphics state (palette, camera, clip, framebuffer) is **not** reset during
+reload, so the screen does not flash. A green "RELOADED" toast renders for
+one second after a successful reload.
+
+For WASM builds, `dtr_wasm_reload()` is exported and called from JavaScript
+via the dev server's SSE-based hot-reload system.
+
 ## Cart System (`cart.h` / `cart.c`)
 
 A cart is a `cart.json` file that describes the game:
@@ -223,5 +271,7 @@ src/
     ├── postfx_api.c    postfx.* namespace
     ├── math_api.c      math.* namespace
     ├── cart_api.c      cart.* namespace
-    └── sys_api.c       sys.* namespace
+    ├── sys_api.c       sys.* namespace
+    ├── col_api.c       col.* namespace (collision helpers)
+    └── cam_api.c       cam.* namespace (camera helpers)
 ```

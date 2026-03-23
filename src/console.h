@@ -77,6 +77,7 @@ typedef struct dtr_console {
     char    watch_path[1024]; /**< Resolved path to the JS source file */
     int64_t watch_mtime;      /**< Last known modify_time (SDL_Time ns) */
     float   watch_timer;      /**< Seconds until next poll */
+    float   reload_toast;     /**< Countdown for "RELOADED" toast overlay */
 #endif
 } dtr_console_t;
 

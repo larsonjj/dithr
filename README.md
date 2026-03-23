@@ -17,7 +17,11 @@ in the browser via WebAssembly.
 - **Post-processing** pipeline: CRT, scanlines, bloom, chromatic aberration
 - **Sound effects & music** via SDL3_mixer (MP3, OGG, WAV)
 - **Keyboard, mouse, and gamepad** input with a virtual action-mapping layer
+- **Collision helpers** — rect, circle, point-in-shape, circle-vs-rect tests
+- **Camera helpers** — set, get, reset, lerp follow
 - **Event bus** for custom game events (on / once / off / emit)
+- **Hot reload** — automatic JS reload on save (F5 manual trigger), with
+  `_save()` / `_restore()` callbacks for state preservation
 - **QuickJS-NG** JavaScript runtime with async support
 - **Cart system** — package a game as a single `cart.json` plus assets
 - **WASM build** for one-click browser deployment
