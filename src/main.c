@@ -52,7 +52,7 @@ EMSCRIPTEN_KEEPALIVE void dtr_wasm_reload(void)
 EMSCRIPTEN_KEEPALIVE void dtr_wasm_reload_assets(void)
 {
     if (s_wasm_app != NULL && s_wasm_app->con != NULL) {
-        dtr_console_reload_assets(s_wasm_app->con);
+        s_wasm_app->con->reload_assets = true;
     }
 }
 #endif
@@ -294,6 +294,12 @@ SDL_AppResult SDL_AppIterate(void *appstate)
     if (app->con->reload) {
         app->con->reload = false;
         dtr_console_reload(app->con);
+    }
+
+    /* Handle deferred asset-only reload */
+    if (app->con->reload_assets) {
+        app->con->reload_assets = false;
+        dtr_console_reload_assets(app->con);
     }
 
     /* Handle restart request from sys.restart() */

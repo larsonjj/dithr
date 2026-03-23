@@ -268,7 +268,6 @@ dtr_console_t *dtr_console_create(const char *cart_path)
     /* --- Ready --- */
     con->running     = true;
     con->paused      = false;
-    con->has_error   = false;
     con->fullscreen  = false;
     con->frame_count = 0;
     con->time        = 0.0f;
@@ -282,6 +281,7 @@ dtr_console_t *dtr_console_create(const char *cart_path)
     con->watch_mtime     = 0;
     con->watch_last_poll = SDL_GetPerformanceCounter();
     con->reload_toast    = 0.0f;
+    con->reload_toast_failed = false;
     con->reload_pending  = false;
     con->reload_detect_time = 0;
     con->reload_count    = 0;
@@ -690,11 +690,18 @@ void dtr_console_iterate(dtr_console_t *con)
             {
                 char toast_buf[32];
                 int32_t toast_w;
+                uint8_t toast_bg;
 
-                SDL_snprintf(toast_buf, sizeof(toast_buf),
-                             "RELOADED (%d)", (int)con->reload_count);
+                if (con->reload_toast_failed) {
+                    SDL_snprintf(toast_buf, sizeof(toast_buf), "RELOAD FAILED");
+                    toast_bg = 8; /* red */
+                } else {
+                    SDL_snprintf(toast_buf, sizeof(toast_buf),
+                                 "RELOADED (%d)", (int)con->reload_count);
+                    toast_bg = 11; /* green */
+                }
                 toast_w = (int32_t)SDL_strlen(toast_buf) * 4 + 4;
-                dtr_gfx_rectfill(gfx, 0, 0, toast_w, 8, 11);
+                dtr_gfx_rectfill(gfx, 0, 0, toast_w, 8, toast_bg);
                 dtr_gfx_print(gfx, toast_buf, 2, 1, 0);
             }
 
@@ -839,6 +846,11 @@ bool dtr_console_reload(dtr_console_t *con)
     int32_t  saved_cursor_y  = 0;
     uint16_t saved_fill_pat  = 0;
 
+    /* Palette state snapshot */
+    uint8_t saved_draw_pal[CONSOLE_PALETTE_SIZE];
+    uint8_t saved_screen_pal[CONSOLE_PALETTE_SIZE];
+    bool    saved_transparent[CONSOLE_PALETTE_SIZE];
+
     if (con == NULL) {
         return false;
     }
@@ -866,7 +878,9 @@ bool dtr_console_reload(dtr_console_t *con)
             JSValue result;
 
             result = JS_Call(con->runtime->ctx, func, global, 0, NULL);
-            if (!JS_IsException(result) && !JS_IsUndefined(result)) {
+            if (JS_IsException(result)) {
+                SDL_Log("hot-reload: _save() threw an exception, state not preserved");
+            } else if (!JS_IsUndefined(result)) {
                 JSValue  json_val;
                 JSValue  stringify;
                 JSValue  json_obj;
@@ -907,6 +921,9 @@ bool dtr_console_reload(dtr_console_t *con)
         saved_cursor_x = con->graphics->cursor_x;
         saved_cursor_y = con->graphics->cursor_y;
         saved_fill_pat = con->graphics->fill_pattern;
+        SDL_memcpy(saved_draw_pal, con->graphics->draw_pal, sizeof(saved_draw_pal));
+        SDL_memcpy(saved_screen_pal, con->graphics->screen_pal, sizeof(saved_screen_pal));
+        SDL_memcpy(saved_transparent, con->graphics->transparent, sizeof(saved_transparent));
     }
 
     /* ---- 2c. Snapshot postfx stack ---- */
@@ -1025,6 +1042,13 @@ bool dtr_console_reload(dtr_console_t *con)
         con->graphics->cursor_x    = saved_cursor_x;
         con->graphics->cursor_y    = saved_cursor_y;
         con->graphics->fill_pattern = saved_fill_pat;
+        SDL_memcpy(con->graphics->draw_pal, saved_draw_pal, sizeof(saved_draw_pal));
+        SDL_memcpy(con->graphics->screen_pal, saved_screen_pal, sizeof(saved_screen_pal));
+        SDL_memcpy(con->graphics->transparent, saved_transparent, sizeof(saved_transparent));
+
+        /* Reset draw list in case reload hit mid-batch */
+        con->graphics->draw_list.active = false;
+        con->graphics->draw_list.count  = 0;
     }
 
     /* ---- 7. Call _init() ---- */
@@ -1034,8 +1058,7 @@ bool dtr_console_reload(dtr_console_t *con)
     dtr_event_emit(con->events, "sys:cart_load", JS_UNDEFINED);
     dtr_event_flush(con->events);
 
-    /* ---- 9. Clear error state + update watch mtime ---- */
-    con->has_error = false;
+    /* ---- 9. Update watch mtime ---- */
 
 #if DEV_BUILD
     {
@@ -1069,7 +1092,8 @@ bool dtr_console_reload(dtr_console_t *con)
 
 #if DEV_BUILD
     ++con->reload_count;
-    con->reload_toast = 1.0f; /* show "RELOADED" for 1 second */
+    con->reload_toast        = 1.0f; /* show "RELOADED" for 1 second */
+    con->reload_toast_failed = false;
 #endif
 
     return true;
@@ -1229,6 +1253,15 @@ bool dtr_console_reload_assets(dtr_console_t *con)
     /* Stop music before reloading audio assets */
     if (con->audio != NULL) {
         dtr_mus_stop(con->audio, 0);
+        dtr_audio_clear_music(con->audio);
+        dtr_audio_clear_sfx(con->audio);
+    }
+
+    /* Free existing map data to avoid leaks */
+    if (!con->cart->baked) {
+        for (int32_t idx = 0; idx < con->cart->map_count; ++idx) {
+            dtr_cart_free_map(con->cart, idx);
+        }
     }
 
     prv_load_cart_assets(con);

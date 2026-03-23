@@ -49,10 +49,10 @@ typedef struct dtr_console {
 
     bool running;
     bool paused;
-    bool has_error;
     bool fullscreen;
     bool restart;
-    bool reload;  /**< Hot-reload: re-eval JS without tearing down subsystems */
+    bool reload;         /**< Hot-reload: re-eval JS without tearing down subsystems */
+    bool reload_assets;  /**< Deferred asset-only reload (set from WASM SSE handler) */
     bool new_frame; /**< Set true at start of each iterate, cleared after resets */
 
     uint64_t frame_count;
@@ -79,6 +79,7 @@ typedef struct dtr_console {
     int64_t  watch_mtime;      /**< Newest modify_time across all .js files */
     uint64_t watch_last_poll;  /**< SDL_GetPerformanceCounter at last poll */
     float    reload_toast;     /**< Countdown for "RELOADED" toast overlay */
+    bool     reload_toast_failed; /**< True when toast shows a failure message */
     int32_t  reload_count;     /**< Running count of successful reloads */
     bool     reload_pending;   /**< A change was detected, debounce in progress */
     uint64_t reload_detect_time; /**< Time the first change was detected */

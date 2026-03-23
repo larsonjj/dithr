@@ -47,6 +47,8 @@ struct dtr_audio {
 /* Lifecycle */
 dtr_audio_t *dtr_audio_create(int32_t channels, int32_t freq, int32_t buffer);
 void         dtr_audio_destroy(dtr_audio_t *aud);
+void         dtr_audio_clear_sfx(dtr_audio_t *aud);
+void         dtr_audio_clear_music(dtr_audio_t *aud);
 
 /* SFX */
 bool  dtr_audio_load_sfx(dtr_audio_t *aud, const uint8_t *data, size_t len);

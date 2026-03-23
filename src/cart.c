@@ -895,6 +895,32 @@ bool dtr_cart_persist_load(dtr_cart_t *cart)
 /*  Cleanup                                                            */
 /* ------------------------------------------------------------------ */
 
+void dtr_cart_free_map(dtr_cart_t *cart, int32_t idx)
+{
+    dtr_map_level_t *level;
+
+    if (cart == NULL || idx < 0 || idx >= cart->map_count) {
+        return;
+    }
+    level = cart->maps[idx];
+    if (level == NULL) {
+        return;
+    }
+    for (int32_t li = 0; li < level->layer_count; ++li) {
+        DTR_FREE(level->layers[li].tiles);
+        for (int32_t oi = 0; oi < level->layers[li].object_count; ++oi) {
+            dtr_map_object_t *obj = &level->layers[li].objects[oi];
+            if (cart->ctx != NULL && !JS_IsUndefined(obj->props)) {
+                JS_FreeValue(cart->ctx, obj->props);
+            }
+        }
+        DTR_FREE(level->layers[li].objects);
+    }
+    DTR_FREE(level->layers);
+    DTR_FREE(level);
+    cart->maps[idx] = NULL;
+}
+
 void dtr_cart_destroy(dtr_cart_t *cart)
 {
     if (cart == NULL) {
@@ -902,23 +928,7 @@ void dtr_cart_destroy(dtr_cart_t *cart)
     }
 
     for (int32_t idx = 0; idx < cart->map_count; ++idx) {
-        if (cart->maps[idx] != NULL) {
-            dtr_map_level_t *level;
-
-            level = cart->maps[idx];
-            for (int32_t li = 0; li < level->layer_count; ++li) {
-                DTR_FREE(level->layers[li].tiles);
-                for (int32_t oi = 0; oi < level->layers[li].object_count; ++oi) {
-                    dtr_map_object_t *obj = &level->layers[li].objects[oi];
-                    if (cart->ctx != NULL && !JS_IsUndefined(obj->props)) {
-                        JS_FreeValue(cart->ctx, obj->props);
-                    }
-                }
-                DTR_FREE(level->layers[li].objects);
-            }
-            DTR_FREE(level->layers);
-            DTR_FREE(level);
-        }
+        dtr_cart_free_map(cart, idx);
     }
 
     DTR_FREE(cart->sprite_rgba);

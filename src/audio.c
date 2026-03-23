@@ -104,6 +104,39 @@ void dtr_audio_destroy(dtr_audio_t *aud)
 }
 
 /* ------------------------------------------------------------------ */
+/*  Clear loaded assets (for hot-reload without destroying mixer)      */
+/* ------------------------------------------------------------------ */
+
+void dtr_audio_clear_sfx(dtr_audio_t *aud)
+{
+    if (aud == NULL) {
+        return;
+    }
+    for (int32_t idx = 0; idx < aud->sfx_count; ++idx) {
+        if (aud->sfx[idx] != NULL) {
+            MIX_DestroyAudio(aud->sfx[idx]);
+            aud->sfx[idx] = NULL;
+        }
+    }
+    aud->sfx_count = 0;
+}
+
+void dtr_audio_clear_music(dtr_audio_t *aud)
+{
+    if (aud == NULL) {
+        return;
+    }
+    for (int32_t idx = 0; idx < aud->music_count; ++idx) {
+        if (aud->music[idx] != NULL) {
+            MIX_DestroyAudio(aud->music[idx]);
+            aud->music[idx] = NULL;
+        }
+    }
+    aud->music_count       = 0;
+    aud->current_music_idx = -1;
+}
+
+/* ------------------------------------------------------------------ */
 /*  SFX loading                                                        */
 /* ------------------------------------------------------------------ */
 

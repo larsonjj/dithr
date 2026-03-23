@@ -215,6 +215,7 @@ struct dtr_cart {
 
 dtr_cart_t *dtr_cart_create(void);
 void        dtr_cart_destroy(dtr_cart_t *cart);
+void        dtr_cart_free_map(dtr_cart_t *cart, int32_t idx);
 
 /**
  * \brief           Fill cart with compiled defaults
