@@ -188,6 +188,8 @@ set(DITHR_CORE_SOURCES
     src/api/math_api.c
     src/api/cart_api.c
     src/api/sys_api.c
+    src/api/col_api.c
+    src/api/cam_api.c
 )
 
 set(DITHR_COMPILE_DEFS

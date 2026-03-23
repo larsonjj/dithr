@@ -78,6 +78,8 @@ void dtr_postfx_api_register(JSContext *ctx, JSValue global);
 void dtr_math_api_register(JSContext *ctx, JSValue global);
 void dtr_cart_api_register(JSContext *ctx, JSValue global);
 void dtr_sys_api_register(JSContext *ctx, JSValue global);
+void dtr_col_api_register(JSContext *ctx, JSValue global);
+void dtr_cam_api_register(JSContext *ctx, JSValue global);
 
 #ifdef __cplusplus
 }

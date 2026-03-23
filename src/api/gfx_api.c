@@ -330,6 +330,44 @@ static JSValue js_gfx_print(JSContext *ctx, JSValueConst this_val, int argc, JSV
     return JS_UNDEFINED;
 }
 
+static JSValue
+js_gfx_text_width(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+{
+    const char *text;
+    int32_t     w;
+
+    (void)this_val;
+    if (argc < 1) {
+        return JS_NewInt32(ctx, 0);
+    }
+    text = JS_ToCString(ctx, argv[0]);
+    if (text == NULL) {
+        return JS_NewInt32(ctx, 0);
+    }
+    w = dtr_gfx_text_width(GFX(ctx), text);
+    JS_FreeCString(ctx, text);
+    return JS_NewInt32(ctx, w);
+}
+
+static JSValue
+js_gfx_text_height(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+{
+    const char *text;
+    int32_t     h;
+
+    (void)this_val;
+    if (argc < 1) {
+        return JS_NewInt32(ctx, 0);
+    }
+    text = JS_ToCString(ctx, argv[0]);
+    if (text == NULL) {
+        return JS_NewInt32(ctx, 0);
+    }
+    h = dtr_gfx_text_height(GFX(ctx), text);
+    JS_FreeCString(ctx, text);
+    return JS_NewInt32(ctx, h);
+}
+
 /* ---- Sprites ---------------------------------------------------------- */
 
 static JSValue js_gfx_spr(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
@@ -643,7 +681,9 @@ static const JSCFunctionListEntry js_gfx_funcs[] = {
     JS_CFUNC_DEF("circ", 4, js_gfx_circ),   JS_CFUNC_DEF("circfill", 4, js_gfx_circfill),
     JS_CFUNC_DEF("tri", 7, js_gfx_tri),     JS_CFUNC_DEF("trifill", 7, js_gfx_trifill),
     JS_CFUNC_DEF("poly", 2, js_gfx_poly),   JS_CFUNC_DEF("polyfill", 2, js_gfx_polyfill),
-    JS_CFUNC_DEF("print", 4, js_gfx_print), JS_CFUNC_DEF("spr", 7, js_gfx_spr),
+    JS_CFUNC_DEF("print", 4, js_gfx_print), JS_CFUNC_DEF("textWidth", 1, js_gfx_text_width),
+    JS_CFUNC_DEF("textHeight", 1, js_gfx_text_height),
+    JS_CFUNC_DEF("spr", 7, js_gfx_spr),
     JS_CFUNC_DEF("sspr", 10, js_gfx_sspr),  JS_CFUNC_DEF("spr_rot", 6, js_gfx_spr_rot),
     JS_CFUNC_DEF("spr_affine", 7, js_gfx_spr_affine),
     JS_CFUNC_DEF("fget", 2, js_gfx_fget),

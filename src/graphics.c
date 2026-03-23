@@ -838,6 +838,56 @@ int32_t dtr_gfx_print(dtr_graphics_t *gfx, const char *str, int32_t x, int32_t y
     return x - ox;
 }
 
+int32_t dtr_gfx_text_width(dtr_graphics_t *gfx, const char *str)
+{
+    const char *ptr;
+    int32_t     cw;
+    int32_t     line_w;
+    int32_t     max_w;
+
+    cw     = gfx->custom_font.active ? gfx->custom_font.char_w : DTR_FONT_W;
+    line_w = 0;
+    max_w  = 0;
+
+    for (ptr = str; *ptr != '\0'; ++ptr) {
+        if ((uint8_t)*ptr == '\n') {
+            if (line_w > 0) {
+                line_w -= 1;
+            }
+            if (line_w > max_w) {
+                max_w = line_w;
+            }
+            line_w = 0;
+            continue;
+        }
+        line_w += cw + 1;
+    }
+    if (line_w > 0) {
+        line_w -= 1;
+    }
+    if (line_w > max_w) {
+        max_w = line_w;
+    }
+    return max_w;
+}
+
+int32_t dtr_gfx_text_height(dtr_graphics_t *gfx, const char *str)
+{
+    const char *ptr;
+    int32_t     ch;
+    int32_t     lines;
+
+    ch    = gfx->custom_font.active ? gfx->custom_font.char_h : DTR_FONT_H;
+    lines = 1;
+
+    for (ptr = str; *ptr != '\0'; ++ptr) {
+        if ((uint8_t)*ptr == '\n') {
+            ++lines;
+        }
+    }
+    return lines * ch;
+}
+
 void dtr_gfx_font(dtr_graphics_t *gfx,
                   int32_t         sx,
                   int32_t         sy,

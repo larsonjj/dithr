@@ -26,6 +26,8 @@ void dtr_api_register_all(dtr_runtime_t *rt)
     dtr_math_api_register(ctx, global);
     dtr_cart_api_register(ctx, global);
     dtr_sys_api_register(ctx, global);
+    dtr_col_api_register(ctx, global);
+    dtr_cam_api_register(ctx, global);
 
     JS_FreeValue(ctx, global);
 }

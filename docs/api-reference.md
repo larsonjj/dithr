@@ -1,6 +1,6 @@
 # API Reference
 
-dithr exposes **13 namespaces** to cart JavaScript code. All functions are
+dithr exposes **15 namespaces** to cart JavaScript code. All functions are
 available as globals on their namespace object (e.g. `gfx.cls()`).
 
 The engine calls three optional global callbacks each frame:
@@ -36,12 +36,28 @@ All colour parameters default to the current draw colour (set with
 `gfx.color()`). Omitting a colour passes `-1` internally, which resolves to
 the active colour.
 
+```js
+/* Draw a HUD panel with a border */
+gfx.rectfill(0, 0, 80, 16, 1);   /* dark-blue fill */
+gfx.rect(0, 0, 80, 16, 7);       /* white border   */
+gfx.print("HP: 100", 2, 5, 7);
+```
+
 ### Text
 
-| Function | Parameters                                   | Returns | Description                                                                                           |
-| -------- | -------------------------------------------- | ------- | ----------------------------------------------------------------------------------------------------- |
-| `print`  | `text, x?, y?, col?`                         | —       | Print a string. If `x`,`y` are omitted the cursor position is used and advances down by one line      |
-| `font`   | `sx?, sy?, char_w?, char_h?, first?, count?` | —       | Set a custom monospaced font from a sprite sheet region. No arguments resets to the built-in 4×6 font |
+| Function     | Parameters                                   | Returns | Description                                                                                           |
+| ------------ | -------------------------------------------- | ------- | ----------------------------------------------------------------------------------------------------- |
+| `print`      | `text, x?, y?, col?`                         | —       | Print a string. If `x`,`y` are omitted the cursor position is used and advances down by one line      |
+| `textWidth`  | `text`                                       | `int`   | Pixel width of a string (widest line if multi-line)                                                   |
+| `textHeight` | `text`                                       | `int`   | Pixel height of a string (all lines)                                                                  |
+| `font`       | `sx?, sy?, char_w?, char_h?, first?, count?` | —       | Set a custom monospaced font from a sprite sheet region. No arguments resets to the built-in 4×6 font |
+
+```js
+/* Centre a label on screen */
+const msg = "GAME OVER";
+const w = gfx.textWidth(msg);
+gfx.print(msg, (320 - w) / 2, 87, 7);
+```
 
 ### Sprites
 
@@ -51,6 +67,11 @@ the active colour.
 | `sspr`       | `sx?, sy?, sw?, sh?, dx?, dy?, dw?, dh?`             | —       | Stretch-blit a region of the spritesheet. `sw`/`sh` default to 8                          |
 | `spr_rot`    | `idx?, x?, y?, angle?, cx?, cy?`                     | —       | Draw sprite rotated by `angle` (radians) around pivot (`cx`, `cy`). Pivot −1 = center     |
 | `spr_affine` | `idx?, x?, y?, origin_x?, origin_y?, rot_x?, rot_y?` | —       | Draw sprite with 2×2 affine transform. `rot_x`/`rot_y` = basis vectors (default identity) |
+
+```js
+/* Draw a 2×1 tile sprite, flipped horizontally */
+gfx.spr(8, player.x, player.y, 2, 1, player.facing < 0, false);
+```
 
 ### Sprite flags
 
@@ -216,6 +237,14 @@ Map abstract action names to physical bindings. Bindings can come from
 | `map`    | `action, bindings` | —       | Map an action to an array of binding strings (e.g. `["KEY_LEFT", "PAD_LEFT"]`) |
 | `clear`  | `action?`          | —       | Clear one action or all if no argument                                         |
 
+```js
+/* Set up bindings and check them */
+input.map("jump", ["KEY_Z", "PAD_A"]);
+if (input.btnp("jump")) {
+    player.vy = -4;
+}
+```
+
 ### Binding type constants
 
 `input.KEY` `input.PAD_BTN` `input.PAD_AXIS` `input.MOUSE_BTN`
@@ -233,6 +262,15 @@ Map abstract action names to physical bindings. Bindings can come from
 
 Events are queued by `emit()` and dispatched during the engine's flush at the
 end of each frame.
+
+```js
+/* Simple event-driven scoring */
+evt.on("coin_collected", (e) => {
+    score += e.value;
+});
+
+evt.emit("coin_collected", { value: 10 });
+```
 
 ---
 
@@ -369,6 +407,15 @@ screen coordinates (Y-down).
 | `dset`   | `slot, value` | —       | Store a number at a slot index |
 | `dget`   | `slot`        | `float` | Read the number from a slot    |
 
+```js
+/* Save and restore a high score */
+let hi = cart.dget(0) || 0;
+if (score > hi) {
+    hi = score;
+    cart.dset(0, hi);
+}
+```
+
 ### Metadata
 
 | Function  | Parameters | Returns  | Description                 |
@@ -439,3 +486,46 @@ screen coordinates (Y-down).
 | `config` | `path?`    | `any`                        | Read cart config. Dot-separated path (e.g. `"display.width"`). No argument returns the full config object                                                                                                          |
 | `limit`  | `key`      | `int`                        | Compile-time limit. Keys: `"fb_width"`, `"fb_height"`, `"palette_size"`, `"max_sprites"`, `"max_maps"`, `"max_map_layers"`, `"max_map_objects"`, `"max_channels"`, `"js_heap_mb"`, `"js_stack_kb"`, `"target_fps"` |
 | `stat`   | `n`        | `float`, `string`, or `bool` | PICO-8 compatible stat. `0` = memory, `1` = CPU, `7` = FPS, `32` = mouse X, `33` = mouse Y, `34` = mouse button mask, `36` = wheel, `90` = ticks                                                                   |
+
+---
+
+## `col` — Collision Helpers
+
+All functions return a boolean: `true` if the shapes overlap, `false`
+otherwise.
+
+| Function    | Parameters                          | Returns | Description                                      |
+| ----------- | ----------------------------------- | ------- | ------------------------------------------------ |
+| `rect`      | `x1, y1, w1, h1, x2, y2, w2, h2`  | `bool`  | AABB rectangle vs rectangle                      |
+| `circ`      | `x1, y1, r1, x2, y2, r2`          | `bool`  | Circle vs circle                                 |
+| `pointRect` | `px, py, rx, ry, rw, rh`          | `bool`  | Point inside rectangle                           |
+| `pointCirc` | `px, py, cx, cy, r`               | `bool`  | Point inside circle                              |
+| `circRect`  | `cx, cy, cr, rx, ry, rw, rh`      | `bool`  | Circle vs rectangle (nearest-point clamping)     |
+
+```js
+/* Check player vs coin overlap */
+if (col.rect(player.x, player.y, 8, 8, coin.x, coin.y, 8, 8)) {
+    evt.emit("coin_collected", { value: 10 });
+}
+```
+
+---
+
+## `cam` — Camera Helpers
+
+Convenience wrappers around `gfx.camera()`. Call `cam.follow()` each frame
+in `_update()` for smooth tracking.
+
+| Function | Parameters       | Returns     | Description                                                    |
+| -------- | ---------------- | ----------- | -------------------------------------------------------------- |
+| `set`    | `x, y`           | —           | Set the camera position (same as `gfx.camera`)                |
+| `get`    |                  | `{x, y}`    | Return the current camera position as an object               |
+| `reset`  |                  | —           | Reset camera to (0, 0)                                        |
+| `follow` | `tx, ty, speed?` | —           | Lerp camera toward target. `speed` defaults to 0.1 (0–1)      |
+
+```js
+function _update(dt) {
+    /* Smoothly follow the player, centred on screen */
+    cam.follow(player.x - 160, player.y - 90, 0.08);
+}
+```

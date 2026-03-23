@@ -275,6 +275,17 @@ void dtr_gfx_polyfill(dtr_graphics_t *gfx, const int32_t *pts, int32_t count, ui
  * \brief           Print a string and return the x advance in pixels
  */
 int32_t dtr_gfx_print(dtr_graphics_t *gfx, const char *str, int32_t x, int32_t y, uint8_t col);
+
+/**
+ * \brief           Measure the pixel width of a string (widest line)
+ */
+int32_t dtr_gfx_text_width(dtr_graphics_t *gfx, const char *str);
+
+/**
+ * \brief           Measure the pixel height of a string (all lines)
+ */
+int32_t dtr_gfx_text_height(dtr_graphics_t *gfx, const char *str);
+
 /**
  * \\brief           Set a custom font from a sprite sheet region
  * \\param[in]       sx: Source X of the font grid on the sheet
