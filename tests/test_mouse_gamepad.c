@@ -393,6 +393,36 @@ static void test_gamepad_deadzone_out_of_range(void)
     DTR_PASS();
 }
 
+static void test_gamepad_rumble_not_connected(void)
+{
+    dtr_gamepad_state_t *gp;
+
+    gp = dtr_gamepad_create();
+
+    /* Not connected — should silently return */
+    dtr_gamepad_rumble(gp, 0, 1000, 1000, 100);
+    dtr_gamepad_rumble(gp, -1, 1000, 1000, 100);
+    dtr_gamepad_rumble(gp, DTR_MAX_GAMEPADS, 1000, 1000, 100);
+
+    dtr_gamepad_destroy(gp);
+    DTR_PASS();
+}
+
+static void test_gamepad_rumble_triggers_not_connected(void)
+{
+    dtr_gamepad_state_t *gp;
+
+    gp = dtr_gamepad_create();
+
+    /* Not connected — should silently return */
+    dtr_gamepad_rumble_triggers(gp, 0, 1000, 1000, 100);
+    dtr_gamepad_rumble_triggers(gp, -1, 1000, 1000, 100);
+    dtr_gamepad_rumble_triggers(gp, DTR_MAX_GAMEPADS, 1000, 1000, 100);
+
+    dtr_gamepad_destroy(gp);
+    DTR_PASS();
+}
+
 /* ================================================================== */
 /*  Main                                                               */
 /* ================================================================== */
@@ -430,6 +460,8 @@ int main(int argc, char *argv[])
     DTR_RUN_TEST(test_gamepad_name_default);
     DTR_RUN_TEST(test_gamepad_update_deadzone);
     DTR_RUN_TEST(test_gamepad_deadzone_out_of_range);
+    DTR_RUN_TEST(test_gamepad_rumble_not_connected);
+    DTR_RUN_TEST(test_gamepad_rumble_triggers_not_connected);
 
     DTR_TEST_END();
 }

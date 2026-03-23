@@ -463,6 +463,252 @@ static void test_cart_parse_audio(void)
 }
 
 /* ------------------------------------------------------------------ */
+/*  Validate — scale out of range                                      */
+/* ------------------------------------------------------------------ */
+
+static void test_cart_validate_clamp_scale(void)
+{
+    dtr_cart_t *cart;
+
+    cart = dtr_cart_create();
+    cart->display.scale = 0;
+    dtr_cart_validate(cart);
+    DTR_ASSERT_EQ_INT(cart->display.scale, CONSOLE_DEFAULT_SCALE);
+
+    cart->display.scale = 20;
+    dtr_cart_validate(cart);
+    DTR_ASSERT_EQ_INT(cart->display.scale, CONSOLE_DEFAULT_SCALE);
+
+    dtr_cart_destroy(cart);
+    DTR_PASS();
+}
+
+/* ------------------------------------------------------------------ */
+/*  Validate — FPS upper bound                                         */
+/* ------------------------------------------------------------------ */
+
+static void test_cart_validate_clamp_fps_upper(void)
+{
+    dtr_cart_t *cart;
+
+    cart = dtr_cart_create();
+    cart->timing.fps = 999;
+    dtr_cart_validate(cart);
+    DTR_ASSERT_EQ_INT(cart->timing.fps, CONSOLE_FPS);
+
+    dtr_cart_destroy(cart);
+    DTR_PASS();
+}
+
+/* ------------------------------------------------------------------ */
+/*  Validate — audio channels                                          */
+/* ------------------------------------------------------------------ */
+
+static void test_cart_validate_clamp_audio_channels(void)
+{
+    dtr_cart_t *cart;
+
+    cart = dtr_cart_create();
+    cart->audio.channels = 0;
+    dtr_cart_validate(cart);
+    DTR_ASSERT_EQ_INT(cart->audio.channels, CONSOLE_AUDIO_CHANNELS);
+
+    cart->audio.channels = 999;
+    dtr_cart_validate(cart);
+    DTR_ASSERT_EQ_INT(cart->audio.channels, CONSOLE_AUDIO_CHANNELS);
+
+    dtr_cart_destroy(cart);
+    DTR_PASS();
+}
+
+/* ------------------------------------------------------------------ */
+/*  Validate — audio frequency                                         */
+/* ------------------------------------------------------------------ */
+
+static void test_cart_validate_clamp_audio_freq(void)
+{
+    dtr_cart_t *cart;
+
+    cart = dtr_cart_create();
+    cart->audio.frequency = 100;
+    dtr_cart_validate(cart);
+    DTR_ASSERT_EQ_INT(cart->audio.frequency, CONSOLE_AUDIO_FREQ);
+
+    cart->audio.frequency = 200000;
+    dtr_cart_validate(cart);
+    DTR_ASSERT_EQ_INT(cart->audio.frequency, CONSOLE_AUDIO_FREQ);
+
+    dtr_cart_destroy(cart);
+    DTR_PASS();
+}
+
+/* ------------------------------------------------------------------ */
+/*  Validate — audio buffer                                            */
+/* ------------------------------------------------------------------ */
+
+static void test_cart_validate_clamp_audio_buffer(void)
+{
+    dtr_cart_t *cart;
+
+    cart = dtr_cart_create();
+    cart->audio.buffer_size = 10;
+    dtr_cart_validate(cart);
+    DTR_ASSERT_EQ_INT(cart->audio.buffer_size, CONSOLE_AUDIO_BUFFER);
+
+    cart->audio.buffer_size = 99999;
+    dtr_cart_validate(cart);
+    DTR_ASSERT_EQ_INT(cart->audio.buffer_size, CONSOLE_AUDIO_BUFFER);
+
+    dtr_cart_destroy(cart);
+    DTR_PASS();
+}
+
+/* ------------------------------------------------------------------ */
+/*  Validate — runtime limits                                          */
+/* ------------------------------------------------------------------ */
+
+static void test_cart_validate_clamp_runtime(void)
+{
+    dtr_cart_t *cart;
+    uint32_t    max_mem;
+    uint32_t    max_stack;
+
+    cart = dtr_cart_create();
+
+    max_mem   = (uint32_t)CONSOLE_JS_MEM_MB * 1024u * 1024u;
+    max_stack = (uint32_t)CONSOLE_JS_STACK_KB * 1024u;
+
+    /* Exceed limits */
+    cart->runtime.mem_limit   = max_mem + 1;
+    cart->runtime.stack_limit = max_stack + 1;
+    dtr_cart_validate(cart);
+    DTR_ASSERT_EQ_INT(cart->runtime.mem_limit, max_mem);
+    DTR_ASSERT_EQ_INT(cart->runtime.stack_limit, max_stack);
+
+    dtr_cart_destroy(cart);
+    DTR_PASS();
+}
+
+/* ------------------------------------------------------------------ */
+/*  Parse — runtime overrides                                          */
+/* ------------------------------------------------------------------ */
+
+static void test_cart_parse_runtime(void)
+{
+    dtr_cart_t *cart;
+    bool        ok;
+    const char *json =
+        "{"
+        "  \"runtime\": {"
+        "    \"memoryLimitMB\": 32,"
+        "    \"stackLimitKB\": 256"
+        "  }"
+        "}";
+
+    cart = dtr_cart_create();
+    prv_setup();
+    ok = dtr_cart_parse(cart, s_ctx, json, strlen(json));
+    DTR_ASSERT(ok);
+    DTR_ASSERT_EQ_INT(cart->runtime.mem_limit, 32u * 1024u * 1024u);
+    DTR_ASSERT_EQ_INT(cart->runtime.stack_limit, 256u * 1024u);
+    prv_teardown();
+    dtr_cart_destroy(cart);
+    DTR_PASS();
+}
+
+/* ------------------------------------------------------------------ */
+/*  Parse — sfx and music arrays                                       */
+/* ------------------------------------------------------------------ */
+
+static void test_cart_parse_sfx_music(void)
+{
+    dtr_cart_t *cart;
+    bool        ok;
+    const char *json =
+        "{"
+        "  \"sfx\": [\"jump.wav\", \"hit.wav\"],"
+        "  \"music\": [\"theme.ogg\"]"
+        "}";
+
+    cart = dtr_cart_create();
+    prv_setup();
+    ok = dtr_cart_parse(cart, s_ctx, json, strlen(json));
+    DTR_ASSERT(ok);
+    DTR_ASSERT_EQ_INT(cart->sfx_count, 2);
+    DTR_ASSERT(strcmp(cart->sfx_paths[0], "jump.wav") == 0);
+    DTR_ASSERT(strcmp(cart->sfx_paths[1], "hit.wav") == 0);
+    DTR_ASSERT_EQ_INT(cart->music_count, 1);
+    DTR_ASSERT(strcmp(cart->music_paths[0], "theme.ogg") == 0);
+    prv_teardown();
+    dtr_cart_destroy(cart);
+    DTR_PASS();
+}
+
+/* ------------------------------------------------------------------ */
+/*  Parse — code path and maps                                         */
+/* ------------------------------------------------------------------ */
+
+static void test_cart_parse_code_maps(void)
+{
+    dtr_cart_t *cart;
+    bool        ok;
+    const char *json =
+        "{"
+        "  \"code\": \"main.js\","
+        "  \"maps\": [\"level1.json\", \"level2.json\"]"
+        "}";
+
+    cart = dtr_cart_create();
+    prv_setup();
+    ok = dtr_cart_parse(cart, s_ctx, json, strlen(json));
+    DTR_ASSERT(ok);
+    DTR_ASSERT(strcmp(cart->code_path, "main.js") == 0);
+    DTR_ASSERT_EQ_INT(cart->map_count, 2);
+    DTR_ASSERT(strcmp(cart->map_paths[0], "level1.json") == 0);
+    DTR_ASSERT(strcmp(cart->map_paths[1], "level2.json") == 0);
+    prv_teardown();
+    dtr_cart_destroy(cart);
+    DTR_PASS();
+}
+
+/* ------------------------------------------------------------------ */
+/*  Parse — sprites section                                            */
+/* ------------------------------------------------------------------ */
+
+static void test_cart_parse_sprites(void)
+{
+    dtr_cart_t *cart;
+    bool        ok;
+    const char *json =
+        "{"
+        "  \"sprites\": {"
+        "    \"tileW\": 16,"
+        "    \"tileH\": 16"
+        "  }"
+        "}";
+
+    cart = dtr_cart_create();
+    prv_setup();
+    ok = dtr_cart_parse(cart, s_ctx, json, strlen(json));
+    DTR_ASSERT(ok);
+    DTR_ASSERT_EQ_INT(cart->sprites.tile_w, 16);
+    DTR_ASSERT_EQ_INT(cart->sprites.tile_h, 16);
+    prv_teardown();
+    dtr_cart_destroy(cart);
+    DTR_PASS();
+}
+
+/* ------------------------------------------------------------------ */
+/*  Destroy null safety                                                */
+/* ------------------------------------------------------------------ */
+
+static void test_cart_destroy_null(void)
+{
+    dtr_cart_destroy(NULL);
+    DTR_PASS();
+}
+
+/* ------------------------------------------------------------------ */
 /*  Main                                                               */
 /* ------------------------------------------------------------------ */
 
@@ -491,6 +737,17 @@ int main(int argc, char *argv[])
     DTR_RUN_TEST(test_cart_validate_clamp_height);
     DTR_RUN_TEST(test_cart_parse_timing);
     DTR_RUN_TEST(test_cart_parse_audio);
+    DTR_RUN_TEST(test_cart_validate_clamp_scale);
+    DTR_RUN_TEST(test_cart_validate_clamp_fps_upper);
+    DTR_RUN_TEST(test_cart_validate_clamp_audio_channels);
+    DTR_RUN_TEST(test_cart_validate_clamp_audio_freq);
+    DTR_RUN_TEST(test_cart_validate_clamp_audio_buffer);
+    DTR_RUN_TEST(test_cart_validate_clamp_runtime);
+    DTR_RUN_TEST(test_cart_parse_runtime);
+    DTR_RUN_TEST(test_cart_parse_sfx_music);
+    DTR_RUN_TEST(test_cart_parse_code_maps);
+    DTR_RUN_TEST(test_cart_parse_sprites);
+    DTR_RUN_TEST(test_cart_destroy_null);
 
     DTR_TEST_END();
 }

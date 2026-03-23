@@ -57,6 +57,7 @@ dtr_add_test(test_cart test_cart.c)
 
 # --- Graphics tests ---
 dtr_add_test(test_graphics test_graphics.c LINK_LIB dithr_core_test)
+dtr_add_test(test_graphics_ext test_graphics_ext.c LINK_LIB dithr_core_test)
 
 # --- Event tests ---
 dtr_add_test(test_event test_event.c)
@@ -78,10 +79,10 @@ dtr_add_test(test_cart_import test_cart_import.c)
 
 # --- CTest properties ---
 set_tests_properties(
-    test_input test_cart test_graphics test_event
+    test_input test_cart test_graphics test_graphics_ext test_event
     test_mouse_gamepad test_runtime test_audio test_postfx
     test_cart_import
     PROPERTIES
-        TIMEOUT 30
+        TIMEOUT 120
         ENVIRONMENT "SDL_AUDIO_DRIVER=dummy;SDL_VIDEO_DRIVER=dummy;SDL_AUDIODRIVER=dummy;SDL_VIDEODRIVER=dummy"
 )

@@ -100,6 +100,17 @@ static void test_load_music_null_audio(void)
 }
 
 /* ------------------------------------------------------------------ */
+/*  Master volume NULL safety                                          */
+/* ------------------------------------------------------------------ */
+
+static void test_master_volume_null(void)
+{
+    dtr_audio_set_master_volume(NULL, 0.5f);
+    DTR_ASSERT_NEAR(dtr_audio_get_master_volume(NULL), 0.0f, 0.001);
+    DTR_PASS();
+}
+
+/* ------------------------------------------------------------------ */
 /*  Channel bounds                                                     */
 /* ------------------------------------------------------------------ */
 
@@ -240,6 +251,7 @@ int main(void)
     DTR_RUN_TEST(test_load_sfx_null_audio);
     DTR_RUN_TEST(test_load_music_null_audio);
     DTR_RUN_TEST(test_sfx_playing_out_of_bounds);
+    DTR_RUN_TEST(test_master_volume_null);
 
     /* Live tests: create one shared audio context */
     live_aud = dtr_audio_create(4, CONSOLE_AUDIO_FREQ, CONSOLE_AUDIO_BUFFER);
