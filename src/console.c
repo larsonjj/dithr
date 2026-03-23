@@ -271,11 +271,14 @@ dtr_console_t *dtr_console_create(const char *cart_path)
     con->time_prev   = SDL_GetPerformanceCounter();
 
 #if DEV_BUILD
-    /* Set up file watcher for the JS source */
+    /* Set up file watcher for the JS source directory */
+    con->watch_dir[0]     = '\0';
     con->watch_path[0]    = '\0';
     con->watch_mtime     = 0;
     con->watch_last_poll = SDL_GetPerformanceCounter();
     con->reload_toast    = 0.0f;
+    con->reload_pending  = false;
+    con->reload_detect_time = 0;
     if (con->cart->code_path[0] != '\0') {
         SDL_PathInfo info;
 
@@ -283,7 +286,28 @@ dtr_console_t *dtr_console_create(const char *cart_path)
                      "%s%s", con->cart->base_path, con->cart->code_path);
         if (SDL_GetPathInfo(con->watch_path, &info)) {
             con->watch_mtime = info.modify_time;
-            SDL_Log("hot-reload: watching %s", con->watch_path);
+
+            /* Extract directory from the full code path */
+            SDL_strlcpy(con->watch_dir, con->watch_path, sizeof(con->watch_dir));
+            {
+                char *last_sep;
+
+                last_sep = SDL_strrchr(con->watch_dir, '/');
+                if (last_sep == NULL) {
+                    last_sep = SDL_strrchr(con->watch_dir, '\\');
+                }
+                if (last_sep != NULL) {
+                    *(last_sep + 1) = '\0';
+                } else {
+                    con->watch_dir[0] = '\0';
+                }
+            }
+
+            if (con->watch_dir[0] != '\0') {
+                SDL_Log("hot-reload: watching directory %s", con->watch_dir);
+            } else {
+                SDL_Log("hot-reload: watching %s", con->watch_path);
+            }
         } else {
             SDL_Log("hot-reload: WARNING: cannot access %s — file watching disabled",
                     con->watch_path);
@@ -442,6 +466,55 @@ void dtr_console_event(dtr_console_t *con, SDL_Event *event)
 }
 
 /* ------------------------------------------------------------------ */
+/*  Hot-reload: directory mtime scanning                               */
+/* ------------------------------------------------------------------ */
+
+#if DEV_BUILD
+
+typedef struct {
+    const char *dir;
+    int64_t     max_mtime;
+} prv_dir_scan_t;
+
+static SDL_EnumerationResult SDLCALL prv_scan_js_cb(void *userdata,
+                                                     const char *dirname,
+                                                     const char *fname)
+{
+    prv_dir_scan_t *scan;
+    const char     *ext;
+    char            full[1024];
+    SDL_PathInfo    info;
+
+    scan = (prv_dir_scan_t *)userdata;
+
+    SDL_snprintf(full, sizeof(full), "%s%s", dirname, fname);
+
+    /* Recurse into subdirectories */
+    if (SDL_GetPathInfo(full, &info) && info.type == SDL_PATHTYPE_DIRECTORY) {
+        char subdir[1024];
+
+        SDL_snprintf(subdir, sizeof(subdir), "%s/", full);
+        SDL_EnumerateDirectory(subdir, prv_scan_js_cb, userdata);
+        return SDL_ENUM_CONTINUE;
+    }
+
+    ext = SDL_strrchr(fname, '.');
+    if (ext == NULL || SDL_strcasecmp(ext, ".js") != 0) {
+        return SDL_ENUM_CONTINUE;
+    }
+
+    if (SDL_GetPathInfo(full, &info)) {
+        if (info.modify_time > scan->max_mtime) {
+            scan->max_mtime = info.modify_time;
+        }
+    }
+
+    return SDL_ENUM_CONTINUE;
+}
+
+#endif /* DEV_BUILD */
+
+/* ------------------------------------------------------------------ */
 /*  Per-frame iteration (called by SDL_AppIterate)                     */
 /* ------------------------------------------------------------------ */
 
@@ -467,6 +540,57 @@ void dtr_console_iterate(dtr_console_t *con)
 
     if (con->runtime->error_active) {
         prv_render_error_overlay(con);
+
+#if DEV_BUILD
+        /* Keep polling for file changes so auto-reload works during errors */
+        if (con->watch_path[0] != '\0') {
+            uint64_t err_ticks;
+            double   err_elapsed;
+
+            err_ticks   = SDL_GetPerformanceCounter();
+            err_elapsed = (double)(err_ticks - con->watch_last_poll)
+                          / (double)SDL_GetPerformanceFrequency() * 1000.0;
+
+            if (err_elapsed >= 200.0) {
+                bool changed;
+
+                changed = false;
+                con->watch_last_poll = err_ticks;
+
+                if (con->watch_dir[0] != '\0') {
+                    prv_dir_scan_t scan;
+
+                    scan.dir       = con->watch_dir;
+                    scan.max_mtime = con->watch_mtime;
+                    SDL_EnumerateDirectory(con->watch_dir, prv_scan_js_cb, &scan);
+                    changed = (scan.max_mtime != con->watch_mtime);
+                } else {
+                    SDL_PathInfo info;
+
+                    if (SDL_GetPathInfo(con->watch_path, &info)) {
+                        changed = (info.modify_time != con->watch_mtime);
+                    }
+                }
+
+                if (changed && !con->reload_pending) {
+                    con->reload_pending     = true;
+                    con->reload_detect_time = err_ticks;
+                }
+            }
+
+            if (con->reload_pending) {
+                double debounce_ms;
+
+                debounce_ms = (double)(SDL_GetPerformanceCounter() - con->reload_detect_time)
+                              / (double)SDL_GetPerformanceFrequency() * 1000.0;
+                if (debounce_ms >= 300.0) {
+                    SDL_Log("hot-reload: change detected (during error), reloading");
+                    con->reload         = true;
+                    con->reload_pending = false;
+                }
+            }
+        }
+#endif
         return;
     }
 
@@ -558,7 +682,7 @@ void dtr_console_iterate(dtr_console_t *con)
     ++con->frame_count;
 
 #if DEV_BUILD
-    /* Hot-reload: poll JS source file for changes (every 200 ms, absolute time) */
+    /* Hot-reload: poll JS source directory for changes (every 200 ms, absolute time) */
     if (con->watch_path[0] != '\0') {
         uint64_t now_ticks;
         double   elapsed_ms;
@@ -568,14 +692,45 @@ void dtr_console_iterate(dtr_console_t *con)
                      / (double)SDL_GetPerformanceFrequency() * 1000.0;
 
         if (elapsed_ms >= 200.0) {
-            SDL_PathInfo info;
+            bool     changed;
 
+            changed = false;
             con->watch_last_poll = now_ticks;
-            if (SDL_GetPathInfo(con->watch_path, &info)) {
-                if (info.modify_time != con->watch_mtime) {
-                    SDL_Log("hot-reload: %s changed, reloading", con->watch_path);
-                    con->reload = true;
+
+            if (con->watch_dir[0] != '\0') {
+                /* Scan directory (recursive) for any .js file newer than watch_mtime */
+                prv_dir_scan_t scan;
+
+                scan.dir       = con->watch_dir;
+                scan.max_mtime = con->watch_mtime;
+                SDL_EnumerateDirectory(con->watch_dir, prv_scan_js_cb, &scan);
+                changed = (scan.max_mtime != con->watch_mtime);
+            } else {
+                /* Fall back to single-file watch */
+                SDL_PathInfo info;
+
+                if (SDL_GetPathInfo(con->watch_path, &info)) {
+                    changed = (info.modify_time != con->watch_mtime);
                 }
+            }
+
+            if (changed && !con->reload_pending) {
+                /* Start debounce timer */
+                con->reload_pending    = true;
+                con->reload_detect_time = now_ticks;
+            }
+        }
+
+        /* Debounce: fire reload after 300 ms of detected change */
+        if (con->reload_pending) {
+            double debounce_ms;
+
+            debounce_ms = (double)(SDL_GetPerformanceCounter() - con->reload_detect_time)
+                          / (double)SDL_GetPerformanceFrequency() * 1000.0;
+            if (debounce_ms >= 300.0) {
+                SDL_Log("hot-reload: change detected, reloading");
+                con->reload         = true;
+                con->reload_pending = false;
             }
         }
     }
@@ -593,8 +748,11 @@ bool dtr_console_reload(dtr_console_t *con)
     size_t          new_len     = 0;
     char            code_full[1024];
     dtr_runtime_t  *new_rt      = NULL;
-    dtr_event_bus_t *new_events = NULL;
     uint64_t        t_start;
+
+    /* PostFX snapshot for auto-preservation */
+    dtr_postfx_entry_t saved_pfx[DTR_POSTFX_MAX_STACK];
+    int32_t            saved_pfx_count = 0;
 
     if (con == NULL) {
         return false;
@@ -652,7 +810,14 @@ bool dtr_console_reload(dtr_console_t *con)
         JS_FreeValue(con->runtime->ctx, global);
     }
 
-    /* ---- 3. Create new runtime + event bus in temporaries ---- */
+    /* ---- 2b. Snapshot postfx stack ---- */
+    if (con->postfx != NULL && con->postfx->count > 0) {
+        saved_pfx_count = con->postfx->count;
+        SDL_memcpy(saved_pfx, con->postfx->stack,
+                   (size_t)saved_pfx_count * sizeof(dtr_postfx_entry_t));
+    }
+
+    /* ---- 3. Create new runtime in temporary ---- */
     new_rt = dtr_runtime_create(
         con,
         (int32_t)(con->cart->runtime.mem_limit / (1024u * 1024u)),
@@ -664,14 +829,11 @@ bool dtr_console_reload(dtr_console_t *con)
         return false;
     }
 
-    new_events = dtr_event_create(new_rt->ctx);
-
     /* ---- 4. Register APIs and evaluate new code on temp runtime ---- */
     dtr_api_register_all(new_rt);
 
     if (!dtr_runtime_eval(new_rt, new_code, new_len, "main.js")) {
         SDL_Log("hot-reload: eval failed — keeping old code");
-        dtr_event_destroy(new_events);
         dtr_runtime_destroy(new_rt);
         SDL_free(new_code);
         SDL_free(saved_json);
@@ -679,13 +841,13 @@ bool dtr_console_reload(dtr_console_t *con)
         return false;
     }
 
-    /* ---- 5. Eval succeeded — commit: tear down old runtime ---- */
+    /* ---- 5. Eval succeeded — commit: tear down old runtime, keep event bus ---- */
     if (con->events != NULL && con->runtime != NULL && con->runtime->ctx != NULL) {
         dtr_event_emit(con->events, "sys:cart_unload", JS_UNDEFINED);
         dtr_event_flush(con->events);
     }
 
-    dtr_event_destroy(con->events);
+    dtr_event_clear(con->events, new_rt->ctx);
     dtr_runtime_destroy(con->runtime);
 
     /* Replace cart code buffer */
@@ -693,9 +855,8 @@ bool dtr_console_reload(dtr_console_t *con)
     con->cart->code     = new_code;
     con->cart->code_len = new_len;
 
-    /* Install new runtime + events */
-    con->runtime = new_rt;
-    con->events  = new_events;
+    /* Install new runtime */
+    con->runtime   = new_rt;
     con->cart->ctx = con->runtime->ctx;
 
     /* ---- 6. Call _restore(state) if we have saved state ---- */
@@ -738,6 +899,13 @@ bool dtr_console_reload(dtr_console_t *con)
         SDL_free(saved_json);
     }
 
+    /* ---- 6b. Restore postfx stack ---- */
+    if (saved_pfx_count > 0 && con->postfx != NULL) {
+        con->postfx->count = saved_pfx_count;
+        SDL_memcpy(con->postfx->stack, saved_pfx,
+                   (size_t)saved_pfx_count * sizeof(dtr_postfx_entry_t));
+    }
+
     /* ---- 7. Call _init() ---- */
     dtr_runtime_call(con->runtime, con->runtime->atom_init);
 
@@ -751,8 +919,19 @@ bool dtr_console_reload(dtr_console_t *con)
 #if DEV_BUILD
     {
         SDL_PathInfo info;
+
         if (SDL_GetPathInfo(con->watch_path, &info)) {
             con->watch_mtime = info.modify_time;
+        }
+
+        /* If watching a directory, scan all .js files for the max mtime */
+        if (con->watch_dir[0] != '\0') {
+            prv_dir_scan_t scan;
+
+            scan.dir       = con->watch_dir;
+            scan.max_mtime = con->watch_mtime;
+            SDL_EnumerateDirectory(con->watch_dir, prv_scan_js_cb, &scan);
+            con->watch_mtime = scan.max_mtime;
         }
     }
 #endif
@@ -910,6 +1089,41 @@ static bool prv_load_cart_assets(dtr_console_t *con)
 }
 
 /* ------------------------------------------------------------------ */
+/*  Asset hot reload                                                   */
+/* ------------------------------------------------------------------ */
+
+bool dtr_console_reload_assets(dtr_console_t *con)
+{
+    uint64_t t_start;
+    uint64_t t_end;
+    double   elapsed_ms;
+
+    if (con == NULL || con->cart == NULL) {
+        return false;
+    }
+
+    t_start = SDL_GetPerformanceCounter();
+
+    /* Stop music before reloading audio assets */
+    if (con->audio != NULL) {
+        dtr_mus_stop(con->audio, 0);
+    }
+
+    prv_load_cart_assets(con);
+
+    t_end      = SDL_GetPerformanceCounter();
+    elapsed_ms = (double)(t_end - t_start) / (double)SDL_GetPerformanceFrequency() * 1000.0;
+    SDL_Log("asset-reload: success (%.1f ms)", elapsed_ms);
+
+    if (con->events != NULL) {
+        dtr_event_emit(con->events, "sys:assets_reloaded", JS_UNDEFINED);
+        dtr_event_flush(con->events);
+    }
+
+    return true;
+}
+
+/* ------------------------------------------------------------------ */
 /*  Internal: pause overlay                                            */
 /* ------------------------------------------------------------------ */
 
@@ -962,15 +1176,75 @@ static void prv_render_pause_overlay(dtr_console_t *con)
 static void prv_render_error_overlay(dtr_console_t *con)
 {
     dtr_graphics_t *gfx;
+    char            line_buf[64];
+    const char     *msg;
+    int32_t         y_pos;
+    int32_t         max_chars;
 
     gfx = con->graphics;
 
-    /* Red-tinted background */
+    /* Black background */
     SDL_memset(gfx->framebuffer, 0, (size_t)(con->fb_width * con->fb_height));
 
-    dtr_gfx_rectfill(gfx, 0, 0, con->fb_width - 1, 12, 8);
+    /* Red header bar */
+    dtr_gfx_rectfill(gfx, 0, 0, con->fb_width - 1, 10, 8);
     dtr_gfx_print(gfx, "RUNTIME ERROR", 2, 2, 7);
-    dtr_gfx_print(gfx, con->runtime->error_msg, 2, 16, 7);
+
+    /* Line number (right-aligned in header) */
+    if (con->runtime->error_line > 0) {
+        int32_t tw;
+
+        SDL_snprintf(line_buf, sizeof(line_buf), "line %d", con->runtime->error_line);
+        tw = dtr_gfx_text_width(gfx, line_buf);
+        dtr_gfx_print(gfx, line_buf, con->fb_width - tw - 2, 2, 7);
+    }
+
+    /* Word-wrapped error message */
+    max_chars = (con->fb_width - 4) / 4; /* 4px per char in default font */
+    if (max_chars < 1) {
+        max_chars = 1;
+    }
+
+    msg   = con->runtime->error_msg;
+    y_pos = 14;
+
+    while (*msg != '\0' && y_pos < con->fb_height - 8) {
+        char    wrap_buf[256];
+        int32_t len;
+        int32_t chunk;
+
+        len = (int32_t)SDL_strlen(msg);
+
+        /* Find newline within range */
+        chunk = (len < max_chars) ? len : max_chars;
+        {
+            int32_t ci;
+
+            for (ci = 0; ci < chunk; ++ci) {
+                if (msg[ci] == '\n') {
+                    chunk = ci;
+                    break;
+                }
+            }
+        }
+
+        if (chunk > (int32_t)(sizeof(wrap_buf) - 1)) {
+            chunk = (int32_t)(sizeof(wrap_buf) - 1);
+        }
+        SDL_memcpy(wrap_buf, msg, (size_t)chunk);
+        wrap_buf[chunk] = '\0';
+
+        dtr_gfx_print(gfx, wrap_buf, 2, y_pos, 7);
+        y_pos += 7;
+
+        msg += chunk;
+        if (*msg == '\n') {
+            ++msg;
+        }
+    }
+
+    /* Hint at bottom */
+    dtr_gfx_print(gfx, "Press F5 to retry", 2, con->fb_height - 8, 6);
 
     {
         void   *locked;

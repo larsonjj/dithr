@@ -26,6 +26,7 @@ dtr_audio_t *dtr_audio_create(int32_t channels, int32_t freq, int32_t buffer)
     aud->buffer_size   = buffer;
     aud->master_volume = 1.0f;
     aud->music_volume  = 1.0f;
+    aud->current_music_idx = -1;
 
     for (int32_t idx = 0; idx < CONSOLE_MAX_CHANNELS; ++idx) {
         aud->channel_volume[idx] = 1.0f;
@@ -280,6 +281,8 @@ void dtr_mus_play(dtr_audio_t *aud, int32_t idx, int32_t fade_ms, uint32_t chann
     }
     MIX_PlayTrack(aud->music_track, props);
     SDL_DestroyProperties(props);
+
+    aud->current_music_idx = idx;
 }
 
 void dtr_mus_stop(dtr_audio_t *aud, int32_t fade_ms)
@@ -296,6 +299,8 @@ void dtr_mus_stop(dtr_audio_t *aud, int32_t fade_ms)
     } else {
         MIX_StopTrack(aud->music_track, 0);
     }
+
+    aud->current_music_idx = -1;
 }
 
 void dtr_mus_volume(dtr_audio_t *aud, float vol)
@@ -323,6 +328,14 @@ bool dtr_mus_playing(dtr_audio_t *aud)
         return false;
     }
     return MIX_TrackPlaying(aud->music_track);
+}
+
+int32_t dtr_mus_current(dtr_audio_t *aud)
+{
+    if (aud == NULL) {
+        return -1;
+    }
+    return aud->current_music_idx;
 }
 
 /* ------------------------------------------------------------------ */

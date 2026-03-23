@@ -152,6 +152,15 @@ static JSValue js_cart_version(JSContext *ctx, JSValueConst this_val, int argc, 
     return JS_NewString(ctx, CART(ctx)->meta.version);
 }
 
+static JSValue
+js_cart_reloadAssets(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+{
+    (void)this_val;
+    (void)argc;
+    (void)argv;
+    return JS_NewBool(ctx, dtr_console_reload_assets(dtr_api_get_console(ctx)));
+}
+
 static const JSCFunctionListEntry js_cart_funcs[] = {
     JS_CFUNC_DEF("save", 2, js_cart_save),
     JS_CFUNC_DEF("load", 1, js_cart_load),
@@ -162,6 +171,7 @@ static const JSCFunctionListEntry js_cart_funcs[] = {
     JS_CFUNC_DEF("title", 0, js_cart_title),
     JS_CFUNC_DEF("author", 0, js_cart_author),
     JS_CFUNC_DEF("version", 0, js_cart_version),
+    JS_CFUNC_DEF("reloadAssets", 0, js_cart_reloadAssets),
 };
 
 void dtr_cart_api_register(JSContext *ctx, JSValue global)

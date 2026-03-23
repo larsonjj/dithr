@@ -41,6 +41,30 @@ void dtr_event_destroy(dtr_event_bus_t *bus)
     DTR_FREE(bus);
 }
 
+void dtr_event_clear(dtr_event_bus_t *bus, JSContext *new_ctx)
+{
+    if (bus == NULL) {
+        return;
+    }
+
+    /* Free all active handler callbacks */
+    for (int32_t idx = 0; idx < DTR_EVENT_MAX_HANDLERS; ++idx) {
+        if (bus->handlers[idx].active) {
+            JS_FreeValue(bus->ctx, bus->handlers[idx].callback);
+            bus->handlers[idx].active = false;
+        }
+    }
+
+    /* Free queued event payloads */
+    for (int32_t idx = 0; idx < bus->queue_count; ++idx) {
+        JS_FreeValue(bus->ctx, bus->queue[idx].payload);
+    }
+    bus->queue_count = 0;
+
+    /* Rebind to the new runtime's context */
+    bus->ctx = new_ctx;
+}
+
 /* ------------------------------------------------------------------ */
 /*  Internal: find free slot                                           */
 /* ------------------------------------------------------------------ */

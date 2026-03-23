@@ -48,12 +48,21 @@ static JSValue js_mus_playing(JSContext *ctx, JSValueConst this_val, int argc, J
     return JS_NewBool(ctx, dtr_mus_playing(AUD(ctx)));
 }
 
+static JSValue js_mus_current(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+{
+    (void)this_val;
+    (void)argc;
+    (void)argv;
+    return JS_NewInt32(ctx, dtr_mus_current(AUD(ctx)));
+}
+
 static const JSCFunctionListEntry js_mus_funcs[] = {
     JS_CFUNC_DEF("play", 3, js_mus_play),
     JS_CFUNC_DEF("stop", 1, js_mus_stop),
     JS_CFUNC_DEF("volume", 1, js_mus_volume),
     JS_CFUNC_DEF("getVolume", 0, js_mus_getVolume),
     JS_CFUNC_DEF("playing", 0, js_mus_playing),
+    JS_CFUNC_DEF("current", 0, js_mus_current),
 };
 
 void dtr_mus_api_register(JSContext *ctx, JSValue global)

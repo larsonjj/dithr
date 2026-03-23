@@ -39,6 +39,8 @@ struct dtr_audio {
     float music_volume;
     float channel_volume[CONSOLE_MAX_CHANNELS];
 
+    int32_t current_music_idx; /**< Index of currently playing music (-1 = none) */
+
     bool initialized;
 };
 
@@ -61,6 +63,7 @@ void  dtr_mus_stop(dtr_audio_t *aud, int32_t fade_ms);
 void  dtr_mus_volume(dtr_audio_t *aud, float vol);
 float dtr_mus_get_volume(dtr_audio_t *aud);
 bool  dtr_mus_playing(dtr_audio_t *aud);
+int32_t dtr_mus_current(dtr_audio_t *aud);
 
 /* Master volume */
 void  dtr_audio_set_master_volume(dtr_audio_t *aud, float vol);

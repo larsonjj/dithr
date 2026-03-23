@@ -51,6 +51,12 @@ dtr_event_bus_t *dtr_event_create(JSContext *ctx);
 void             dtr_event_destroy(dtr_event_bus_t *bus);
 
 /**
+ * \brief           Clear all handlers and queued events, update context pointer.
+ *                  The bus itself stays alive — used during hot reload.
+ */
+void dtr_event_clear(dtr_event_bus_t *bus, JSContext *new_ctx);
+
+/**
  * \brief           Register a handler, returns a unique handle
  */
 int32_t dtr_event_on(dtr_event_bus_t *bus, const char *name, JSValue callback);

@@ -13,6 +13,7 @@
 
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
+#include <emscripten/console.h>
 #endif
 
 /* ------------------------------------------------------------------ */
@@ -125,12 +126,47 @@ static bool prv_parse_cli(int argc, char **argv, cli_opts_t *opts)
 /*  SDL_AppInit                                                        */
 /* ------------------------------------------------------------------ */
 
+#ifdef __EMSCRIPTEN__
+/**
+ * \brief           Route SDL log messages to the correct browser console level.
+ *
+ * Without this, Emscripten sends all SDL_Log output through stderr which the
+ * browser renders as console.warn/error.  This callback maps SDL log
+ * priorities to console.log, console.warn, and console.error instead.
+ */
+static void prv_emscripten_log_output(void *userdata, int category,
+                                      SDL_LogPriority priority,
+                                      const char *message)
+{
+    (void)userdata;
+    (void)category;
+
+    switch (priority) {
+        case SDL_LOG_PRIORITY_VERBOSE:
+        case SDL_LOG_PRIORITY_DEBUG:
+        case SDL_LOG_PRIORITY_INFO:
+            emscripten_console_log(message);
+            break;
+        case SDL_LOG_PRIORITY_WARN:
+            emscripten_console_warn(message);
+            break;
+        default: /* ERROR, CRITICAL */
+            emscripten_console_error(message);
+            break;
+    }
+}
+#endif
+
 SDL_AppResult SDL_AppInit(void **appstate, int argc, char **argv)
 {
     app_state_t *app;
     cli_opts_t   opts;
 
     SDL_SetLogPriorities(SDL_LOG_PRIORITY_INFO);
+
+#ifdef __EMSCRIPTEN__
+    SDL_SetLogOutputFunction(prv_emscripten_log_output, NULL);
+#endif
 
     app = SDL_calloc(1, sizeof(app_state_t));
     if (app == NULL) {
