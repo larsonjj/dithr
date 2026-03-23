@@ -274,6 +274,7 @@ if (EMSCRIPTEN)
         -sSTACK_SIZE=1048576
         -sINITIAL_MEMORY=67108864
         -sENVIRONMENT=web
+        "SHELL:-s EXPORTED_RUNTIME_METHODS=['FS']"
         -lidbfs.js
         -flto
         -Oz

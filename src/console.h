@@ -52,6 +52,7 @@ typedef struct dtr_console {
     bool has_error;
     bool fullscreen;
     bool restart;
+    bool reload;  /**< Hot-reload: re-eval JS without tearing down subsystems */
     bool new_frame; /**< Set true at start of each iterate, cleared after resets */
 
     uint64_t frame_count;
@@ -108,6 +109,19 @@ void dtr_console_iterate(dtr_console_t *con);
  * \param[in]       con: Console instance
  */
 void dtr_console_destroy(dtr_console_t *con);
+
+/**
+ * \brief           Hot-reload JS code without tearing down subsystems.
+ *
+ * Destroys only the JS runtime and event bus, re-reads the JS source from
+ * disk, creates a fresh runtime/context, re-registers APIs, and re-evals
+ * the code.  Optionally calls _save() before teardown and _restore(state)
+ * after re-eval so the cart can preserve game state across reloads.
+ *
+ * \param[in]       con: Console instance
+ * \return          true on success, false on failure (console left in error state)
+ */
+bool dtr_console_reload(dtr_console_t *con);
 
 #ifdef __cplusplus
 }

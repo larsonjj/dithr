@@ -40,7 +40,29 @@ const RELOAD_SNIPPET = `
 <script>
 (function(){
   var es = new EventSource("/__livereload");
-  es.onmessage = function(){ location.reload(); };
+  es.addEventListener("reload", function(){ location.reload(); });
+  es.addEventListener("hotreload", function(e){
+    var jsPath = e.data;
+    if (!Module || !Module.FS) {
+      console.warn("[hot-reload] Module.FS not available, full reload");
+      location.reload();
+      return;
+    }
+    if (typeof Module._dtr_wasm_reload !== "function") {
+      console.warn("[hot-reload] _dtr_wasm_reload not exported, full reload");
+      location.reload();
+      return;
+    }
+    fetch("/__cart/" + jsPath + "?t=" + Date.now())
+      .then(function(r){ return r.text(); })
+      .then(function(src){
+        var enc = new TextEncoder();
+        Module.FS.writeFile("/cart/" + jsPath, enc.encode(src));
+        Module._dtr_wasm_reload();
+        console.log("[hot-reload] reloaded " + jsPath);
+      })
+      .catch(function(err){ console.warn("[hot-reload] failed, full reload", err); location.reload(); });
+  });
   es.onerror = function(){ es.close(); setTimeout(function(){ location.reload(); }, 2000); };
 })();
 </script>
@@ -95,6 +117,32 @@ const server = http.createServer((req, res) => {
         res.write(":\n\n"); // SSE comment to keep connection alive
         sseClients.add(res);
         req.on("close", () => sseClients.delete(res));
+        return;
+    }
+
+    /* Serve raw cart files for hot reload */
+    if (relPath.startsWith("/__cart/")) {
+        const cartRel = relPath.slice("/__cart/".length);
+        const cartFile = path.join(CART_ABS, cartRel);
+        if (!cartFile.startsWith(CART_ABS)) {
+            res.writeHead(403);
+            res.end("Forbidden");
+            return;
+        }
+        fs.stat(cartFile, (err, stat) => {
+            if (err || !stat.isFile()) {
+                res.writeHead(404);
+                res.end("Not Found");
+                return;
+            }
+            res.setHeader("Content-Type", getMime(cartFile));
+            res.setHeader("Cache-Control", "no-store");
+            res.setHeader("Cross-Origin-Opener-Policy", "same-origin");
+            res.setHeader("Cross-Origin-Embedder-Policy", "require-corp");
+            res.setHeader("Content-Length", stat.size);
+            res.writeHead(200);
+            fs.createReadStream(cartFile).pipe(res);
+        });
         return;
     }
 
@@ -196,7 +244,7 @@ function rebuild(openBrowser) {
             } else {
                 console.log("[watch] Reloading browser");
                 for (const client of sseClients) {
-                    client.write("data: reload\n\n");
+                    client.write("event: reload\ndata: rebuild\n\n");
                 }
             }
         } else {
@@ -215,11 +263,50 @@ function rebuild(openBrowser) {
 
 /* Debounce: collect rapid changes into a single rebuild */
 let debounceTimer = null;
+let pendingFiles = new Set();
+
+/**
+ * Returns true for editor temp / backup files that should be ignored.
+ * This prevents atomic-save artefacts (VS Code, vim, etc.) from
+ * defeating the JS-only hot-reload path.
+ */
+function isIgnoredFile(filename) {
+    if (!filename) return true;
+    if (filename.endsWith("~") || filename.startsWith(".")) return true;
+    const ext = path.extname(filename).toLowerCase();
+    if (ext === ".tmp" || ext === ".swp" || ext === ".bak" || ext === ".crswap") return true;
+    return false;
+}
 
 function onCartChange(eventType, filename) {
-    if (filename && (filename.endsWith("~") || filename.startsWith("."))) return;
+    if (isIgnoredFile(filename)) return;
     if (debounceTimer) clearTimeout(debounceTimer);
-    debounceTimer = setTimeout(() => rebuild(false), 300);
+
+    pendingFiles.add(filename.replace(/\\/g, "/"));
+
+    debounceTimer = setTimeout(() => {
+        const files = [...pendingFiles];
+        pendingFiles.clear();
+
+        /* Filter out any remaining unrecognised files (e.g. no extension) */
+        const known = files.filter((f) => path.extname(f) !== "");
+        if (known.length === 0) return;
+
+        const jsOnly = known.every((f) => f.endsWith(".js") || f.endsWith(".mjs"));
+
+        if (jsOnly) {
+            /* JS-only change — hot reload without cmake rebuild */
+            console.log(`[watch] JS changed: ${known.join(", ")} — hot-reloading`);
+            for (const client of sseClients) {
+                for (const f of known) {
+                    client.write(`event: hotreload\ndata: ${f}\n\n`);
+                }
+            }
+        } else {
+            /* Non-JS change — full rebuild + page reload */
+            rebuild(false);
+        }
+    }, 300);
 }
 
 fs.watch(CART_ABS, { recursive: true }, onCartChange);

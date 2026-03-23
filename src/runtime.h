@@ -28,6 +28,8 @@ struct dtr_runtime {
     JSAtom atom_init;
     JSAtom atom_update;
     JSAtom atom_draw;
+    JSAtom atom_save;
+    JSAtom atom_restore;
 
     /* Error overlay state */
     bool    error_active;

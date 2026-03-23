@@ -99,9 +99,11 @@ dtr_runtime_t *dtr_runtime_create(dtr_console_t *con, int32_t heap_mb, int32_t s
     JS_SetContextOpaque(rt->ctx, con);
 
     /* Cache frequently used atoms */
-    rt->atom_init   = JS_NewAtom(rt->ctx, "_init");
-    rt->atom_update = JS_NewAtom(rt->ctx, "_update");
-    rt->atom_draw   = JS_NewAtom(rt->ctx, "_draw");
+    rt->atom_init    = JS_NewAtom(rt->ctx, "_init");
+    rt->atom_update  = JS_NewAtom(rt->ctx, "_update");
+    rt->atom_draw    = JS_NewAtom(rt->ctx, "_draw");
+    rt->atom_save    = JS_NewAtom(rt->ctx, "_save");
+    rt->atom_restore = JS_NewAtom(rt->ctx, "_restore");
 
     rt->error_active = false;
     rt->error_line   = 0;
@@ -120,6 +122,8 @@ void dtr_runtime_destroy(dtr_runtime_t *rt)
         JS_FreeAtom(rt->ctx, rt->atom_init);
         JS_FreeAtom(rt->ctx, rt->atom_update);
         JS_FreeAtom(rt->ctx, rt->atom_draw);
+        JS_FreeAtom(rt->ctx, rt->atom_save);
+        JS_FreeAtom(rt->ctx, rt->atom_restore);
         JS_FreeContext(rt->ctx);
     }
     if (rt->rt != NULL) {

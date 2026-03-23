@@ -38,6 +38,14 @@ EMSCRIPTEN_KEEPALIVE void dtr_idbfs_ready(void)
         s_wasm_app->idbfs_ready = true;
     }
 }
+
+/* Called from JS live-reload client to trigger a JS-only hot reload */
+EMSCRIPTEN_KEEPALIVE void dtr_wasm_reload(void)
+{
+    if (s_wasm_app != NULL && s_wasm_app->con != NULL) {
+        s_wasm_app->con->reload = true;
+    }
+}
 #endif
 
 /* ------------------------------------------------------------------ */
@@ -237,6 +245,12 @@ SDL_AppResult SDL_AppIterate(void *appstate)
 #endif
 
     dtr_console_iterate(app->con);
+
+    /* Handle hot-reload (JS only, preserves engine state) */
+    if (app->con->reload) {
+        app->con->reload = false;
+        dtr_console_reload(app->con);
+    }
 
     /* Handle restart request from sys.restart() */
     if (app->con->restart) {
