@@ -219,6 +219,9 @@ dtr_console_t *dtr_console_create(const char *cart_path)
         dtr_postfx_use(con->postfx, con->cart->meta.default_postfx);
     }
 
+    /* --- Tween pool --- */
+    dtr_tween_init(&con->tween);
+
     /* --- Cart ref to JS context --- */
     con->cart->ctx = con->runtime->ctx;
 

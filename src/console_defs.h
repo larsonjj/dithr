@@ -146,5 +146,6 @@ typedef struct dtr_event_bus     dtr_event_bus_t;
 typedef struct dtr_cart           dtr_cart_t;
 typedef struct dtr_postfx        dtr_postfx_t;
 typedef struct dtr_runtime       dtr_runtime_t;
+typedef struct dtr_tween         dtr_tween_t;
 
 #endif /* DTR_CONSOLE_DEFS_H */

@@ -7,6 +7,7 @@
 #define DTR_CONSOLE_H
 
 #include "console_defs.h"
+#include "tween.h"
 #include <SDL3/SDL.h>
 
 #ifdef __cplusplus
@@ -46,6 +47,7 @@ typedef struct dtr_console {
     dtr_event_bus_t *    events;
     dtr_cart_t *         cart;
     dtr_postfx_t *       postfx;
+    dtr_tween_t          tween;
 
     bool running;
     bool paused;

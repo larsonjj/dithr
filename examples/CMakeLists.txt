@@ -14,6 +14,7 @@
 #   platformer         - Simple side-scrolling platformer
 #   raycaster          - Wolfenstein-style raycaster
 #   spritemark         - Bunnymark-style sprite benchmark
+#   ui_demo            - UI layout helpers & tween animations
 
 # Install example carts alongside the executable
 install(DIRECTORY
@@ -27,6 +28,7 @@ install(DIRECTORY
     platformer
     raycaster
     spritemark
+    ui_demo
     DESTINATION examples
     PATTERN "node_modules" EXCLUDE
 )

@@ -190,6 +190,10 @@ set(DITHR_CORE_SOURCES
     src/api/sys_api.c
     src/api/col_api.c
     src/api/cam_api.c
+    src/api/ui_api.c
+    src/api/tween_api.c
+    src/ui.c
+    src/tween.c
 )
 
 set(DITHR_COMPILE_DEFS

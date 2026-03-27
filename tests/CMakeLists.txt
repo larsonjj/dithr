@@ -84,11 +84,17 @@ dtr_add_test(test_col test_col.c)
 # --- Camera / text metric tests ---
 dtr_add_test(test_cam test_cam.c LINK_LIB dithr_core_test)
 
+# --- UI layout tests ---
+dtr_add_test(test_ui test_ui.c LINK_LIB dithr_core_test)
+
+# --- Tween tests ---
+dtr_add_test(test_tween test_tween.c LINK_LIB dithr_core_test)
+
 # --- CTest properties ---
 set_tests_properties(
     test_input test_cart test_graphics test_graphics_ext test_event
     test_mouse_gamepad test_runtime test_audio test_postfx
-    test_cart_import test_col test_cam
+    test_cart_import test_col test_cam test_ui test_tween
     PROPERTIES
         TIMEOUT 120
         ENVIRONMENT "SDL_AUDIO_DRIVER=dummy;SDL_VIDEO_DRIVER=dummy;SDL_AUDIODRIVER=dummy;SDL_VIDEODRIVER=dummy"
