@@ -35,6 +35,7 @@ jobs:
                     - platformer
                     - raycaster
                     - spritemark
+                    - ui_demo
         steps:
             - uses: actions/checkout@v6
 
