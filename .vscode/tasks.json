@@ -50,7 +50,10 @@
     {
       "label": "WASM: Clean Data",
       "type": "shell",
-      "command": "if (Test-Path build/wasm/dithr.data) { Remove-Item build/wasm/dithr.data }",
+      "command": "rm -f build/wasm/dithr.data",
+      "windows": {
+        "command": "if (Test-Path build/wasm/dithr.data) { Remove-Item build/wasm/dithr.data }"
+      },
       "problemMatcher": [],
       "dependsOn": "WASM: Configure"
     },
@@ -87,7 +90,10 @@
     {
       "label": "Run Example",
       "type": "shell",
-      "command": "build/debug/Debug/dithr.exe ${input:ExampleCart}",
+      "command": "build/debug/dithr ${input:ExampleCart}",
+      "windows": {
+        "command": "build/debug/Debug/dithr.exe ${input:ExampleCart}"
+      },
       "dependsOn": "Build (Debug)",
       "problemMatcher": []
     },
