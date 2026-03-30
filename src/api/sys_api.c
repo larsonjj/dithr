@@ -512,6 +512,168 @@ js_sys_clipboard_set(JSContext *ctx, JSValueConst this_val, int argc, JSValueCon
     return JS_UNDEFINED;
 }
 
+/* ------------------------------------------------------------------ */
+/*  File I/O (sandboxed to cart directory)                             */
+/* ------------------------------------------------------------------ */
+
+/**
+ * \brief           Resolve a relative path against the cart base and validate
+ *                  it stays within the sandbox.
+ * \return          true if the resolved path is safe; full is populated.
+ */
+static bool prv_resolve_sandboxed(JSContext *ctx, const char *rel,
+                                  char *full, size_t full_size)
+{
+    dtr_console_t *con;
+    const char    *base;
+    size_t         base_len;
+    char          *pos;
+
+    con  = dtr_api_get_console(ctx);
+    base = con->cart->base_path;
+
+    /* Reject absolute paths and explicit traversal */
+    if (rel[0] == '/' || rel[0] == '\\') {
+        return false;
+    }
+    if (SDL_strstr(rel, "..") != NULL) {
+        return false;
+    }
+
+    SDL_snprintf(full, full_size, "%s%s", base, rel);
+
+    /* Normalise backslashes to forward slashes */
+    for (pos = full; *pos != '\0'; ++pos) {
+        if (*pos == '\\') {
+            *pos = '/';
+        }
+    }
+
+    /* Final check: resolved path must start with base_path */
+    base_len = SDL_strlen(base);
+    if (SDL_strncmp(full, base, base_len) != 0) {
+        return false;
+    }
+
+    return true;
+}
+
+static JSValue
+js_sys_read_file(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+{
+    const char *rel;
+    char        full[1024];
+    void       *data;
+    size_t      len;
+    JSValue     result;
+
+    (void)this_val;
+    if (argc < 1) {
+        return JS_UNDEFINED;
+    }
+    rel = JS_ToCString(ctx, argv[0]);
+    if (rel == NULL) {
+        return JS_UNDEFINED;
+    }
+
+    if (!prv_resolve_sandboxed(ctx, rel, full, sizeof(full))) {
+        JS_FreeCString(ctx, rel);
+        return JS_ThrowRangeError(ctx, "readFile: path outside cart directory");
+    }
+    JS_FreeCString(ctx, rel);
+
+    data = SDL_LoadFile(full, &len);
+    if (data == NULL) {
+        return JS_UNDEFINED;
+    }
+
+    result = JS_NewStringLen(ctx, (const char *)data, len);
+    SDL_free(data);
+    return result;
+}
+
+static JSValue
+js_sys_write_file(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+{
+    const char *rel;
+    const char *content;
+    size_t      content_len;
+    char        full[1024];
+
+    (void)this_val;
+    if (argc < 2) {
+        return JS_FALSE;
+    }
+    rel = JS_ToCString(ctx, argv[0]);
+    if (rel == NULL) {
+        return JS_FALSE;
+    }
+
+    if (!prv_resolve_sandboxed(ctx, rel, full, sizeof(full))) {
+        JS_FreeCString(ctx, rel);
+        return JS_ThrowRangeError(ctx, "writeFile: path outside cart directory");
+    }
+    JS_FreeCString(ctx, rel);
+
+    content = JS_ToCStringLen(ctx, &content_len, argv[1]);
+    if (content == NULL) {
+        return JS_FALSE;
+    }
+
+    if (!SDL_SaveFile(full, content, content_len)) {
+        JS_FreeCString(ctx, content);
+        return JS_FALSE;
+    }
+
+    JS_FreeCString(ctx, content);
+    return JS_TRUE;
+}
+
+static JSValue
+js_sys_list_files(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+{
+    const char *rel;
+    char        full[1024];
+    int32_t     count;
+    char      **files;
+    JSValue     arr;
+
+    (void)this_val;
+
+    rel = "";
+    if (argc >= 1) {
+        rel = JS_ToCString(ctx, argv[0]);
+        if (rel == NULL) {
+            return JS_NewArray(ctx);
+        }
+    }
+
+    if (rel[0] != '\0') {
+        if (!prv_resolve_sandboxed(ctx, rel, full, sizeof(full))) {
+            if (argc >= 1) {
+                JS_FreeCString(ctx, rel);
+            }
+            return JS_ThrowRangeError(ctx, "listFiles: path outside cart directory");
+        }
+    } else {
+        SDL_snprintf(full, sizeof(full), "%s", dtr_api_get_console(ctx)->cart->base_path);
+    }
+    if (argc >= 1) {
+        JS_FreeCString(ctx, rel);
+    }
+
+    files = SDL_GlobDirectory(full, NULL, 0, &count);
+    arr   = JS_NewArray(ctx);
+    if (files != NULL) {
+        for (int32_t idx = 0; idx < count; ++idx) {
+            JS_SetPropertyUint32(ctx, arr, (uint32_t)idx,
+                                 JS_NewString(ctx, files[idx]));
+        }
+        SDL_free(files);
+    }
+    return arr;
+}
+
 static const JSCFunctionListEntry js_sys_funcs[] = {
     JS_CFUNC_DEF("time", 0, js_sys_time),
     JS_CFUNC_DEF("delta", 0, js_sys_delta),
@@ -540,6 +702,9 @@ static const JSCFunctionListEntry js_sys_funcs[] = {
     JS_CFUNC_DEF("volume", 1, js_sys_volume),
     JS_CFUNC_DEF("clipboardGet", 0, js_sys_clipboard_get),
     JS_CFUNC_DEF("clipboardSet", 1, js_sys_clipboard_set),
+    JS_CFUNC_DEF("readFile", 1, js_sys_read_file),
+    JS_CFUNC_DEF("writeFile", 2, js_sys_write_file),
+    JS_CFUNC_DEF("listFiles", 1, js_sys_list_files),
 };
 
 void dtr_sys_api_register(JSContext *ctx, JSValue global)

@@ -515,6 +515,17 @@ if (score > hi) {
 | `clipboardGet` |            | `string` | Read the system clipboard                                   |
 | `clipboardSet` | `text`     | —        | Write to the system clipboard                               |
 
+### File I/O (sandboxed to cart directory)
+
+| Function    | Parameters      | Returns    | Description                                                    |
+| ----------- | --------------- | ---------- | -------------------------------------------------------------- |
+| `readFile`  | `path`          | `string`   | Read a text file. Returns `undefined` if not found             |
+| `writeFile` | `path, content` | `bool`     | Write a text file. Returns `true` on success                   |
+| `listFiles` | `dir?`          | `string[]` | List files in a directory (relative to cart). Defaults to root |
+
+All paths are relative to the cart directory. Absolute paths and `..`
+traversal are rejected with a `RangeError`.
+
 ### Configuration
 
 | Function | Parameters | Returns                      | Description                                                                                                                                                                                                        |
