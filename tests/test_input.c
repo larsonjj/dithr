@@ -54,7 +54,7 @@ static void test_key_btnp(void)
     assert(dtr_key_btnp(keys, DTR_KEY_Z)); /* first frame pressed → true */
 
     /* Frame 2: still held */
-    dtr_key_update(keys); /* copies current→previous */
+    dtr_key_update(keys, 0.016f); /* copies current→previous */
     assert(!dtr_key_btnp(keys, DTR_KEY_Z)); /* held, not newly pressed */
 
     /* Frame 3: release */
@@ -62,7 +62,7 @@ static void test_key_btnp(void)
     assert(!dtr_key_btnp(keys, DTR_KEY_Z));
 
     /* Frame 4: re-press */
-    dtr_key_update(keys);
+    dtr_key_update(keys, 0.016f);
     dtr_key_set(keys, DTR_KEY_Z, true);
     assert(dtr_key_btnp(keys, DTR_KEY_Z)); /* new press → true */
 
@@ -185,7 +185,7 @@ static void test_input_map_and_query(void)
     assert(dtr_input_btnp(inp, "jump")); /* first frame → just pressed */
 
     /* Hold */
-    dtr_key_update(keys);
+    dtr_key_update(keys, 0.016f);
     dtr_input_update(inp, keys, NULL);
     assert(dtr_input_btn(inp, "jump"));
     assert(!dtr_input_btnp(inp, "jump")); /* held → not just pressed */
@@ -255,9 +255,20 @@ static void test_key_from_scancode(void)
     DTR_ASSERT_EQ_INT(dtr_key_from_scancode(SDL_SCANCODE_F1), DTR_KEY_F1);
     DTR_ASSERT_EQ_INT(dtr_key_from_scancode(SDL_SCANCODE_0), DTR_KEY_0);
     DTR_ASSERT_EQ_INT(dtr_key_from_scancode(SDL_SCANCODE_9), DTR_KEY_9);
+    DTR_ASSERT_EQ_INT(dtr_key_from_scancode(SDL_SCANCODE_BACKSPACE), DTR_KEY_BACKSPACE);
+    DTR_ASSERT_EQ_INT(dtr_key_from_scancode(SDL_SCANCODE_DELETE), DTR_KEY_DELETE);
+    DTR_ASSERT_EQ_INT(dtr_key_from_scancode(SDL_SCANCODE_TAB), DTR_KEY_TAB);
+    DTR_ASSERT_EQ_INT(dtr_key_from_scancode(SDL_SCANCODE_HOME), DTR_KEY_HOME);
+    DTR_ASSERT_EQ_INT(dtr_key_from_scancode(SDL_SCANCODE_END), DTR_KEY_END);
+    DTR_ASSERT_EQ_INT(dtr_key_from_scancode(SDL_SCANCODE_PAGEUP), DTR_KEY_PAGEUP);
+    DTR_ASSERT_EQ_INT(dtr_key_from_scancode(SDL_SCANCODE_PAGEDOWN), DTR_KEY_PAGEDOWN);
+    DTR_ASSERT_EQ_INT(dtr_key_from_scancode(SDL_SCANCODE_LCTRL), DTR_KEY_LCTRL);
+    DTR_ASSERT_EQ_INT(dtr_key_from_scancode(SDL_SCANCODE_RCTRL), DTR_KEY_RCTRL);
+    DTR_ASSERT_EQ_INT(dtr_key_from_scancode(SDL_SCANCODE_LALT), DTR_KEY_LALT);
+    DTR_ASSERT_EQ_INT(dtr_key_from_scancode(SDL_SCANCODE_RALT), DTR_KEY_RALT);
 
     /* Unmapped scancode returns NONE */
-    DTR_ASSERT_EQ_INT(dtr_key_from_scancode(SDL_SCANCODE_BACKSPACE), DTR_KEY_NONE);
+    DTR_ASSERT_EQ_INT(dtr_key_from_scancode(SDL_SCANCODE_CAPSLOCK), DTR_KEY_NONE);
     DTR_PASS();
 }
 

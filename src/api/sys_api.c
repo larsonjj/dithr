@@ -473,6 +473,45 @@ js_sys_text_input(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst 
     return JS_UNDEFINED;
 }
 
+/* ------------------------------------------------------------------ */
+/*  Clipboard                                                          */
+/* ------------------------------------------------------------------ */
+
+static JSValue
+js_sys_clipboard_get(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+{
+    char   *text;
+    JSValue result;
+
+    (void)this_val;
+    (void)argc;
+    (void)argv;
+    text = SDL_GetClipboardText();
+    if (text == NULL) {
+        return JS_NewString(ctx, "");
+    }
+    result = JS_NewString(ctx, text);
+    SDL_free(text);
+    return result;
+}
+
+static JSValue
+js_sys_clipboard_set(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+{
+    const char *text;
+
+    (void)this_val;
+    if (argc < 1) {
+        return JS_UNDEFINED;
+    }
+    text = JS_ToCString(ctx, argv[0]);
+    if (text != NULL) {
+        SDL_SetClipboardText(text);
+        JS_FreeCString(ctx, text);
+    }
+    return JS_UNDEFINED;
+}
+
 static const JSCFunctionListEntry js_sys_funcs[] = {
     JS_CFUNC_DEF("time", 0, js_sys_time),
     JS_CFUNC_DEF("delta", 0, js_sys_delta),
@@ -499,6 +538,8 @@ static const JSCFunctionListEntry js_sys_funcs[] = {
     JS_CFUNC_DEF("stat", 1, js_sys_stat),
     JS_CFUNC_DEF("textInput", 1, js_sys_text_input),
     JS_CFUNC_DEF("volume", 1, js_sys_volume),
+    JS_CFUNC_DEF("clipboardGet", 0, js_sys_clipboard_get),
+    JS_CFUNC_DEF("clipboardSet", 1, js_sys_clipboard_set),
 };
 
 void dtr_sys_api_register(JSContext *ctx, JSValue global)

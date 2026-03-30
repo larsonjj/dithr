@@ -777,7 +777,7 @@ void dtr_console_iterate(dtr_console_t *con)
 
     /* Input update — must happen AFTER JS _update/_draw so that btnp()
        edge detection (current && !previous) is visible during the frame. */
-    dtr_key_update(con->keys);
+    dtr_key_update(con->keys, con->delta);
     dtr_mouse_update(con->mouse);
 
     /* Reset per-frame mouse deltas after JS has consumed them */

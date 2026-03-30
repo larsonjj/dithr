@@ -22,6 +22,13 @@ static JSValue js_key_btnp(JSContext *ctx, JSValueConst this_val, int argc, JSVa
                       dtr_key_btnp(KEYS(ctx), (dtr_key_t)dtr_api_opt_int(ctx, argc, argv, 0, 0)));
 }
 
+static JSValue js_key_btnr(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+{
+    (void)this_val;
+    return JS_NewBool(ctx,
+                      dtr_key_btnr(KEYS(ctx), (dtr_key_t)dtr_api_opt_int(ctx, argc, argv, 0, 0)));
+}
+
 static JSValue js_key_name(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
     (void)this_val;
@@ -33,6 +40,7 @@ static JSValue js_key_name(JSContext *ctx, JSValueConst this_val, int argc, JSVa
 static const JSCFunctionListEntry js_key_funcs[] = {
     JS_CFUNC_DEF("btn", 1, js_key_btn),
     JS_CFUNC_DEF("btnp", 1, js_key_btnp),
+    JS_CFUNC_DEF("btnr", 1, js_key_btnr),
     JS_CFUNC_DEF("name", 1, js_key_name),
 };
 
@@ -66,6 +74,17 @@ void dtr_key_api_register(JSContext *ctx, JSValue global)
     JS_SetPropertyStr(ctx, ns, "W", JS_NewInt32(ctx, DTR_KEY_W));
     JS_SetPropertyStr(ctx, ns, "F1", JS_NewInt32(ctx, DTR_KEY_F1));
     JS_SetPropertyStr(ctx, ns, "F2", JS_NewInt32(ctx, DTR_KEY_F2));
+    JS_SetPropertyStr(ctx, ns, "BACKSPACE", JS_NewInt32(ctx, DTR_KEY_BACKSPACE));
+    JS_SetPropertyStr(ctx, ns, "DELETE", JS_NewInt32(ctx, DTR_KEY_DELETE));
+    JS_SetPropertyStr(ctx, ns, "TAB", JS_NewInt32(ctx, DTR_KEY_TAB));
+    JS_SetPropertyStr(ctx, ns, "HOME", JS_NewInt32(ctx, DTR_KEY_HOME));
+    JS_SetPropertyStr(ctx, ns, "END", JS_NewInt32(ctx, DTR_KEY_END));
+    JS_SetPropertyStr(ctx, ns, "PAGEUP", JS_NewInt32(ctx, DTR_KEY_PAGEUP));
+    JS_SetPropertyStr(ctx, ns, "PAGEDOWN", JS_NewInt32(ctx, DTR_KEY_PAGEDOWN));
+    JS_SetPropertyStr(ctx, ns, "LCTRL", JS_NewInt32(ctx, DTR_KEY_LCTRL));
+    JS_SetPropertyStr(ctx, ns, "RCTRL", JS_NewInt32(ctx, DTR_KEY_RCTRL));
+    JS_SetPropertyStr(ctx, ns, "LALT", JS_NewInt32(ctx, DTR_KEY_LALT));
+    JS_SetPropertyStr(ctx, ns, "RALT", JS_NewInt32(ctx, DTR_KEY_RALT));
 
     JS_SetPropertyStr(ctx, global, "key", ns);
 }

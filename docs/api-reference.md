@@ -188,17 +188,20 @@ games).
 
 ## `key` — Keyboard
 
-| Function | Parameters | Returns  | Description                          |
-| -------- | ---------- | -------- | ------------------------------------ |
-| `btn`    | `keycode`  | `bool`   | Is the key currently held?           |
-| `btnp`   | `keycode`  | `bool`   | Was the key just pressed this frame? |
-| `name`   | `keycode`  | `string` | Human-readable key name              |
+| Function | Parameters | Returns  | Description                                                       |
+| -------- | ---------- | -------- | ----------------------------------------------------------------- |
+| `btn`    | `keycode`  | `bool`   | Is the key currently held?                                        |
+| `btnp`   | `keycode`  | `bool`   | Was the key just pressed this frame?                              |
+| `btnr`   | `keycode`  | `bool`   | Just pressed **or** auto-repeating (350 ms delay, 40 ms interval) |
+| `name`   | `keycode`  | `string` | Human-readable key name                                           |
 
 ### Constants
 
 `key.UP` `key.DOWN` `key.LEFT` `key.RIGHT` `key.Z` `key.X` `key.C` `key.V`
 `key.SPACE` `key.ENTER` `key.ESCAPE` `key.LSHIFT` `key.RSHIFT` `key.A`
-`key.B` `key.D` `key.E` `key.F` `key.W` `key.F1` `key.F2`
+`key.B` `key.D` `key.E` `key.F` `key.W` `key.S` `key.F1` `key.F2`
+`key.BACKSPACE` `key.DELETE` `key.TAB` `key.HOME` `key.END`
+`key.PAGEUP` `key.PAGEDOWN` `key.LCTRL` `key.RCTRL` `key.LALT` `key.RALT`
 
 ---
 
@@ -503,6 +506,14 @@ if (score > hi) {
 | `paused`         |            | `bool`  | Is the game paused?                          |
 | `fullscreen`     | `enabled?` | `bool`  | Get or set fullscreen. Returns current state |
 | `set_fullscreen` | `enabled`  | —       | Set fullscreen mode                          |
+
+### Text Input
+
+| Function       | Parameters | Returns  | Description                                                 |
+| -------------- | ---------- | -------- | ----------------------------------------------------------- |
+| `textInput`    | `enabled?` | —        | Enable/disable OS text input (triggers `text:input` events) |
+| `clipboardGet` |            | `string` | Read the system clipboard                                   |
+| `clipboardSet` | `text`     | —        | Write to the system clipboard                               |
 
 ### Configuration
 

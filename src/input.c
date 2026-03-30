@@ -20,6 +20,8 @@ static const char *KEY_NAMES[DTR_KEY_COUNT] = {
     "R",     "S",      "T",      "U",      "W",     "Y",   "0",   "1",   "2",  "3",
     "4",     "5",      "6",      "7",      "8",     "9",   "F1",  "F2",  "F3", "F4",
     "F5",    "F6",     "F7",     "F8",     "F9",    "F10", "F11", "F12",
+    "BACKSPACE", "DELETE", "TAB", "HOME", "END", "PAGEUP", "PAGEDOWN",
+    "LCTRL", "RCTRL", "LALT", "RALT",
 };
 
 /* ------------------------------------------------------------------ */
@@ -143,6 +145,28 @@ dtr_key_t dtr_key_from_scancode(SDL_Scancode sc)
             return DTR_KEY_F11;
         case SDL_SCANCODE_F12:
             return DTR_KEY_F12;
+        case SDL_SCANCODE_BACKSPACE:
+            return DTR_KEY_BACKSPACE;
+        case SDL_SCANCODE_DELETE:
+            return DTR_KEY_DELETE;
+        case SDL_SCANCODE_TAB:
+            return DTR_KEY_TAB;
+        case SDL_SCANCODE_HOME:
+            return DTR_KEY_HOME;
+        case SDL_SCANCODE_END:
+            return DTR_KEY_END;
+        case SDL_SCANCODE_PAGEUP:
+            return DTR_KEY_PAGEUP;
+        case SDL_SCANCODE_PAGEDOWN:
+            return DTR_KEY_PAGEDOWN;
+        case SDL_SCANCODE_LCTRL:
+            return DTR_KEY_LCTRL;
+        case SDL_SCANCODE_RCTRL:
+            return DTR_KEY_RCTRL;
+        case SDL_SCANCODE_LALT:
+            return DTR_KEY_LALT;
+        case SDL_SCANCODE_RALT:
+            return DTR_KEY_RALT;
         default:
             return DTR_KEY_NONE;
     }
@@ -165,9 +189,38 @@ void dtr_key_destroy(dtr_key_state_t *keys)
     DTR_FREE(keys);
 }
 
-void dtr_key_update(dtr_key_state_t *keys)
+void dtr_key_update(dtr_key_state_t *keys, float delta)
 {
     SDL_memcpy(keys->previous, keys->current, sizeof(keys->current));
+    SDL_memset(keys->repeat_fired, 0, sizeof(keys->repeat_fired));
+
+    for (int32_t idx = 1; idx < DTR_KEY_COUNT; ++idx) {
+        if (keys->current[idx]) {
+            float prev_time;
+
+            prev_time = keys->hold_time[idx];
+            keys->hold_time[idx] += delta;
+
+            if (prev_time >= DTR_KEY_REPEAT_DELAY) {
+                /* Already past initial delay — check repeat interval */
+                float prev_rep;
+                float curr_rep;
+
+                prev_rep = prev_time - DTR_KEY_REPEAT_DELAY;
+                curr_rep = keys->hold_time[idx] - DTR_KEY_REPEAT_DELAY;
+
+                if ((int)(curr_rep / DTR_KEY_REPEAT_INTERVAL)
+                    > (int)(prev_rep / DTR_KEY_REPEAT_INTERVAL)) {
+                    keys->repeat_fired[idx] = true;
+                }
+            } else if (keys->hold_time[idx] >= DTR_KEY_REPEAT_DELAY) {
+                /* Just crossed the initial delay threshold */
+                keys->repeat_fired[idx] = true;
+            }
+        } else {
+            keys->hold_time[idx] = 0.0f;
+        }
+    }
 }
 
 void dtr_key_set(dtr_key_state_t *keys, dtr_key_t key, bool down)
@@ -189,6 +242,17 @@ bool dtr_key_btnp(dtr_key_state_t *keys, dtr_key_t key)
 {
     if (key > DTR_KEY_NONE && key < DTR_KEY_COUNT) {
         return keys->current[key] && !keys->previous[key];
+    }
+    return false;
+}
+
+bool dtr_key_btnr(dtr_key_state_t *keys, dtr_key_t key)
+{
+    if (key > DTR_KEY_NONE && key < DTR_KEY_COUNT) {
+        if (keys->current[key] && !keys->previous[key]) {
+            return true; /* initial press */
+        }
+        return keys->repeat_fired[key];
     }
     return false;
 }

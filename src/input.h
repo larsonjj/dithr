@@ -72,6 +72,17 @@ typedef enum dtr_key {
     DTR_KEY_F10,
     DTR_KEY_F11,
     DTR_KEY_F12,
+    DTR_KEY_BACKSPACE,
+    DTR_KEY_DELETE,
+    DTR_KEY_TAB,
+    DTR_KEY_HOME,
+    DTR_KEY_END,
+    DTR_KEY_PAGEUP,
+    DTR_KEY_PAGEDOWN,
+    DTR_KEY_LCTRL,
+    DTR_KEY_RCTRL,
+    DTR_KEY_LALT,
+    DTR_KEY_RALT,
     DTR_KEY_COUNT
 } dtr_key_t;
 
@@ -120,17 +131,24 @@ typedef enum dtr_mouse_btn {
 /*  Keyboard state                                                           */
 /* ------------------------------------------------------------------------ */
 
+/* Key repeat default timing (seconds) */
+#define DTR_KEY_REPEAT_DELAY    0.35f
+#define DTR_KEY_REPEAT_INTERVAL 0.04f
+
 struct dtr_key_state {
-    bool current[DTR_KEY_COUNT];
-    bool previous[DTR_KEY_COUNT];
+    bool  current[DTR_KEY_COUNT];
+    bool  previous[DTR_KEY_COUNT];
+    float hold_time[DTR_KEY_COUNT];
+    bool  repeat_fired[DTR_KEY_COUNT];
 };
 
 dtr_key_state_t *dtr_key_create(void);
 void             dtr_key_destroy(dtr_key_state_t *keys);
-void             dtr_key_update(dtr_key_state_t *keys);
+void             dtr_key_update(dtr_key_state_t *keys, float delta);
 void             dtr_key_set(dtr_key_state_t *keys, dtr_key_t key, bool down);
 bool             dtr_key_btn(dtr_key_state_t *keys, dtr_key_t key);
 bool             dtr_key_btnp(dtr_key_state_t *keys, dtr_key_t key);
+bool             dtr_key_btnr(dtr_key_state_t *keys, dtr_key_t key);
 const char *     dtr_key_name(dtr_key_t key);
 
 /**
