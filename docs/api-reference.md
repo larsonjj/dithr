@@ -11,6 +11,31 @@ The engine calls three optional global callbacks each frame:
 | `_update(dt)` | `dt`: seconds since last frame | Called every frame before draw       |
 | `_draw()`     | —                              | Called every frame for rendering     |
 
+### Hot-reload callbacks (DEV_BUILD only)
+
+Two additional optional callbacks support state preservation across hot
+reloads:
+
+| Callback          | Signature              | Description                                                                         |
+| ----------------- | ---------------------- | ----------------------------------------------------------------------------------- |
+| `_save()`         | — → `object` or `void` | Called before teardown. Return a JSON-serializable object to preserve game state    |
+| `_restore(state)` | `state`: saved object  | Called after the new code is evaluated with the object returned by the last `_save` |
+
+If `_save()` returns `undefined` (or is not defined), `_restore()` is not
+called. The engine also auto-preserves camera, palette, draw state, custom
+font, PostFX stack, and draw list across reloads.
+
+```js
+function _save() {
+    return { px: px, py: py, score: score };
+}
+function _restore(s) {
+    px = s.px;
+    py = s.py;
+    score = s.score;
+}
+```
+
 ---
 
 ## `gfx` — Drawing, Palette, Sprites
@@ -529,3 +554,38 @@ function _update(dt) {
     cam.follow(player.x - 160, player.y - 90, 0.08);
 }
 ```
+
+---
+
+## System Events
+
+The engine emits the following events on the `evt` bus. Subscribe with
+`evt.on("sys:event_name", callback)`.
+
+| Event                 | Payload | Description                                        |
+| --------------------- | ------- | -------------------------------------------------- |
+| `sys:cart_load`       | —       | Cart has been loaded (or reloaded)                 |
+| `sys:cart_unload`     | —       | Cart is about to be torn down                      |
+| `sys:quit`            | —       | Engine is shutting down                            |
+| `sys:pause`           | —       | Game paused (Escape pressed)                       |
+| `sys:resume`          | —       | Game resumed                                       |
+| `sys:fullscreen`      | —       | Fullscreen toggled (F11)                           |
+| `sys:focus_lost`      | —       | Window lost focus                                  |
+| `sys:focus_gained`    | —       | Window gained focus                                |
+| `sys:resize`          | —       | Window was resized                                 |
+| `sys:assets_reloaded` | —       | Assets were reloaded (F6 or `cart.reloadAssets()`) |
+| `text:input`          | string  | Text input character (from `SDL_EVENT_TEXT_INPUT`) |
+
+---
+
+## Dev Keybindings (DEV_BUILD only)
+
+These keybindings are available in development builds:
+
+| Key | Action                                                    |
+| --- | --------------------------------------------------------- |
+| F4  | Undo last hot reload (revert to previous JS code)         |
+| F5  | Force hot reload (re-evaluate JS source from disk)        |
+| F6  | Reload assets only (sprites, maps, SFX, music) without JS |
+| F11 | Toggle fullscreen                                         |
+| Esc | Toggle pause                                              |

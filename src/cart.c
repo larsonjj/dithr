@@ -932,5 +932,6 @@ void dtr_cart_destroy(dtr_cart_t *cart)
     }
 
     DTR_FREE(cart->sprite_rgba);
+    DTR_FREE(cart->code);
     DTR_FREE(cart);
 }

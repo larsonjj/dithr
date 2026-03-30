@@ -68,6 +68,135 @@ static void prv_console_cleanup(dtr_console_t *con)
 }
 
 /* ------------------------------------------------------------------ */
+/*  Hot-reload: directory mtime scanning                               */
+/* ------------------------------------------------------------------ */
+
+#if DEV_BUILD
+
+typedef struct {
+    const char *dir;
+    int64_t     max_mtime;
+} prv_dir_scan_t;
+
+static SDL_EnumerationResult SDLCALL prv_scan_js_cb(void *userdata,
+                                                     const char *dirname,
+                                                     const char *fname)
+{
+    prv_dir_scan_t *scan;
+    const char     *ext;
+    char            full[1024];
+    SDL_PathInfo    info;
+
+    scan = (prv_dir_scan_t *)userdata;
+
+    /* Skip editor temp / backup files */
+    if (fname[0] == '.') {
+        return SDL_ENUM_CONTINUE;
+    }
+    ext = SDL_strrchr(fname, '.');
+    if (ext != NULL) {
+        if (SDL_strcasecmp(ext, ".tmp") == 0 || SDL_strcasecmp(ext, ".swp") == 0 ||
+            SDL_strcasecmp(ext, ".bak") == 0 || SDL_strcasecmp(ext, ".crswap") == 0) {
+            return SDL_ENUM_CONTINUE;
+        }
+    }
+    {
+        size_t name_len;
+
+        name_len = SDL_strlen(fname);
+        if (name_len > 0 && fname[name_len - 1] == '~') {
+            return SDL_ENUM_CONTINUE;
+        }
+    }
+
+    SDL_snprintf(full, sizeof(full), "%s%s", dirname, fname);
+
+    /* Recurse into subdirectories */
+    if (SDL_GetPathInfo(full, &info) && info.type == SDL_PATHTYPE_DIRECTORY) {
+        char subdir[1024];
+
+        SDL_snprintf(subdir, sizeof(subdir), "%s/", full);
+        SDL_EnumerateDirectory(subdir, prv_scan_js_cb, userdata);
+        return SDL_ENUM_CONTINUE;
+    }
+
+    if (ext == NULL || SDL_strcasecmp(ext, ".js") != 0) {
+        return SDL_ENUM_CONTINUE;
+    }
+
+    if (SDL_GetPathInfo(full, &info)) {
+        if (info.modify_time > scan->max_mtime) {
+            scan->max_mtime = info.modify_time;
+        }
+    }
+
+    return SDL_ENUM_CONTINUE;
+}
+
+/**
+ * \brief           Poll for .js file changes and manage debounce timer.
+ *
+ * Called from iterate() both in normal and error states.  When a file
+ * change is detected and the debounce window has elapsed, sets
+ * con->reload = true.
+ */
+static void prv_poll_file_changes(dtr_console_t *con)
+{
+    uint64_t ticks;
+    double   elapsed_ms;
+
+    if (con->watch_path[0] == '\0') {
+        return;
+    }
+
+    ticks      = SDL_GetPerformanceCounter();
+    elapsed_ms = (double)(ticks - con->watch_last_poll)
+                 / (double)SDL_GetPerformanceFrequency() * 1000.0;
+
+    if (elapsed_ms >= 200.0) {
+        bool changed;
+
+        changed = false;
+        con->watch_last_poll = ticks;
+
+        if (con->watch_dir[0] != '\0') {
+            prv_dir_scan_t scan;
+
+            scan.dir       = con->watch_dir;
+            scan.max_mtime = con->watch_mtime;
+            SDL_EnumerateDirectory(con->watch_dir, prv_scan_js_cb, &scan);
+            changed = (scan.max_mtime != con->watch_mtime);
+        } else {
+            SDL_PathInfo info;
+
+            if (SDL_GetPathInfo(con->watch_path, &info)) {
+                changed = (info.modify_time != con->watch_mtime);
+            }
+        }
+
+        if (changed && !con->reload_pending) {
+            con->reload_pending     = true;
+            con->reload_detect_time = ticks;
+        }
+    }
+
+    /* Debounce: fire reload after 300 ms of detected change */
+    if (con->reload_pending) {
+        double debounce_ms;
+
+        debounce_ms = (double)(SDL_GetPerformanceCounter() - con->reload_detect_time)
+                      / (double)SDL_GetPerformanceFrequency() * 1000.0;
+        if (debounce_ms >= 300.0) {
+            SDL_Log("hot-reload: change detected, reloading");
+            con->reload         = true;
+            con->reload_pending = false;
+        }
+    }
+}
+
+#endif /* DEV_BUILD */
+
+/* ------------------------------------------------------------------ */
 /*  Create                                                             */
 /* ------------------------------------------------------------------ */
 
@@ -314,7 +443,15 @@ dtr_console_t *dtr_console_create(const char *cart_path)
                 }
             }
 
+            /* Scan all .js files so watch_mtime covers the whole directory,
+               preventing a spurious reload on the first poll cycle. */
             if (con->watch_dir[0] != '\0') {
+                prv_dir_scan_t scan;
+
+                scan.dir       = con->watch_dir;
+                scan.max_mtime = con->watch_mtime;
+                SDL_EnumerateDirectory(con->watch_dir, prv_scan_js_cb, &scan);
+                con->watch_mtime = scan.max_mtime;
                 SDL_Log("hot-reload: watching directory %s", con->watch_dir);
             } else {
                 SDL_Log("hot-reload: watching %s", con->watch_path);
@@ -391,7 +528,10 @@ void dtr_console_event(dtr_console_t *con, SDL_Event *event)
 
                         SDL_snprintf(full, sizeof(full), "%s%s",
                                      con->cart->base_path, con->cart->code_path);
-                        SDL_SaveFile(full, con->cart->code, con->cart->code_len);
+                        if (!SDL_SaveFile(full, con->cart->code, con->cart->code_len)) {
+                            SDL_Log("hot-reload: undo — failed to write %s: %s",
+                                    full, SDL_GetError());
+                        }
                     }
 
                     con->reload = true;
@@ -515,74 +655,6 @@ void dtr_console_event(dtr_console_t *con, SDL_Event *event)
 }
 
 /* ------------------------------------------------------------------ */
-/*  Hot-reload: directory mtime scanning                               */
-/* ------------------------------------------------------------------ */
-
-#if DEV_BUILD
-
-typedef struct {
-    const char *dir;
-    int64_t     max_mtime;
-} prv_dir_scan_t;
-
-static SDL_EnumerationResult SDLCALL prv_scan_js_cb(void *userdata,
-                                                     const char *dirname,
-                                                     const char *fname)
-{
-    prv_dir_scan_t *scan;
-    const char     *ext;
-    char            full[1024];
-    SDL_PathInfo    info;
-
-    scan = (prv_dir_scan_t *)userdata;
-
-    /* Skip editor temp / backup files */
-    if (fname[0] == '.') {
-        return SDL_ENUM_CONTINUE;
-    }
-    ext = SDL_strrchr(fname, '.');
-    if (ext != NULL) {
-        if (SDL_strcasecmp(ext, ".tmp") == 0 || SDL_strcasecmp(ext, ".swp") == 0 ||
-            SDL_strcasecmp(ext, ".bak") == 0 || SDL_strcasecmp(ext, ".crswap") == 0) {
-            return SDL_ENUM_CONTINUE;
-        }
-    }
-    {
-        size_t name_len;
-
-        name_len = SDL_strlen(fname);
-        if (name_len > 0 && fname[name_len - 1] == '~') {
-            return SDL_ENUM_CONTINUE;
-        }
-    }
-
-    SDL_snprintf(full, sizeof(full), "%s%s", dirname, fname);
-
-    /* Recurse into subdirectories */
-    if (SDL_GetPathInfo(full, &info) && info.type == SDL_PATHTYPE_DIRECTORY) {
-        char subdir[1024];
-
-        SDL_snprintf(subdir, sizeof(subdir), "%s/", full);
-        SDL_EnumerateDirectory(subdir, prv_scan_js_cb, userdata);
-        return SDL_ENUM_CONTINUE;
-    }
-
-    if (ext == NULL || SDL_strcasecmp(ext, ".js") != 0) {
-        return SDL_ENUM_CONTINUE;
-    }
-
-    if (SDL_GetPathInfo(full, &info)) {
-        if (info.modify_time > scan->max_mtime) {
-            scan->max_mtime = info.modify_time;
-        }
-    }
-
-    return SDL_ENUM_CONTINUE;
-}
-
-#endif /* DEV_BUILD */
-
-/* ------------------------------------------------------------------ */
 /*  Per-frame iteration (called by SDL_AppIterate)                     */
 /* ------------------------------------------------------------------ */
 
@@ -611,53 +683,7 @@ void dtr_console_iterate(dtr_console_t *con)
 
 #if DEV_BUILD
         /* Keep polling for file changes so auto-reload works during errors */
-        if (con->watch_path[0] != '\0') {
-            uint64_t err_ticks;
-            double   err_elapsed;
-
-            err_ticks   = SDL_GetPerformanceCounter();
-            err_elapsed = (double)(err_ticks - con->watch_last_poll)
-                          / (double)SDL_GetPerformanceFrequency() * 1000.0;
-
-            if (err_elapsed >= 200.0) {
-                bool changed;
-
-                changed = false;
-                con->watch_last_poll = err_ticks;
-
-                if (con->watch_dir[0] != '\0') {
-                    prv_dir_scan_t scan;
-
-                    scan.dir       = con->watch_dir;
-                    scan.max_mtime = con->watch_mtime;
-                    SDL_EnumerateDirectory(con->watch_dir, prv_scan_js_cb, &scan);
-                    changed = (scan.max_mtime != con->watch_mtime);
-                } else {
-                    SDL_PathInfo info;
-
-                    if (SDL_GetPathInfo(con->watch_path, &info)) {
-                        changed = (info.modify_time != con->watch_mtime);
-                    }
-                }
-
-                if (changed && !con->reload_pending) {
-                    con->reload_pending     = true;
-                    con->reload_detect_time = err_ticks;
-                }
-            }
-
-            if (con->reload_pending) {
-                double debounce_ms;
-
-                debounce_ms = (double)(SDL_GetPerformanceCounter() - con->reload_detect_time)
-                              / (double)SDL_GetPerformanceFrequency() * 1000.0;
-                if (debounce_ms >= 300.0) {
-                    SDL_Log("hot-reload: change detected (during error), reloading");
-                    con->reload         = true;
-                    con->reload_pending = false;
-                }
-            }
-        }
+        prv_poll_file_changes(con);
 #endif
         return;
     }
@@ -765,58 +791,8 @@ void dtr_console_iterate(dtr_console_t *con)
     ++con->frame_count;
 
 #if DEV_BUILD
-    /* Hot-reload: poll JS source directory for changes (every 200 ms, absolute time) */
-    if (con->watch_path[0] != '\0') {
-        uint64_t now_ticks;
-        double   elapsed_ms;
-
-        now_ticks  = SDL_GetPerformanceCounter();
-        elapsed_ms = (double)(now_ticks - con->watch_last_poll)
-                     / (double)SDL_GetPerformanceFrequency() * 1000.0;
-
-        if (elapsed_ms >= 200.0) {
-            bool     changed;
-
-            changed = false;
-            con->watch_last_poll = now_ticks;
-
-            if (con->watch_dir[0] != '\0') {
-                /* Scan directory (recursive) for any .js file newer than watch_mtime */
-                prv_dir_scan_t scan;
-
-                scan.dir       = con->watch_dir;
-                scan.max_mtime = con->watch_mtime;
-                SDL_EnumerateDirectory(con->watch_dir, prv_scan_js_cb, &scan);
-                changed = (scan.max_mtime != con->watch_mtime);
-            } else {
-                /* Fall back to single-file watch */
-                SDL_PathInfo info;
-
-                if (SDL_GetPathInfo(con->watch_path, &info)) {
-                    changed = (info.modify_time != con->watch_mtime);
-                }
-            }
-
-            if (changed && !con->reload_pending) {
-                /* Start debounce timer */
-                con->reload_pending    = true;
-                con->reload_detect_time = now_ticks;
-            }
-        }
-
-        /* Debounce: fire reload after 300 ms of detected change */
-        if (con->reload_pending) {
-            double debounce_ms;
-
-            debounce_ms = (double)(SDL_GetPerformanceCounter() - con->reload_detect_time)
-                          / (double)SDL_GetPerformanceFrequency() * 1000.0;
-            if (debounce_ms >= 300.0) {
-                SDL_Log("hot-reload: change detected, reloading");
-                con->reload         = true;
-                con->reload_pending = false;
-            }
-        }
-    }
+    /* Hot-reload: poll JS source directory for changes (every 200 ms) */
+    prv_poll_file_changes(con);
 #endif
 }
 
@@ -854,6 +830,9 @@ bool dtr_console_reload(dtr_console_t *con)
     uint8_t saved_screen_pal[CONSOLE_PALETTE_SIZE];
     bool    saved_transparent[CONSOLE_PALETTE_SIZE];
 
+    /* Custom font snapshot */
+    dtr_custom_font_t saved_custom_font = {0};
+
     if (con == NULL) {
         return false;
     }
@@ -866,6 +845,10 @@ bool dtr_console_reload(dtr_console_t *con)
     new_code = (char *)SDL_LoadFile(code_full, &new_len);
     if (new_code == NULL) {
         SDL_Log("hot-reload: failed to read %s", code_full);
+#if DEV_BUILD
+        con->reload_toast        = 1.5f;
+        con->reload_toast_failed = true;
+#endif
         return false;
     }
 
@@ -927,6 +910,7 @@ bool dtr_console_reload(dtr_console_t *con)
         SDL_memcpy(saved_draw_pal, con->graphics->draw_pal, sizeof(saved_draw_pal));
         SDL_memcpy(saved_screen_pal, con->graphics->screen_pal, sizeof(saved_screen_pal));
         SDL_memcpy(saved_transparent, con->graphics->transparent, sizeof(saved_transparent));
+        saved_custom_font = con->graphics->custom_font;
     }
 
     /* ---- 2c. Snapshot postfx stack ---- */
@@ -945,6 +929,10 @@ bool dtr_console_reload(dtr_console_t *con)
         SDL_Log("hot-reload: failed to create runtime");
         SDL_free(new_code);
         SDL_free(saved_json);
+#if DEV_BUILD
+        con->reload_toast        = 1.5f;
+        con->reload_toast_failed = true;
+#endif
         return false;
     }
 
@@ -956,6 +944,10 @@ bool dtr_console_reload(dtr_console_t *con)
         dtr_runtime_destroy(new_rt);
         SDL_free(new_code);
         SDL_free(saved_json);
+#if DEV_BUILD
+        con->reload_toast        = 1.5f;
+        con->reload_toast_failed = true;
+#endif
         /* Old runtime + events stay intact; engine keeps running */
         return false;
     }
@@ -1013,6 +1005,9 @@ bool dtr_console_reload(dtr_console_t *con)
                 JSValue res;
 
                 res = JS_Call(con->runtime->ctx, func, global, 1, &parsed);
+                if (JS_IsException(res)) {
+                    SDL_Log("hot-reload: _restore() threw an exception");
+                }
                 JS_FreeValue(con->runtime->ctx, res);
             }
 
@@ -1048,6 +1043,10 @@ bool dtr_console_reload(dtr_console_t *con)
         SDL_memcpy(con->graphics->draw_pal, saved_draw_pal, sizeof(saved_draw_pal));
         SDL_memcpy(con->graphics->screen_pal, saved_screen_pal, sizeof(saved_screen_pal));
         SDL_memcpy(con->graphics->transparent, saved_transparent, sizeof(saved_transparent));
+        con->graphics->custom_font = saved_custom_font;
+
+        /* Reset in-progress transition to avoid stale visuals */
+        SDL_memset(&con->graphics->transition, 0, sizeof(con->graphics->transition));
 
         /* Reset draw list in case reload hit mid-batch */
         con->graphics->draw_list.active = false;
@@ -1253,8 +1252,9 @@ bool dtr_console_reload_assets(dtr_console_t *con)
 
     t_start = SDL_GetPerformanceCounter();
 
-    /* Stop music before reloading audio assets */
+    /* Stop all playback before clearing audio assets (prevents use-after-free) */
     if (con->audio != NULL) {
+        dtr_sfx_stop(con->audio, -1);
         dtr_mus_stop(con->audio, 0);
         dtr_audio_clear_music(con->audio);
         dtr_audio_clear_sfx(con->audio);

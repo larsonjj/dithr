@@ -188,19 +188,18 @@ namespace:
 
 During development (`DEV_BUILD`), the engine polls the JS source file for
 changes every 200 ms. When a change is detected (or the user presses **F5**),
-`dtr_console_reload()` executes a 13-step process:
+`dtr_console_reload()` executes a 10-step process:
 
-1. Call the JS `_save()` callback (if defined) to capture game state.
-2. Emit `"unload"` event.
-3. Destroy the QuickJS runtime.
-4. Re-read the JS source from disk.
-5. Create a fresh QuickJS runtime.
-6. Re-register all API namespaces.
-7. Evaluate the new source.
-8. Call `_restore(state)` with the saved state (if `_save` returned a value).
-9. Call `_init()`.
-10. Emit `"cart_load"` event.
-11. Update the file modification timestamp.
+1. Read new JS source from disk.
+2. Call the JS `_save()` callback (if defined) to capture game state.
+3. Snapshot camera, palette, draw state, custom font, and PostFX stack.
+4. Create a fresh QuickJS runtime and register all API namespaces.
+5. Evaluate the new source — on failure, the old runtime stays intact.
+6. Tear down the old runtime; clear and rebind the event bus.
+7. Call `_restore(state)` with the saved state (if `_save` returned a value).
+8. Restore PostFX, camera, draw state, custom font; reset transition and draw list.
+9. Call `_init()` and emit `sys:cart_load`.
+10. Update file watch timestamps and log elapsed time.
 
 Graphics state (palette, camera, clip, framebuffer) is **not** reset during
 reload, so the screen does not flash. A green "RELOADED" toast renders for

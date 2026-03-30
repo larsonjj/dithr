@@ -29,6 +29,17 @@ const ROOT = path.resolve(__dirname, "..");
 const BUILD_DIR = path.join(ROOT, "build", "wasm");
 const CART_ABS = path.resolve(CART_DIR);
 
+/* Read cart.json to determine the JS entry-point file */
+let ENTRY_JS = null;
+try {
+    const cartJson = JSON.parse(fs.readFileSync(path.join(CART_ABS, "cart.json"), "utf8"));
+    if (cartJson.code) {
+        ENTRY_JS = cartJson.code.replace(/\\/g, "/");
+    }
+} catch (_) {
+    /* cart.json missing or unparseable — fall back to treating all .js as entry */
+}
+
 /* ------------------------------------------------------------------ */
 /*  SSE live-reload                                                    */
 /* ------------------------------------------------------------------ */
@@ -315,6 +326,11 @@ function onCartChange(eventType, filename) {
 
         const jsOnly = known.every((f) => f.endsWith(".js") || f.endsWith(".mjs"));
 
+        /* When we know the entry-point, only hot-reload if the changed file
+           IS the entry-point.  Other .js files need a full cmake rebuild. */
+        const isEntryChange =
+            jsOnly && ENTRY_JS != null && known.length === 1 && known[0] === ENTRY_JS;
+
         const ASSET_EXTS = [".png", ".tmj", ".ldtk", ".wav", ".ogg", ".mp3"];
         const assetOnly =
             !jsOnly &&
@@ -323,9 +339,9 @@ function onCartChange(eventType, filename) {
                 return ASSET_EXTS.includes(ext);
             });
 
-        if (jsOnly) {
-            /* JS-only change — hot reload without cmake rebuild */
-            console.log(`[watch] JS changed: ${known.join(", ")} — hot-reloading`);
+        if (isEntryChange) {
+            /* Entry-point JS change — hot reload without cmake rebuild */
+            console.log(`[watch] JS entry changed: ${known.join(", ")} — hot-reloading`);
             for (const client of sseClients) {
                 for (const f of known) {
                     client.write(`event: hotreload\ndata: ${f}\n\n`);
