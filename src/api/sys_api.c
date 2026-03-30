@@ -526,6 +526,7 @@ static bool prv_resolve_sandboxed(JSContext *ctx, const char *rel,
 {
     dtr_console_t *con;
     const char    *base;
+    char           norm_base[1024];
     size_t         base_len;
     char          *pos;
 
@@ -549,9 +550,17 @@ static bool prv_resolve_sandboxed(JSContext *ctx, const char *rel,
         }
     }
 
+    /* Normalise base_path the same way for comparison */
+    SDL_strlcpy(norm_base, base, sizeof(norm_base));
+    for (pos = norm_base; *pos != '\0'; ++pos) {
+        if (*pos == '\\') {
+            *pos = '/';
+        }
+    }
+
     /* Final check: resolved path must start with base_path */
-    base_len = SDL_strlen(base);
-    if (SDL_strncmp(full, base, base_len) != 0) {
+    base_len = SDL_strlen(norm_base);
+    if (SDL_strncmp(full, norm_base, base_len) != 0) {
         return false;
     }
 
@@ -674,6 +683,76 @@ js_sys_list_files(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst 
     return arr;
 }
 
+/* ------------------------------------------------------------------ */
+/*  Directory listing                                                  */
+/* ------------------------------------------------------------------ */
+
+typedef struct {
+    JSContext *ctx;
+    JSValue    arr;
+    uint32_t   idx;
+    const char *base;
+} prv_list_dirs_ctx_t;
+
+static SDL_EnumerationResult
+prv_list_dirs_cb(void *userdata, const char *dirname, const char *fname)
+{
+    prv_list_dirs_ctx_t *ld;
+    char                 full[1024];
+    SDL_PathInfo         info;
+
+    ld = (prv_list_dirs_ctx_t *)userdata;
+    (void)dirname;
+
+    SDL_snprintf(full, sizeof(full), "%s%s", ld->base, fname);
+    if (SDL_GetPathInfo(full, &info) && info.type == SDL_PATHTYPE_DIRECTORY) {
+        JS_SetPropertyUint32(ld->ctx, ld->arr, ld->idx,
+                             JS_NewString(ld->ctx, fname));
+        ++ld->idx;
+    }
+    return SDL_ENUM_CONTINUE;
+}
+
+static JSValue
+js_sys_list_dirs(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+{
+    const char         *rel;
+    char                full[1024];
+    prv_list_dirs_ctx_t ld;
+
+    (void)this_val;
+
+    rel = "";
+    if (argc >= 1) {
+        rel = JS_ToCString(ctx, argv[0]);
+        if (rel == NULL) {
+            return JS_NewArray(ctx);
+        }
+    }
+
+    if (rel[0] != '\0') {
+        if (!prv_resolve_sandboxed(ctx, rel, full, sizeof(full))) {
+            if (argc >= 1) {
+                JS_FreeCString(ctx, rel);
+            }
+            return JS_ThrowRangeError(ctx, "listDirs: path outside cart directory");
+        }
+    } else {
+        SDL_snprintf(full, sizeof(full), "%s", dtr_api_get_console(ctx)->cart->base_path);
+    }
+    if (argc >= 1) {
+        JS_FreeCString(ctx, rel);
+    }
+
+    ld.ctx  = ctx;
+    ld.arr  = JS_NewArray(ctx);
+    ld.idx  = 0;
+    ld.base = full;
+
+    SDL_EnumerateDirectory(full, prv_list_dirs_cb, &ld);
+    return ld.arr;
+}
+
 static const JSCFunctionListEntry js_sys_funcs[] = {
     JS_CFUNC_DEF("time", 0, js_sys_time),
     JS_CFUNC_DEF("delta", 0, js_sys_delta),
@@ -705,6 +784,7 @@ static const JSCFunctionListEntry js_sys_funcs[] = {
     JS_CFUNC_DEF("readFile", 1, js_sys_read_file),
     JS_CFUNC_DEF("writeFile", 2, js_sys_write_file),
     JS_CFUNC_DEF("listFiles", 1, js_sys_list_files),
+    JS_CFUNC_DEF("listDirs", 1, js_sys_list_dirs),
 };
 
 void dtr_sys_api_register(JSContext *ctx, JSValue global)

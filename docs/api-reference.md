@@ -526,6 +526,7 @@ if (score > hi) {
 | `readFile`  | `path`          | `string`   | Read a text file. Returns `undefined` if not found             |
 | `writeFile` | `path, content` | `bool`     | Write a text file. Returns `true` on success                   |
 | `listFiles` | `dir?`          | `string[]` | List files in a directory (relative to cart). Defaults to root |
+| `listDirs`  | `dir?`          | `string[]` | List subdirectories in a directory (relative to cart)          |
 
 All paths are relative to the cart directory. Absolute paths and `..`
 traversal are rejected with a `RangeError`.

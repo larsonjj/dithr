@@ -62,6 +62,7 @@ let fname = ""; // current filename
 let dirty = false;
 let msg = "",
     msgT = 0; // status message + timer
+let restored = false; // set by _restore to skip default open in _init
 
 // undo
 const MAXUNDO = 200;
@@ -69,9 +70,10 @@ let undoStack = [];
 
 // file browser
 let brMode = false;
-let brFiles = [];
+let brEntries = []; // {name, isDir}
 let brIdx = 0;
 let brScroll = 0;
+let brDir = ""; // current directory relative to cart root ("" = root, "src/" etc.)
 
 // JS keywords for syntax highlighting
 const KEYWORDS = new Set([
@@ -239,13 +241,30 @@ function saveFile() {
 }
 
 function openBrowser() {
-    brFiles = sys.listFiles("src");
-    if (!brFiles || !brFiles.length) {
-        brFiles = sys.listFiles();
+    brDir = "";
+    refreshBrowser();
+    brMode = true;
+}
+
+function refreshBrowser() {
+    let dirs = sys.listDirs(brDir || undefined);
+    let files = sys.listFiles(brDir || undefined);
+    brEntries = [];
+    if (brDir) {
+        brEntries.push({ name: "..", isDir: true });
+    }
+    if (dirs) {
+        for (let i = 0; i < dirs.length; i++) {
+            brEntries.push({ name: dirs[i], isDir: true });
+        }
+    }
+    if (files) {
+        for (let i = 0; i < files.length; i++) {
+            brEntries.push({ name: files[i], isDir: false });
+        }
     }
     brIdx = 0;
     brScroll = 0;
-    brMode = true;
 }
 
 // ─── Syntax highlighting ─────────────────────────────────────────────────────
@@ -344,11 +363,14 @@ function onTextInput(ch) {
 function _init() {
     sys.textInput(true);
     evt.on("text:input", onTextInput);
-    status("dithr editor — Ctrl+O open  Ctrl+S save", 5);
+    if (!restored) {
+        openFile("src/main.js");
+    }
+    restored = false;
 }
 
 function _save() {
-    return { buf, cx, cy, ox, oy, fname, dirty, undoStack, anchor };
+    return { buf, cx, cy, ox, oy, fname, dirty, undoStack, anchor, brDir };
 }
 
 function _restore(s) {
@@ -361,6 +383,8 @@ function _restore(s) {
     dirty = s.dirty;
     undoStack = s.undoStack || [];
     anchor = s.anchor || null;
+    brDir = s.brDir || "";
+    restored = true;
 }
 
 function _update(dt) {
@@ -665,13 +689,28 @@ function drawSelection(lineIdx, py) {
 
 function updateBrowser() {
     if (key.btnr(key.UP)) brIdx = Math.max(0, brIdx - 1);
-    if (key.btnr(key.DOWN)) brIdx = Math.min(brFiles.length - 1, brIdx + 1);
+    if (key.btnr(key.DOWN)) brIdx = Math.min(brEntries.length - 1, brIdx + 1);
     if (brIdx < brScroll) brScroll = brIdx;
     if (brIdx >= brScroll + EROWS) brScroll = brIdx - EROWS + 1;
 
-    if (key.btnp(key.ENTER) && brFiles.length) {
-        openFile("src/" + brFiles[brIdx]);
-        brMode = false;
+    if (key.btnp(key.ENTER) && brEntries.length) {
+        let entry = brEntries[brIdx];
+        if (entry.isDir) {
+            if (entry.name === "..") {
+                // Go up one level
+                let parts = brDir.split("/").filter(function (p) {
+                    return p;
+                });
+                parts.pop();
+                brDir = parts.length ? parts.join("/") + "/" : "";
+            } else {
+                brDir = brDir + entry.name + "/";
+            }
+            refreshBrowser();
+        } else {
+            openFile(brDir + entry.name);
+            brMode = false;
+        }
     }
     if (key.btnp(key.ESCAPE)) brMode = false;
 }
@@ -679,19 +718,22 @@ function updateBrowser() {
 function drawBrowser() {
     // Header
     gfx.rectfill(0, 0, FB_W - 1, CH - 1, HEADBG);
-    gfx.print("Open file (src/)  Up/Down select  Enter open  Esc cancel", CW, 0, HEADFG);
+    let hdr = "Open: /" + brDir + "  Up/Down select  Enter open  Esc cancel";
+    gfx.print(hdr, CW, 0, HEADFG);
 
     let editY = HEAD * CH;
-    for (let i = 0; i < EROWS && brScroll + i < brFiles.length; i++) {
+    for (let i = 0; i < EROWS && brScroll + i < brEntries.length; i++) {
         let fi = brScroll + i;
+        let entry = brEntries[fi];
         let py = editY + i * CH;
         if (fi === brIdx) {
             gfx.rectfill(0, py, FB_W - 1, py + CH - 1, SELBG);
         }
-        gfx.print(brFiles[fi], CW * 2, py, fi === brIdx ? FG : GUTFG);
+        let label = entry.isDir ? entry.name + "/" : entry.name;
+        gfx.print(label, CW * 2, py, fi === brIdx ? FG : GUTFG);
     }
 
-    if (!brFiles.length) {
-        gfx.print("No files found in src/", CW * 2, editY, GUTFG);
+    if (!brEntries.length) {
+        gfx.print("Empty directory", CW * 2, editY, GUTFG);
     }
 }
