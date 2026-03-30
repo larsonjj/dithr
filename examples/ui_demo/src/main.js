@@ -112,10 +112,38 @@ function start_intro() {
     });
 }
 
+// --- Hot-reload state preservation -----------------------------------
+
+function _save() {
+    return {
+        sidebar_open: sidebar_open,
+        sidebar_t: sidebar_t,
+        hp: hp,
+        mp: mp,
+        xp: xp,
+        intro_done: intro_done,
+    };
+}
+
+function _restore(s) {
+    sidebar_open = s.sidebar_open;
+    sidebar_t = s.sidebar_t;
+    hp = s.hp;
+    mp = s.mp;
+    xp = s.xp;
+    intro_done = s.intro_done;
+    bar_values = [hp, mp, xp];
+    menu_offsets = [0, 0, 0, 0];
+    title_alpha = 1;
+    bounce_y = 0;
+}
+
 // --- Callbacks -------------------------------------------------------
 
 function _init() {
-    start_intro();
+    if (!intro_done) {
+        start_intro();
+    }
 }
 
 function _update(dt) {
