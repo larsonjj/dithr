@@ -247,8 +247,8 @@ function openBrowser() {
 }
 
 function refreshBrowser() {
-    let dirs = sys.listDirs(brDir || undefined);
-    let files = sys.listFiles(brDir || undefined);
+    let dirs = sys.listDirs(brDir);
+    let files = sys.listFiles(brDir);
     brEntries = [];
     if (brDir) {
         brEntries.push({ name: "..", isDir: true });
@@ -585,6 +585,49 @@ function updateEdit() {
     if (key.btnp(key.ESCAPE)) {
         anchor = null;
     }
+
+    // ── Mouse ──
+    let mx = mouse.x();
+    let my = mouse.y();
+    let editY = HEAD * CH;
+    let footY = (ROWS - FOOT) * CH;
+    let gutterPx = GUTTER * CW;
+
+    if (my >= editY && my < footY && mx >= gutterPx) {
+        if (mouse.btnp(0)) {
+            // Click to place cursor
+            let row = (oy + (my - editY) / CH) | 0;
+            let col = (ox + (mx - gutterPx) / CW) | 0;
+            row = clamp(row, 0, buf.length - 1);
+            col = clamp(col, 0, buf[row].length);
+            if (shift) {
+                if (!anchor) anchor = { x: cx, y: cy };
+            } else {
+                anchor = null;
+            }
+            cx = col;
+            cy = row;
+            ensureVisible();
+            resetBlink();
+        } else if (mouse.btn(0)) {
+            // Drag to extend selection
+            let row = (oy + (my - editY) / CH) | 0;
+            let col = (ox + (mx - gutterPx) / CW) | 0;
+            row = clamp(row, 0, buf.length - 1);
+            col = clamp(col, 0, buf[row].length);
+            if (!anchor) anchor = { x: cx, y: cy };
+            cx = col;
+            cy = row;
+            ensureVisible();
+            resetBlink();
+        }
+    }
+
+    // Mouse wheel scroll
+    let wheel = mouse.wheel();
+    if (wheel !== 0) {
+        oy = clamp(oy - wheel * 3, 0, Math.max(0, buf.length - EROWS));
+    }
 }
 
 // ─── Editor drawing ──────────────────────────────────────────────────────────
@@ -689,9 +732,26 @@ function drawSelection(lineIdx, py) {
 
 function updateBrowser() {
     if (key.btnr(key.UP)) brIdx = Math.max(0, brIdx - 1);
-    if (key.btnr(key.DOWN)) brIdx = Math.min(brEntries.length - 1, brIdx + 1);
+    if (key.btnr(key.DOWN) && brEntries.length) brIdx = Math.min(brEntries.length - 1, brIdx + 1);
     if (brIdx < brScroll) brScroll = brIdx;
     if (brIdx >= brScroll + EROWS) brScroll = brIdx - EROWS + 1;
+
+    // Mouse click in browser list
+    let my = mouse.y();
+    let editY = HEAD * CH;
+    if (mouse.btnp(0) && my >= editY && brEntries.length) {
+        let row = (brScroll + (my - editY) / CH) | 0;
+        if (row >= 0 && row < brEntries.length) {
+            brIdx = row;
+        }
+    }
+
+    // Mouse wheel scroll
+    let wheel = mouse.wheel();
+    if (wheel !== 0) {
+        brScroll = clamp(brScroll - wheel * 3, 0, Math.max(0, brEntries.length - EROWS));
+        brIdx = clamp(brIdx, brScroll, brScroll + EROWS - 1);
+    }
 
     if (key.btnp(key.ENTER) && brEntries.length) {
         let entry = brEntries[brIdx];

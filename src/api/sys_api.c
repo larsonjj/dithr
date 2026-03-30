@@ -541,7 +541,7 @@ static bool prv_resolve_sandboxed(JSContext *ctx, const char *rel,
         return false;
     }
 
-    SDL_snprintf(full, full_size, "%s%s", base, rel);
+    SDL_snprintf(full, full_size, "%s/%s", base, rel);
 
     /* Normalise backslashes to forward slashes */
     for (pos = full; *pos != '\0'; ++pos) {
@@ -665,7 +665,7 @@ js_sys_list_files(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst 
             return JS_ThrowRangeError(ctx, "listFiles: path outside cart directory");
         }
     } else {
-        SDL_snprintf(full, sizeof(full), "%s", dtr_api_get_console(ctx)->cart->base_path);
+        SDL_snprintf(full, sizeof(full), "%s/", dtr_api_get_console(ctx)->cart->base_path);
     }
     if (argc >= 1) {
         JS_FreeCString(ctx, rel);
@@ -738,7 +738,7 @@ js_sys_list_dirs(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *
             return JS_ThrowRangeError(ctx, "listDirs: path outside cart directory");
         }
     } else {
-        SDL_snprintf(full, sizeof(full), "%s", dtr_api_get_console(ctx)->cart->base_path);
+        SDL_snprintf(full, sizeof(full), "%s/", dtr_api_get_console(ctx)->cart->base_path);
     }
     if (argc >= 1) {
         JS_FreeCString(ctx, rel);

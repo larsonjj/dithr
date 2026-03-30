@@ -40,6 +40,7 @@ void dtr_cart_defaults(dtr_cart_t *cart)
     cart->display.scale      = CONSOLE_DEFAULT_SCALE;
     cart->display.palette    = 0;
     cart->display.fullscreen = false;
+    cart->display.pause_key   = true;
 
     /* Timing defaults */
     cart->timing.fps    = CONSOLE_FPS;
@@ -174,6 +175,7 @@ bool dtr_cart_parse(dtr_cart_t *cart, JSContext *ctx, const char *json, size_t l
         cart->display.scale      = prv_json_int(ctx, sub, "scale", CONSOLE_DEFAULT_SCALE);
         cart->display.palette    = prv_json_int(ctx, sub, "palette", 0);
         cart->display.fullscreen = prv_json_bool(ctx, sub, "fullscreen", false);
+        cart->display.pause_key  = prv_json_bool(ctx, sub, "pauseKey", true);
     }
     JS_FreeValue(ctx, sub);
 

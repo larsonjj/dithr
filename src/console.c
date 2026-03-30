@@ -486,8 +486,24 @@ void dtr_console_event(dtr_console_t *con, SDL_Event *event)
         case SDL_EVENT_KEY_DOWN: {
             dtr_key_t key;
 
+            /* Copy error to clipboard: Ctrl+C while error overlay is shown */
+            if (con->runtime->error_active
+                && event->key.scancode == SDL_SCANCODE_C
+                && (event->key.mod & SDL_KMOD_CTRL)) {
+                char clip_buf[2048];
+                if (con->runtime->error_line > 0) {
+                    SDL_snprintf(clip_buf, sizeof(clip_buf), "line %d: %s",
+                                 con->runtime->error_line,
+                                 con->runtime->error_msg);
+                } else {
+                    SDL_strlcpy(clip_buf, con->runtime->error_msg, sizeof(clip_buf));
+                }
+                SDL_SetClipboardText(clip_buf);
+                break;
+            }
+
             /* Hardcoded pause toggle: Escape */
-            if (event->key.scancode == SDL_SCANCODE_ESCAPE) {
+            if (event->key.scancode == SDL_SCANCODE_ESCAPE && con->cart->display.pause_key) {
                 con->paused = !con->paused;
                 if (con->paused) {
                     dtr_event_emit(con->events, "sys:pause", JS_UNDEFINED);
@@ -1404,7 +1420,7 @@ static void prv_render_error_overlay(dtr_console_t *con)
     }
 
     /* Hint at bottom */
-    dtr_gfx_print(gfx, "Press F5 to retry", 2, con->fb_height - 8, 6);
+    dtr_gfx_print(gfx, "Ctrl+C copy  F5 retry", 2, con->fb_height - 8, 6);
 
     {
         void   *locked;

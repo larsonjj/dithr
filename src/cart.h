@@ -78,6 +78,7 @@ typedef struct dtr_cart_display {
     int32_t scale;
     int32_t palette;
     bool    fullscreen;
+    bool    pause_key;
     char    window_title[128];
 } dtr_cart_display_t;
 
