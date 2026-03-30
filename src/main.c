@@ -61,6 +61,8 @@ EMSCRIPTEN_KEEPALIVE void dtr_wasm_reload_assets(void)
 /*  CLI options                                                        */
 /* ------------------------------------------------------------------ */
 
+#ifndef DTR_WASM_CART_PATH
+
 typedef struct cli_opts {
     const char *cart_path;
     int32_t     scale;      /* 0 = use cart default */
@@ -129,6 +131,7 @@ static bool prv_parse_cli(int argc, char **argv, cli_opts_t *opts)
     }
     return true;
 }
+#endif /* DTR_WASM_CART_PATH */
 
 /* ------------------------------------------------------------------ */
 /*  SDL_AppInit                                                        */
@@ -168,7 +171,9 @@ static void prv_emscripten_log_output(void *userdata, int category,
 SDL_AppResult SDL_AppInit(void **appstate, int argc, char **argv)
 {
     app_state_t *app;
+#ifndef DTR_WASM_CART_PATH
     cli_opts_t   opts;
+#endif
 
     SDL_SetLogPriorities(SDL_LOG_PRIORITY_INFO);
 
