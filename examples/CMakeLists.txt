@@ -15,6 +15,7 @@
 #   raycaster          - Wolfenstein-style raycaster
 #   spritemark         - Bunnymark-style sprite benchmark
 #   ui_demo            - UI layout helpers & tween animations
+#   editor             - Minimal text editor (640×360 framebuffer)
 
 # Install example carts alongside the executable
 install(DIRECTORY
@@ -29,6 +30,7 @@ install(DIRECTORY
     raycaster
     spritemark
     ui_demo
+    editor
     DESTINATION examples
     PATTERN "node_modules" EXCLUDE
 )

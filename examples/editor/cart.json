@@ -1,0 +1,27 @@
+{
+  "meta": {
+    "title": "dithr Editor",
+    "author": "dithr",
+    "version": "0.1.0",
+    "description": "A minimal text editor built on the dithr fantasy console"
+  },
+  "display": {
+    "width": 640,
+    "height": 360,
+    "scale": 2
+  },
+  "timing": {
+    "fps": 60
+  },
+  "sprites": {
+    "tileW": 8,
+    "tileH": 8
+  },
+  "audio": {
+    "channels": 0
+  },
+  "input": {
+    "default_mappings": {}
+  },
+  "code": "src/main.js"
+}

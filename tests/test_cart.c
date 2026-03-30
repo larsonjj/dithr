@@ -509,9 +509,13 @@ static void test_cart_validate_clamp_audio_channels(void)
     dtr_cart_t *cart;
 
     cart = dtr_cart_create();
-    cart->audio.channels = 0;
+    cart->audio.channels = -1;
     dtr_cart_validate(cart);
     DTR_ASSERT_EQ_INT(cart->audio.channels, CONSOLE_AUDIO_CHANNELS);
+
+    cart->audio.channels = 0;
+    dtr_cart_validate(cart);
+    DTR_ASSERT_EQ_INT(cart->audio.channels, 0);
 
     cart->audio.channels = 999;
     dtr_cart_validate(cart);

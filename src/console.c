@@ -320,10 +320,12 @@ dtr_console_t *dtr_console_create(const char *cart_path)
     }
 
     /* --- Audio subsystem --- */
-    con->audio = dtr_audio_create(
-        con->cart->audio.channels, con->cart->audio.frequency, con->cart->audio.buffer_size);
-    if (con->audio == NULL) {
-        SDL_Log("Warning: audio subsystem failed to initialise — audio disabled");
+    if (con->cart->audio.channels > 0) {
+        con->audio = dtr_audio_create(
+            con->cart->audio.channels, con->cart->audio.frequency, con->cart->audio.buffer_size);
+        if (con->audio == NULL) {
+            SDL_Log("Warning: audio subsystem failed to initialise — audio disabled");
+        }
     }
 
     /* --- Input subsystems --- */
@@ -644,8 +646,8 @@ void dtr_console_event(dtr_console_t *con, SDL_Event *event)
 
                 ctx     = con->runtime->ctx;
                 payload = JS_NewString(ctx, event->text.text);
+                /* dtr_event_emit takes ownership of payload — do NOT free here */
                 dtr_event_emit(con->events, "text:input", payload);
-                JS_FreeValue(ctx, payload);
             }
             break;
 

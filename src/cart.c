@@ -445,12 +445,12 @@ bool dtr_cart_validate(dtr_cart_t *cart)
     valid = true;
 
     /* Clamp display to compiled ceilings */
-    if (cart->display.width < 64 || cart->display.width > CONSOLE_FB_WIDTH) {
+    if (cart->display.width < 64 || cart->display.width > CONSOLE_FB_MAX_WIDTH) {
         SDL_Log("Cart: display.width %d out of range, clamped", cart->display.width);
         cart->display.width = CONSOLE_FB_WIDTH;
         valid = false;
     }
-    if (cart->display.height < 64 || cart->display.height > CONSOLE_FB_HEIGHT) {
+    if (cart->display.height < 64 || cart->display.height > CONSOLE_FB_MAX_HEIGHT) {
         SDL_Log("Cart: display.height %d out of range, clamped", cart->display.height);
         cart->display.height = CONSOLE_FB_HEIGHT;
         valid = false;
@@ -474,7 +474,7 @@ bool dtr_cart_validate(dtr_cart_t *cart)
     }
 
     /* Audio channels */
-    if (cart->audio.channels < 1 || cart->audio.channels > CONSOLE_MAX_CHANNELS) {
+    if (cart->audio.channels < 0 || cart->audio.channels > CONSOLE_MAX_CHANNELS) {
         SDL_Log("Cart: audio.channels %d out of range, clamped", cart->audio.channels);
         cart->audio.channels = CONSOLE_AUDIO_CHANNELS;
         valid = false;

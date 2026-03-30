@@ -198,8 +198,12 @@ games).
 ### Constants
 
 `key.UP` `key.DOWN` `key.LEFT` `key.RIGHT` `key.Z` `key.X` `key.C` `key.V`
-`key.SPACE` `key.ENTER` `key.ESCAPE` `key.LSHIFT` `key.RSHIFT` `key.A`
-`key.B` `key.D` `key.E` `key.F` `key.W` `key.S` `key.F1` `key.F2`
+`key.SPACE` `key.ENTER` `key.ESCAPE` `key.LSHIFT` `key.RSHIFT`
+`key.A` `key.B` `key.D` `key.E` `key.F` `key.G` `key.H` `key.I` `key.J`
+`key.K` `key.L` `key.M` `key.N` `key.O` `key.P` `key.Q` `key.R` `key.S`
+`key.T` `key.U` `key.W` `key.Y`
+`key.NUM0` … `key.NUM9`
+`key.F1` … `key.F12`
 `key.BACKSPACE` `key.DELETE` `key.TAB` `key.HOME` `key.END`
 `key.PAGEUP` `key.PAGEDOWN` `key.LCTRL` `key.RCTRL` `key.LALT` `key.RALT`
 

@@ -60,6 +60,7 @@ static const uint32_t DEFAULT_PALETTE[CONSOLE_PALETTE_SIZE] = {
 dtr_graphics_t *dtr_gfx_create(int32_t width, int32_t height)
 {
     dtr_graphics_t *gfx;
+    size_t          pixel_count;
 
     gfx = DTR_CALLOC(1, sizeof(dtr_graphics_t));
     if (gfx == NULL) {
@@ -68,6 +69,17 @@ dtr_graphics_t *dtr_gfx_create(int32_t width, int32_t height)
 
     gfx->width  = width;
     gfx->height = height;
+
+    pixel_count = (size_t)width * (size_t)height;
+
+    gfx->framebuffer = DTR_CALLOC(pixel_count, sizeof(uint8_t));
+    gfx->pixels      = DTR_CALLOC(pixel_count, sizeof(uint32_t));
+    if (gfx->framebuffer == NULL || gfx->pixels == NULL) {
+        DTR_FREE(gfx->framebuffer);
+        DTR_FREE(gfx->pixels);
+        DTR_FREE(gfx);
+        return NULL;
+    }
 
     dtr_gfx_init_default_palette(gfx);
     dtr_gfx_reset(gfx);
@@ -83,6 +95,8 @@ void dtr_gfx_destroy(dtr_graphics_t *gfx)
     if (gfx->sheet.pixels != NULL) {
         DTR_FREE(gfx->sheet.pixels);
     }
+    DTR_FREE(gfx->framebuffer);
+    DTR_FREE(gfx->pixels);
     DTR_FREE(gfx);
 }
 

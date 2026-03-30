@@ -352,9 +352,9 @@ static JSValue js_sys_limit(JSContext *ctx, JSValueConst this_val, int argc, JSV
 
     if (key != NULL) {
         if (SDL_strcmp(key, "fb_width") == 0) {
-            result = JS_NewInt32(ctx, CONSOLE_FB_WIDTH);
+            result = JS_NewInt32(ctx, dtr_api_get_console(ctx)->fb_width);
         } else if (SDL_strcmp(key, "fb_height") == 0) {
-            result = JS_NewInt32(ctx, CONSOLE_FB_HEIGHT);
+            result = JS_NewInt32(ctx, dtr_api_get_console(ctx)->fb_height);
         } else if (SDL_strcmp(key, "palette_size") == 0) {
             result = JS_NewInt32(ctx, CONSOLE_PALETTE_SIZE);
         } else if (SDL_strcmp(key, "max_sprites") == 0) {

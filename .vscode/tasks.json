@@ -123,7 +123,8 @@
         "${workspaceFolder}/examples/platformer",
         "${workspaceFolder}/examples/raycaster",
         "${workspaceFolder}/examples/spritemark",
-        "${workspaceFolder}/examples/ui_demo"
+        "${workspaceFolder}/examples/ui_demo",
+        "${workspaceFolder}/examples/editor"
       ],
       "default": "examples/hello_world"
     },
@@ -142,7 +143,8 @@
         "${workspaceFolder}/examples/platformer/cart.json",
         "${workspaceFolder}/examples/raycaster/cart.json",
         "${workspaceFolder}/examples/spritemark/cart.json",
-        "${workspaceFolder}/examples/ui_demo/cart.json"
+        "${workspaceFolder}/examples/ui_demo/cart.json",
+        "${workspaceFolder}/examples/editor/cart.json"
       ],
       "default": "${workspaceFolder}/examples/hello_world/cart.json"
     }

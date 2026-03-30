@@ -141,11 +141,11 @@ typedef struct dtr_draw_list {
  * \brief           Complete graphics subsystem state
  */
 struct dtr_graphics {
-    /* Palette-indexed framebuffer */
-    uint8_t framebuffer[CONSOLE_FB_WIDTH * CONSOLE_FB_HEIGHT];
+    /* Palette-indexed framebuffer (dynamically allocated: width * height) */
+    uint8_t *framebuffer;
 
-    /* RGBA pixel buffer for uploading to texture */
-    uint32_t pixels[CONSOLE_FB_WIDTH * CONSOLE_FB_HEIGHT];
+    /* RGBA pixel buffer for uploading to texture (dynamically allocated) */
+    uint32_t *pixels;
 
     /* Draw palette — maps source index → draw index */
     uint8_t draw_pal[CONSOLE_PALETTE_SIZE];

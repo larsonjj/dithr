@@ -132,6 +132,7 @@ FetchContent_Declare(
 )
 FetchContent_GetProperties(quickjs)
 if (NOT quickjs_POPULATED)
+
     FetchContent_MakeAvailable(quickjs)
 endif()
 
