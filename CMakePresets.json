@@ -92,8 +92,7 @@
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
         "DTR_DEV_BUILD": "ON",
-        "CMAKE_C_FLAGS": "--coverage",
-        "CMAKE_EXE_LINKER_FLAGS": "--coverage",
+        "DTR_ENABLE_COVERAGE": "ON",
         "BUILD_SHARED_LIBS": "OFF"
       }
     }

@@ -8,12 +8,24 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 /** Always-on assertion: prints file/line and aborts on failure. */
 #define DTR_ASSERT(expr)                                                          \
     do {                                                                          \
         if (!(expr)) {                                                            \
             fprintf(stderr, "  FAIL %s:%d: %s\n", __FILE__, __LINE__, #expr);     \
+            fflush(stderr);                                                       \
+            abort();                                                              \
+        }                                                                         \
+    } while (0)
+
+/** Assert a pointer is not NULL, printing the expression on failure. */
+#define DTR_ASSERT_NOT_NULL(ptr)                                                  \
+    do {                                                                          \
+        if ((ptr) == NULL) {                                                      \
+            fprintf(stderr, "  FAIL %s:%d: %s == NULL\n",                         \
+                    __FILE__, __LINE__, #ptr);                                    \
             fflush(stderr);                                                       \
             abort();                                                              \
         }                                                                         \
@@ -27,6 +39,20 @@
         if (_a != _b) {                                                           \
             fprintf(stderr, "  FAIL %s:%d: %s == %lld, expected %s == %lld\n",    \
                     __FILE__, __LINE__, #a, _a, #b, _b);                          \
+            fflush(stderr);                                                       \
+            abort();                                                              \
+        }                                                                         \
+    } while (0)
+
+/** Convenience: assert two strings are equal, printing both on failure. */
+#define DTR_ASSERT_EQ_STR(a, b)                                                   \
+    do {                                                                          \
+        const char *_a = (a);                                                     \
+        const char *_b = (b);                                                     \
+        if (_a == NULL || _b == NULL || strcmp(_a, _b) != 0) {                    \
+            fprintf(stderr, "  FAIL %s:%d: %s == \"%s\", expected %s == \"%s\"\n",\
+                    __FILE__, __LINE__, #a, _a ? _a : "(null)",                   \
+                    #b, _b ? _b : "(null)");                                      \
             fflush(stderr);                                                       \
             abort();                                                              \
         }                                                                         \

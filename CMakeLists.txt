@@ -17,9 +17,9 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # Compiler warnings (applied only to our own targets, not dependencies)
 if (MSVC)
-    set(DTR_WARN_FLAGS /W4)
+    set(DTR_WARN_FLAGS /W4 /sdl)
 else()
-    set(DTR_WARN_FLAGS -Wall -Wextra -Wpedantic)
+    set(DTR_WARN_FLAGS -Wall -Wextra -Wpedantic -Wshadow -Wformat=2)
 endif()
 
 # Sanitizers & coverage (must precede all target definitions)

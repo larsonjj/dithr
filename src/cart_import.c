@@ -306,6 +306,15 @@ bool dtr_import_tiled(const char *tmj_path, dtr_map_level_t **out_level, JSConte
                 }
                 tile_count   = layer->width * layer->height;
                 layer->tiles = DTR_CALLOC((size_t)tile_count, sizeof(int32_t));
+                if (layer->tiles == NULL) {
+                    JS_FreeValue(ctx, data_arr);
+                    if (type_str != NULL) {
+                        JS_FreeCString(ctx, type_str);
+                    }
+                    JS_FreeValue(ctx, type_val);
+                    JS_FreeValue(ctx, layer_obj);
+                    continue;
+                }
 
                 for (int32_t ti = 0; ti < tile_count; ++ti) {
                     JSValue tv;
@@ -338,7 +347,16 @@ bool dtr_import_tiled(const char *tmj_path, dtr_map_level_t **out_level, JSConte
                     obj_count = CONSOLE_MAX_MAP_OBJECTS;
                 }
 
-                layer->objects      = DTR_CALLOC((size_t)obj_count, sizeof(dtr_map_object_t));
+                layer->objects = DTR_CALLOC((size_t)obj_count, sizeof(dtr_map_object_t));
+                if (layer->objects == NULL) {
+                    JS_FreeValue(ctx, obj_arr);
+                    if (type_str != NULL) {
+                        JS_FreeCString(ctx, type_str);
+                    }
+                    JS_FreeValue(ctx, type_val);
+                    JS_FreeValue(ctx, layer_obj);
+                    continue;
+                }
                 layer->object_count = obj_count;
 
                 for (int32_t oi = 0; oi < obj_count; ++oi) {

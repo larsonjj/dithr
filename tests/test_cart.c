@@ -713,6 +713,154 @@ static void test_cart_destroy_null(void)
 }
 
 /* ------------------------------------------------------------------ */
+/*  Edge case: extremely large display dimensions are clamped          */
+/* ------------------------------------------------------------------ */
+
+static void test_cart_parse_huge_display(void)
+{
+    dtr_cart_t *cart;
+    bool        ok;
+    const char *json =
+        "{"
+        "  \"display\": {"
+        "    \"width\": 99999,"
+        "    \"height\": 99999,"
+        "    \"scale\": 100"
+        "  }"
+        "}";
+
+    cart = dtr_cart_create();
+    prv_setup();
+    ok = dtr_cart_parse(cart, s_ctx, json, strlen(json));
+    DTR_ASSERT(ok);
+    /* Validate should clamp these back to defaults */
+    dtr_cart_validate(cart);
+    DTR_ASSERT_EQ_INT(cart->display.width, CONSOLE_FB_WIDTH);
+    DTR_ASSERT_EQ_INT(cart->display.height, CONSOLE_FB_HEIGHT);
+    DTR_ASSERT_EQ_INT(cart->display.scale, CONSOLE_DEFAULT_SCALE);
+    prv_teardown();
+    dtr_cart_destroy(cart);
+    DTR_PASS();
+}
+
+/* ------------------------------------------------------------------ */
+/*  Edge case: negative values in numeric fields                       */
+/* ------------------------------------------------------------------ */
+
+static void test_cart_parse_negative_values(void)
+{
+    dtr_cart_t *cart;
+    bool        ok;
+    const char *json =
+        "{"
+        "  \"display\": { \"width\": -1, \"height\": -100 },"
+        "  \"timing\": { \"fps\": -5 },"
+        "  \"audio\": { \"channels\": -10, \"frequency\": -1 }"
+        "}";
+
+    cart = dtr_cart_create();
+    prv_setup();
+    ok = dtr_cart_parse(cart, s_ctx, json, strlen(json));
+    DTR_ASSERT(ok);
+    /* All should be clamped by validate */
+    dtr_cart_validate(cart);
+    DTR_ASSERT(cart->display.width >= 64);
+    DTR_ASSERT(cart->display.height >= 64);
+    DTR_ASSERT(cart->timing.fps >= 15);
+    DTR_ASSERT(cart->audio.channels >= 0);
+    DTR_ASSERT(cart->audio.frequency >= 8000);
+    prv_teardown();
+    dtr_cart_destroy(cart);
+    DTR_PASS();
+}
+
+/* ------------------------------------------------------------------ */
+/*  Edge case: huge runtime memory limit is clamped                    */
+/* ------------------------------------------------------------------ */
+
+static void test_cart_parse_huge_runtime(void)
+{
+    dtr_cart_t *cart;
+    bool        ok;
+    uint32_t    max_mem;
+    uint32_t    max_stack;
+    const char *json =
+        "{"
+        "  \"runtime\": {"
+        "    \"memoryLimitMB\": 99999,"
+        "    \"stackLimitKB\": 99999"
+        "  }"
+        "}";
+
+    cart = dtr_cart_create();
+    prv_setup();
+    ok = dtr_cart_parse(cart, s_ctx, json, strlen(json));
+    DTR_ASSERT(ok);
+    dtr_cart_validate(cart);
+    max_mem   = (uint32_t)CONSOLE_JS_MEM_MB * 1024u * 1024u;
+    max_stack = (uint32_t)CONSOLE_JS_STACK_KB * 1024u;
+    DTR_ASSERT(cart->runtime.mem_limit <= max_mem);
+    DTR_ASSERT(cart->runtime.stack_limit <= max_stack);
+    prv_teardown();
+    dtr_cart_destroy(cart);
+    DTR_PASS();
+}
+
+/* ------------------------------------------------------------------ */
+/*  Edge case: empty string fields                                     */
+/* ------------------------------------------------------------------ */
+
+static void test_cart_parse_empty_strings(void)
+{
+    dtr_cart_t *cart;
+    bool        ok;
+    const char *json =
+        "{"
+        "  \"meta\": { \"title\": \"\", \"author\": \"\" },"
+        "  \"code\": \"\","
+        "  \"sfx\": [],"
+        "  \"music\": [],"
+        "  \"maps\": []"
+        "}";
+
+    cart = dtr_cart_create();
+    prv_setup();
+    ok = dtr_cart_parse(cart, s_ctx, json, strlen(json));
+    DTR_ASSERT(ok);
+    DTR_ASSERT_EQ_INT(cart->sfx_count, 0);
+    DTR_ASSERT_EQ_INT(cart->music_count, 0);
+    DTR_ASSERT_EQ_INT(cart->map_count, 0);
+    prv_teardown();
+    dtr_cart_destroy(cart);
+    DTR_PASS();
+}
+
+/* ------------------------------------------------------------------ */
+/*  Edge case: unknown top-level keys are safely ignored               */
+/* ------------------------------------------------------------------ */
+
+static void test_cart_parse_unknown_keys(void)
+{
+    dtr_cart_t *cart;
+    bool        ok;
+    const char *json =
+        "{"
+        "  \"unknown_key\": 42,"
+        "  \"another\": { \"nested\": true },"
+        "  \"display\": { \"width\": 256 }"
+        "}";
+
+    cart = dtr_cart_create();
+    prv_setup();
+    ok = dtr_cart_parse(cart, s_ctx, json, strlen(json));
+    DTR_ASSERT(ok);
+    DTR_ASSERT_EQ_INT(cart->display.width, 256);
+    prv_teardown();
+    dtr_cart_destroy(cart);
+    DTR_PASS();
+}
+
+/* ------------------------------------------------------------------ */
 /*  Main                                                               */
 /* ------------------------------------------------------------------ */
 
@@ -752,6 +900,11 @@ int main(int argc, char *argv[])
     DTR_RUN_TEST(test_cart_parse_code_maps);
     DTR_RUN_TEST(test_cart_parse_sprites);
     DTR_RUN_TEST(test_cart_destroy_null);
+    DTR_RUN_TEST(test_cart_parse_huge_display);
+    DTR_RUN_TEST(test_cart_parse_negative_values);
+    DTR_RUN_TEST(test_cart_parse_huge_runtime);
+    DTR_RUN_TEST(test_cart_parse_empty_strings);
+    DTR_RUN_TEST(test_cart_parse_unknown_keys);
 
     DTR_TEST_END();
 }

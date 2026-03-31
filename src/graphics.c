@@ -1764,15 +1764,16 @@ void dtr_gfx_dl_end(dtr_graphics_t *gfx)
 
 void dtr_gfx_flip_to(dtr_graphics_t *gfx, uint32_t *dst)
 {
-    int32_t total;
+    int32_t  total;
+    uint32_t lut[CONSOLE_PALETTE_SIZE];
+
+    for (int32_t idx = 0; idx < CONSOLE_PALETTE_SIZE; ++idx) {
+        lut[idx] = gfx->colors[gfx->screen_pal[idx]];
+    }
 
     total = gfx->width * gfx->height;
     for (int32_t idx = 0; idx < total; ++idx) {
-        uint8_t pal_idx;
-
-        pal_idx  = gfx->framebuffer[idx];
-        pal_idx  = gfx->screen_pal[pal_idx];
-        dst[idx] = gfx->colors[pal_idx];
+        dst[idx] = lut[gfx->framebuffer[idx]];
     }
 }
 

@@ -114,6 +114,9 @@ static JSValue js_gfx_tilemap(JSContext *ctx, JSValueConst this_val, int argc, J
     if (map_w <= 0 || map_h <= 0 || tile_w <= 0 || tile_h <= 0) {
         return JS_UNDEFINED;
     }
+    if (map_w > INT32_MAX / map_h) {
+        return JS_UNDEFINED;
+    }
 
     /* Read tiles array into temp buffer */
     len_val = JS_GetPropertyStr(ctx, argv[0], "length");

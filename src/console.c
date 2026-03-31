@@ -334,7 +334,9 @@ dtr_console_t *dtr_console_create(const char *cart_path)
 
     /* Ensure gamepad subsystem is initialised (SDL callbacks only auto-init EVENTS) */
     if (!SDL_WasInit(SDL_INIT_GAMEPAD)) {
-        SDL_InitSubSystem(SDL_INIT_GAMEPAD);
+        if (!SDL_InitSubSystem(SDL_INIT_GAMEPAD)) {
+            SDL_Log("Warning: SDL_InitSubSystem(GAMEPAD) failed: %s", SDL_GetError());
+        }
     }
     con->gamepads = dtr_gamepad_create();
     con->input    = dtr_input_create();

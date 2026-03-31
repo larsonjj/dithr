@@ -68,3 +68,53 @@ The engine exposes JS namespaces (e.g. `gfx`, `sfx`, `col`). To add one:
 - Make sure all tests pass before submitting.
 - Follow the existing code style (see above).
 - Update documentation if you add or change API surface.
+
+## Running Examples
+
+After building, run any example cart:
+
+```bash
+./build/debug/Debug/dithr examples/hello_world/cart.json
+./build/debug/Debug/dithr examples/platformer/cart.json
+```
+
+## Formatting
+
+The project uses `clang-format` (version 15+). Format all source files before
+committing:
+
+```bash
+find src/ tests/ -name '*.c' -o -name '*.h' | xargs clang-format -i
+```
+
+CI enforces formatting — PRs with style violations will fail the format check.
+
+## Code Coverage
+
+On Linux/macOS, use the `coverage` preset to generate a coverage report:
+
+```bash
+cmake --preset coverage
+cmake --build build/coverage
+cd build/coverage && ctest --output-on-failure
+lcov --capture --directory . --include '*/src/*' -o coverage.info
+genhtml coverage.info -o coverage-report
+```
+
+Open `build/coverage/coverage-report/index.html` in a browser to view the
+results.
+
+## WASM Builds
+
+Requires [Emscripten](https://emscripten.org/) (>= 3.x):
+
+```bash
+cmake --preset wasm -DDTR_WASM_CART_DIR=examples/hello_world
+cmake --build build/wasm
+```
+
+Serve the output locally:
+
+```bash
+node tools/serve-wasm.js
+```

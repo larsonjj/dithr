@@ -89,11 +89,19 @@ Run it:
 dithr cart.json
 ```
 
+### Command-Line Flags
+
+| Flag           | Short | Description                |
+| -------------- | ----- | -------------------------- |
+| `--fullscreen` | `-f`  | Start in fullscreen mode   |
+| `--scale N`    | `-s`  | Window scale factor (1–10) |
+| `--mute`       | `-m`  | Start with audio muted     |
+
 ## Documentation
 
 | Document                               | Description                                            |
 | -------------------------------------- | ------------------------------------------------------ |
-| [API Reference](docs/api-reference.md) | All 15 JS namespaces with every function and constant  |
+| [API Reference](docs/api-reference.md) | All 17 JS namespaces with every function and constant  |
 | [Cart Format](docs/cart-format.md)     | `cart.json` schema and asset conventions               |
 | [Architecture](docs/architecture.md)   | Engine lifecycle, subsystem overview, design decisions |
 | [Building](docs/building.md)           | Build presets, CMake variables, WASM workflow          |
