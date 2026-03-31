@@ -21,7 +21,7 @@ static const char *KEY_NAMES[DTR_KEY_COUNT] = {
     "4",     "5",      "6",      "7",      "8",     "9",   "F1",  "F2",  "F3", "F4",
     "F5",    "F6",     "F7",     "F8",     "F9",    "F10", "F11", "F12",
     "BACKSPACE", "DELETE", "TAB", "HOME", "END", "PAGEUP", "PAGEDOWN",
-    "LCTRL", "RCTRL", "LALT", "RALT", "GRAVE",
+    "LCTRL", "RCTRL", "LALT", "RALT", "GRAVE", "SLASH",
 };
 
 /* ------------------------------------------------------------------ */
@@ -169,6 +169,8 @@ dtr_key_t dtr_key_from_scancode(SDL_Scancode sc)
             return DTR_KEY_RALT;
         case SDL_SCANCODE_GRAVE:
             return DTR_KEY_GRAVE;
+        case SDL_SCANCODE_SLASH:
+            return DTR_KEY_SLASH;
         default:
             return DTR_KEY_NONE;
     }

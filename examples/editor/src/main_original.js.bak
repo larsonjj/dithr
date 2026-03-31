@@ -1,0 +1,2640 @@
+// ─── dithr editor ─────────────────────────────────────────────────────────────
+//
+// A minimal text editor built on the dithr fantasy console engine.
+// Framebuffer: 640×360, built-in 4×6 font (5×7 advance with spacing).
+//
+// Shortcuts:
+//   Ctrl+O   Open file browser       Ctrl+S   Save file
+//   Ctrl+Z   Undo                    Ctrl+Y   Redo
+//   Ctrl+X   Cut (selection/line)    Ctrl+C   Copy (selection/line)
+//   Ctrl+V   Paste                   Ctrl+A   Select all
+//   Ctrl+D   Duplicate line          Ctrl+Shift+D  Duplicate selection
+//   Ctrl+Shift+K  Delete line        Ctrl+/   Toggle line comment
+//   Ctrl+F   Find                    Ctrl+H   Find & replace
+//   Ctrl+G   Go to line              Ctrl+`   Toggle vim mode
+//   Ctrl+Left/Right  Word navigation
+//   Ctrl+Shift+Up/Down  Move line    Ctrl+Shift+Enter  Insert line above
+//   Ctrl+Backspace  Delete word left Ctrl+Delete  Delete word right
+//   Tab   Indent selection   Shift+Tab  Dedent selection   Esc  Clear sel
+//   Home  Smart home (toggle col 0 / first non-blank)
+//   Double-click  Select word        Triple-click  Select line
+//
+// Features:  Bracket matching & rainbow colorization, indent guides,
+//   minimap, scrollbar, modified line indicators, smooth scrolling,
+//   persistent find highlights, smart auto-indent after {, tab rendering
+//
+// Vim mode (toggle with Ctrl+`):
+//   Normal:  h/j/k/l  w/b/e  0/$/^  gg/G  x  dd/yy/cc  d/c/y+motion
+//            i/I/a/A/o/O  p/P  u  J  D/C  v/V  :  /pattern  n/N  r
+//   Visual:  motions extend selection, d/c/y/x operate
+//   Command: :w :q :wq :e :<line>
+//
+// ──────────────────────────────────────────────────────────────────────────────
+
+// ─── Layout ──────────────────────────────────────────────────────────────────
+
+const CW = 5; // char advance (4px glyph + 1px)
+const CH = 7; // line advance (6px glyph + 1px)
+const FB_W = 640,
+    FB_H = 360;
+const COLS = (FB_W / CW) | 0; // 128
+const ROWS = (FB_H / CH) | 0; // 51
+
+const GUTTER = 5; // chars for line numbers
+const HEAD = 1; // header rows
+const FOOT = 1; // status-bar rows
+const EROWS = ROWS - HEAD - FOOT; // 49
+const MINIMAP_W = 10; // minimap width in pixels
+const SCROLLBAR_W = 2; // scrollbar width in pixels
+const ECOLS = COLS - GUTTER; // 123 (minimap overlays text area)
+
+const TAB = "  "; // soft tab (2 spaces)
+const SCROLL_MARGIN = 4; // lines of context kept above/below cursor
+
+// ─── Palette indices ─────────────────────────────────────────────────────────
+
+const BG = 0; // black
+const FG = 7; // white (near-white #FFF1E8)
+const GUTBG = 1; // dark blue
+const GUTFG = 6; // light gray
+const HEADBG = 1;
+const HEADFG = 7;
+const FOOTBG = 1;
+const FOOTFG = 6;
+const CURFG = 7; // cursor colour
+const LINEBG = 17; // #222222 — subtle current-line highlight
+const SELBG = 2; // dark purple — selection
+const KWCOL = 12; // cyan — keywords
+const STRCOL = 11; // green — strings
+const COMCOL = 5; // dark gray — comments
+const NUMCOL = 9; // orange — numbers
+const DIRTCOL = 8; // red — unsaved indicator
+const TRAILBG = 20; // dark brown — trailing whitespace
+const MATCHBG = 9; // orange — find match highlight
+const BRACKETBG = 18; // #3A3A3A — matching bracket highlight
+const GUIDECOL = 17; // #222222 — indent guide
+const SCROLLBG = 17; // scrollbar track
+const SCROLLFG = 6; // scrollbar thumb
+const ADDCOL = 11; // green — added line indicator
+const MODCOL = 12; // cyan — modified line indicator
+
+// ─── State ───────────────────────────────────────────────────────────────────
+
+let buf = [""]; // line buffer
+let cx = 0,
+    cy = 0; // cursor col / row in buffer
+let ox = 0,
+    oy = 0; // scroll offset col / row
+let anchor = null; // selection anchor {x,y} or null
+
+let blink = 0,
+    curOn = true; // cursor blink state
+let fname = ""; // current filename
+let dirty = false;
+let msg = "",
+    msgT = 0; // status message + timer
+let restored = false; // set by _restore to skip default open in _init
+
+// undo / redo
+const MAXUNDO = 200;
+let undoStack = [];
+let redoStack = [];
+
+// file browser
+let brMode = false;
+let brEntries = []; // {name, isDir}
+let brIdx = 0;
+let brScroll = 0;
+let brDir = ""; // current directory relative to cart root ("" = root, "src/" etc.)
+
+// find & replace
+let findMode = false;
+let findText = "";
+let replaceText = "";
+let findReplace = false; // true = show replace field
+let findField = 0; // 0 = find, 1 = replace
+
+// go to line
+let gotoMode = false;
+let gotoText = "";
+
+// vim mode
+let vimEnabled = false;
+let vim = "normal"; // "normal", "insert", "visual", "vline", "command"
+let vimCount = "";
+let vimPending = "";
+let vimOpCount = 1;
+let vimCmd = "";
+let vimReg = "";
+let vimLinewise = false;
+let vimSearch = "";
+let vimVlineStart = 0;
+
+// auto-closing brackets
+const AUTO_CLOSE = { "(": ")", "[": "]", "{": "}" };
+const BRACKET_PAIRS = { "(": ")", ")": "(", "[": "]", "]": "[", "{": "}", "}": "{" };
+const BRACKET_COLORS = [8, 9, 12, 11, 13, 14]; // rainbow bracket colors
+
+// double-click state
+let lastClickTime = 0;
+let lastClickX = 0;
+let lastClickY = 0;
+let clickCount = 0;
+
+// smooth scrolling
+let targetOy = 0;
+let smoothOy = 0;
+
+// modified line tracking (since last save)
+let savedBuf = []; // snapshot at last save/open
+
+// persistent find highlighting
+let lastFindText = "";
+
+// ─── Caches (invalidated on edit) ────────────────────────────────────────────
+let _blockStateCache = []; // inBlock state at start of each line
+let _blockStateDirty = true;
+let _bracketMatchCache = null; // { cy, cx, result }
+let _bracketDepthCache = []; // cumulative bracket depth at start of each line
+let _bracketDepthDirty = true;
+let _bufVersion = 0; // incremented on every edit
+let _lastCacheVersion = -1; // version at which caches were last valid
+
+function invalidateCaches() {
+    _bufVersion++;
+}
+
+// JS keywords for syntax highlighting
+const KEYWORDS = new Set([
+    "break",
+    "case",
+    "catch",
+    "class",
+    "const",
+    "continue",
+    "debugger",
+    "default",
+    "delete",
+    "do",
+    "else",
+    "export",
+    "extends",
+    "false",
+    "finally",
+    "for",
+    "function",
+    "if",
+    "import",
+    "in",
+    "instanceof",
+    "let",
+    "new",
+    "null",
+    "of",
+    "return",
+    "super",
+    "switch",
+    "this",
+    "throw",
+    "true",
+    "try",
+    "typeof",
+    "undefined",
+    "var",
+    "void",
+    "while",
+    "with",
+    "yield",
+]);
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
+function clamp(v, lo, hi) {
+    return v < lo ? lo : v > hi ? hi : v;
+}
+
+function status(text, sec) {
+    msg = text;
+    msgT = sec || 3;
+}
+
+function resetBlink() {
+    blink = 0;
+    curOn = true;
+}
+
+function ensureVisible() {
+    let newOy = oy;
+    if (cy < newOy + SCROLL_MARGIN) newOy = Math.max(0, cy - SCROLL_MARGIN);
+    if (cy > newOy + EROWS - 1 - SCROLL_MARGIN) newOy = cy - EROWS + 1 + SCROLL_MARGIN;
+    newOy = clamp(newOy, 0, Math.max(0, buf.length - EROWS));
+    oy = newOy;
+    targetOy = newOy;
+    if (cx < ox) ox = cx;
+    if (cx >= ox + ECOLS) ox = cx - ECOLS + 1;
+}
+
+// ─── Vim helpers ─────────────────────────────────────────────────────────────
+
+function isWordChar(c) {
+    return (
+        (c >= "a" && c <= "z") ||
+        (c >= "A" && c <= "Z") ||
+        (c >= "0" && c <= "9") ||
+        c === "_" ||
+        c === "$"
+    );
+}
+
+// ─── Word boundary helpers ───────────────────────────────────────────────────
+
+function wordBoundaryLeft(line, col) {
+    let c = col;
+    if (c <= 0) return 0;
+    c--;
+    while (c > 0 && line[c] === " ") c--;
+    if (isWordChar(line[c])) {
+        while (c > 0 && isWordChar(line[c - 1])) c--;
+    } else {
+        while (c > 0 && !isWordChar(line[c - 1]) && line[c - 1] !== " ") c--;
+    }
+    return c;
+}
+
+function wordBoundaryRight(line, col) {
+    let c = col;
+    if (c >= line.length) return line.length;
+    if (isWordChar(line[c])) {
+        while (c < line.length && isWordChar(line[c])) c++;
+    } else if (line[c] !== " ") {
+        while (c < line.length && !isWordChar(line[c]) && line[c] !== " ") c++;
+    }
+    while (c < line.length && line[c] === " ") c++;
+    return c;
+}
+
+// ─── Bracket matching ───────────────────────────────────────────────────────
+
+function findMatchingBracket(row, col) {
+    let ch = buf[row] ? buf[row][col] : undefined;
+    if (!ch || !BRACKET_PAIRS[ch]) return null;
+    let open = "([{";
+    let isOpen = open.indexOf(ch) >= 0;
+    let target = BRACKET_PAIRS[ch];
+    let dir = isOpen ? 1 : -1;
+    let depth = 0;
+    let r = row,
+        c = col;
+    // Limit search to 5000 characters to avoid freezing on large files
+    let steps = 0;
+    while (r >= 0 && r < buf.length && steps < 5000) {
+        let line = buf[r];
+        while (c >= 0 && c < line.length) {
+            let cur = line[c];
+            if (cur === ch) depth++;
+            else if (cur === target) depth--;
+            if (depth === 0) return { y: r, x: c };
+            c += dir;
+            steps++;
+        }
+        r += dir;
+        if (r >= 0 && r < buf.length) {
+            c = dir > 0 ? 0 : buf[r].length - 1;
+        }
+    }
+    return null;
+}
+
+function getCachedBracketMatch() {
+    if (_bracketMatchCache && _bracketMatchCache.cy === cy && _bracketMatchCache.cx === cx) {
+        return _bracketMatchCache.result;
+    }
+    let result = findMatchingBracket(cy, cx);
+    _bracketMatchCache = { cy, cx, result };
+    return result;
+}
+
+// Lightweight block-comment state tracker — no object allocation.
+// Returns true if the line ends inside a block comment.
+function trackBlockState(line, inBlock) {
+    let i = 0,
+        n = line.length;
+    if (inBlock) {
+        let end = line.indexOf("*/");
+        if (end >= 0) {
+            i = end + 2;
+            inBlock = false;
+        } else return true;
+    }
+    while (i < n) {
+        let c = line[i];
+        if (c === "/" && i + 1 < n) {
+            if (line[i + 1] === "*") {
+                let end = line.indexOf("*/", i + 2);
+                if (end >= 0) {
+                    i = end + 2;
+                    continue;
+                } else return true;
+            }
+            if (line[i + 1] === "/") return false;
+        }
+        if (c === '"' || c === "'" || c === "`") {
+            let j = i + 1;
+            while (j < n && line[j] !== c) {
+                if (line[j] === "\\") j++;
+                j++;
+            }
+            i = j < n ? j + 1 : j;
+            continue;
+        }
+        i++;
+    }
+    return false;
+}
+
+function rebuildBracketDepthCache(upTo) {
+    _bracketDepthCache = new Array(upTo);
+    let depth = 0;
+    for (let r = 0; r < upTo; r++) {
+        _bracketDepthCache[r] = depth;
+        let line = buf[r];
+        for (let c = 0; c < line.length; c++) {
+            let ch = line[c];
+            if (ch === "(" || ch === "[" || ch === "{") depth++;
+            else if (ch === ")" || ch === "]" || ch === "}") depth--;
+        }
+    }
+}
+
+function rebuildBlockStateCache(upTo) {
+    _blockStateCache = new Array(upTo);
+    let inBlock = false;
+    for (let i = 0; i < upTo; i++) {
+        _blockStateCache[i] = inBlock;
+        inBlock = trackBlockState(buf[i], inBlock);
+    }
+}
+
+function ensureCaches() {
+    // Only rebuild up to the last visible line
+    let needed = Math.min(oy + EROWS + 1, buf.length);
+    if (_lastCacheVersion !== _bufVersion || needed > _blockStateCache.length) {
+        rebuildBlockStateCache(needed);
+        rebuildBracketDepthCache(needed);
+        _bracketMatchCache = null;
+        _lastCacheVersion = _bufVersion;
+    }
+}
+
+function firstNonBlank(line) {
+    let s = buf[line];
+    let i = 0;
+    while (i < s.length && (s[i] === " " || s[i] === "\t")) i++;
+    return i;
+}
+
+function getIndent(line) {
+    let m = buf[line].match(/^(\s*)/);
+    return m ? m[1] : "";
+}
+
+function vimWordForward() {
+    let line = buf[cy];
+    if (cx >= line.length) {
+        if (cy < buf.length - 1) {
+            cy++;
+            cx = 0;
+            line = buf[cy];
+        }
+        while (cx < line.length && line[cx] === " ") cx++;
+        return;
+    }
+    if (isWordChar(line[cx])) {
+        while (cx < line.length && isWordChar(line[cx])) cx++;
+    } else if (line[cx] !== " ") {
+        while (cx < line.length && !isWordChar(line[cx]) && line[cx] !== " ") cx++;
+    }
+    while (cx < line.length && line[cx] === " ") cx++;
+    if (cx >= line.length && cy < buf.length - 1) {
+        cy++;
+        cx = 0;
+        line = buf[cy];
+        while (cx < line.length && line[cx] === " ") cx++;
+    }
+}
+
+function vimWordBack() {
+    if (cx === 0) {
+        if (cy > 0) {
+            cy--;
+            cx = buf[cy].length;
+        }
+        return;
+    }
+    let line = buf[cy];
+    cx--;
+    while (cx > 0 && line[cx] === " ") cx--;
+    if (isWordChar(line[cx])) {
+        while (cx > 0 && isWordChar(line[cx - 1])) cx--;
+    } else {
+        while (cx > 0 && !isWordChar(line[cx - 1]) && line[cx - 1] !== " ") cx--;
+    }
+}
+
+function vimWordEnd() {
+    let line = buf[cy];
+    if (cx >= line.length - 1) {
+        if (cy < buf.length - 1) {
+            cy++;
+            cx = 0;
+            line = buf[cy];
+            while (cx < line.length && line[cx] === " ") cx++;
+        }
+    } else {
+        cx++;
+    }
+    line = buf[cy];
+    while (cx < line.length && line[cx] === " ") cx++;
+    if (isWordChar(line[cx])) {
+        while (cx < line.length - 1 && isWordChar(line[cx + 1])) cx++;
+    } else {
+        while (cx < line.length - 1 && !isWordChar(line[cx + 1]) && line[cx + 1] !== " ") cx++;
+    }
+}
+
+// ─── Selection helpers ───────────────────────────────────────────────────────
+
+function selOrdered() {
+    if (!anchor) return null;
+    let a = { x: anchor.x, y: anchor.y };
+    let b = { x: cx, y: cy };
+    if (a.y > b.y || (a.y === b.y && a.x > b.x)) {
+        let t = a;
+        a = b;
+        b = t;
+    }
+    return { a, b };
+}
+
+function selText() {
+    let s = selOrdered();
+    if (!s) return "";
+    if (s.a.y === s.b.y) return buf[s.a.y].slice(s.a.x, s.b.x);
+    let parts = [buf[s.a.y].slice(s.a.x)];
+    for (let i = s.a.y + 1; i < s.b.y; i++) parts.push(buf[i]);
+    parts.push(buf[s.b.y].slice(0, s.b.x));
+    return parts.join("\n");
+}
+
+function deleteSel() {
+    let s = selOrdered();
+    if (!s) return false;
+    pushUndo();
+    if (s.a.y === s.b.y) {
+        buf[s.a.y] = buf[s.a.y].slice(0, s.a.x) + buf[s.a.y].slice(s.b.x);
+    } else {
+        buf[s.a.y] = buf[s.a.y].slice(0, s.a.x) + buf[s.b.y].slice(s.b.x);
+        buf.splice(s.a.y + 1, s.b.y - s.a.y);
+    }
+    cx = s.a.x;
+    cy = s.a.y;
+    anchor = null;
+    dirty = true;
+    return true;
+}
+
+// ─── Undo ────────────────────────────────────────────────────────────────────
+
+function snapshot() {
+    return { buf: buf.map((l) => l), cx, cy };
+}
+
+function pushUndo() {
+    undoStack.push(snapshot());
+    if (undoStack.length > MAXUNDO) undoStack.shift();
+    redoStack = [];
+    invalidateCaches();
+}
+
+function doUndo() {
+    if (!undoStack.length) {
+        status("Nothing to undo");
+        return;
+    }
+    redoStack.push(snapshot());
+    let s = undoStack.pop();
+    buf = s.buf;
+    cx = s.cx;
+    cy = s.cy;
+    anchor = null;
+    dirty = true;
+    invalidateCaches();
+    ensureVisible();
+    resetBlink();
+}
+
+function doRedo() {
+    if (!redoStack.length) {
+        status("Nothing to redo");
+        return;
+    }
+    invalidateCaches();
+    undoStack.push(snapshot());
+    let s = redoStack.pop();
+    buf = s.buf;
+    cx = s.cx;
+    cy = s.cy;
+    anchor = null;
+    dirty = true;
+    ensureVisible();
+    resetBlink();
+}
+
+// ─── File I/O ────────────────────────────────────────────────────────────────
+
+function openFile(path) {
+    let data = sys.readFile(path);
+    if (data === undefined) {
+        status("Cannot read: " + path);
+        return;
+    }
+    buf = data.replace(/\r\n/g, "\n").split("\n");
+    if (!buf.length) buf = [""];
+    fname = path;
+    cx = cy = ox = oy = 0;
+    anchor = null;
+    dirty = false;
+    undoStack = [];
+    redoStack = [];
+    savedBuf = buf.map(function (l) {
+        return l;
+    });
+    invalidateCaches();
+    status("Opened " + path);
+}
+
+function saveFile() {
+    if (!fname) {
+        status("No file — open one first (Ctrl+O)");
+        return;
+    }
+    let ok = sys.writeFile(fname, buf.join("\n"));
+    if (ok) {
+        dirty = false;
+        savedBuf = buf.map(function (l) {
+            return l;
+        });
+        status("Saved " + fname);
+    } else {
+        status("Write failed: " + fname);
+    }
+}
+
+function openBrowser() {
+    brDir = "";
+    refreshBrowser();
+    brMode = true;
+}
+
+function refreshBrowser() {
+    let dirs = sys.listDirs(brDir);
+    let files = sys.listFiles(brDir);
+    brEntries = [];
+    if (brDir) {
+        brEntries.push({ name: "..", isDir: true });
+    }
+    if (dirs) {
+        for (let i = 0; i < dirs.length; i++) {
+            brEntries.push({ name: dirs[i], isDir: true });
+        }
+    }
+    if (files) {
+        for (let i = 0; i < files.length; i++) {
+            brEntries.push({ name: files[i], isDir: false });
+        }
+    }
+    brIdx = 0;
+    brScroll = 0;
+}
+
+// ─── Syntax highlighting ─────────────────────────────────────────────────────
+// Returns {toks: [{text, col}], inBlock: bool} for one source line.
+// Pass inBlock=true when the line starts inside a /* block comment.
+
+function tokenize(line, inBlock) {
+    let toks = [];
+    let i = 0,
+        n = line.length;
+
+    // Continued block comment from previous line
+    if (inBlock) {
+        let end = line.indexOf("*/");
+        if (end >= 0) {
+            toks.push({ text: line.slice(0, end + 2), col: COMCOL });
+            i = end + 2;
+            inBlock = false;
+        } else {
+            toks.push({ text: line, col: COMCOL });
+            return { toks: toks, inBlock: true };
+        }
+    }
+
+    while (i < n) {
+        // Block comment start
+        if (line[i] === "/" && i + 1 < n && line[i + 1] === "*") {
+            let end = line.indexOf("*/", i + 2);
+            if (end >= 0) {
+                toks.push({ text: line.slice(i, end + 2), col: COMCOL });
+                i = end + 2;
+                continue;
+            } else {
+                toks.push({ text: line.slice(i), col: COMCOL });
+                return { toks: toks, inBlock: true };
+            }
+        }
+
+        // Single-line comment
+        if (line[i] === "/" && i + 1 < n && line[i + 1] === "/") {
+            toks.push({ text: line.slice(i), col: COMCOL });
+            return { toks: toks, inBlock: false };
+        }
+
+        // String literal
+        if (line[i] === '"' || line[i] === "'" || line[i] === "`") {
+            let q = line[i],
+                j = i + 1;
+            while (j < n && line[j] !== q) {
+                if (line[j] === "\\") j++;
+                j++;
+            }
+            if (j < n) j++;
+            toks.push({ text: line.slice(i, j), col: STRCOL });
+            i = j;
+            continue;
+        }
+
+        // Number
+        if (line[i] >= "0" && line[i] <= "9") {
+            let j = i;
+            while (
+                j < n &&
+                ((line[j] >= "0" && line[j] <= "9") ||
+                    line[j] === "." ||
+                    line[j] === "x" ||
+                    line[j] === "X" ||
+                    (line[j] >= "a" && line[j] <= "f") ||
+                    (line[j] >= "A" && line[j] <= "F"))
+            )
+                j++;
+            toks.push({ text: line.slice(i, j), col: NUMCOL });
+            i = j;
+            continue;
+        }
+
+        // Identifier / keyword
+        let ch = line[i];
+        if ((ch >= "a" && ch <= "z") || (ch >= "A" && ch <= "Z") || ch === "_" || ch === "$") {
+            let j = i + 1;
+            while (j < n) {
+                let c = line[j];
+                if (
+                    (c >= "a" && c <= "z") ||
+                    (c >= "A" && c <= "Z") ||
+                    (c >= "0" && c <= "9") ||
+                    c === "_" ||
+                    c === "$"
+                )
+                    j++;
+                else break;
+            }
+            let word = line.slice(i, j);
+            toks.push({ text: word, col: KEYWORDS.has(word) ? KWCOL : FG });
+            i = j;
+            continue;
+        }
+
+        // Single character (whitespace, operator, punctuation)
+        toks.push({ text: line[i], col: FG });
+        i++;
+    }
+    return { toks: toks, inBlock: false };
+}
+
+// ─── Text input event handler ────────────────────────────────────────────────
+
+function onTextInput(ch) {
+    if (brMode) return;
+    if (key.btn(key.LCTRL) || key.btn(key.RCTRL)) return;
+
+    if (findMode) {
+        if (findField === 0) findText += ch;
+        else replaceText += ch;
+        return;
+    }
+
+    if (gotoMode) {
+        if (ch >= "0" && ch <= "9") gotoText += ch;
+        return;
+    }
+
+    if (vimEnabled && vim !== "insert") {
+        if (vim === "command") {
+            vimCmd += ch;
+        } else {
+            vimNormal(ch);
+        }
+        return;
+    }
+
+    // Skip over matching closing bracket already at cursor
+    if ((ch === ")" || ch === "]" || ch === "}") && buf[cy][cx] === ch) {
+        cx++;
+        ensureVisible();
+        resetBlink();
+        return;
+    }
+
+    deleteSel();
+    pushUndo();
+    let closer = AUTO_CLOSE[ch];
+    if (closer) {
+        buf[cy] = buf[cy].slice(0, cx) + ch + closer + buf[cy].slice(cx);
+        cx += 1;
+    } else {
+        buf[cy] = buf[cy].slice(0, cx) + ch + buf[cy].slice(cx);
+        cx += ch.length;
+    }
+    dirty = true;
+    ensureVisible();
+    resetBlink();
+}
+
+// ─── Lifecycle ───────────────────────────────────────────────────────────────
+
+function _init() {
+    sys.textInput(true);
+    evt.on("text:input", onTextInput);
+    if (!restored) {
+        openFile("src/main.js");
+    }
+    restored = false;
+}
+
+function _save() {
+    return {
+        buf,
+        cx,
+        cy,
+        ox,
+        oy,
+        fname,
+        dirty,
+        undoStack,
+        redoStack,
+        anchor,
+        brDir,
+        vimEnabled,
+        savedBuf,
+        lastFindText,
+    };
+}
+
+function _restore(s) {
+    buf = s.buf;
+    cx = s.cx;
+    cy = s.cy;
+    ox = s.ox;
+    oy = s.oy;
+    fname = s.fname;
+    dirty = s.dirty;
+    undoStack = s.undoStack || [];
+    redoStack = s.redoStack || [];
+    anchor = s.anchor || null;
+    brDir = s.brDir || "";
+    vimEnabled = s.vimEnabled || false;
+    savedBuf = s.savedBuf || [];
+    lastFindText = s.lastFindText || "";
+    targetOy = oy;
+    vim = "normal";
+    vimCount = "";
+    vimPending = "";
+    vimCmd = "";
+    restored = true;
+    invalidateCaches();
+}
+
+function _update(dt) {
+    // Cursor blink
+    blink += dt;
+    if (blink >= 0.5) {
+        blink -= 0.5;
+        curOn = !curOn;
+    }
+
+    // Status decay
+    if (msgT > 0) {
+        msgT -= dt;
+        if (msgT <= 0) msg = "";
+    }
+
+    // Smooth scroll interpolation
+    if (oy !== targetOy) {
+        let diff = targetOy - oy;
+        if (Math.abs(diff) < 0.5) {
+            oy = targetOy;
+        } else {
+            oy = oy + diff * 0.3;
+            oy = Math.round(oy);
+        }
+    }
+
+    if (brMode) updateBrowser();
+    else if (findMode) updateFind();
+    else if (gotoMode) updateGoto();
+    else updateEdit();
+}
+
+function _draw() {
+    gfx.cls(BG);
+    if (brMode) drawBrowser();
+    else {
+        drawEditor();
+        if (findMode) drawFind();
+        if (gotoMode) drawGoto();
+    }
+}
+
+// ─── Edit-mode update ────────────────────────────────────────────────────────
+
+function updateEdit() {
+    let ctrl = key.btn(key.LCTRL) || key.btn(key.RCTRL);
+    let shift = key.btn(key.LSHIFT) || key.btn(key.RSHIFT);
+
+    // ── Ctrl shortcuts ──
+    if (ctrl) {
+        if (key.btnp(key.GRAVE)) {
+            vimEnabled = !vimEnabled;
+            if (vimEnabled) {
+                vim = "normal";
+                vimCount = "";
+                vimPending = "";
+                anchor = null;
+                status("Vim ON");
+            } else {
+                status("Vim OFF");
+            }
+            return;
+        }
+        if (key.btnp(key.S)) {
+            saveFile();
+            return;
+        }
+        if (key.btnp(key.O)) {
+            openBrowser();
+            return;
+        }
+        if (key.btnp(key.Z)) {
+            doUndo();
+            return;
+        }
+        if (key.btnp(key.Y)) {
+            doRedo();
+            return;
+        }
+        if (key.btnp(key.A)) {
+            anchor = { x: 0, y: 0 };
+            cy = buf.length - 1;
+            cx = buf[cy].length;
+            return;
+        }
+        if (key.btnp(key.C)) {
+            let t = selText();
+            if (t) sys.clipboardSet(t);
+            else sys.clipboardSet(buf[cy]);
+            status("Copied");
+            return;
+        }
+        if (key.btnp(key.X)) {
+            let t = selText();
+            if (t) {
+                sys.clipboardSet(t);
+                deleteSel();
+            } else {
+                sys.clipboardSet(buf[cy] + "\n");
+                pushUndo();
+                buf.splice(cy, 1);
+                if (!buf.length) buf = [""];
+                cy = Math.min(cy, buf.length - 1);
+                cx = Math.min(cx, buf[cy].length);
+                dirty = true;
+            }
+            ensureVisible();
+            resetBlink();
+            return;
+        }
+        if (key.btnp(key.V)) {
+            let t = sys.clipboardGet();
+            if (!t) return;
+            deleteSel();
+            pushUndo();
+            let parts = t.replace(/\r\n/g, "\n").split("\n");
+            if (parts.length === 1) {
+                buf[cy] = buf[cy].slice(0, cx) + t + buf[cy].slice(cx);
+                cx += t.length;
+            } else {
+                let after = buf[cy].slice(cx);
+                buf[cy] = buf[cy].slice(0, cx) + parts[0];
+                for (let i = 1; i < parts.length - 1; i++) {
+                    buf.splice(cy + i, 0, parts[i]);
+                }
+                buf.splice(cy + parts.length - 1, 0, parts[parts.length - 1] + after);
+                cy += parts.length - 1;
+                cx = parts[parts.length - 1].length;
+            }
+            dirty = true;
+            ensureVisible();
+            resetBlink();
+            return;
+        }
+        if (key.btnp(key.D)) {
+            if (shift && anchor) {
+                // Ctrl+Shift+D: duplicate selection inline
+                let t = selText();
+                if (t) {
+                    let s = selOrdered();
+                    pushUndo();
+                    buf[s.b.y] = buf[s.b.y].slice(0, s.b.x) + t + buf[s.b.y].slice(s.b.x);
+                    dirty = true;
+                }
+            } else {
+                // Ctrl+D: duplicate line
+                pushUndo();
+                buf.splice(cy + 1, 0, buf[cy]);
+                cy++;
+                dirty = true;
+            }
+            ensureVisible();
+            resetBlink();
+            return;
+        }
+        if (key.btnp(key.F)) {
+            findMode = true;
+            findReplace = false;
+            findField = 0;
+            return;
+        }
+        if (key.btnp(key.H)) {
+            findMode = true;
+            findReplace = true;
+            findField = 0;
+            return;
+        }
+        if (key.btnp(key.G)) {
+            gotoMode = true;
+            gotoText = "";
+            return;
+        }
+        if (shift && key.btnp(key.K)) {
+            pushUndo();
+            let s = selOrdered();
+            if (s) {
+                buf.splice(s.a.y, s.b.y - s.a.y + 1);
+                anchor = null;
+                cy = Math.min(s.a.y, buf.length - 1);
+            } else {
+                buf.splice(cy, 1);
+            }
+            if (!buf.length) buf = [""];
+            cy = Math.min(cy, buf.length - 1);
+            cx = Math.min(cx, buf[cy].length);
+            dirty = true;
+            ensureVisible();
+            resetBlink();
+            return;
+        }
+        if (key.btnr(key.LEFT)) {
+            let ox0 = cx,
+                oy0 = cy;
+            if (cx > 0) {
+                let line = buf[cy];
+                cx--;
+                if (isWordChar(line[cx])) {
+                    while (cx > 0 && isWordChar(line[cx - 1])) cx--;
+                } else {
+                    while (cx > 0 && !isWordChar(line[cx - 1]) && line[cx - 1] !== " ") cx--;
+                }
+            } else if (cy > 0) {
+                cy--;
+                cx = buf[cy].length;
+            }
+            if (shift && !anchor) anchor = { x: ox0, y: oy0 };
+            if (!shift) anchor = null;
+            ensureVisible();
+            resetBlink();
+            return;
+        }
+        if (key.btnr(key.RIGHT)) {
+            let ox0 = cx,
+                oy0 = cy;
+            let line = buf[cy];
+            if (cx < line.length) {
+                if (isWordChar(line[cx])) {
+                    while (cx < line.length && isWordChar(line[cx])) cx++;
+                } else if (line[cx] !== " ") {
+                    while (cx < line.length && !isWordChar(line[cx]) && line[cx] !== " ") cx++;
+                }
+                while (cx < line.length && line[cx] === " ") cx++;
+            } else if (cy < buf.length - 1) {
+                cy++;
+                cx = 0;
+            }
+            if (shift && !anchor) anchor = { x: ox0, y: oy0 };
+            if (!shift) anchor = null;
+            ensureVisible();
+            resetBlink();
+            return;
+        }
+        if (key.btnp(key.SLASH)) {
+            // Toggle line comment
+            pushUndo();
+            let s = selOrdered();
+            let startLine = s ? s.a.y : cy;
+            let endLine = s ? s.b.y : cy;
+            // Check if all lines are commented
+            let allCommented = true;
+            for (let i = startLine; i <= endLine; i++) {
+                let stripped = buf[i].replace(/^\s*/, "");
+                if (stripped.length && stripped.slice(0, 2) !== "//") {
+                    allCommented = false;
+                    break;
+                }
+            }
+            for (let i = startLine; i <= endLine; i++) {
+                if (allCommented) {
+                    let idx = buf[i].indexOf("//");
+                    if (idx >= 0) {
+                        let after = buf[i][idx + 2] === " " ? idx + 3 : idx + 2;
+                        buf[i] = buf[i].slice(0, idx) + buf[i].slice(after);
+                    }
+                } else {
+                    let fnb = 0;
+                    while (fnb < buf[i].length && (buf[i][fnb] === " " || buf[i][fnb] === "\t"))
+                        fnb++;
+                    buf[i] = buf[i].slice(0, fnb) + "// " + buf[i].slice(fnb);
+                }
+            }
+            dirty = true;
+            resetBlink();
+            return;
+        }
+        if (shift && key.btnr(key.UP)) {
+            // Move line(s) up
+            let s = selOrdered();
+            let startLine = s ? s.a.y : cy;
+            let endLine = s ? s.b.y : cy;
+            if (startLine > 0) {
+                pushUndo();
+                let removed = buf.splice(startLine - 1, 1)[0];
+                buf.splice(endLine, 0, removed);
+                cy--;
+                if (s) {
+                    anchor = { x: s.a.x, y: s.a.y - 1 };
+                }
+                dirty = true;
+                ensureVisible();
+                resetBlink();
+            }
+            return;
+        }
+        if (shift && key.btnr(key.DOWN)) {
+            // Move line(s) down
+            let s = selOrdered();
+            let startLine = s ? s.a.y : cy;
+            let endLine = s ? s.b.y : cy;
+            if (endLine < buf.length - 1) {
+                pushUndo();
+                let removed = buf.splice(endLine + 1, 1)[0];
+                buf.splice(startLine, 0, removed);
+                cy++;
+                if (s) {
+                    anchor = { x: s.a.x, y: s.a.y + 1 };
+                }
+                dirty = true;
+                ensureVisible();
+                resetBlink();
+            }
+            return;
+        }
+        if (shift && key.btnp(key.ENTER)) {
+            // Insert line above
+            pushUndo();
+            let indent = getIndent(cy);
+            buf.splice(cy, 0, indent);
+            cx = indent.length;
+            dirty = true;
+            ensureVisible();
+            resetBlink();
+            return;
+        }
+        if (key.btnr(key.BACKSPACE)) {
+            // Ctrl+Backspace: delete word left
+            if (deleteSel()) {
+                ensureVisible();
+                resetBlink();
+                return;
+            }
+            pushUndo();
+            if (cx > 0) {
+                let nc = wordBoundaryLeft(buf[cy], cx);
+                buf[cy] = buf[cy].slice(0, nc) + buf[cy].slice(cx);
+                cx = nc;
+            } else if (cy > 0) {
+                cx = buf[cy - 1].length;
+                buf[cy - 1] += buf[cy];
+                buf.splice(cy, 1);
+                cy--;
+            }
+            dirty = true;
+            ensureVisible();
+            resetBlink();
+            return;
+        }
+        if (key.btnr(key.DELETE)) {
+            // Ctrl+Delete: delete word right
+            if (deleteSel()) {
+                ensureVisible();
+                resetBlink();
+                return;
+            }
+            pushUndo();
+            if (cx < buf[cy].length) {
+                let nc = wordBoundaryRight(buf[cy], cx);
+                buf[cy] = buf[cy].slice(0, cx) + buf[cy].slice(nc);
+            } else if (cy < buf.length - 1) {
+                buf[cy] += buf[cy + 1];
+                buf.splice(cy + 1, 1);
+            }
+            dirty = true;
+            resetBlink();
+            return;
+        }
+        return;
+    }
+
+    // ── Vim non-insert modes ──
+    if (vimEnabled && vim !== "insert") {
+        updateVimKeys();
+        return;
+    }
+
+    // ── Vim insert: Escape returns to normal ──
+    if (vimEnabled && key.btnp(key.ESCAPE)) {
+        vim = "normal";
+        cx = Math.max(0, cx - 1);
+        anchor = null;
+        ensureVisible();
+        resetBlink();
+        return;
+    }
+
+    // ── Navigation (with key repeat) ──
+    let pcx = cx,
+        pcy = cy;
+
+    if (key.btnr(key.LEFT)) {
+        if (cx > 0) cx--;
+        else if (cy > 0) {
+            cy--;
+            cx = buf[cy].length;
+        }
+    }
+    if (key.btnr(key.RIGHT)) {
+        if (cx < buf[cy].length) cx++;
+        else if (cy < buf.length - 1) {
+            cy++;
+            cx = 0;
+        }
+    }
+    if (key.btnr(key.UP) && cy > 0) {
+        cy--;
+        cx = clamp(cx, 0, buf[cy].length);
+    }
+    if (key.btnr(key.DOWN) && cy < buf.length - 1) {
+        cy++;
+        cx = clamp(cx, 0, buf[cy].length);
+    }
+    if (key.btnr(key.HOME)) {
+        let firstNonBlank = 0;
+        while (
+            firstNonBlank < buf[cy].length &&
+            (buf[cy][firstNonBlank] === " " || buf[cy][firstNonBlank] === "\t")
+        )
+            firstNonBlank++;
+        cx = cx === firstNonBlank ? 0 : firstNonBlank;
+    }
+    if (key.btnr(key.END)) cx = buf[cy].length;
+    if (key.btnr(key.PAGEUP)) {
+        cy = Math.max(0, cy - EROWS);
+        cx = clamp(cx, 0, buf[cy].length);
+    }
+    if (key.btnr(key.PAGEDOWN)) {
+        cy = Math.min(buf.length - 1, cy + EROWS);
+        cx = clamp(cx, 0, buf[cy].length);
+    }
+
+    // Update selection anchor if shifted, clear if not
+    if (cx !== pcx || cy !== pcy) {
+        if (shift && !anchor) anchor = { x: pcx, y: pcy };
+        if (!shift) anchor = null;
+        ensureVisible();
+        resetBlink();
+    }
+
+    // ── Editing keys ──
+    if (key.btnr(key.BACKSPACE)) {
+        if (deleteSel()) {
+            ensureVisible();
+            resetBlink();
+            return;
+        }
+        pushUndo();
+        if (cx > 0) {
+            buf[cy] = buf[cy].slice(0, cx - 1) + buf[cy].slice(cx);
+            cx--;
+        } else if (cy > 0) {
+            cx = buf[cy - 1].length;
+            buf[cy - 1] += buf[cy];
+            buf.splice(cy, 1);
+            cy--;
+        }
+        dirty = true;
+        ensureVisible();
+        resetBlink();
+    }
+
+    if (key.btnr(key.DELETE)) {
+        if (deleteSel()) {
+            ensureVisible();
+            resetBlink();
+            return;
+        }
+        pushUndo();
+        if (cx < buf[cy].length) {
+            buf[cy] = buf[cy].slice(0, cx) + buf[cy].slice(cx + 1);
+        } else if (cy < buf.length - 1) {
+            buf[cy] += buf[cy + 1];
+            buf.splice(cy + 1, 1);
+        }
+        dirty = true;
+        resetBlink();
+    }
+
+    if (key.btnp(key.ENTER)) {
+        deleteSel();
+        pushUndo();
+        // Auto-indent: match leading whitespace of current line
+        let indent = "";
+        let m = buf[cy].match(/^(\s+)/);
+        if (m) indent = m[1];
+        let charBefore = cx > 0 ? buf[cy][cx - 1] : "";
+        let charAfter = cx < buf[cy].length ? buf[cy][cx] : "";
+        let after = buf[cy].slice(cx);
+        buf[cy] = buf[cy].slice(0, cx);
+        if (charBefore === "{") {
+            let newIndent = indent + TAB;
+            cy++;
+            if (charAfter === "}") {
+                // Split braces: cursor on indented middle line, closing brace on dedented line below
+                buf.splice(cy, 0, newIndent, indent + after);
+            } else {
+                buf.splice(cy, 0, newIndent + after);
+            }
+            cx = newIndent.length;
+        } else {
+            cy++;
+            buf.splice(cy, 0, indent + after);
+            cx = indent.length;
+        }
+        dirty = true;
+        ensureVisible();
+        resetBlink();
+    }
+
+    if (key.btnr(key.TAB)) {
+        let s = selOrdered();
+        if (s && s.a.y !== s.b.y) {
+            // Indent / dedent selected lines
+            pushUndo();
+            for (let i = s.a.y; i <= s.b.y; i++) {
+                if (shift) {
+                    // Dedent: remove leading TAB
+                    if (buf[i].slice(0, TAB.length) === TAB) {
+                        buf[i] = buf[i].slice(TAB.length);
+                    }
+                } else {
+                    buf[i] = TAB + buf[i];
+                }
+            }
+            dirty = true;
+            resetBlink();
+        } else if (shift) {
+            // Dedent current line
+            pushUndo();
+            if (buf[cy].slice(0, TAB.length) === TAB) {
+                buf[cy] = buf[cy].slice(TAB.length);
+                cx = Math.max(0, cx - TAB.length);
+                dirty = true;
+            }
+            resetBlink();
+        } else {
+            deleteSel();
+            pushUndo();
+            buf[cy] = buf[cy].slice(0, cx) + TAB + buf[cy].slice(cx);
+            cx += TAB.length;
+            dirty = true;
+            ensureVisible();
+            resetBlink();
+        }
+    }
+
+    if (key.btnp(key.ESCAPE)) {
+        anchor = null;
+    }
+
+    // ── Mouse ──
+    let mx = mouse.x();
+    let my = mouse.y();
+    let editY = HEAD * CH;
+    let footY = (ROWS - FOOT) * CH;
+    let gutterPx = GUTTER * CW;
+
+    if (my >= editY && my < footY && mx >= gutterPx) {
+        if (mouse.btnp(0)) {
+            // Click to place cursor
+            let row = (oy + (my - editY) / CH) | 0;
+            let col = (ox + (mx - gutterPx) / CW) | 0;
+            row = clamp(row, 0, buf.length - 1);
+            col = clamp(col, 0, buf[row].length);
+            // Detect double/triple click
+            let now = Date.now();
+            if (
+                now - lastClickTime < 400 &&
+                Math.abs(mx - lastClickX) < 4 &&
+                Math.abs(my - lastClickY) < 4
+            ) {
+                clickCount++;
+            } else {
+                clickCount = 1;
+            }
+            lastClickTime = now;
+            lastClickX = mx;
+            lastClickY = my;
+            if (clickCount === 2) {
+                // Double-click: select word
+                cy = row;
+                let line = buf[cy];
+                let wl = col,
+                    wr = col;
+                while (wl > 0 && isWordChar(line[wl - 1])) wl--;
+                while (wr < line.length && isWordChar(line[wr])) wr++;
+                anchor = { x: wl, y: cy };
+                cx = wr;
+            } else if (clickCount >= 3) {
+                // Triple-click: select line
+                cy = row;
+                anchor = { x: 0, y: cy };
+                cx = buf[cy].length;
+                clickCount = 3;
+            } else {
+                if (shift) {
+                    if (!anchor) anchor = { x: cx, y: cy };
+                } else {
+                    anchor = null;
+                }
+                cx = col;
+                cy = row;
+            }
+            ensureVisible();
+            resetBlink();
+        } else if (mouse.btn(0)) {
+            // Drag to extend selection
+            let row = (oy + (my - editY) / CH) | 0;
+            let col = (ox + (mx - gutterPx) / CW) | 0;
+            row = clamp(row, 0, buf.length - 1);
+            col = clamp(col, 0, buf[row].length);
+            if (!anchor) anchor = { x: cx, y: cy };
+            cx = col;
+            cy = row;
+            ensureVisible();
+            resetBlink();
+        }
+    }
+
+    // Mouse wheel scroll (smooth)
+    let wheel = mouse.wheel();
+    if (wheel !== 0) {
+        targetOy = clamp(targetOy - wheel * 3, 0, Math.max(0, buf.length - EROWS));
+    }
+}
+
+// ─── Vim mode ────────────────────────────────────────────────────────────────
+
+function updateVimKeys() {
+    // Command mode special keys
+    if (vim === "command") {
+        if (key.btnp(key.ESCAPE)) {
+            vim = "normal";
+            vimCmd = "";
+            return;
+        }
+        if (key.btnp(key.ENTER)) {
+            vimExecCmd(vimCmd);
+            vim = "normal";
+            vimCmd = "";
+            return;
+        }
+        if (key.btnr(key.BACKSPACE)) {
+            if (vimCmd.length > 0) {
+                vimCmd = vimCmd.slice(0, -1);
+            } else {
+                vim = "normal";
+            }
+            return;
+        }
+        return;
+    }
+
+    // Normal/Visual: Escape
+    if (key.btnp(key.ESCAPE)) {
+        if (vim === "visual" || vim === "vline") {
+            vim = "normal";
+            anchor = null;
+        }
+        vimCount = "";
+        vimPending = "";
+        return;
+    }
+
+    // Mouse handling (works in normal/visual)
+    let mx = mouse.x();
+    let my = mouse.y();
+    let editY = HEAD * CH;
+    let footY = (ROWS - FOOT) * CH;
+    let gutterPx = GUTTER * CW;
+
+    if (my >= editY && my < footY && mx >= gutterPx) {
+        if (mouse.btnp(0)) {
+            let row = (oy + (my - editY) / CH) | 0;
+            let col = (ox + (mx - gutterPx) / CW) | 0;
+            row = clamp(row, 0, buf.length - 1);
+            col = clamp(col, 0, Math.max(0, buf[row].length - 1));
+            cx = col;
+            cy = row;
+            if (vim !== "visual" && vim !== "vline") anchor = null;
+            ensureVisible();
+            resetBlink();
+        }
+    }
+
+    let wheel = mouse.wheel();
+    if (wheel !== 0) {
+        oy = clamp(oy - wheel * 3, 0, Math.max(0, buf.length - EROWS));
+    }
+}
+
+// ── Vim normal mode dispatch ──
+
+function vimNormal(ch) {
+    if (vim === "visual" || vim === "vline") {
+        vimVisual(ch);
+        return;
+    }
+
+    // Numeric prefix
+    if ((ch >= "1" && ch <= "9") || (ch === "0" && vimCount !== "")) {
+        vimCount += ch;
+        return;
+    }
+
+    let count = vimCount !== "" ? parseInt(vimCount) : 1;
+    vimCount = "";
+
+    // Pending operator
+    if (vimPending !== "") {
+        vimResolvePending(ch, count);
+        return;
+    }
+
+    switch (ch) {
+        // ── Mode switches ──
+        case "i":
+            vim = "insert";
+            return;
+        case "I":
+            cx = firstNonBlank(cy);
+            vim = "insert";
+            return;
+        case "a":
+            cx = Math.min(cx + 1, buf[cy].length);
+            vim = "insert";
+            return;
+        case "A":
+            cx = buf[cy].length;
+            vim = "insert";
+            return;
+        case "o": {
+            pushUndo();
+            let ind = getIndent(cy);
+            buf.splice(cy + 1, 0, ind);
+            cy++;
+            cx = ind.length;
+            dirty = true;
+            vim = "insert";
+            ensureVisible();
+            resetBlink();
+            return;
+        }
+        case "O": {
+            pushUndo();
+            let ind = getIndent(cy);
+            buf.splice(cy, 0, ind);
+            cx = ind.length;
+            dirty = true;
+            vim = "insert";
+            ensureVisible();
+            resetBlink();
+            return;
+        }
+        case "v":
+            anchor = { x: cx, y: cy };
+            vim = "visual";
+            return;
+        case "V":
+            vimVlineStart = cy;
+            anchor = { x: 0, y: cy };
+            cx = buf[cy].length;
+            vim = "vline";
+            return;
+        case ":":
+            vim = "command";
+            vimCmd = "";
+            return;
+        case "/":
+            vim = "command";
+            vimCmd = "/";
+            return;
+
+        // ── Motions ──
+        case "h":
+            for (let i = 0; i < count; i++) if (cx > 0) cx--;
+            break;
+        case "j":
+            for (let i = 0; i < count; i++) if (cy < buf.length - 1) cy++;
+            cx = clamp(cx, 0, Math.max(0, buf[cy].length - 1));
+            break;
+        case "k":
+            for (let i = 0; i < count; i++) if (cy > 0) cy--;
+            cx = clamp(cx, 0, Math.max(0, buf[cy].length - 1));
+            break;
+        case "l":
+            for (let i = 0; i < count; i++) if (cx < buf[cy].length - 1) cx++;
+            break;
+        case "w":
+            for (let i = 0; i < count; i++) vimWordForward();
+            break;
+        case "b":
+            for (let i = 0; i < count; i++) vimWordBack();
+            break;
+        case "e":
+            for (let i = 0; i < count; i++) vimWordEnd();
+            break;
+        case "0":
+            cx = 0;
+            break;
+        case "$":
+            cx = Math.max(0, buf[cy].length - 1);
+            break;
+        case "^":
+            cx = firstNonBlank(cy);
+            break;
+        case "G":
+            if (count > 1) cy = clamp(count - 1, 0, buf.length - 1);
+            else cy = buf.length - 1;
+            cx = firstNonBlank(cy);
+            break;
+        case "g":
+            vimPending = "g";
+            vimOpCount = count;
+            return;
+
+        // ── Editing ──
+        case "x":
+            pushUndo();
+            for (let i = 0; i < count; i++) {
+                if (cx < buf[cy].length) {
+                    vimReg = buf[cy][cx];
+                    buf[cy] = buf[cy].slice(0, cx) + buf[cy].slice(cx + 1);
+                    dirty = true;
+                }
+            }
+            vimLinewise = false;
+            if (cx >= buf[cy].length && cx > 0) cx = buf[cy].length - 1;
+            break;
+        case "s":
+            pushUndo();
+            if (cx < buf[cy].length) {
+                vimReg = buf[cy][cx];
+                buf[cy] = buf[cy].slice(0, cx) + buf[cy].slice(cx + 1);
+                dirty = true;
+            }
+            vimLinewise = false;
+            vim = "insert";
+            break;
+        case "r":
+            vimPending = "r";
+            return;
+        case "p":
+            vimPaste(false, count);
+            break;
+        case "P":
+            vimPaste(true, count);
+            break;
+        case "u":
+            for (let i = 0; i < count; i++) doUndo();
+            break;
+        case "J":
+            pushUndo();
+            for (let i = 0; i < count; i++) {
+                if (cy < buf.length - 1) {
+                    let trail = buf[cy + 1].replace(/^\s+/, "");
+                    buf[cy] += (trail ? " " : "") + trail;
+                    buf.splice(cy + 1, 1);
+                    dirty = true;
+                }
+            }
+            break;
+        case "D":
+            pushUndo();
+            vimReg = buf[cy].slice(cx);
+            vimLinewise = false;
+            buf[cy] = buf[cy].slice(0, cx);
+            if (cx > 0) cx--;
+            dirty = true;
+            break;
+        case "C":
+            pushUndo();
+            vimReg = buf[cy].slice(cx);
+            vimLinewise = false;
+            buf[cy] = buf[cy].slice(0, cx);
+            dirty = true;
+            vim = "insert";
+            break;
+
+        // ── Operators ──
+        case "d":
+            vimPending = "d";
+            vimOpCount = count;
+            return;
+        case "c":
+            vimPending = "c";
+            vimOpCount = count;
+            return;
+        case "y":
+            vimPending = "y";
+            vimOpCount = count;
+            return;
+
+        // ── Search ──
+        case "n":
+            for (let i = 0; i < count; i++) vimSearchNext(1);
+            break;
+        case "N":
+            for (let i = 0; i < count; i++) vimSearchNext(-1);
+            break;
+
+        default:
+            return;
+    }
+
+    ensureVisible();
+    resetBlink();
+}
+
+// ── Vim visual mode ──
+
+function vimVisual(ch) {
+    if ((ch >= "1" && ch <= "9") || (ch === "0" && vimCount !== "")) {
+        vimCount += ch;
+        return;
+    }
+
+    let count = vimCount !== "" ? parseInt(vimCount) : 1;
+    vimCount = "";
+
+    // Operators on selection
+    switch (ch) {
+        case "d":
+        case "x":
+            vimReg = selText();
+            vimLinewise = vim === "vline";
+            deleteSel();
+            vim = "normal";
+            if (cx >= buf[cy].length && cx > 0) cx = buf[cy].length - 1;
+            ensureVisible();
+            resetBlink();
+            return;
+        case "y":
+            vimReg = selText();
+            vimLinewise = vim === "vline";
+            anchor = null;
+            vim = "normal";
+            status("Yanked");
+            return;
+        case "c":
+            vimReg = selText();
+            vimLinewise = vim === "vline";
+            deleteSel();
+            vim = "insert";
+            ensureVisible();
+            resetBlink();
+            return;
+    }
+
+    // Motions
+    switch (ch) {
+        case "h":
+            for (let i = 0; i < count; i++) if (cx > 0) cx--;
+            break;
+        case "j":
+            for (let i = 0; i < count; i++) if (cy < buf.length - 1) cy++;
+            cx = clamp(cx, 0, buf[cy].length);
+            break;
+        case "k":
+            for (let i = 0; i < count; i++) if (cy > 0) cy--;
+            cx = clamp(cx, 0, buf[cy].length);
+            break;
+        case "l":
+            for (let i = 0; i < count; i++) if (cx < buf[cy].length) cx++;
+            break;
+        case "w":
+            for (let i = 0; i < count; i++) vimWordForward();
+            break;
+        case "b":
+            for (let i = 0; i < count; i++) vimWordBack();
+            break;
+        case "e":
+            for (let i = 0; i < count; i++) vimWordEnd();
+            break;
+        case "0":
+            cx = 0;
+            break;
+        case "$":
+            cx = buf[cy].length;
+            break;
+        case "^":
+            cx = firstNonBlank(cy);
+            break;
+        case "G":
+            cy = buf.length - 1;
+            cx = clamp(cx, 0, buf[cy].length);
+            break;
+        case "g":
+            vimPending = "g";
+            return;
+        default:
+            return;
+    }
+
+    // For visual-line mode, extend to full lines
+    if (vim === "vline") {
+        if (cy >= vimVlineStart) {
+            anchor = { x: 0, y: vimVlineStart };
+            cx = buf[cy].length;
+        } else {
+            anchor = { x: buf[vimVlineStart].length, y: vimVlineStart };
+            cx = 0;
+        }
+    }
+
+    ensureVisible();
+    resetBlink();
+}
+
+// ── Resolve pending operator ──
+
+function vimResolvePending(ch, motionCount) {
+    let op = vimPending;
+    let opCount = vimOpCount;
+    vimPending = "";
+    vimOpCount = 1;
+
+    let totalCount = opCount * motionCount;
+
+    // Replace character
+    if (op === "r") {
+        pushUndo();
+        if (cx < buf[cy].length) {
+            buf[cy] = buf[cy].slice(0, cx) + ch + buf[cy].slice(cx + 1);
+            dirty = true;
+        }
+        ensureVisible();
+        resetBlink();
+        return;
+    }
+
+    // gg — go to top or line N
+    if (op === "g") {
+        if (ch === "g") {
+            cy = opCount > 1 ? clamp(opCount - 1, 0, buf.length - 1) : 0;
+            cx = firstNonBlank(cy);
+        }
+        ensureVisible();
+        resetBlink();
+        return;
+    }
+
+    // Doubled operator (dd, yy, cc) — linewise
+    if (ch === op) {
+        vimLinewiseOp(op, totalCount);
+        return;
+    }
+
+    // Operator + motion
+    vimMotionOp(op, ch, totalCount);
+}
+
+// ── Linewise operator (dd, yy, cc) ──
+
+function vimLinewiseOp(op, count) {
+    let startLine = cy;
+    let endLine = Math.min(cy + count - 1, buf.length - 1);
+    let text = "";
+    for (let i = startLine; i <= endLine; i++) text += buf[i] + "\n";
+    vimReg = text;
+    vimLinewise = true;
+
+    if (op === "d" || op === "c") {
+        pushUndo();
+        buf.splice(startLine, endLine - startLine + 1);
+        if (!buf.length) buf = [""];
+        cy = Math.min(startLine, buf.length - 1);
+        cx = firstNonBlank(cy);
+        dirty = true;
+    }
+    if (op === "c") vim = "insert";
+    if (op === "y") status("Yanked " + (endLine - startLine + 1) + " lines");
+
+    ensureVisible();
+    resetBlink();
+}
+
+// ── Operator + motion ──
+
+function vimMotionOp(op, ch, count) {
+    let ocx = cx,
+        ocy = cy;
+
+    // Execute motion
+    let moved = false;
+    switch (ch) {
+        case "h":
+            for (let i = 0; i < count; i++)
+                if (cx > 0) {
+                    cx--;
+                    moved = true;
+                }
+            break;
+        case "j":
+            for (let i = 0; i < count; i++)
+                if (cy < buf.length - 1) {
+                    cy++;
+                    moved = true;
+                }
+            break;
+        case "k":
+            for (let i = 0; i < count; i++)
+                if (cy > 0) {
+                    cy--;
+                    moved = true;
+                }
+            break;
+        case "l":
+            for (let i = 0; i < count; i++)
+                if (cx < buf[cy].length) {
+                    cx++;
+                    moved = true;
+                }
+            break;
+        case "w":
+            for (let i = 0; i < count; i++) vimWordForward();
+            moved = true;
+            break;
+        case "b":
+            for (let i = 0; i < count; i++) vimWordBack();
+            moved = true;
+            break;
+        case "e":
+            for (let i = 0; i < count; i++) {
+                vimWordEnd();
+                cx++;
+            }
+            moved = true;
+            break;
+        case "$":
+            cx = buf[cy].length;
+            moved = true;
+            break;
+        case "0":
+            cx = 0;
+            moved = true;
+            break;
+        case "^":
+            cx = firstNonBlank(cy);
+            moved = true;
+            break;
+        case "G":
+            cy = buf.length - 1;
+            moved = true;
+            break;
+        default:
+            return;
+    }
+
+    if (!moved) return;
+
+    // j/k/G motions are linewise
+    let linewise = ch === "j" || ch === "k" || ch === "G";
+
+    if (linewise) {
+        let sl = Math.min(ocy, cy);
+        let el = Math.max(ocy, cy);
+        let text = "";
+        for (let i = sl; i <= el; i++) text += buf[i] + "\n";
+        vimReg = text;
+        vimLinewise = true;
+
+        if (op === "d" || op === "c") {
+            pushUndo();
+            buf.splice(sl, el - sl + 1);
+            if (!buf.length) buf = [""];
+            cy = Math.min(sl, buf.length - 1);
+            cx = firstNonBlank(cy);
+            dirty = true;
+        }
+        if (op === "c") vim = "insert";
+        if (op === "y") {
+            cx = ocx;
+            cy = ocy;
+            status("Yanked " + (el - sl + 1) + " lines");
+        }
+    } else {
+        let a = { x: ocx, y: ocy };
+        let b = { x: cx, y: cy };
+        if (a.y > b.y || (a.y === b.y && a.x > b.x)) {
+            let t = a;
+            a = b;
+            b = t;
+        }
+
+        let text;
+        if (a.y === b.y) {
+            text = buf[a.y].slice(a.x, b.x);
+        } else {
+            let parts = [buf[a.y].slice(a.x)];
+            for (let i = a.y + 1; i < b.y; i++) parts.push(buf[i]);
+            parts.push(buf[b.y].slice(0, b.x));
+            text = parts.join("\n");
+        }
+        vimReg = text;
+        vimLinewise = false;
+
+        if (op === "d" || op === "c") {
+            pushUndo();
+            if (a.y === b.y) {
+                buf[a.y] = buf[a.y].slice(0, a.x) + buf[a.y].slice(b.x);
+            } else {
+                buf[a.y] = buf[a.y].slice(0, a.x) + buf[b.y].slice(b.x);
+                buf.splice(a.y + 1, b.y - a.y);
+            }
+            cx = a.x;
+            cy = a.y;
+            if (cx >= buf[cy].length && cx > 0 && op === "d") cx--;
+            dirty = true;
+        }
+        if (op === "c") vim = "insert";
+        if (op === "y") {
+            cx = ocx;
+            cy = ocy;
+            status("Yanked");
+        }
+    }
+
+    ensureVisible();
+    resetBlink();
+}
+
+// ── Vim paste ──
+
+function vimPaste(before, count) {
+    if (!vimReg) return;
+    pushUndo();
+
+    if (vimLinewise) {
+        let lines = vimReg.split("\n");
+        if (lines.length && lines[lines.length - 1] === "") lines.pop();
+        for (let c = 0; c < count; c++) {
+            let insertAt = before ? cy : cy + 1;
+            for (let i = 0; i < lines.length; i++) {
+                buf.splice(insertAt + i, 0, lines[i]);
+            }
+            if (!before) cy += lines.length;
+        }
+        cx = firstNonBlank(cy);
+    } else {
+        for (let c = 0; c < count; c++) {
+            let pos = before ? cx : Math.min(cx + 1, buf[cy].length);
+            buf[cy] = buf[cy].slice(0, pos) + vimReg + buf[cy].slice(pos);
+            cx = pos + vimReg.length - 1;
+        }
+    }
+
+    dirty = true;
+    ensureVisible();
+    resetBlink();
+}
+
+// ── Vim command execution ──
+
+function vimExecCmd(cmd) {
+    if (cmd === "w") {
+        saveFile();
+    } else if (cmd === "q") {
+        buf = [""];
+        cx = cy = ox = oy = 0;
+        fname = "";
+        dirty = false;
+        undoStack = [];
+        anchor = null;
+        status("Buffer closed");
+    } else if (cmd === "wq") {
+        saveFile();
+        buf = [""];
+        cx = cy = ox = oy = 0;
+        fname = "";
+        dirty = false;
+        undoStack = [];
+        anchor = null;
+        status("Saved & closed");
+    } else if (cmd === "e" || cmd === "e ") {
+        openBrowser();
+    } else if (/^[0-9]+$/.test(cmd)) {
+        let line = parseInt(cmd);
+        cy = clamp(line - 1, 0, buf.length - 1);
+        cx = firstNonBlank(cy);
+        ensureVisible();
+        resetBlink();
+    } else if (cmd.charAt(0) === "/") {
+        vimSearch = cmd.slice(1);
+        if (vimSearch) vimSearchNext(1);
+    } else {
+        status("Unknown: :" + cmd);
+    }
+}
+
+// ── Vim search ──
+
+function vimSearchNext(dir) {
+    if (!vimSearch) {
+        status("No search pattern");
+        return;
+    }
+
+    let total = buf.length;
+    let startCol = cx + dir;
+
+    for (let i = 0; i < total; i++) {
+        let li = (cy + i * dir + total) % total;
+        let line = buf[li];
+        let col;
+
+        if (i === 0) {
+            if (dir > 0) {
+                col = line.indexOf(vimSearch, Math.max(0, startCol));
+            } else {
+                col = line.lastIndexOf(vimSearch, Math.max(0, startCol - 1));
+            }
+        } else {
+            col = dir > 0 ? line.indexOf(vimSearch) : line.lastIndexOf(vimSearch);
+        }
+
+        if (col >= 0) {
+            cy = li;
+            cx = col;
+            ensureVisible();
+            resetBlink();
+            status("/" + vimSearch);
+            return;
+        }
+    }
+
+    status("Not found: " + vimSearch);
+}
+
+// ─── Editor drawing ──────────────────────────────────────────────────────────
+
+function drawEditor() {
+    let editY = HEAD * CH;
+    let footY = (ROWS - FOOT) * CH;
+    let gutterPx = GUTTER * CW;
+
+    // ── Header bar ──
+    gfx.rectfill(0, 0, FB_W - 1, CH - 1, HEADBG);
+    let title = (dirty ? "\x07 " : "  ") + (fname || "[untitled]");
+    gfx.print(title, gutterPx, 0, dirty ? DIRTCOL : HEADFG);
+    if (vimEnabled) {
+        gfx.print("[vim]", FB_W - 6 * CW, 0, GUTFG);
+    }
+
+    // ── Gutter background ──
+    gfx.rectfill(0, editY, gutterPx - 2, footY - 1, GUTBG);
+
+    // ── Use cached block comment and bracket depth state ──
+    ensureCaches();
+    let inBlock = oy < _blockStateCache.length ? _blockStateCache[oy] : false;
+
+    // ── Text area ──
+    for (let r = 0; r < EROWS; r++) {
+        let li = oy + r;
+        if (li >= buf.length) break;
+        let py = editY + r * CH;
+
+        // Current-line highlight
+        if (li === cy) {
+            gfx.rectfill(gutterPx, py, FB_W - 1, py + CH - 1, LINEBG);
+        }
+
+        // Selection highlight
+        drawSelection(li, py);
+
+        // Find match highlighting (persistent: use lastFindText when not in findMode)
+        let highlightText = findMode ? findText : lastFindText;
+        if (highlightText) {
+            let line = buf[li];
+            let idx = line.indexOf(highlightText);
+            while (idx >= 0) {
+                let x0 = gutterPx + (idx - ox) * CW;
+                let x1 = gutterPx + (idx + highlightText.length - ox) * CW - 1;
+                x0 = clamp(x0, gutterPx, FB_W - 1);
+                x1 = clamp(x1, gutterPx, FB_W - 1);
+                if (x1 >= x0 && idx + highlightText.length > ox && idx < ox + ECOLS) {
+                    gfx.rectfill(x0, py, x1, py + CH - 1, MATCHBG);
+                }
+                idx = line.indexOf(highlightText, idx + 1);
+            }
+        }
+
+        // Trailing whitespace highlight (skip current line)
+        if (li !== cy) {
+            let line = buf[li];
+            let trimEnd = line.length;
+            while (trimEnd > 0 && (line[trimEnd - 1] === " " || line[trimEnd - 1] === "\t"))
+                trimEnd--;
+            if (trimEnd < line.length && trimEnd >= ox) {
+                let x0 = gutterPx + Math.max(0, trimEnd - ox) * CW;
+                let x1 = gutterPx + (line.length - ox) * CW - 1;
+                x0 = clamp(x0, gutterPx, FB_W - 1);
+                x1 = clamp(x1, gutterPx, FB_W - 1);
+                if (x1 >= x0) {
+                    gfx.rectfill(x0, py, x1, py + CH - 2, TRAILBG);
+                }
+            }
+        }
+
+        // Indent guides
+        let indentLevel = 0;
+        let line = buf[li];
+        while (indentLevel < line.length && line[indentLevel] === " ") indentLevel++;
+        let tabW = TAB.length;
+        for (let g = tabW; g < Math.max(indentLevel, li === cy ? 0 : indentLevel); g += tabW) {
+            let gx = gutterPx + (g - ox) * CW - 1;
+            if (gx > gutterPx && gx < FB_W - MINIMAP_W) {
+                for (let dy = 0; dy < CH; dy += 2) {
+                    gfx.pset(gx, py + dy, GUIDECOL);
+                }
+            }
+        }
+
+        // Line number (highlight current line number)
+        let num = String(li + 1);
+        let pad = GUTTER - 1 - num.length;
+        if (li === cy) {
+            gfx.rectfill(0, py, gutterPx - 2, py + CH - 1, GUTBG);
+            gfx.print(num, pad * CW, py, CURFG);
+        } else {
+            gfx.print(num, pad * CW, py, GUTFG);
+        }
+
+        // Modified line indicator in gutter
+        if (savedBuf.length > 0) {
+            if (li >= savedBuf.length || buf[li] !== savedBuf[li]) {
+                let indicatorCol = li >= savedBuf.length ? ADDCOL : MODCOL;
+                gfx.rectfill(gutterPx - 2, py, gutterPx - 2, py + CH - 2, indicatorCol);
+            }
+        }
+
+        // Syntax-highlighted text (with block comment tracking)
+        let result = tokenize(buf[li], inBlock);
+        let tokens = result.toks;
+        inBlock = result.inBlock;
+        let col = 0;
+        // Running bracket depth from cached line-start value
+        let bDepth = li < _bracketDepthCache.length ? _bracketDepthCache[li] : 0;
+        for (let t = 0; t < tokens.length; t++) {
+            let tok = tokens[t];
+            let tokCol = tok.col;
+            for (let c = 0; c < tok.text.length; c++) {
+                let ch = tok.text[c];
+                // Track bracket depth inline
+                let isBracket = false;
+                if (tokCol === FG && BRACKET_PAIRS[ch]) {
+                    isBracket = true;
+                    let isOpen = ch === "(" || ch === "[" || ch === "{";
+                    if (!isOpen) bDepth--;
+                    let vc = col - ox;
+                    if (vc >= 0 && vc < ECOLS) {
+                        let bCol = BRACKET_COLORS[Math.abs(bDepth) % BRACKET_COLORS.length];
+                        gfx.print(ch, gutterPx + vc * CW, py, bCol);
+                    }
+                    if (isOpen) bDepth++;
+                }
+                if (!isBracket) {
+                    let vc = col - ox;
+                    if (vc >= 0 && vc < ECOLS) {
+                        if (ch === "\t") {
+                            gfx.print("\x1a", gutterPx + vc * CW, py, GUIDECOL);
+                        } else {
+                            gfx.print(ch, gutterPx + vc * CW, py, tokCol);
+                        }
+                    }
+                }
+                col++;
+            }
+        }
+    }
+
+    // ── Matching bracket highlight ──
+    let matchBracket = getCachedBracketMatch();
+    if (matchBracket) {
+        let mr = matchBracket.y - oy;
+        let mc = matchBracket.x - ox;
+        if (mr >= 0 && mr < EROWS && mc >= 0 && mc < ECOLS) {
+            let mx2 = gutterPx + mc * CW;
+            let my2 = editY + mr * CH;
+            gfx.rectfill(mx2, my2, mx2 + CW - 2, my2 + CH - 2, BRACKETBG);
+            gfx.print(buf[matchBracket.y][matchBracket.x], mx2, my2, FG);
+        }
+    }
+
+    // ── Scrollbar ──
+    if (buf.length > EROWS) {
+        let trackX = FB_W - SCROLLBAR_W;
+        let trackH = footY - editY;
+        gfx.rectfill(trackX, editY, FB_W - 1, footY - 1, SCROLLBG);
+        let thumbH = Math.max(8, (EROWS / buf.length) * trackH) | 0;
+        let thumbY = (editY + (oy / Math.max(1, buf.length - EROWS)) * (trackH - thumbH)) | 0;
+        gfx.rectfill(trackX, thumbY, FB_W - 1, thumbY + thumbH - 1, SCROLLFG);
+    }
+
+    // ── Minimap ──
+    {
+        let mmX = FB_W - MINIMAP_W - SCROLLBAR_W - 1;
+        let mmH = footY - editY;
+        let totalLines = buf.length;
+        if (totalLines > 0) {
+            let scale = mmH / totalLines;
+            // Iterate by pixel row instead of by line to avoid O(totalLines) per frame
+            let pixelRows = Math.min(mmH, totalLines);
+            for (let py2 = 0; py2 < pixelRows; py2++) {
+                let lineIdx = (py2 / scale) | 0;
+                if (lineIdx >= totalLines) break;
+                let my2 = editY + py2;
+                let lineLen = Math.min(buf[lineIdx].length, MINIMAP_W);
+                if (lineLen > 0) {
+                    let mmCol = lineIdx === cy ? CURFG : GUTFG;
+                    gfx.rectfill(mmX, my2, mmX + lineLen - 1, my2, mmCol);
+                }
+            }
+            // Draw visible region overlay
+            let vrY = (editY + oy * scale) | 0;
+            let vrH = Math.max(1, (EROWS * scale) | 0);
+            gfx.rectfill(mmX - 1, vrY, mmX - 1, Math.min(vrY + vrH, footY - 1), SCROLLFG);
+        }
+    }
+
+    // ── Cursor ──
+    if (curOn) {
+        let scrX = gutterPx + (cx - ox) * CW;
+        let scrY = editY + (cy - oy) * CH;
+        if (cx >= ox && cx <= ox + ECOLS && cy >= oy && cy < oy + EROWS) {
+            if (vimEnabled && vim !== "insert") {
+                // Block cursor
+                gfx.rectfill(scrX, scrY, scrX + CW - 2, scrY + CH - 2, CURFG);
+                if (cx < buf[cy].length) {
+                    gfx.print(buf[cy][cx], scrX, scrY, BG);
+                }
+            } else {
+                // Line cursor
+                gfx.rectfill(scrX, scrY, scrX, scrY + CH - 2, CURFG);
+            }
+        }
+    }
+
+    // ── Status bar ──
+    gfx.rectfill(0, footY, FB_W - 1, footY + CH - 1, FOOTBG);
+    if (vimEnabled && vim === "command") {
+        gfx.print(":" + vimCmd + "_", gutterPx, footY, FG);
+    } else {
+        let modeStr = "";
+        if (vimEnabled) {
+            if (vim === "insert") modeStr = "-- INSERT --  ";
+            else if (vim === "visual") modeStr = "-- VISUAL --  ";
+            else if (vim === "vline") modeStr = "-- V-LINE --  ";
+        }
+        let pos = modeStr + "Ln " + (cy + 1) + ", Col " + (cx + 1) + "  (" + buf.length + " lines)";
+        gfx.print(pos, gutterPx, footY, FOOTFG);
+        // Pending operator / count feedback
+        let right = "";
+        if (vimEnabled && (vimCount || vimPending)) right = vimCount + vimPending;
+        if (msg) right = msg;
+        if (right) {
+            let rw = gfx.textWidth(right);
+            gfx.print(right, FB_W - rw - CW, footY, FOOTFG);
+        }
+    }
+}
+
+function drawSelection(lineIdx, py) {
+    let s = selOrdered();
+    if (!s) return;
+    if (lineIdx < s.a.y || lineIdx > s.b.y) return;
+
+    let sc, ec;
+    if (lineIdx === s.a.y && lineIdx === s.b.y) {
+        sc = s.a.x;
+        ec = s.b.x;
+    } else if (lineIdx === s.a.y) {
+        sc = s.a.x;
+        ec = buf[lineIdx].length;
+    } else if (lineIdx === s.b.y) {
+        sc = 0;
+        ec = s.b.x;
+    } else {
+        sc = 0;
+        ec = buf[lineIdx].length;
+    }
+
+    let gutterPx = GUTTER * CW;
+    let x0 = gutterPx + (sc - ox) * CW;
+    let x1 = gutterPx + (ec - ox) * CW - 1;
+    x0 = clamp(x0, gutterPx, FB_W - 1);
+    x1 = clamp(x1, gutterPx, FB_W - 1);
+    if (x1 >= x0) {
+        gfx.rectfill(x0, py, x1, py + CH - 1, SELBG);
+    }
+}
+
+// ─── Find & Replace ──────────────────────────────────────────────────────────
+
+function updateFind() {
+    let ctrl = key.btn(key.LCTRL) || key.btn(key.RCTRL);
+    let shift = key.btn(key.LSHIFT) || key.btn(key.RSHIFT);
+
+    if (key.btnp(key.ESCAPE)) {
+        if (findText) lastFindText = findText;
+        findMode = false;
+        return;
+    }
+
+    if (key.btnr(key.BACKSPACE)) {
+        if (findField === 0 && findText.length) findText = findText.slice(0, -1);
+        if (findField === 1 && replaceText.length) replaceText = replaceText.slice(0, -1);
+        return;
+    }
+
+    if (key.btnp(key.TAB) && findReplace) {
+        findField = 1 - findField;
+        return;
+    }
+
+    if (key.btnp(key.ENTER)) {
+        if (findField === 0) {
+            findNext(shift ? -1 : 1);
+        } else {
+            if (ctrl) {
+                replaceAll();
+            } else {
+                replaceCurrent();
+                findNext(1);
+            }
+        }
+        return;
+    }
+}
+
+function findNext(dir) {
+    if (!findText) return;
+    let total = buf.length;
+    let startCol = cx + (dir > 0 ? 1 : 0);
+
+    for (let i = 0; i < total; i++) {
+        let li = (cy + i * dir + total) % total;
+        let line = buf[li];
+        let col;
+
+        if (i === 0) {
+            col =
+                dir > 0
+                    ? line.indexOf(findText, startCol)
+                    : line.lastIndexOf(findText, Math.max(0, startCol - 1));
+        } else {
+            col = dir > 0 ? line.indexOf(findText) : line.lastIndexOf(findText);
+        }
+
+        if (col >= 0) {
+            cy = li;
+            cx = col;
+            anchor = { x: col, y: li };
+            cx = col + findText.length;
+            ensureVisible();
+            resetBlink();
+            return;
+        }
+    }
+    status("Not found: " + findText);
+}
+
+function replaceCurrent() {
+    if (!findText) return;
+    let s = selOrdered();
+    if (s && s.a.y === s.b.y) {
+        let sel = buf[s.a.y].slice(s.a.x, s.b.x);
+        if (sel === findText) {
+            pushUndo();
+            buf[s.a.y] = buf[s.a.y].slice(0, s.a.x) + replaceText + buf[s.a.y].slice(s.b.x);
+            cx = s.a.x + replaceText.length;
+            cy = s.a.y;
+            anchor = null;
+            dirty = true;
+        }
+    }
+}
+
+function replaceAll() {
+    if (!findText) return;
+    pushUndo();
+    let count = 0;
+    for (let i = 0; i < buf.length; i++) {
+        let parts = buf[i].split(findText);
+        if (parts.length > 1) {
+            count += parts.length - 1;
+            buf[i] = parts.join(replaceText);
+        }
+    }
+    anchor = null;
+    if (count) {
+        dirty = true;
+        status("Replaced " + count + " occurrences");
+    } else {
+        status("No occurrences found");
+    }
+}
+
+function drawFind() {
+    let footY = (ROWS - FOOT) * CH;
+    let gutterPx = GUTTER * CW;
+
+    // Find field on footer row
+    gfx.rectfill(0, footY, FB_W - 1, footY + CH - 1, HEADBG);
+    let fl = "Find: ";
+    gfx.print(fl, gutterPx, footY, findField === 0 ? FG : GUTFG);
+    gfx.print(findText + (findField === 0 ? "_" : ""), gutterPx + fl.length * CW, footY, FG);
+
+    // Hint on right
+    let hint = findReplace ? "Tab:switch  Ctrl+Ent:all" : "Enter:next  Shift+Ent:prev";
+    let hw = gfx.textWidth(hint);
+    gfx.print(hint, FB_W - hw - CW, footY, GUTFG);
+
+    // Replace field one row above footer
+    if (findReplace) {
+        let replY = footY - CH;
+        gfx.rectfill(0, replY, FB_W - 1, replY + CH - 1, HEADBG);
+        let rl = "Repl: ";
+        gfx.print(rl, gutterPx, replY, findField === 1 ? FG : GUTFG);
+        gfx.print(replaceText + (findField === 1 ? "_" : ""), gutterPx + rl.length * CW, replY, FG);
+    }
+}
+
+// ─── Go to line ──────────────────────────────────────────────────────────────
+
+function updateGoto() {
+    if (key.btnp(key.ESCAPE)) {
+        gotoMode = false;
+        return;
+    }
+    if (key.btnr(key.BACKSPACE)) {
+        if (gotoText.length) gotoText = gotoText.slice(0, -1);
+        else gotoMode = false;
+        return;
+    }
+    if (key.btnp(key.ENTER)) {
+        let line = parseInt(gotoText);
+        if (line > 0) {
+            cy = clamp(line - 1, 0, buf.length - 1);
+            cx = 0;
+            anchor = null;
+            ensureVisible();
+            resetBlink();
+        }
+        gotoMode = false;
+        return;
+    }
+}
+
+function drawGoto() {
+    let footY = (ROWS - FOOT) * CH;
+    let gutterPx = GUTTER * CW;
+    gfx.rectfill(0, footY, FB_W - 1, footY + CH - 1, HEADBG);
+    let gl = "Go to line: ";
+    gfx.print(gl, gutterPx, footY, FG);
+    gfx.print(gotoText + "_", gutterPx + gl.length * CW, footY, FG);
+}
+
+// ─── File browser ────────────────────────────────────────────────────────────
+
+function updateBrowser() {
+    if (key.btnr(key.UP)) brIdx = Math.max(0, brIdx - 1);
+    if (key.btnr(key.DOWN) && brEntries.length) brIdx = Math.min(brEntries.length - 1, brIdx + 1);
+    if (brIdx < brScroll) brScroll = brIdx;
+    if (brIdx >= brScroll + EROWS) brScroll = brIdx - EROWS + 1;
+
+    // Mouse click in browser list
+    let my = mouse.y();
+    let editY = HEAD * CH;
+    if (mouse.btnp(0) && my >= editY && brEntries.length) {
+        let row = (brScroll + (my - editY) / CH) | 0;
+        if (row >= 0 && row < brEntries.length) {
+            brIdx = row;
+        }
+    }
+
+    // Mouse wheel scroll
+    let wheel = mouse.wheel();
+    if (wheel !== 0) {
+        brScroll = clamp(brScroll - wheel * 3, 0, Math.max(0, brEntries.length - EROWS));
+        brIdx = clamp(brIdx, brScroll, brScroll + EROWS - 1);
+    }
+
+    if (key.btnp(key.ENTER) && brEntries.length) {
+        let entry = brEntries[brIdx];
+        if (entry.isDir) {
+            if (entry.name === "..") {
+                // Go up one level
+                let parts = brDir.split("/").filter(function (p) {
+                    return p;
+                });
+                parts.pop();
+                brDir = parts.length ? parts.join("/") + "/" : "";
+            } else {
+                brDir = brDir + entry.name + "/";
+            }
+            refreshBrowser();
+        } else {
+            openFile(brDir + entry.name);
+            brMode = false;
+        }
+    }
+    if (key.btnp(key.ESCAPE)) brMode = false;
+}
+
+function drawBrowser() {
+    // Header
+    gfx.rectfill(0, 0, FB_W - 1, CH - 1, HEADBG);
+    let hdr = "Open: /" + brDir + "  Up/Down select  Enter open  Esc cancel";
+    gfx.print(hdr, CW, 0, HEADFG);
+
+    let editY = HEAD * CH;
+    for (let i = 0; i < EROWS && brScroll + i < brEntries.length; i++) {
+        let fi = brScroll + i;
+        let entry = brEntries[fi];
+        let py = editY + i * CH;
+        if (fi === brIdx) {
+            gfx.rectfill(0, py, FB_W - 1, py + CH - 1, SELBG);
+        }
+        let label = entry.isDir ? entry.name + "/" : entry.name;
+        gfx.print(label, CW * 2, py, fi === brIdx ? FG : GUTFG);
+    }
+
+    if (!brEntries.length) {
+        gfx.print("Empty directory", CW * 2, editY, GUTFG);
+    }
+}

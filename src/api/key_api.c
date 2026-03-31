@@ -121,6 +121,7 @@ void dtr_key_api_register(JSContext *ctx, JSValue global)
     JS_SetPropertyStr(ctx, ns, "LALT", JS_NewInt32(ctx, DTR_KEY_LALT));
     JS_SetPropertyStr(ctx, ns, "RALT", JS_NewInt32(ctx, DTR_KEY_RALT));
     JS_SetPropertyStr(ctx, ns, "GRAVE", JS_NewInt32(ctx, DTR_KEY_GRAVE));
+    JS_SetPropertyStr(ctx, ns, "SLASH", JS_NewInt32(ctx, DTR_KEY_SLASH));
 
     JS_SetPropertyStr(ctx, global, "key", ns);
 }
