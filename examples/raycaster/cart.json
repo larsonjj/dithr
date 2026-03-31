@@ -30,5 +30,6 @@
       "turn_right": ["KEY_RIGHT", "PAD_RIGHT"]
     }
   },
-  "code": "src/main.js"
+  "code": "src/main.js",
+  "maps": []
 }

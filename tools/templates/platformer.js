@@ -17,12 +17,12 @@ function _init() {
 
 function _update(dt) {
     // Horizontal movement
-    if (key.btn(key.LEFT)) vx -= MOVE_SPD;
-    if (key.btn(key.RIGHT)) vx += MOVE_SPD;
+    if (input.btn("left")) vx -= MOVE_SPD;
+    if (input.btn("right")) vx += MOVE_SPD;
     vx *= FRICTION;
 
     // Jump
-    if (grounded && key.btnp(key.Z)) {
+    if (grounded && input.btnp("jump")) {
         vy = JUMP_VEL;
         grounded = false;
     }
@@ -44,10 +44,10 @@ function _draw() {
     gfx.cls(1);
 
     // Draw ground
-    gfx.rectfill(0, 148, gfx.screenW ? gfx.screenW : 320, 180, 3);
+    gfx.rectfill(0, 148, sys.width() - 1, 180, 3);
 
     // Draw player
     gfx.rectfill(math.flr(px), math.flr(py), math.flr(px) + 8, math.flr(py) + 8, 11);
 
-    gfx.print("arrows: move  z: jump", 4, 4, 7);
+    gfx.print("arrows/wasd: move  z/space: jump", 4, 4, 7);
 }

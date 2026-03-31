@@ -49,6 +49,9 @@ typedef struct dtr_console {
     dtr_postfx_t *       postfx;
     dtr_tween_t          tween;
 
+    /* Math PRNG state (xorshift64, per-console instance) */
+    uint64_t rng_state;
+
     bool running;
     bool paused;
     bool fullscreen;

@@ -14,7 +14,7 @@ extern "C" {
 #endif /* __cplusplus */
 
 /* Maximum length of the error message stored for the overlay */
-#define DTR_ERROR_MSG_LEN 512
+#define DTR_ERROR_MSG_LEN 1024
 
 /**
  * \brief           JS runtime wrapper

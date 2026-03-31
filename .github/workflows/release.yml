@@ -1,0 +1,87 @@
+name: Release
+
+on:
+    push:
+        tags: ["v*"]
+
+permissions:
+    contents: write
+
+jobs:
+    build-windows:
+        runs-on: windows-latest
+        steps:
+            - uses: actions/checkout@v6
+
+            - name: Configure
+              run: cmake --preset release
+
+            - name: Build
+              run: cmake --build build/release --config Release
+
+            - name: Package
+              run: |
+                  mkdir dist
+                  Copy-Item build/release/Release/dithr.exe dist/
+                  Copy-Item LICENSE dist/
+                  Copy-Item README.md dist/
+                  Compress-Archive -Path dist/* -DestinationPath dithr-windows-x64.zip
+
+            - name: Upload artifact
+              uses: actions/upload-artifact@v4
+              with:
+                  name: dithr-windows-x64
+                  path: dithr-windows-x64.zip
+
+    build-linux:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v6
+
+            - name: Install dependencies
+              run: |
+                  sudo apt-get update
+                  sudo apt-get install -y ninja-build \
+                    libx11-dev libxext-dev libxcursor-dev libxi-dev \
+                    libxfixes-dev libxrandr-dev libxrender-dev libxss-dev \
+                    libxtst-dev libxxf86vm-dev \
+                    libwayland-dev libxkbcommon-dev \
+                    libdrm-dev libgbm-dev libgl1-mesa-dev libgles2-mesa-dev \
+                    libegl1-mesa-dev libdbus-1-dev libudev-dev \
+                    libasound2-dev libpulse-dev libpipewire-0.3-dev \
+                    libdecor-0-dev
+
+            - name: Configure
+              run: cmake --preset release
+
+            - name: Build
+              run: cmake --build build/release --config Release
+
+            - name: Package
+              run: |
+                  mkdir dist
+                  cp build/release/dithr dist/
+                  cp LICENSE README.md dist/
+                  tar czf dithr-linux-x64.tar.gz -C dist .
+
+            - name: Upload artifact
+              uses: actions/upload-artifact@v4
+              with:
+                  name: dithr-linux-x64
+                  path: dithr-linux-x64.tar.gz
+
+    release:
+        needs: [build-windows, build-linux]
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/download-artifact@v4
+              with:
+                  merge-multiple: true
+
+            - name: Create release
+              uses: softprops/action-gh-release@v2
+              with:
+                  generate_release_notes: true
+                  files: |
+                      dithr-windows-x64.zip
+                      dithr-linux-x64.tar.gz

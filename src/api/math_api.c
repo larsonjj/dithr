@@ -9,17 +9,15 @@
 /*  PRNG — xorshift64                                                  */
 /* ------------------------------------------------------------------ */
 
-static uint64_t prv_rng_state = 1;
-
-static uint64_t prv_xorshift64(void)
+static uint64_t prv_xorshift64(dtr_console_t *con)
 {
     uint64_t x;
 
-    x = prv_rng_state;
+    x = con->rng_state;
     x ^= x << 13;
     x ^= x >> 7;
     x ^= x << 17;
-    prv_rng_state = x;
+    con->rng_state = x;
     return x;
 }
 
@@ -37,7 +35,7 @@ static JSValue js_math_rnd(JSContext *ctx, JSValueConst this_val, int argc, JSVa
     {
         double val;
 
-        val = (double)(prv_xorshift64() & 0xFFFFFFFF) / 4294967296.0;
+        val = (double)(prv_xorshift64(dtr_api_get_console(ctx)) & 0xFFFFFFFF) / 4294967296.0;
         return JS_NewFloat64(ctx, val * max);
     }
 }
@@ -51,7 +49,7 @@ static JSValue js_math_rnd_int(JSContext *ctx, JSValueConst this_val, int argc, 
     if (max <= 0) {
         return JS_NewInt32(ctx, 0);
     }
-    return JS_NewInt32(ctx, (int32_t)(prv_xorshift64() % (uint64_t)max));
+    return JS_NewInt32(ctx, (int32_t)(prv_xorshift64(dtr_api_get_console(ctx)) % (uint64_t)max));
 }
 
 static JSValue
@@ -64,19 +62,21 @@ js_math_rnd_range(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst 
     (void)this_val;
     lo = dtr_api_opt_float(ctx, argc, argv, 0, 0.0);
     hi = dtr_api_opt_float(ctx, argc, argv, 1, 1.0);
-    t  = (double)(prv_xorshift64() & 0xFFFFFFFF) / 4294967296.0;
+    t  = (double)(prv_xorshift64(dtr_api_get_console(ctx)) & 0xFFFFFFFF) / 4294967296.0;
     return JS_NewFloat64(ctx, lo + (hi - lo) * t);
 }
 
 static JSValue js_math_seed(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
-    int32_t seed;
+    int32_t        seed;
+    dtr_console_t *con;
 
     (void)this_val;
-    seed          = dtr_api_opt_int(ctx, argc, argv, 0, 1);
-    prv_rng_state = (uint64_t)seed;
-    if (prv_rng_state == 0) {
-        prv_rng_state = 1;
+    seed = dtr_api_opt_int(ctx, argc, argv, 0, 1);
+    con  = dtr_api_get_console(ctx);
+    con->rng_state = (uint64_t)seed;
+    if (con->rng_state == 0) {
+        con->rng_state = 1;
     }
     return JS_UNDEFINED;
 }

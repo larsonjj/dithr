@@ -30,5 +30,6 @@
       "action": ["KEY_X", "PAD_B"]
     }
   },
-  "code": "src/main.js"
+  "code": "src/main.js",
+  "maps": []
 }

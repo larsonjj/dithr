@@ -80,7 +80,6 @@ function main() {
             fps: 60,
         },
         sprites: {
-            sheet: "assets/sprites/spritesheet.png",
             tileW: 8,
             tileH: 8,
         },

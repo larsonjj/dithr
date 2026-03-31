@@ -299,8 +299,11 @@ if (EMSCRIPTEN)
         set_property(TARGET dithr PROPERTY LINK_DEPENDS ${DTR_CART_FILES})
     endif()
 
-    # Produce .html output so the Emscripten shell page is generated
+    # Produce .html output with custom shell page
     set_target_properties(dithr PROPERTIES SUFFIX ".html")
+    target_link_options(dithr PRIVATE
+        "--shell-file" "${CMAKE_SOURCE_DIR}/tools/templates/shell.html"
+    )
 endif()
 
 # Copy shared library DLLs next to the executable (Windows + shared builds only)

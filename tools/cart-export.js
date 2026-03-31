@@ -1,6 +1,10 @@
 #!/usr/bin/env node
 // tools/cart-export.js — Export a cart to a standalone HTML file
 // Usage: node cart-export.js <cart.json> [--out output.html]
+//
+// NOTE: This tool is a work-in-progress. The generated HTML embeds the cart
+// data but requires a standalone dithr WASM runtime to actually run. Use the
+// normal WASM build workflow (cmake --preset wasm) for playable web exports.
 
 "use strict";
 

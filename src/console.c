@@ -211,6 +211,9 @@ dtr_console_t *dtr_console_create(const char *cart_path)
         return NULL;
     }
 
+    /* Default PRNG seed (xorshift64 needs non-zero) */
+    con->rng_state = 1;
+
     /* Store cart path for restart support */
     SDL_strlcpy(con->cart_path, cart_path, sizeof(con->cart_path));
 
@@ -1422,7 +1425,13 @@ static void prv_render_error_overlay(dtr_console_t *con)
     }
 
     /* Hint at bottom */
+#ifdef __EMSCRIPTEN__
+    dtr_gfx_print(gfx, "Ctrl+C copy", 2, con->fb_height - 8, 6);
+#elif DEV_BUILD
     dtr_gfx_print(gfx, "Ctrl+C copy  F5 retry", 2, con->fb_height - 8, 6);
+#else
+    dtr_gfx_print(gfx, "Ctrl+C copy", 2, con->fb_height - 8, 6);
+#endif
 
     {
         void   *locked;
