@@ -28,7 +28,7 @@ jobs:
                   Compress-Archive -Path dist/* -DestinationPath dithr-windows-x64.zip
 
             - name: Upload artifact
-              uses: actions/upload-artifact@v4
+              uses: actions/upload-artifact@v7
               with:
                   name: dithr-windows-x64
                   path: dithr-windows-x64.zip
@@ -65,7 +65,7 @@ jobs:
                   tar czf dithr-linux-x64.tar.gz -C dist .
 
             - name: Upload artifact
-              uses: actions/upload-artifact@v4
+              uses: actions/upload-artifact@v7
               with:
                   name: dithr-linux-x64
                   path: dithr-linux-x64.tar.gz
