@@ -10,16 +10,16 @@
 // ─── Constants ───────────────────────────────────────────────────────────────
 
 const SPR_GRID_X = 0;
-const SPR_GRID_Y = CH; // below tab bar
+const SPR_GRID_Y = TAB_H; // below tab bar
 const SPR_GRID_COLS = 16; // sprites per row in sheet overview
 const SPR_GRID_CELL = 10; // pixels per cell in the overview
 const SPR_GRID_W = SPR_GRID_COLS * SPR_GRID_CELL; // 160
-const SPR_GRID_H = FB_H - CH * 2; // full height minus tab bar and footer
+const SPR_GRID_H = FB_H - TAB_H - CH; // full height minus tab bar and footer
 
 const SPR_CANVAS_X = SPR_GRID_W + 2;
-const SPR_CANVAS_Y = CH;
+const SPR_CANVAS_Y = TAB_H;
 const SPR_PAL_H = 34; // palette strip height at bottom
-const SPR_CANVAS_H = FB_H - CH - SPR_PAL_H - CH; // canvas area height
+const SPR_CANVAS_H = FB_H - TAB_H - SPR_PAL_H - CH; // canvas area height
 const SPR_CANVAS_W = FB_W - SPR_GRID_W - 2; // canvas area width
 
 const SPR_PAL_Y = FB_H - SPR_PAL_H - CH; // palette Y

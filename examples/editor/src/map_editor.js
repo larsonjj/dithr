@@ -12,11 +12,11 @@
 const MAP_TILE_PX = 8; // default tile size in pixels
 const MAP_PICKER_W = 130; // right panel width
 const MAP_VP_X = 0;
-const MAP_VP_Y = CH; // below tab bar
+const MAP_VP_Y = TAB_H; // below tab bar
 const MAP_VP_W = FB_W - MAP_PICKER_W;
-const MAP_VP_H = FB_H - CH * 2; // minus tab bar and footer
+const MAP_VP_H = FB_H - TAB_H - CH; // minus tab bar and footer
 const MAP_PICK_X = MAP_VP_W + 1;
-const MAP_PICK_Y = CH;
+const MAP_PICK_Y = TAB_H;
 const MAP_PICK_CELL = 10; // tile picker cell size
 const MAP_PICK_COLS = Math.floor(MAP_PICKER_W / MAP_PICK_CELL);
 

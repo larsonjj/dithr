@@ -48,7 +48,7 @@ const COLS = (FB_W / CW) | 0; // 128
 const ROWS = (FB_H / CH) | 0; // 51
 
 const GUTTER = 5; // chars for line numbers
-const HEAD = 1; // header rows
+const HEAD = 2; // tab bar rows
 const FOOT = 1; // status-bar rows
 const EROWS = ROWS - HEAD - FOOT; // 49
 const MINIMAP_W = 10; // minimap width in pixels
@@ -88,6 +88,8 @@ const TABBG = 1; // tab bar background
 const TABACT = 0; // active tab background
 const TABFG = 7; // active tab text
 const TABINACT = 5; // inactive tab text
+const TABHOV = 17; // tab hover background
+const TAB_H = CH * 2; // tab bar height in pixels
 const GRIDC = 17; // sprite/map grid lines
 
 // ─── Tab names ───────────────────────────────────────────────────────────────
@@ -2082,38 +2084,50 @@ function vimSearchNext(dir) {
 // ─── Tab bar (shared across all tabs) ────────────────────────────────────────
 
 function drawTabBar() {
-    gfx.rectfill(0, 0, FB_W - 1, CH - 1, TABBG);
-    let tx = 1;
+    gfx.rectfill(0, 0, FB_W - 1, TAB_H - 1, TABBG);
+    let mx = mouse.x();
+    let my = mouse.y();
+    let tx = 0;
+    let textY = Math.floor((TAB_H - CH) / 2); // vertically center text
     for (let i = 0; i < TAB_NAMES.length; i++) {
-        let name = " " + TAB_NAMES[i] + " ";
-        let w = name.length * CW;
+        let label = " " + (i + 1) + ":" + TAB_NAMES[i] + " ";
+        let w = label.length * CW;
+        let hovered = mx >= tx && mx < tx + w && my < TAB_H;
         if (i === activeTab) {
-            gfx.rectfill(tx, 0, tx + w - 1, CH - 1, TABACT);
-            gfx.print(name, tx, 0, TABFG);
+            gfx.rectfill(tx, 0, tx + w - 1, TAB_H - 1, BG);
+            gfx.print(label, tx, textY, TABFG);
+            // underline
+            gfx.line(tx, TAB_H - 1, tx + w - 1, TAB_H - 1, TABFG);
         } else {
-            gfx.print(name, tx, 0, TABINACT);
+            if (hovered) {
+                gfx.rectfill(tx, 0, tx + w - 1, TAB_H - 1, TABHOV);
+            }
+            gfx.print(label, tx, textY, hovered ? TABFG : TABINACT);
         }
         // Click to switch tabs
-        if (mouse.btnp(0) && mouse.y() < CH && mouse.x() >= tx && mouse.x() < tx + w) {
+        if (mouse.btnp(0) && my < TAB_H && mx >= tx && mx < tx + w) {
             activeTab = i;
         }
-        tx += w + 2;
+        tx += w + 1;
     }
 }
 
 // ─── Editor drawing ──────────────────────────────────────────────────────────
 
 function drawEditor() {
-    let editY = HEAD * CH;
+    let editY = TAB_H;
     let footY = (ROWS - FOOT) * CH;
     let gutterPx = GUTTER * CW;
 
-    // ── Header bar ──
-    gfx.rectfill(0, 0, FB_W - 1, CH - 1, HEADBG);
-    let title = (dirty ? "\x07 " : "  ") + (fname || "[untitled]");
-    gfx.print(title, gutterPx, 0, dirty ? DIRTCOL : HEADFG);
+    // ── File info (right side of tab bar) ──
+    let title = (dirty ? "\x07 " : "") + (fname || "[untitled]");
+    let titleW = title.length * CW;
+    let titleX = FB_W - titleW - CW;
+    if (vimEnabled) titleX -= 6 * CW;
+    let tabTextY = Math.floor((TAB_H - CH) / 2);
+    gfx.print(title, titleX, tabTextY, dirty ? DIRTCOL : HEADFG);
     if (vimEnabled) {
-        gfx.print("[vim]", FB_W - 6 * CW, 0, GUTFG);
+        gfx.print("[vim]", FB_W - 6 * CW, tabTextY, GUTFG);
     }
 
     // ── Gutter background ──
@@ -2623,16 +2637,16 @@ function drawBrowser() {
 // ─── Constants ───────────────────────────────────────────────────────────────
 
 const SPR_GRID_X = 0;
-const SPR_GRID_Y = CH; // below tab bar
+const SPR_GRID_Y = TAB_H; // below tab bar
 const SPR_GRID_COLS = 16; // sprites per row in sheet overview
 const SPR_GRID_CELL = 10; // pixels per cell in the overview
 const SPR_GRID_W = SPR_GRID_COLS * SPR_GRID_CELL; // 160
-const SPR_GRID_H = FB_H - CH * 2; // full height minus tab bar and footer
+const SPR_GRID_H = FB_H - TAB_H - CH; // full height minus tab bar and footer
 
 const SPR_CANVAS_X = SPR_GRID_W + 2;
-const SPR_CANVAS_Y = CH;
+const SPR_CANVAS_Y = TAB_H;
 const SPR_PAL_H = 34; // palette strip height at bottom
-const SPR_CANVAS_H = FB_H - CH - SPR_PAL_H - CH; // canvas area height
+const SPR_CANVAS_H = FB_H - TAB_H - SPR_PAL_H - CH; // canvas area height
 const SPR_CANVAS_W = FB_W - SPR_GRID_W - 2; // canvas area width
 
 const SPR_PAL_Y = FB_H - SPR_PAL_H - CH; // palette Y
@@ -2926,11 +2940,11 @@ function drawSpriteEditor() {
 const MAP_TILE_PX = 8; // default tile size in pixels
 const MAP_PICKER_W = 130; // right panel width
 const MAP_VP_X = 0;
-const MAP_VP_Y = CH; // below tab bar
+const MAP_VP_Y = TAB_H; // below tab bar
 const MAP_VP_W = FB_W - MAP_PICKER_W;
-const MAP_VP_H = FB_H - CH * 2; // minus tab bar and footer
+const MAP_VP_H = FB_H - TAB_H - CH; // minus tab bar and footer
 const MAP_PICK_X = MAP_VP_W + 1;
-const MAP_PICK_Y = CH;
+const MAP_PICK_Y = TAB_H;
 const MAP_PICK_CELL = 10; // tile picker cell size
 const MAP_PICK_COLS = Math.floor(MAP_PICKER_W / MAP_PICK_CELL);
 

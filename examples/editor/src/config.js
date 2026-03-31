@@ -41,7 +41,7 @@ const COLS = (FB_W / CW) | 0; // 128
 const ROWS = (FB_H / CH) | 0; // 51
 
 const GUTTER = 5; // chars for line numbers
-const HEAD = 1; // header rows
+const HEAD = 2; // tab bar rows
 const FOOT = 1; // status-bar rows
 const EROWS = ROWS - HEAD - FOOT; // 49
 const MINIMAP_W = 10; // minimap width in pixels
@@ -81,6 +81,8 @@ const TABBG = 1; // tab bar background
 const TABACT = 0; // active tab background
 const TABFG = 7; // active tab text
 const TABINACT = 5; // inactive tab text
+const TABHOV = 17; // tab hover background
+const TAB_H = CH * 2; // tab bar height in pixels
 const GRIDC = 17; // sprite/map grid lines
 
 // ─── Tab names ───────────────────────────────────────────────────────────────

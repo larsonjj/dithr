@@ -1,38 +1,50 @@
 // ─── Tab bar (shared across all tabs) ────────────────────────────────────────
 
 function drawTabBar() {
-    gfx.rectfill(0, 0, FB_W - 1, CH - 1, TABBG);
-    let tx = 1;
+    gfx.rectfill(0, 0, FB_W - 1, TAB_H - 1, TABBG);
+    let mx = mouse.x();
+    let my = mouse.y();
+    let tx = 0;
+    let textY = Math.floor((TAB_H - CH) / 2); // vertically center text
     for (let i = 0; i < TAB_NAMES.length; i++) {
-        let name = " " + TAB_NAMES[i] + " ";
-        let w = name.length * CW;
+        let label = " " + (i + 1) + ":" + TAB_NAMES[i] + " ";
+        let w = label.length * CW;
+        let hovered = mx >= tx && mx < tx + w && my < TAB_H;
         if (i === activeTab) {
-            gfx.rectfill(tx, 0, tx + w - 1, CH - 1, TABACT);
-            gfx.print(name, tx, 0, TABFG);
+            gfx.rectfill(tx, 0, tx + w - 1, TAB_H - 1, BG);
+            gfx.print(label, tx, textY, TABFG);
+            // underline
+            gfx.line(tx, TAB_H - 1, tx + w - 1, TAB_H - 1, TABFG);
         } else {
-            gfx.print(name, tx, 0, TABINACT);
+            if (hovered) {
+                gfx.rectfill(tx, 0, tx + w - 1, TAB_H - 1, TABHOV);
+            }
+            gfx.print(label, tx, textY, hovered ? TABFG : TABINACT);
         }
         // Click to switch tabs
-        if (mouse.btnp(0) && mouse.y() < CH && mouse.x() >= tx && mouse.x() < tx + w) {
+        if (mouse.btnp(0) && my < TAB_H && mx >= tx && mx < tx + w) {
             activeTab = i;
         }
-        tx += w + 2;
+        tx += w + 1;
     }
 }
 
 // ─── Editor drawing ──────────────────────────────────────────────────────────
 
 function drawEditor() {
-    let editY = HEAD * CH;
+    let editY = TAB_H;
     let footY = (ROWS - FOOT) * CH;
     let gutterPx = GUTTER * CW;
 
-    // ── Header bar ──
-    gfx.rectfill(0, 0, FB_W - 1, CH - 1, HEADBG);
-    let title = (dirty ? "\x07 " : "  ") + (fname || "[untitled]");
-    gfx.print(title, gutterPx, 0, dirty ? DIRTCOL : HEADFG);
+    // ── File info (right side of tab bar) ──
+    let title = (dirty ? "\x07 " : "") + (fname || "[untitled]");
+    let titleW = title.length * CW;
+    let titleX = FB_W - titleW - CW;
+    if (vimEnabled) titleX -= 6 * CW;
+    let tabTextY = Math.floor((TAB_H - CH) / 2);
+    gfx.print(title, titleX, tabTextY, dirty ? DIRTCOL : HEADFG);
     if (vimEnabled) {
-        gfx.print("[vim]", FB_W - 6 * CW, 0, GUTFG);
+        gfx.print("[vim]", FB_W - 6 * CW, tabTextY, GUTFG);
     }
 
     // ── Gutter background ──
