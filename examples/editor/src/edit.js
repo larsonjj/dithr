@@ -6,6 +6,18 @@ function updateEdit() {
 
     // ── Ctrl shortcuts ──
     if (ctrl) {
+        if (key.btnp(key.NUM1)) {
+            activeTab = TAB_CODE;
+            return;
+        }
+        if (key.btnp(key.NUM2)) {
+            activeTab = TAB_SPRITES;
+            return;
+        }
+        if (key.btnp(key.NUM3)) {
+            activeTab = TAB_MAP;
+            return;
+        }
         if (key.btnp(key.GRAVE)) {
             vimEnabled = !vimEnabled;
             if (vimEnabled) {

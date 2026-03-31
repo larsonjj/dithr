@@ -21,6 +21,8 @@ const modules = [
     "draw.js",
     "find.js",
     "browser.js",
+    "sprite_editor.js",
+    "map_editor.js",
     "main.js",
 ];
 

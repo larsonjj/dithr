@@ -105,6 +105,21 @@ gfx.spr(8, player.x, player.y, 2, 1, player.facing < 0, false);
 | `fget`   | `n?, bit?`       | `int` or `bool` | Get sprite flags. Without `bit` returns the full bitmask; with `bit` returns a single bit as a boolean |
 | `fset`   | `n?, bit?, val?` | —               | Set a sprite flag bit. `val` defaults to 1                                                             |
 
+### Spritesheet pixel access
+
+| Function | Parameters     | Returns | Description                            |
+| -------- | -------------- | ------- | -------------------------------------- |
+| `sget`   | `x?, y?`       | `int`   | Get palette index at spritesheet pixel |
+| `sset`   | `x?, y?, col?` | —       | Set palette index at spritesheet pixel |
+| `sheetW` |                | `int`   | Spritesheet width in pixels            |
+| `sheetH` |                | `int`   | Spritesheet height in pixels           |
+
+```js
+/* Read and modify a pixel on the spritesheet */
+var old = gfx.sget(16, 8); // get colour at (16, 8) on sheet
+gfx.sset(16, 8, 7); // set it to white
+```
+
 ### Palette
 
 | Function | Parameters            | Returns | Description                                                                                       |

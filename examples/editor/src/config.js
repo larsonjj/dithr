@@ -77,6 +77,18 @@ const SCROLLBG = 17; // scrollbar track
 const SCROLLFG = 6; // scrollbar thumb
 const ADDCOL = 11; // green — added line indicator
 const MODCOL = 12; // cyan — modified line indicator
+const TABBG = 1; // tab bar background
+const TABACT = 0; // active tab background
+const TABFG = 7; // active tab text
+const TABINACT = 5; // inactive tab text
+const GRIDC = 17; // sprite/map grid lines
+
+// ─── Tab names ───────────────────────────────────────────────────────────────
+
+const TAB_CODE = 0;
+const TAB_SPRITES = 1;
+const TAB_MAP = 2;
+const TAB_NAMES = ["CODE", "SPRITES", "MAP"];
 
 // ─── Bracket / auto-close tables ─────────────────────────────────────────────
 

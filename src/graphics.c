@@ -1292,6 +1292,32 @@ void dtr_gfx_fset_bit(dtr_graphics_t *gfx, int32_t idx, int32_t flag, bool val)
 }
 
 /* ------------------------------------------------------------------ */
+/*  Spritesheet pixel access                                           */
+/* ------------------------------------------------------------------ */
+
+uint8_t dtr_gfx_sget(dtr_graphics_t *gfx, int32_t x, int32_t y)
+{
+    if (gfx->sheet.pixels == NULL) {
+        return 0;
+    }
+    if (x < 0 || x >= gfx->sheet.width || y < 0 || y >= gfx->sheet.height) {
+        return 0;
+    }
+    return gfx->sheet.pixels[y * gfx->sheet.width + x];
+}
+
+void dtr_gfx_sset(dtr_graphics_t *gfx, int32_t x, int32_t y, uint8_t col)
+{
+    if (gfx->sheet.pixels == NULL) {
+        return;
+    }
+    if (x < 0 || x >= gfx->sheet.width || y < 0 || y >= gfx->sheet.height) {
+        return;
+    }
+    gfx->sheet.pixels[y * gfx->sheet.width + x] = col;
+}
+
+/* ------------------------------------------------------------------ */
 /*  Palette                                                            */
 /* ------------------------------------------------------------------ */
 

@@ -674,6 +674,43 @@ js_gfx_dl_spr_affine(JSContext *ctx, JSValueConst this_val, int argc, JSValueCon
     return JS_UNDEFINED;
 }
 
+/* ---- Spritesheet pixel access ----------------------------------------- */
+
+static JSValue js_gfx_sget(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+{
+    (void)this_val;
+    return JS_NewInt32(ctx,
+                       dtr_gfx_sget(GFX(ctx),
+                                    dtr_api_opt_int(ctx, argc, argv, 0, 0),
+                                    dtr_api_opt_int(ctx, argc, argv, 1, 0)));
+}
+
+static JSValue js_gfx_sset(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+{
+    (void)this_val;
+    dtr_gfx_sset(GFX(ctx),
+                 dtr_api_opt_int(ctx, argc, argv, 0, 0),
+                 dtr_api_opt_int(ctx, argc, argv, 1, 0),
+                 prv_resolve_col(ctx, argc, argv, 2));
+    return JS_UNDEFINED;
+}
+
+static JSValue js_gfx_sheet_w(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+{
+    (void)this_val;
+    (void)argc;
+    (void)argv;
+    return JS_NewInt32(ctx, GFX(ctx)->sheet.width);
+}
+
+static JSValue js_gfx_sheet_h(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+{
+    (void)this_val;
+    (void)argc;
+    (void)argv;
+    return JS_NewInt32(ctx, GFX(ctx)->sheet.height);
+}
+
 /* ---- Function list ---------------------------------------------------- */
 
 static const JSCFunctionListEntry js_gfx_funcs[] = {
@@ -695,6 +732,9 @@ static const JSCFunctionListEntry js_gfx_funcs[] = {
     JS_CFUNC_DEF("clip", 4, js_gfx_clip),   JS_CFUNC_DEF("fillp", 1, js_gfx_fillp),
     JS_CFUNC_DEF("color", 1, js_gfx_color), JS_CFUNC_DEF("cursor", 2, js_gfx_cursor),
     JS_CFUNC_DEF("font", 6, js_gfx_font),
+    JS_CFUNC_DEF("sget", 2, js_gfx_sget),   JS_CFUNC_DEF("sset", 3, js_gfx_sset),
+    JS_CFUNC_DEF("sheetW", 0, js_gfx_sheet_w),
+    JS_CFUNC_DEF("sheetH", 0, js_gfx_sheet_h),
     JS_CFUNC_DEF("fade", 2, js_gfx_fade),
     JS_CFUNC_DEF("wipe", 3, js_gfx_wipe),
     JS_CFUNC_DEF("dissolve", 2, js_gfx_dissolve),

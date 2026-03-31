@@ -66,6 +66,24 @@ let savedBuf = []; // snapshot at last save/open
 // persistent find highlighting
 let lastFindText = "";
 
+// ─── Tab state ───────────────────────────────────────────────────────────────
+let activeTab = TAB_CODE;
+
+// ─── Sprite editor state ─────────────────────────────────────────────────────
+let sprSel = 0; // selected sprite index
+let sprCol = 7; // selected palette colour for painting
+let sprZoom = 8; // pixel zoom level
+let sprTool = 0; // 0=pencil, 1=eraser
+let sprScrollY = 0; // sheet grid scroll offset (pixels)
+
+// ─── Map editor state ────────────────────────────────────────────────────────
+let mapCamX = 0; // camera tile offset
+let mapCamY = 0;
+let mapLayer = 0; // active layer
+let mapTile = 0; // selected tile for painting
+let mapTool = 0; // 0=pencil, 1=eraser
+let mapGridOn = true; // show grid overlay
+
 // ─── Caches (invalidated on edit) ────────────────────────────────────────────
 
 let _blockStateCache = []; // inBlock state at start of each line

@@ -1,6 +1,7 @@
 // ─── Text input event handler ────────────────────────────────────────────────
 
 function onTextInput(ch) {
+    if (activeTab !== TAB_CODE) return;
     if (brMode) return;
     if (key.btn(key.LCTRL) || key.btn(key.RCTRL)) return;
 
@@ -74,6 +75,17 @@ function _save() {
         vimEnabled,
         savedBuf,
         lastFindText,
+        activeTab,
+        sprSel,
+        sprCol,
+        sprTool,
+        sprScrollY,
+        mapCamX,
+        mapCamY,
+        mapLayer,
+        mapTile,
+        mapTool,
+        mapGridOn,
     };
 }
 
@@ -92,6 +104,17 @@ function _restore(s) {
     vimEnabled = s.vimEnabled || false;
     savedBuf = s.savedBuf || [];
     lastFindText = s.lastFindText || "";
+    activeTab = s.activeTab || TAB_CODE;
+    sprSel = s.sprSel || 0;
+    sprCol = s.sprCol || 7;
+    sprTool = s.sprTool || 0;
+    sprScrollY = s.sprScrollY || 0;
+    mapCamX = s.mapCamX || 0;
+    mapCamY = s.mapCamY || 0;
+    mapLayer = s.mapLayer || 0;
+    mapTile = s.mapTile || 0;
+    mapTool = s.mapTool || 0;
+    mapGridOn = s.mapGridOn !== undefined ? s.mapGridOn : true;
     targetOy = oy;
     vim = "normal";
     vimCount = "";
@@ -126,6 +149,15 @@ function _update(dt) {
         }
     }
 
+    if (activeTab === TAB_SPRITES) {
+        updateSpriteEditor();
+        return;
+    }
+    if (activeTab === TAB_MAP) {
+        updateMapEditor();
+        return;
+    }
+
     if (brMode) updateBrowser();
     else if (findMode) updateFind();
     else if (gotoMode) updateGoto();
@@ -134,6 +166,16 @@ function _update(dt) {
 
 function _draw() {
     gfx.cls(BG);
+    drawTabBar();
+    if (activeTab === TAB_SPRITES) {
+        drawSpriteEditor();
+        return;
+    }
+    if (activeTab === TAB_MAP) {
+        drawMapEditor();
+        return;
+    }
+
     if (brMode) drawBrowser();
     else {
         drawEditor();

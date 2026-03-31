@@ -1,3 +1,25 @@
+// ─── Tab bar (shared across all tabs) ────────────────────────────────────────
+
+function drawTabBar() {
+    gfx.rectfill(0, 0, FB_W - 1, CH - 1, TABBG);
+    let tx = 1;
+    for (let i = 0; i < TAB_NAMES.length; i++) {
+        let name = " " + TAB_NAMES[i] + " ";
+        let w = name.length * CW;
+        if (i === activeTab) {
+            gfx.rectfill(tx, 0, tx + w - 1, CH - 1, TABACT);
+            gfx.print(name, tx, 0, TABFG);
+        } else {
+            gfx.print(name, tx, 0, TABINACT);
+        }
+        // Click to switch tabs
+        if (mouse.btnp(0) && mouse.y() < CH && mouse.x() >= tx && mouse.x() < tx + w) {
+            activeTab = i;
+        }
+        tx += w + 2;
+    }
+}
+
 // ─── Editor drawing ──────────────────────────────────────────────────────────
 
 function drawEditor() {

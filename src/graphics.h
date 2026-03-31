@@ -354,6 +354,13 @@ void    dtr_gfx_fset(dtr_graphics_t *gfx, int32_t idx, uint8_t mask);
 void    dtr_gfx_fset_bit(dtr_graphics_t *gfx, int32_t idx, int32_t flag, bool val);
 
 /* ------------------------------------------------------------------------ */
+/*  Spritesheet pixel access                                                 */
+/* ------------------------------------------------------------------------ */
+
+uint8_t dtr_gfx_sget(dtr_graphics_t *gfx, int32_t x, int32_t y);
+void    dtr_gfx_sset(dtr_graphics_t *gfx, int32_t x, int32_t y, uint8_t col);
+
+/* ------------------------------------------------------------------------ */
 /*  Palette                                                                  */
 /* ------------------------------------------------------------------------ */
 

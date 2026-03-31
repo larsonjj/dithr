@@ -84,6 +84,18 @@ const SCROLLBG = 17; // scrollbar track
 const SCROLLFG = 6; // scrollbar thumb
 const ADDCOL = 11; // green — added line indicator
 const MODCOL = 12; // cyan — modified line indicator
+const TABBG = 1; // tab bar background
+const TABACT = 0; // active tab background
+const TABFG = 7; // active tab text
+const TABINACT = 5; // inactive tab text
+const GRIDC = 17; // sprite/map grid lines
+
+// ─── Tab names ───────────────────────────────────────────────────────────────
+
+const TAB_CODE = 0;
+const TAB_SPRITES = 1;
+const TAB_MAP = 2;
+const TAB_NAMES = ["CODE", "SPRITES", "MAP"];
 
 // ─── Bracket / auto-close tables ─────────────────────────────────────────────
 
@@ -205,6 +217,24 @@ let savedBuf = []; // snapshot at last save/open
 
 // persistent find highlighting
 let lastFindText = "";
+
+// ─── Tab state ───────────────────────────────────────────────────────────────
+let activeTab = TAB_CODE;
+
+// ─── Sprite editor state ─────────────────────────────────────────────────────
+let sprSel = 0; // selected sprite index
+let sprCol = 7; // selected palette colour for painting
+let sprZoom = 8; // pixel zoom level
+let sprTool = 0; // 0=pencil, 1=eraser
+let sprScrollY = 0; // sheet grid scroll offset (pixels)
+
+// ─── Map editor state ────────────────────────────────────────────────────────
+let mapCamX = 0; // camera tile offset
+let mapCamY = 0;
+let mapLayer = 0; // active layer
+let mapTile = 0; // selected tile for painting
+let mapTool = 0; // 0=pencil, 1=eraser
+let mapGridOn = true; // show grid overlay
 
 // ─── Caches (invalidated on edit) ────────────────────────────────────────────
 
@@ -759,6 +789,18 @@ function updateEdit() {
 
     // ── Ctrl shortcuts ──
     if (ctrl) {
+        if (key.btnp(key.NUM1)) {
+            activeTab = TAB_CODE;
+            return;
+        }
+        if (key.btnp(key.NUM2)) {
+            activeTab = TAB_SPRITES;
+            return;
+        }
+        if (key.btnp(key.NUM3)) {
+            activeTab = TAB_MAP;
+            return;
+        }
         if (key.btnp(key.GRAVE)) {
             vimEnabled = !vimEnabled;
             if (vimEnabled) {
@@ -2037,6 +2079,28 @@ function vimSearchNext(dir) {
 
 // ── draw.js ─────────────────────────────────────────────────────────────
 
+// ─── Tab bar (shared across all tabs) ────────────────────────────────────────
+
+function drawTabBar() {
+    gfx.rectfill(0, 0, FB_W - 1, CH - 1, TABBG);
+    let tx = 1;
+    for (let i = 0; i < TAB_NAMES.length; i++) {
+        let name = " " + TAB_NAMES[i] + " ";
+        let w = name.length * CW;
+        if (i === activeTab) {
+            gfx.rectfill(tx, 0, tx + w - 1, CH - 1, TABACT);
+            gfx.print(name, tx, 0, TABFG);
+        } else {
+            gfx.print(name, tx, 0, TABINACT);
+        }
+        // Click to switch tabs
+        if (mouse.btnp(0) && mouse.y() < CH && mouse.x() >= tx && mouse.x() < tx + w) {
+            activeTab = i;
+        }
+        tx += w + 2;
+    }
+}
+
 // ─── Editor drawing ──────────────────────────────────────────────────────────
 
 function drawEditor() {
@@ -2545,11 +2609,549 @@ function drawBrowser() {
 }
 
 
+// ── sprite_editor.js ────────────────────────────────────────────────────
+
+// ─── Sprite editor ───────────────────────────────────────────────────────────
+//
+// Layout (640×360):
+//   Row 0        : tab bar (shared drawTabBar)
+//   Left panel   : sprite sheet grid (scrollable)
+//   Center panel : zoomed pixel canvas for selected sprite
+//   Bottom strip : palette picker, flags, tool selector
+//
+
+// ─── Constants ───────────────────────────────────────────────────────────────
+
+const SPR_GRID_X = 0;
+const SPR_GRID_Y = CH; // below tab bar
+const SPR_GRID_COLS = 16; // sprites per row in sheet overview
+const SPR_GRID_CELL = 10; // pixels per cell in the overview
+const SPR_GRID_W = SPR_GRID_COLS * SPR_GRID_CELL; // 160
+const SPR_GRID_H = FB_H - CH * 2; // full height minus tab bar and footer
+
+const SPR_CANVAS_X = SPR_GRID_W + 2;
+const SPR_CANVAS_Y = CH;
+const SPR_PAL_H = 34; // palette strip height at bottom
+const SPR_CANVAS_H = FB_H - CH - SPR_PAL_H - CH; // canvas area height
+const SPR_CANVAS_W = FB_W - SPR_GRID_W - 2; // canvas area width
+
+const SPR_PAL_Y = FB_H - SPR_PAL_H - CH; // palette Y
+const SPR_PAL_X = SPR_CANVAS_X;
+
+const SPR_PAL_CELL = 10; // palette swatch size
+const SPR_PAL_COLS = 16;
+
+const SPR_TOOLS = ["PEN", "ERA"];
+
+// ─── Update ──────────────────────────────────────────────────────────────────
+
+function updateSpriteEditor() {
+    let ctrl = key.btn(key.LCTRL) || key.btn(key.RCTRL);
+
+    // Tab switching
+    if (ctrl) {
+        if (key.btnp(key.NUM1)) {
+            activeTab = TAB_CODE;
+            return;
+        }
+        if (key.btnp(key.NUM2)) {
+            activeTab = TAB_SPRITES;
+            return;
+        }
+        if (key.btnp(key.NUM3)) {
+            activeTab = TAB_MAP;
+            return;
+        }
+    }
+
+    let mx = mouse.x();
+    let my = mouse.y();
+    let mBtn = mouse.btn(0);
+    let mPress = mouse.btnp(0);
+    let wheel = mouse.wheel();
+
+    let sw = gfx.sheetW();
+    let sh = gfx.sheetH();
+    if (sw === 0 || sh === 0) return; // no spritesheet loaded
+
+    let tileW = 8; // default tile size
+    let tileH = 8;
+    let sheetCols = Math.floor(sw / tileW);
+    let sheetRows = Math.floor(sh / tileH);
+    let sprCount = sheetCols * sheetRows;
+
+    // ── Sheet grid interaction (click to select sprite) ──
+    if (
+        mPress &&
+        mx >= SPR_GRID_X &&
+        mx < SPR_GRID_X + SPR_GRID_W &&
+        my >= SPR_GRID_Y &&
+        my < SPR_GRID_Y + SPR_GRID_H
+    ) {
+        let gx = Math.floor((mx - SPR_GRID_X) / SPR_GRID_CELL);
+        let gy = Math.floor((my - SPR_GRID_Y) / SPR_GRID_CELL) + sprScrollY;
+        let idx = gy * SPR_GRID_COLS + gx;
+        if (idx >= 0 && idx < sprCount) sprSel = idx;
+    }
+
+    // Scroll sheet grid
+    if (
+        mx >= SPR_GRID_X &&
+        mx < SPR_GRID_X + SPR_GRID_W &&
+        my >= SPR_GRID_Y &&
+        my < SPR_GRID_Y + SPR_GRID_H
+    ) {
+        sprScrollY = clamp(
+            sprScrollY - wheel,
+            0,
+            Math.max(
+                0,
+                Math.ceil(sprCount / SPR_GRID_COLS) - Math.floor(SPR_GRID_H / SPR_GRID_CELL),
+            ),
+        );
+    }
+
+    // ── Zoomed canvas interaction (paint pixels) ──
+    let canvasSize = Math.min(SPR_CANVAS_W, SPR_CANVAS_H);
+    let zoom = Math.floor(canvasSize / tileW);
+    let canvasPixW = zoom * tileW;
+    let canvasPixH = zoom * tileH;
+    let canvasOx = SPR_CANVAS_X + Math.floor((SPR_CANVAS_W - canvasPixW) / 2);
+    let canvasOy = SPR_CANVAS_Y + Math.floor((SPR_CANVAS_H - canvasPixH) / 2);
+
+    if (
+        mBtn &&
+        mx >= canvasOx &&
+        mx < canvasOx + canvasPixW &&
+        my >= canvasOy &&
+        my < canvasOy + canvasPixH
+    ) {
+        let px = Math.floor((mx - canvasOx) / zoom);
+        let py = Math.floor((my - canvasOy) / zoom);
+        let selRow = Math.floor(sprSel / sheetCols);
+        let selCol = sprSel % sheetCols;
+        let sx = selCol * tileW + px;
+        let sy = selRow * tileH + py;
+        if (sprTool === 0) {
+            gfx.sset(sx, sy, sprCol);
+        } else {
+            gfx.sset(sx, sy, 0);
+        }
+    }
+
+    // ── Palette click ──
+    if (
+        mPress &&
+        my >= SPR_PAL_Y &&
+        my < SPR_PAL_Y + SPR_PAL_CELL * 2 &&
+        mx >= SPR_PAL_X &&
+        mx < SPR_PAL_X + SPR_PAL_COLS * SPR_PAL_CELL
+    ) {
+        let pc = Math.floor((mx - SPR_PAL_X) / SPR_PAL_CELL);
+        let pr = Math.floor((my - SPR_PAL_Y) / SPR_PAL_CELL);
+        let idx = pr * SPR_PAL_COLS + pc;
+        if (idx >= 0 && idx < 32) sprCol = idx;
+    }
+
+    // ── Flags toggle (8 bits below palette) ──
+    let flagsY = SPR_PAL_Y + SPR_PAL_CELL * 2 + 2;
+    if (
+        mPress &&
+        my >= flagsY &&
+        my < flagsY + CH &&
+        mx >= SPR_PAL_X &&
+        mx < SPR_PAL_X + 8 * (CW + 2)
+    ) {
+        let bit = Math.floor((mx - SPR_PAL_X) / (CW + 2));
+        if (bit >= 0 && bit < 8) {
+            let f = gfx.fget(sprSel);
+            gfx.fset(sprSel, f ^ (1 << bit));
+        }
+    }
+
+    // ── Tool switch (keyboard) ──
+    if (key.btnp(key.E)) sprTool = 1;
+    if (key.btnp(key.B)) sprTool = 0;
+
+    // Pick colour from canvas (right-click)
+    if (
+        mouse.btn(1) &&
+        mx >= canvasOx &&
+        mx < canvasOx + canvasPixW &&
+        my >= canvasOy &&
+        my < canvasOy + canvasPixH
+    ) {
+        let px = Math.floor((mx - canvasOx) / zoom);
+        let py = Math.floor((my - canvasOy) / zoom);
+        let selRow = Math.floor(sprSel / sheetCols);
+        let selCol = sprSel % sheetCols;
+        let sx = selCol * tileW + px;
+        let sy = selRow * tileH + py;
+        sprCol = gfx.sget(sx, sy);
+        sprTool = 0;
+    }
+}
+
+// ─── Draw ────────────────────────────────────────────────────────────────────
+
+function drawSpriteEditor() {
+    let sw = gfx.sheetW();
+    let sh = gfx.sheetH();
+    if (sw === 0 || sh === 0) {
+        gfx.print("No spritesheet loaded", 10, FB_H / 2, FG);
+        return;
+    }
+
+    let tileW = 8;
+    let tileH = 8;
+    let sheetCols = Math.floor(sw / tileW);
+    let sheetRows = Math.floor(sh / tileH);
+    let sprCount = sheetCols * sheetRows;
+
+    // ── Sheet grid panel background ──
+    gfx.rectfill(
+        SPR_GRID_X,
+        SPR_GRID_Y,
+        SPR_GRID_X + SPR_GRID_W - 1,
+        SPR_GRID_Y + SPR_GRID_H - 1,
+        GUTBG,
+    );
+
+    // Draw sprite thumbnails
+    let visRows = Math.floor(SPR_GRID_H / SPR_GRID_CELL);
+    for (let r = 0; r < visRows; r++) {
+        for (let c = 0; c < SPR_GRID_COLS; c++) {
+            let idx = (r + sprScrollY) * SPR_GRID_COLS + c;
+            if (idx >= sprCount) break;
+            let dx = SPR_GRID_X + c * SPR_GRID_CELL;
+            let dy = SPR_GRID_Y + r * SPR_GRID_CELL;
+            // Draw mini sprite using sspr
+            let srcX = (idx % sheetCols) * tileW;
+            let srcY = Math.floor(idx / sheetCols) * tileH;
+            gfx.sspr(srcX, srcY, tileW, tileH, dx, dy, SPR_GRID_CELL, SPR_GRID_CELL);
+            // Highlight selected
+            if (idx === sprSel) {
+                gfx.rect(dx, dy, dx + SPR_GRID_CELL - 1, dy + SPR_GRID_CELL - 1, FG);
+            }
+        }
+    }
+
+    // ── Zoomed canvas ──
+    let canvasSize = Math.min(SPR_CANVAS_W, SPR_CANVAS_H);
+    let zoom = Math.floor(canvasSize / tileW);
+    let canvasPixW = zoom * tileW;
+    let canvasPixH = zoom * tileH;
+    let canvasOx = SPR_CANVAS_X + Math.floor((SPR_CANVAS_W - canvasPixW) / 2);
+    let canvasOy = SPR_CANVAS_Y + Math.floor((SPR_CANVAS_H - canvasPixH) / 2);
+
+    // Background checkerboard
+    gfx.rectfill(canvasOx - 1, canvasOy - 1, canvasOx + canvasPixW, canvasOy + canvasPixH, GRIDC);
+
+    let selRow = Math.floor(sprSel / sheetCols);
+    let selCol = sprSel % sheetCols;
+    for (let py = 0; py < tileH; py++) {
+        for (let px = 0; px < tileW; px++) {
+            let sx = selCol * tileW + px;
+            let sy = selRow * tileH + py;
+            let c = gfx.sget(sx, sy);
+            gfx.rectfill(
+                canvasOx + px * zoom,
+                canvasOy + py * zoom,
+                canvasOx + (px + 1) * zoom - 1,
+                canvasOy + (py + 1) * zoom - 1,
+                c,
+            );
+        }
+    }
+
+    // Grid lines
+    for (let px = 0; px <= tileW; px++) {
+        let x = canvasOx + px * zoom;
+        gfx.line(x, canvasOy, x, canvasOy + canvasPixH - 1, GRIDC);
+    }
+    for (let py = 0; py <= tileH; py++) {
+        let y = canvasOy + py * zoom;
+        gfx.line(canvasOx, y, canvasOx + canvasPixW - 1, y, GRIDC);
+    }
+
+    // ── Palette strip ──
+    for (let i = 0; i < 32; i++) {
+        let pc = i % SPR_PAL_COLS;
+        let pr = Math.floor(i / SPR_PAL_COLS);
+        let px = SPR_PAL_X + pc * SPR_PAL_CELL;
+        let py = SPR_PAL_Y + pr * SPR_PAL_CELL;
+        gfx.rectfill(px, py, px + SPR_PAL_CELL - 1, py + SPR_PAL_CELL - 1, i);
+        if (i === sprCol) {
+            gfx.rect(px, py, px + SPR_PAL_CELL - 1, py + SPR_PAL_CELL - 1, FG);
+        }
+    }
+
+    // ── Flags display ──
+    let flagsY = SPR_PAL_Y + SPR_PAL_CELL * 2 + 2;
+    let flags = gfx.fget(sprSel);
+    gfx.print("FLAGS:", SPR_PAL_X, flagsY, GUTFG);
+    for (let b = 0; b < 8; b++) {
+        let bx = SPR_PAL_X + 7 * CW + b * (CW + 2);
+        let on = (flags >> b) & 1;
+        gfx.print("" + b, bx, flagsY, on ? FG : GUTFG);
+        if (on) gfx.rectfill(bx, flagsY + CH, bx + CW - 1, flagsY + CH + 1, FG);
+    }
+
+    // ── Tool / info ──
+    let infoY = flagsY + CH + 4;
+    gfx.print("TOOL:" + SPR_TOOLS[sprTool], SPR_PAL_X, infoY, GUTFG);
+    gfx.print("COL:" + sprCol, SPR_PAL_X + 14 * CW, infoY, sprCol);
+    gfx.print("#" + sprSel, SPR_PAL_X + 22 * CW, infoY, FG);
+
+    // ── Footer ──
+    let footY = FB_H - CH;
+    gfx.rectfill(0, footY, FB_W - 1, FB_H - 1, FOOTBG);
+    gfx.print("B:pen E:eraser RClick:pick  Ctrl+1/2/3:tabs", 1 * CW, footY, FOOTFG);
+}
+
+
+// ── map_editor.js ───────────────────────────────────────────────────────
+
+// ─── Map editor ──────────────────────────────────────────────────────────────
+//
+// Layout (640×360):
+//   Row 0         : tab bar (shared drawTabBar)
+//   Left panel    : map viewport with tile painting
+//   Right panel   : tile picker (spritesheet as palette)
+//   Bottom strip  : layer selector, info, grid toggle
+//
+
+// ─── Constants ───────────────────────────────────────────────────────────────
+
+const MAP_TILE_PX = 8; // default tile size in pixels
+const MAP_PICKER_W = 130; // right panel width
+const MAP_VP_X = 0;
+const MAP_VP_Y = CH; // below tab bar
+const MAP_VP_W = FB_W - MAP_PICKER_W;
+const MAP_VP_H = FB_H - CH * 2; // minus tab bar and footer
+const MAP_PICK_X = MAP_VP_W + 1;
+const MAP_PICK_Y = CH;
+const MAP_PICK_CELL = 10; // tile picker cell size
+const MAP_PICK_COLS = Math.floor(MAP_PICKER_W / MAP_PICK_CELL);
+
+// ─── Update ──────────────────────────────────────────────────────────────────
+
+function updateMapEditor() {
+    let ctrl = key.btn(key.LCTRL) || key.btn(key.RCTRL);
+
+    // Tab switching
+    if (ctrl) {
+        if (key.btnp(key.NUM1)) {
+            activeTab = TAB_CODE;
+            return;
+        }
+        if (key.btnp(key.NUM2)) {
+            activeTab = TAB_SPRITES;
+            return;
+        }
+        if (key.btnp(key.NUM3)) {
+            activeTab = TAB_MAP;
+            return;
+        }
+    }
+
+    let mx = mouse.x();
+    let my = mouse.y();
+    let mBtn = mouse.btn(0);
+    let mPress = mouse.btnp(0);
+    let wheel = mouse.wheel();
+    let shift = key.btn(key.LSHIFT) || key.btn(key.RSHIFT);
+
+    let mw = map.width();
+    let mh = map.height();
+    if (mw === 0 || mh === 0) return; // no map loaded
+
+    let sw = gfx.sheetW();
+    let sh = gfx.sheetH();
+    let tileW = MAP_TILE_PX;
+    let tileH = MAP_TILE_PX;
+    let sheetCols = sw > 0 ? Math.floor(sw / tileW) : 0;
+    let sheetCount = sheetCols > 0 ? sheetCols * Math.floor(sh / tileH) : 0;
+
+    // ── Map viewport panning (arrow keys / WASD) ──
+    let speed = shift ? 4 : 1;
+    if (key.btn(key.LEFT) || key.btn(key.A)) mapCamX -= speed;
+    if (key.btn(key.RIGHT) || key.btn(key.D)) mapCamX += speed;
+    if (key.btn(key.UP) || key.btn(key.W)) mapCamY -= speed;
+    if (key.btn(key.DOWN) || key.btn(key.S)) mapCamY += speed;
+    mapCamX = clamp(mapCamX, 0, Math.max(0, mw - Math.floor(MAP_VP_W / tileW)));
+    mapCamY = clamp(mapCamY, 0, Math.max(0, mh - Math.floor(MAP_VP_H / tileH)));
+
+    // ── Paint tile on map viewport ──
+    if (
+        mBtn &&
+        mx >= MAP_VP_X &&
+        mx < MAP_VP_X + MAP_VP_W &&
+        my >= MAP_VP_Y &&
+        my < MAP_VP_Y + MAP_VP_H
+    ) {
+        let tx = Math.floor((mx - MAP_VP_X) / tileW) + mapCamX;
+        let ty = Math.floor((my - MAP_VP_Y) / tileH) + mapCamY;
+        if (tx >= 0 && tx < mw && ty >= 0 && ty < mh) {
+            if (mapTool === 0) {
+                map.set(tx, ty, mapLayer, mapTile);
+            } else {
+                map.set(tx, ty, mapLayer, 0);
+            }
+        }
+    }
+
+    // Pick tile from map (right-click)
+    if (
+        mouse.btn(1) &&
+        mx >= MAP_VP_X &&
+        mx < MAP_VP_X + MAP_VP_W &&
+        my >= MAP_VP_Y &&
+        my < MAP_VP_Y + MAP_VP_H
+    ) {
+        let tx = Math.floor((mx - MAP_VP_X) / tileW) + mapCamX;
+        let ty = Math.floor((my - MAP_VP_Y) / tileH) + mapCamY;
+        if (tx >= 0 && tx < mw && ty >= 0 && ty < mh) {
+            mapTile = map.get(tx, ty, mapLayer);
+            mapTool = 0;
+        }
+    }
+
+    // ── Tile picker interaction ──
+    if (
+        mPress &&
+        mx >= MAP_PICK_X &&
+        mx < MAP_PICK_X + MAP_PICK_COLS * MAP_PICK_CELL &&
+        my >= MAP_PICK_Y
+    ) {
+        let pc = Math.floor((mx - MAP_PICK_X) / MAP_PICK_CELL);
+        let pr = Math.floor((my - MAP_PICK_Y) / MAP_PICK_CELL);
+        let idx = pr * MAP_PICK_COLS + pc;
+        if (idx >= 0 && idx < sheetCount) mapTile = idx;
+    }
+
+    // ── Layer switching (keyboard) ──
+    let layers = map.layers();
+    if (key.btnp(key.LEFTBRACKET) && mapLayer > 0) mapLayer--;
+    if (key.btnp(key.RIGHTBRACKET) && mapLayer < layers - 1) mapLayer++;
+
+    // ── Grid toggle ──
+    if (key.btnp(key.G) && !ctrl) mapGridOn = !mapGridOn;
+
+    // ── Tool switch ──
+    if (key.btnp(key.E)) mapTool = 1;
+    if (key.btnp(key.B)) mapTool = 0;
+}
+
+// ─── Draw ────────────────────────────────────────────────────────────────────
+
+function drawMapEditor() {
+    let mw = map.width();
+    let mh = map.height();
+    if (mw === 0 || mh === 0) {
+        gfx.print("No map loaded", 10, FB_H / 2, FG);
+        return;
+    }
+
+    let sw = gfx.sheetW();
+    let sh = gfx.sheetH();
+    let tileW = MAP_TILE_PX;
+    let tileH = MAP_TILE_PX;
+    let sheetCols = sw > 0 ? Math.floor(sw / tileW) : 0;
+    let sheetRows = sw > 0 ? Math.floor(sh / tileH) : 0;
+    let sheetCount = sheetCols * sheetRows;
+
+    // ── Map viewport ──
+    gfx.clip(MAP_VP_X, MAP_VP_Y, MAP_VP_W, MAP_VP_H);
+
+    // Draw the map using map.draw — it draws all visible tiles
+    let drawX = MAP_VP_X - ((mapCamX * tileW) % tileW);
+    let drawY = MAP_VP_Y - ((mapCamY * tileH) % tileH);
+    let visCols = Math.ceil(MAP_VP_W / tileW) + 1;
+    let visRows = Math.ceil(MAP_VP_H / tileH) + 1;
+
+    // Draw each visible tile manually so we control the layer
+    for (let r = 0; r < visRows; r++) {
+        for (let c = 0; c < visCols; c++) {
+            let tx = mapCamX + c;
+            let ty = mapCamY + r;
+            if (tx >= mw || ty >= mh) continue;
+            let tile = map.get(tx, ty, mapLayer);
+            if (tile > 0 && sheetCols > 0) {
+                let srcX = (tile % sheetCols) * tileW;
+                let srcY = Math.floor(tile / sheetCols) * tileH;
+                let dx = MAP_VP_X + c * tileW;
+                let dy = MAP_VP_Y + r * tileH;
+                gfx.sspr(srcX, srcY, tileW, tileH, dx, dy, tileW, tileH);
+            }
+        }
+    }
+
+    // Grid overlay
+    if (mapGridOn) {
+        for (let c = 0; c <= visCols; c++) {
+            let x = MAP_VP_X + c * tileW;
+            gfx.line(x, MAP_VP_Y, x, MAP_VP_Y + MAP_VP_H - 1, GRIDC);
+        }
+        for (let r = 0; r <= visRows; r++) {
+            let y = MAP_VP_Y + r * tileH;
+            gfx.line(MAP_VP_X, y, MAP_VP_X + MAP_VP_W - 1, y, GRIDC);
+        }
+    }
+
+    gfx.clip(); // reset clip
+
+    // ── Tile picker panel ──
+    gfx.rectfill(MAP_PICK_X, MAP_PICK_Y, FB_W - 1, FB_H - CH - 1, GUTBG);
+
+    if (sheetCols > 0) {
+        let pickRows = Math.ceil(sheetCount / MAP_PICK_COLS);
+        let visPickRows = Math.floor((FB_H - CH * 2) / MAP_PICK_CELL);
+        for (let r = 0; r < visPickRows && r < pickRows; r++) {
+            for (let c = 0; c < MAP_PICK_COLS; c++) {
+                let idx = r * MAP_PICK_COLS + c;
+                if (idx >= sheetCount) break;
+                let dx = MAP_PICK_X + c * MAP_PICK_CELL;
+                let dy = MAP_PICK_Y + r * MAP_PICK_CELL;
+                let srcX = (idx % sheetCols) * tileW;
+                let srcY = Math.floor(idx / sheetCols) * tileH;
+                gfx.sspr(srcX, srcY, tileW, tileH, dx, dy, MAP_PICK_CELL, MAP_PICK_CELL);
+                if (idx === mapTile) {
+                    gfx.rect(dx, dy, dx + MAP_PICK_CELL - 1, dy + MAP_PICK_CELL - 1, FG);
+                }
+            }
+        }
+    }
+
+    // ── Footer ──
+    let footY = FB_H - CH;
+    gfx.rectfill(0, footY, FB_W - 1, FB_H - 1, FOOTBG);
+    let layers = map.layers();
+    let info =
+        "L:" +
+        mapLayer +
+        "/" +
+        (layers - 1) +
+        " T:" +
+        mapTile +
+        " G:" +
+        (mapGridOn ? "on" : "off") +
+        " (" +
+        mapCamX +
+        "," +
+        mapCamY +
+        ")";
+    gfx.print(info, 1 * CW, footY, FOOTFG);
+    gfx.print("[/]:layer B:pen E:era G:grid", FB_W - 30 * CW, footY, FOOTFG);
+}
+
+
 // ── main.js ─────────────────────────────────────────────────────────────
 
 // ─── Text input event handler ────────────────────────────────────────────────
 
 function onTextInput(ch) {
+    if (activeTab !== TAB_CODE) return;
     if (brMode) return;
     if (key.btn(key.LCTRL) || key.btn(key.RCTRL)) return;
 
@@ -2623,6 +3225,17 @@ function _save() {
         vimEnabled,
         savedBuf,
         lastFindText,
+        activeTab,
+        sprSel,
+        sprCol,
+        sprTool,
+        sprScrollY,
+        mapCamX,
+        mapCamY,
+        mapLayer,
+        mapTile,
+        mapTool,
+        mapGridOn,
     };
 }
 
@@ -2641,6 +3254,17 @@ function _restore(s) {
     vimEnabled = s.vimEnabled || false;
     savedBuf = s.savedBuf || [];
     lastFindText = s.lastFindText || "";
+    activeTab = s.activeTab || TAB_CODE;
+    sprSel = s.sprSel || 0;
+    sprCol = s.sprCol || 7;
+    sprTool = s.sprTool || 0;
+    sprScrollY = s.sprScrollY || 0;
+    mapCamX = s.mapCamX || 0;
+    mapCamY = s.mapCamY || 0;
+    mapLayer = s.mapLayer || 0;
+    mapTile = s.mapTile || 0;
+    mapTool = s.mapTool || 0;
+    mapGridOn = s.mapGridOn !== undefined ? s.mapGridOn : true;
     targetOy = oy;
     vim = "normal";
     vimCount = "";
@@ -2675,6 +3299,15 @@ function _update(dt) {
         }
     }
 
+    if (activeTab === TAB_SPRITES) {
+        updateSpriteEditor();
+        return;
+    }
+    if (activeTab === TAB_MAP) {
+        updateMapEditor();
+        return;
+    }
+
     if (brMode) updateBrowser();
     else if (findMode) updateFind();
     else if (gotoMode) updateGoto();
@@ -2683,6 +3316,16 @@ function _update(dt) {
 
 function _draw() {
     gfx.cls(BG);
+    drawTabBar();
+    if (activeTab === TAB_SPRITES) {
+        drawSpriteEditor();
+        return;
+    }
+    if (activeTab === TAB_MAP) {
+        drawMapEditor();
+        return;
+    }
+
     if (brMode) drawBrowser();
     else {
         drawEditor();
