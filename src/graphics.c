@@ -1097,24 +1097,41 @@ void dtr_gfx_sspr(dtr_graphics_t *gfx,
         return;
     }
 
-    for (int32_t row = 0; row < dh; ++row) {
-        for (int32_t px = 0; px < dw; ++px) {
-            int32_t src_x;
-            int32_t src_y;
-            uint8_t col;
+    /* Sanity-limit destination size to prevent overflow in fixed-point math */
+    if (dw > 16384 || dh > 16384) {
+        return;
+    }
 
-            src_x = sx + px * sw / dw;
-            src_y = sy + row * sh / dh;
+    {
+        /* Fixed-point 16.16 stepping to avoid per-pixel division */
+        int32_t step_x = (sw << 16) / dw;
+        int32_t step_y = (sh << 16) / dh;
 
-            if (src_x < 0 || src_x >= sht->width || src_y < 0 || src_y >= sht->height) {
+        for (int32_t row = 0; row < dh; ++row) {
+            int32_t src_y  = sy + ((row * step_y) >> 16);
+            int32_t dest_y = dy + row;
+
+            if (src_y < 0 || src_y >= sht->height) {
                 continue;
             }
 
-            col = sht->pixels[src_y * sht->width + src_x];
-            if (gfx->transparent[col]) {
-                continue;
+            {
+                int32_t  x_acc = 0;
+                uint8_t *src_row = sht->pixels + src_y * sht->width;
+
+                for (int32_t px = 0; px < dw; ++px) {
+                    int32_t src_x = sx + (x_acc >> 16);
+                    uint8_t col;
+
+                    if (src_x >= 0 && src_x < sht->width) {
+                        col = src_row[src_x];
+                        if (!gfx->transparent[col]) {
+                            prv_put_pixel(gfx, dx + px, dest_y, col);
+                        }
+                    }
+                    x_acc += step_x;
+                }
             }
-            prv_put_pixel(gfx, dx + px, dy + row, col);
         }
     }
 }
