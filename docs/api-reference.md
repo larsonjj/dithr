@@ -1,6 +1,6 @@
 # API Reference
 
-dithr exposes **15 namespaces** to cart JavaScript code. All functions are
+dithr exposes **17 namespaces** to cart JavaScript code. All functions are
 available as globals on their namespace object (e.g. `gfx.cls()`).
 
 The engine calls three optional global callbacks each frame:
@@ -558,6 +558,88 @@ otherwise.
 /* Check player vs coin overlap */
 if (col.rect(player.x, player.y, 8, 8, coin.x, coin.y, 8, 8)) {
     evt.emit("coin_collected", { value: 10 });
+}
+```
+
+---
+
+## `ui` — UI Layout Helpers
+
+Stateless rectangle-based layout utilities for building menus, HUDs, and
+dialogue boxes. Every function takes and returns `{x, y, w, h}` rect objects.
+
+| Function | Parameters             | Returns            | Description                                             |
+| -------- | ---------------------- | ------------------ | ------------------------------------------------------- |
+| `rect`   | `x, y, w, h`           | `{x, y, w, h}`     | Create a rect from position and size                    |
+| `inset`  | `rect, n`              | `{x, y, w, h}`     | Shrink a rect on all four sides by `n` pixels           |
+| `anchor` | `ax, ay, w, h`         | `{x, y, w, h}`     | Position a rect using normalised 0–1 screen anchors     |
+| `hsplit` | `rect, t?, gap?`       | `[left, right]`    | Split a rect horizontally at fraction `t` (default 0.5) |
+| `vsplit` | `rect, t?, gap?`       | `[top, bottom]`    | Split a rect vertically at fraction `t` (default 0.5)   |
+| `hstack` | `rect, n, gap?`        | `[{x,y,w,h}, ...]` | Divide a rect into `n` equal columns (max 64)           |
+| `vstack` | `rect, n, gap?`        | `[{x,y,w,h}, ...]` | Divide a rect into `n` equal rows (max 64)              |
+| `place`  | `parent, ax, ay, w, h` | `{x, y, w, h}`     | Place a child rect within a parent using 0–1 anchors    |
+
+```js
+/* Three-column HUD bar along the bottom of the screen */
+const bar = ui.anchor(0.5, 1.0, 300, 20);
+const cols = ui.hstack(ui.inset(bar, 2), 3, 4);
+gfx.rectfill(bar.x, bar.y, bar.x + bar.w, bar.y + bar.h, 1);
+gfx.print("HP: 100", cols[0].x, cols[0].y, 7);
+gfx.print("MP: 50", cols[1].x, cols[1].y, 12);
+gfx.print("LV: 3", cols[2].x, cols[2].y, 10);
+```
+
+---
+
+## `tween` — Tweening Engine
+
+Managed value interpolation with easing functions and Promise-based
+completion. Call `tween.tick(dt)` once per frame in `_update()` to advance
+all active tweens.
+
+### Managed tweens
+
+| Function    | Parameters                     | Returns                    | Description                                                        |
+| ----------- | ------------------------------ | -------------------------- | ------------------------------------------------------------------ |
+| `start`     | `from, to, dur, ease?, delay?` | `{id: int, done: Promise}` | Start a tween. Returns a handle with `id` and a `done` Promise     |
+| `tick`      | `dt`                           | —                          | Advance all tweens by `dt` seconds. Resolves finished Promises     |
+| `val`       | `handle_or_id, default?`       | `float`                    | Current interpolated value (or `default` if the tween is inactive) |
+| `done`      | `handle_or_id`                 | `bool`                     | `true` if the tween has finished                                   |
+| `cancel`    | `handle_or_id`                 | —                          | Cancel a tween. Rejects its Promise with `"tween cancelled"`       |
+| `cancelAll` |                                | —                          | Cancel all active tweens                                           |
+
+### Standalone easing
+
+| Function | Parameters | Returns | Description                                |
+| -------- | ---------- | ------- | ------------------------------------------ |
+| `ease`   | `t, name`  | `float` | Apply a named easing function to `t` (0–1) |
+
+### Easing names
+
+`"linear"`, `"easeIn"`, `"easeOut"`, `"easeInOut"`, `"easeInQuad"`,
+`"easeOutQuad"`, `"easeInOutQuad"`, `"easeInCubic"`, `"easeOutCubic"`,
+`"easeInOutCubic"`, `"easeOutBack"`, `"easeOutElastic"`, `"easeOutBounce"`
+
+The pool supports up to **64** concurrent tweens.
+
+```js
+let fadeIn;
+
+function _init() {
+    fadeIn = tween.start(0, 255, 1.0, "outQuad");
+    fadeIn.done.then(() => {
+        /* animation complete */
+    });
+}
+
+function _update(dt) {
+    tween.tick(dt);
+}
+
+function _draw() {
+    const alpha = tween.val(fadeIn, 0);
+    gfx.cls(0);
+    gfx.print("Hello!", 140, 87, 7);
 }
 ```
 

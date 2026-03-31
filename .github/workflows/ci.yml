@@ -8,6 +8,59 @@ on:
 
 jobs:
     # ---------------------------------------------------------------------------
+    #  Formatting — clang-format check
+    # ---------------------------------------------------------------------------
+    formatting:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v6
+
+            - name: Check formatting
+              run: |
+                  find src/ tests/ -name '*.c' -o -name '*.h' \
+                    | xargs clang-format --dry-run --Werror
+
+    # ---------------------------------------------------------------------------
+    #  Static analysis — clang-tidy
+    # ---------------------------------------------------------------------------
+    clang-tidy:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v6
+
+            - name: Cache build
+              uses: actions/cache@v5
+              with:
+                  path: build/debug/_deps
+                  key: linux-tidy-deps-${{ hashFiles('CMakeLists.txt') }}
+                  restore-keys: linux-tidy-deps-
+
+            - name: Install dependencies
+              run: |
+                  sudo apt-get update
+                  sudo apt-get install -y ninja-build clang-tidy \
+                    libx11-dev libxext-dev libxcursor-dev libxi-dev \
+                    libxfixes-dev libxrandr-dev libxrender-dev libxss-dev \
+                    libxtst-dev libxxf86vm-dev \
+                    libwayland-dev libxkbcommon-dev \
+                    libdrm-dev libgbm-dev libgl1-mesa-dev libgles2-mesa-dev \
+                    libegl1-mesa-dev libdbus-1-dev libudev-dev \
+                    libasound2-dev libpulse-dev libpipewire-0.3-dev \
+                    libdecor-0-dev
+
+            - name: Configure
+              run: >
+                  cmake -B build/debug -G Ninja
+                  -DCMAKE_BUILD_TYPE=Debug
+                  -DBUILD_SHARED_LIBS=OFF
+                  -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+
+            - name: Run clang-tidy
+              run: |
+                  find src/ -name '*.c' ! -name 'main.c' \
+                    | xargs clang-tidy -p build/debug
+
+    # ---------------------------------------------------------------------------
     #  Windows — MSVC (native)
     # ---------------------------------------------------------------------------
     windows:
@@ -212,3 +265,81 @@ jobs:
                   SDL_VIDEO_DRIVER: dummy
                   SDL_AUDIODRIVER: dummy
                   SDL_VIDEODRIVER: dummy
+
+    # ---------------------------------------------------------------------------
+    #  Linux — Clang
+    # ---------------------------------------------------------------------------
+    linux-clang:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v6
+
+            - name: Cache build
+              uses: actions/cache@v5
+              with:
+                  path: build/debug/_deps
+                  key: linux-clang-deps-${{ hashFiles('CMakeLists.txt') }}
+                  restore-keys: linux-clang-deps-
+
+            - name: Install dependencies
+              run: |
+                  sudo apt-get update
+                  sudo apt-get install -y ninja-build clang \
+                    libx11-dev libxext-dev libxcursor-dev libxi-dev \
+                    libxfixes-dev libxrandr-dev libxrender-dev libxss-dev \
+                    libxtst-dev libxxf86vm-dev \
+                    libwayland-dev libxkbcommon-dev \
+                    libdrm-dev libgbm-dev libgl1-mesa-dev libgles2-mesa-dev \
+                    libegl1-mesa-dev libdbus-1-dev libudev-dev \
+                    libasound2-dev libpulse-dev libpipewire-0.3-dev \
+                    libdecor-0-dev
+
+            - name: Configure
+              run: >
+                  cmake -B build/debug -G Ninja
+                  -DCMAKE_BUILD_TYPE=Debug
+                  -DCMAKE_C_COMPILER=clang
+                  -DBUILD_SHARED_LIBS=OFF
+
+            - name: Build
+              run: cmake --build build/debug
+
+            - name: Test
+              working-directory: build/debug
+              run: ctest --output-on-failure --timeout 300
+
+    # ---------------------------------------------------------------------------
+    #  WASM — Emscripten build check
+    # ---------------------------------------------------------------------------
+    wasm:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v6
+
+            - name: Install Ninja
+              run: sudo apt-get update && sudo apt-get install -y ninja-build
+
+            - name: Setup Emscripten
+              run: |
+                  git clone https://github.com/emscripten-core/emsdk.git --depth 1
+                  cd emsdk
+                  ./emsdk install latest
+                  ./emsdk activate latest
+                  echo "${{ github.workspace }}/emsdk" >> $GITHUB_PATH
+                  echo "${{ github.workspace }}/emsdk/upstream/emscripten" >> $GITHUB_PATH
+                  echo "EMSDK=${{ github.workspace }}/emsdk" >> $GITHUB_ENV
+
+            - name: Cache build
+              uses: actions/cache@v5
+              with:
+                  path: build/wasm/_deps
+                  key: wasm-ci-deps-${{ hashFiles('CMakeLists.txt') }}
+                  restore-keys: wasm-ci-deps-
+
+            - name: Configure
+              run: >
+                  cmake --preset wasm
+                  -DDTR_WASM_CART_DIR=${{ github.workspace }}/examples/hello_world
+
+            - name: Build
+              run: cmake --build build/wasm
