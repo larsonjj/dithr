@@ -83,6 +83,7 @@ typedef enum dtr_key {
     DTR_KEY_RCTRL,
     DTR_KEY_LALT,
     DTR_KEY_RALT,
+    DTR_KEY_GRAVE,
     DTR_KEY_COUNT
 } dtr_key_t;
 
