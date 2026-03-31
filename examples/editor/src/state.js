@@ -75,6 +75,9 @@ let sprCol = 7; // selected palette colour for painting
 let sprZoom = 8; // pixel zoom level
 let sprTool = 0; // 0=pencil, 1=eraser
 let sprScrollY = 0; // sheet grid scroll offset (pixels)
+let sprUndoStack = []; // [{x, y, prev}]
+let sprUndoPending = []; // current stroke
+const SPR_MAX_UNDO = 100;
 
 // ─── Map editor state ────────────────────────────────────────────────────────
 let mapCamX = 0; // camera tile offset
@@ -83,6 +86,9 @@ let mapLayer = 0; // active layer
 let mapTile = 0; // selected tile for painting
 let mapTool = 0; // 0=pencil, 1=eraser
 let mapGridOn = true; // show grid overlay
+let mapUndoStack = []; // [{x, y, layer, prev}]
+let mapUndoPending = []; // current stroke
+const MAP_MAX_UNDO = 100;
 
 // ─── Caches (invalidated on edit) ────────────────────────────────────────────
 
@@ -93,6 +99,10 @@ let _bracketDepthCache = []; // cumulative bracket depth at start of each line
 let _bracketDepthDirty = true;
 let _bufVersion = 0; // incremented on every edit
 let _lastCacheVersion = -1; // version at which caches were last valid
+
+// minimap cache
+let _mmCacheVersion = -1;
+let _mmLineLens = []; // precomputed line lengths for minimap
 
 function invalidateCaches() {
     _bufVersion++;

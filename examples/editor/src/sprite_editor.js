@@ -119,10 +119,26 @@ function updateSpriteEditor() {
         let selCol = sprSel % sheetCols;
         let sx = selCol * tileW + px;
         let sy = selRow * tileH + py;
-        if (sprTool === 0) {
-            gfx.sset(sx, sy, sprCol);
-        } else {
-            gfx.sset(sx, sy, 0);
+        let newCol = sprTool === 0 ? sprCol : 0;
+        let prev = gfx.sget(sx, sy);
+        if (prev !== newCol) {
+            sprUndoPending.push({ x: sx, y: sy, prev: prev });
+            gfx.sset(sx, sy, newCol);
+        }
+    }
+
+    // Commit stroke on mouse release
+    if (!mBtn && sprUndoPending.length > 0) {
+        sprUndoStack.push(sprUndoPending);
+        sprUndoPending = [];
+        if (sprUndoStack.length > SPR_MAX_UNDO) sprUndoStack.shift();
+    }
+
+    // Undo (Ctrl+Z)
+    if (ctrl && key.btnp(key.Z) && sprUndoStack.length > 0) {
+        let stroke = sprUndoStack.pop();
+        for (let i = stroke.length - 1; i >= 0; i--) {
+            gfx.sset(stroke[i].x, stroke[i].y, stroke[i].prev);
         }
     }
 

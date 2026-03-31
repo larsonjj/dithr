@@ -204,18 +204,27 @@ function drawEditor() {
         let totalLines = buf.length;
         if (totalLines > 0) {
             let scale = mmH / totalLines;
-            // Iterate by pixel row instead of by line to avoid O(totalLines) per frame
+
+            // Recompute cached line lengths only when buffer changes
+            if (_mmCacheVersion !== _bufVersion) {
+                _mmCacheVersion = _bufVersion;
+                _mmLineLens = new Array(totalLines);
+                for (let i = 0; i < totalLines; i++) {
+                    _mmLineLens[i] = Math.min(buf[i].length, MINIMAP_W);
+                }
+            }
+
             let pixelRows = Math.min(mmH, totalLines);
             for (let py2 = 0; py2 < pixelRows; py2++) {
                 let lineIdx = (py2 / scale) | 0;
                 if (lineIdx >= totalLines) break;
-                let my2 = editY + py2;
-                let lineLen = Math.min(buf[lineIdx].length, MINIMAP_W);
+                let lineLen = _mmLineLens[lineIdx];
                 if (lineLen > 0) {
                     let mmCol = lineIdx === cy ? CURFG : GUTFG;
-                    gfx.rectfill(mmX, my2, mmX + lineLen - 1, my2, mmCol);
+                    gfx.rectfill(mmX, editY + py2, mmX + lineLen - 1, editY + py2, mmCol);
                 }
             }
+
             // Draw visible region overlay
             let vrY = (editY + oy * scale) | 0;
             let vrH = Math.max(1, (EROWS * scale) | 0);

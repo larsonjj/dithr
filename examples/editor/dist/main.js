@@ -229,6 +229,9 @@ let sprCol = 7; // selected palette colour for painting
 let sprZoom = 8; // pixel zoom level
 let sprTool = 0; // 0=pencil, 1=eraser
 let sprScrollY = 0; // sheet grid scroll offset (pixels)
+let sprUndoStack = []; // [{x, y, prev}]
+let sprUndoPending = []; // current stroke
+const SPR_MAX_UNDO = 100;
 
 // ─── Map editor state ────────────────────────────────────────────────────────
 let mapCamX = 0; // camera tile offset
@@ -237,6 +240,9 @@ let mapLayer = 0; // active layer
 let mapTile = 0; // selected tile for painting
 let mapTool = 0; // 0=pencil, 1=eraser
 let mapGridOn = true; // show grid overlay
+let mapUndoStack = []; // [{x, y, layer, prev}]
+let mapUndoPending = []; // current stroke
+const MAP_MAX_UNDO = 100;
 
 // ─── Caches (invalidated on edit) ────────────────────────────────────────────
 
@@ -247,6 +253,10 @@ let _bracketDepthCache = []; // cumulative bracket depth at start of each line
 let _bracketDepthDirty = true;
 let _bufVersion = 0; // incremented on every edit
 let _lastCacheVersion = -1; // version at which caches were last valid
+
+// minimap cache
+let _mmCacheVersion = -1;
+let _mmLineLens = []; // precomputed line lengths for minimap
 
 function invalidateCaches() {
     _bufVersion++;
@@ -2287,18 +2297,27 @@ function drawEditor() {
         let totalLines = buf.length;
         if (totalLines > 0) {
             let scale = mmH / totalLines;
-            // Iterate by pixel row instead of by line to avoid O(totalLines) per frame
+
+            // Recompute cached line lengths only when buffer changes
+            if (_mmCacheVersion !== _bufVersion) {
+                _mmCacheVersion = _bufVersion;
+                _mmLineLens = new Array(totalLines);
+                for (let i = 0; i < totalLines; i++) {
+                    _mmLineLens[i] = Math.min(buf[i].length, MINIMAP_W);
+                }
+            }
+
             let pixelRows = Math.min(mmH, totalLines);
             for (let py2 = 0; py2 < pixelRows; py2++) {
                 let lineIdx = (py2 / scale) | 0;
                 if (lineIdx >= totalLines) break;
-                let my2 = editY + py2;
-                let lineLen = Math.min(buf[lineIdx].length, MINIMAP_W);
+                let lineLen = _mmLineLens[lineIdx];
                 if (lineLen > 0) {
                     let mmCol = lineIdx === cy ? CURFG : GUTFG;
-                    gfx.rectfill(mmX, my2, mmX + lineLen - 1, my2, mmCol);
+                    gfx.rectfill(mmX, editY + py2, mmX + lineLen - 1, editY + py2, mmCol);
                 }
             }
+
             // Draw visible region overlay
             let vrY = (editY + oy * scale) | 0;
             let vrH = Math.max(1, (EROWS * scale) | 0);
@@ -2746,10 +2765,26 @@ function updateSpriteEditor() {
         let selCol = sprSel % sheetCols;
         let sx = selCol * tileW + px;
         let sy = selRow * tileH + py;
-        if (sprTool === 0) {
-            gfx.sset(sx, sy, sprCol);
-        } else {
-            gfx.sset(sx, sy, 0);
+        let newCol = sprTool === 0 ? sprCol : 0;
+        let prev = gfx.sget(sx, sy);
+        if (prev !== newCol) {
+            sprUndoPending.push({ x: sx, y: sy, prev: prev });
+            gfx.sset(sx, sy, newCol);
+        }
+    }
+
+    // Commit stroke on mouse release
+    if (!mBtn && sprUndoPending.length > 0) {
+        sprUndoStack.push(sprUndoPending);
+        sprUndoPending = [];
+        if (sprUndoStack.length > SPR_MAX_UNDO) sprUndoStack.shift();
+    }
+
+    // Undo (Ctrl+Z)
+    if (ctrl && key.btnp(key.Z) && sprUndoStack.length > 0) {
+        let stroke = sprUndoStack.pop();
+        for (let i = stroke.length - 1; i >= 0; i--) {
+            gfx.sset(stroke[i].x, stroke[i].y, stroke[i].prev);
         }
     }
 
@@ -3007,10 +3042,11 @@ function updateMapEditor() {
         let tx = Math.floor((mx - MAP_VP_X) / tileW) + mapCamX;
         let ty = Math.floor((my - MAP_VP_Y) / tileH) + mapCamY;
         if (tx >= 0 && tx < mw && ty >= 0 && ty < mh) {
-            if (mapTool === 0) {
-                map.set(tx, ty, mapLayer, mapTile);
-            } else {
-                map.set(tx, ty, mapLayer, 0);
+            let newTile = mapTool === 0 ? mapTile : 0;
+            let prev = map.get(tx, ty, mapLayer);
+            if (prev !== newTile) {
+                mapUndoPending.push({ x: tx, y: ty, layer: mapLayer, prev: prev });
+                map.set(tx, ty, mapLayer, newTile);
             }
         }
     }
@@ -3046,8 +3082,24 @@ function updateMapEditor() {
 
     // ── Layer switching (keyboard) ──
     let layers = map.layers();
+    if (mapLayer >= layers) mapLayer = Math.max(0, layers - 1);
     if (key.btnp(key.LEFTBRACKET) && mapLayer > 0) mapLayer--;
     if (key.btnp(key.RIGHTBRACKET) && mapLayer < layers - 1) mapLayer++;
+
+    // Commit stroke on mouse release
+    if (!mBtn && mapUndoPending.length > 0) {
+        mapUndoStack.push(mapUndoPending);
+        mapUndoPending = [];
+        if (mapUndoStack.length > MAP_MAX_UNDO) mapUndoStack.shift();
+    }
+
+    // Undo (Ctrl+Z)
+    if (ctrl && key.btnp(key.Z) && mapUndoStack.length > 0) {
+        let stroke = mapUndoStack.pop();
+        for (let i = stroke.length - 1; i >= 0; i--) {
+            map.set(stroke[i].x, stroke[i].y, stroke[i].layer, stroke[i].prev);
+        }
+    }
 
     // ── Grid toggle ──
     if (key.btnp(key.G) && !ctrl) mapGridOn = !mapGridOn;

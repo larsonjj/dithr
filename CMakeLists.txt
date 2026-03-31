@@ -315,7 +315,12 @@ if (WIN32 AND TARGET SDL3-shared)
     )
     if (MSVC AND DTR_ENABLE_ASAN)
         get_filename_component(_msvc_compiler_dir "${CMAKE_C_COMPILER}" DIRECTORY)
-        set(_asan_dll "${_msvc_compiler_dir}/clang_rt.asan_dynamic-x86_64.dll")
+        if (CMAKE_SIZEOF_VOID_P EQUAL 8 AND CMAKE_SYSTEM_PROCESSOR MATCHES "ARM|aarch64")
+            set(_asan_rt_name "clang_rt.asan_dynamic-aarch64.dll")
+        else()
+            set(_asan_rt_name "clang_rt.asan_dynamic-x86_64.dll")
+        endif()
+        set(_asan_dll "${_msvc_compiler_dir}/${_asan_rt_name}")
         if (EXISTS "${_asan_dll}")
             add_custom_command(TARGET dithr POST_BUILD
                 COMMAND ${CMAKE_COMMAND} -E copy_if_different

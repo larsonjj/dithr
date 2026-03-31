@@ -79,10 +79,11 @@ function updateMapEditor() {
         let tx = Math.floor((mx - MAP_VP_X) / tileW) + mapCamX;
         let ty = Math.floor((my - MAP_VP_Y) / tileH) + mapCamY;
         if (tx >= 0 && tx < mw && ty >= 0 && ty < mh) {
-            if (mapTool === 0) {
-                map.set(tx, ty, mapLayer, mapTile);
-            } else {
-                map.set(tx, ty, mapLayer, 0);
+            let newTile = mapTool === 0 ? mapTile : 0;
+            let prev = map.get(tx, ty, mapLayer);
+            if (prev !== newTile) {
+                mapUndoPending.push({ x: tx, y: ty, layer: mapLayer, prev: prev });
+                map.set(tx, ty, mapLayer, newTile);
             }
         }
     }
@@ -118,8 +119,24 @@ function updateMapEditor() {
 
     // ── Layer switching (keyboard) ──
     let layers = map.layers();
+    if (mapLayer >= layers) mapLayer = Math.max(0, layers - 1);
     if (key.btnp(key.LEFTBRACKET) && mapLayer > 0) mapLayer--;
     if (key.btnp(key.RIGHTBRACKET) && mapLayer < layers - 1) mapLayer++;
+
+    // Commit stroke on mouse release
+    if (!mBtn && mapUndoPending.length > 0) {
+        mapUndoStack.push(mapUndoPending);
+        mapUndoPending = [];
+        if (mapUndoStack.length > MAP_MAX_UNDO) mapUndoStack.shift();
+    }
+
+    // Undo (Ctrl+Z)
+    if (ctrl && key.btnp(key.Z) && mapUndoStack.length > 0) {
+        let stroke = mapUndoStack.pop();
+        for (let i = stroke.length - 1; i >= 0; i--) {
+            map.set(stroke[i].x, stroke[i].y, stroke[i].layer, stroke[i].prev);
+        }
+    }
 
     // ── Grid toggle ──
     if (key.btnp(key.G) && !ctrl) mapGridOn = !mapGridOn;
