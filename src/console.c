@@ -299,8 +299,17 @@ dtr_console_t *dtr_console_create(const char *cart_path)
 
     SDL_SetRenderVSync(con->renderer, 0);
 
-    SDL_SetRenderLogicalPresentation(
-        con->renderer, con->fb_width, con->fb_height, SDL_LOGICAL_PRESENTATION_INTEGER_SCALE);
+    {
+        SDL_RendererLogicalPresentation lp;
+        switch (con->cart->display.scale_mode) {
+        case 1:  lp = SDL_LOGICAL_PRESENTATION_LETTERBOX;     break;
+        case 2:  lp = SDL_LOGICAL_PRESENTATION_STRETCH;       break;
+        case 3:  lp = SDL_LOGICAL_PRESENTATION_OVERSCAN;      break;
+        default: lp = SDL_LOGICAL_PRESENTATION_INTEGER_SCALE; break;
+        }
+        SDL_SetRenderLogicalPresentation(
+            con->renderer, con->fb_width, con->fb_height, lp);
+    }
 
     /* Screen texture: streaming, nearest-neighbor for pixel-perfect */
     con->screen_tex = SDL_CreateTexture(con->renderer,

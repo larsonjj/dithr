@@ -38,6 +38,7 @@ void dtr_cart_defaults(dtr_cart_t *cart)
     cart->display.width      = CONSOLE_FB_WIDTH;
     cart->display.height     = CONSOLE_FB_HEIGHT;
     cart->display.scale      = CONSOLE_DEFAULT_SCALE;
+    cart->display.scale_mode = 0; /* integer */
     cart->display.palette    = 0;
     cart->display.fullscreen = false;
     cart->display.pause_key   = true;
@@ -176,6 +177,16 @@ bool dtr_cart_parse(dtr_cart_t *cart, JSContext *ctx, const char *json, size_t l
         cart->display.palette    = prv_json_int(ctx, sub, "palette", 0);
         cart->display.fullscreen = prv_json_bool(ctx, sub, "fullscreen", false);
         cart->display.pause_key  = prv_json_bool(ctx, sub, "pauseKey", true);
+
+        /* scaleMode: "integer" (default), "letterbox", "stretch", "overscan" */
+        {
+            char mode_str[32] = "";
+            prv_json_str(ctx, sub, "scaleMode", mode_str, sizeof(mode_str), "integer");
+            if (SDL_strcmp(mode_str, "letterbox") == 0)      cart->display.scale_mode = 1;
+            else if (SDL_strcmp(mode_str, "stretch") == 0)   cart->display.scale_mode = 2;
+            else if (SDL_strcmp(mode_str, "overscan") == 0)  cart->display.scale_mode = 3;
+            else                                             cart->display.scale_mode = 0;
+        }
     }
     JS_FreeValue(ctx, sub);
 

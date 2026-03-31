@@ -37,6 +37,7 @@ my-game/
         "width": 320, // framebuffer width  (default 320)
         "height": 180, // framebuffer height (default 180)
         "scale": 3, // initial window scale multiplier
+        "scaleMode": "integer", // "integer", "letterbox", "stretch", or "overscan"
     },
 
     // --- Timing ---
@@ -78,23 +79,24 @@ my-game/
 
 ### Field reference
 
-| Field                    | Type   | Default | Description                                      |
-| ------------------------ | ------ | ------- | ------------------------------------------------ |
-| `meta.title`             | string | `""`    | Window title and `cart.title()` return value     |
-| `meta.author`            | string | `""`    | `cart.author()` return value                     |
-| `meta.version`           | string | `""`    | `cart.version()` return value                    |
-| `meta.description`       | string | `""`    | Not used at runtime                              |
-| `display.width`          | int    | 320     | Framebuffer width in pixels                      |
-| `display.height`         | int    | 180     | Framebuffer height in pixels                     |
-| `display.scale`          | int    | 3       | Initial window = framebuffer × scale             |
-| `timing.fps`             | int    | 60      | Target frames per second                         |
-| `sprites.sheet`          | string | —       | Path to sprite sheet PNG (relative to cart.json) |
-| `sprites.tileW`          | int    | 8       | Sprite tile width                                |
-| `sprites.tileH`          | int    | 8       | Sprite tile height                               |
-| `audio.channels`         | int    | 8       | Mixer channels (max 16)                          |
-| `input.default_mappings` | object | `{}`    | Action name → array of binding strings           |
-| `code`                   | string | —       | Path to the main JS file (relative to cart.json) |
-| `maps`                   | array  | `[]`    | Tiled map data (see below)                       |
+| Field                    | Type   | Default     | Description                                              |
+| ------------------------ | ------ | ----------- | -------------------------------------------------------- |
+| `meta.title`             | string | `""`        | Window title and `cart.title()` return value             |
+| `meta.author`            | string | `""`        | `cart.author()` return value                             |
+| `meta.version`           | string | `""`        | `cart.version()` return value                            |
+| `meta.description`       | string | `""`        | Not used at runtime                                      |
+| `display.width`          | int    | 320         | Framebuffer width in pixels                              |
+| `display.height`         | int    | 180         | Framebuffer height in pixels                             |
+| `display.scale`          | int    | 3           | Initial window = framebuffer × scale                     |
+| `display.scaleMode`      | string | `"integer"` | `"integer"`, `"letterbox"`, `"stretch"`, or `"overscan"` |
+| `timing.fps`             | int    | 60          | Target frames per second                                 |
+| `sprites.sheet`          | string | —           | Path to sprite sheet PNG (relative to cart.json)         |
+| `sprites.tileW`          | int    | 8           | Sprite tile width                                        |
+| `sprites.tileH`          | int    | 8           | Sprite tile height                                       |
+| `audio.channels`         | int    | 8           | Mixer channels (max 16)                                  |
+| `input.default_mappings` | object | `{}`        | Action name → array of binding strings                   |
+| `code`                   | string | —           | Path to the main JS file (relative to cart.json)         |
+| `maps`                   | array  | `[]`        | Tiled map data (see below)                               |
 
 ### Binding string format
 

@@ -9,6 +9,7 @@
     "width": 640,
     "height": 360,
     "scale": 2,
+    "scaleMode": "letterbox",
     "pauseKey": false
   },
   "timing": {
