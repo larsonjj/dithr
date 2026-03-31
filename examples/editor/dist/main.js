@@ -12,7 +12,7 @@
 //
 // Shortcuts:
 //   Ctrl+O   Open file browser       Ctrl+S   Save file
-//   Ctrl+Z   Undo                    Ctrl+Y   Redo
+//   Ctrl+Z   Undo                    Ctrl+Y / Ctrl+Shift+Z   Redo
 //   Ctrl+X   Cut (selection/line)    Ctrl+C   Copy (selection/line)
 //   Ctrl+V   Paste                   Ctrl+A   Select all
 //   Ctrl+D   Duplicate line          Ctrl+Shift+D  Duplicate selection
@@ -781,7 +781,11 @@ function updateEdit() {
             return;
         }
         if (key.btnp(key.Z)) {
-            doUndo();
+            if (shift) {
+                doRedo();
+            } else {
+                doUndo();
+            }
             return;
         }
         if (key.btnp(key.Y)) {

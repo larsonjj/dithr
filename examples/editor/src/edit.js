@@ -28,7 +28,11 @@ function updateEdit() {
             return;
         }
         if (key.btnp(key.Z)) {
-            doUndo();
+            if (shift) {
+                doRedo();
+            } else {
+                doUndo();
+            }
             return;
         }
         if (key.btnp(key.Y)) {
