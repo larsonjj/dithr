@@ -6,6 +6,9 @@
 #include "postfx.h"
 
 #include <math.h>
+#if !defined(_WIN32)
+#include <strings.h>
+#endif
 
 /*
  * RGBA8888 pixel helpers — matches SDL_PIXELFORMAT_RGBA8888 uint32 layout:

@@ -289,7 +289,7 @@ prv_hline(dtr_graphics_t *gfx, int32_t raw_x0, int32_t raw_x1, int32_t raw_y, ui
 
     if (gfx->fill_pattern == 0) {
         /* Solid fill — memset the span */
-        memset(&gfx->framebuffer[scr_y * gfx->width + left], col, (size_t)(right - left + 1));
+        memset(&gfx->framebuffer[scr_y * gfx->width + left], col, (size_t)right - (size_t)left + 1);
     } else {
         /* Patterned fill */
         int32_t pat_y_bits;
@@ -375,7 +375,7 @@ prv_vline(dtr_graphics_t *gfx, int32_t raw_x, int32_t raw_y0, int32_t raw_y1, ui
 
 void dtr_gfx_cls(dtr_graphics_t *gfx, uint8_t col)
 {
-    memset(gfx->framebuffer, col, (size_t)(gfx->width * gfx->height));
+    memset(gfx->framebuffer, col, (size_t)gfx->width * (size_t)gfx->height);
 }
 
 void dtr_gfx_pset(dtr_graphics_t *gfx, int32_t x, int32_t y, uint8_t col)
@@ -710,7 +710,12 @@ void dtr_gfx_poly(dtr_graphics_t *gfx, const int32_t *pts, int32_t count, uint8_
         int32_t next;
 
         next = (idx + 1) % count;
-        dtr_gfx_line(gfx, pts[idx * 2], pts[idx * 2 + 1], pts[next * 2], pts[next * 2 + 1], col);
+        dtr_gfx_line(gfx,
+                     pts[(ptrdiff_t)idx * 2],
+                     pts[(ptrdiff_t)idx * 2 + 1],
+                     pts[(ptrdiff_t)next * 2],
+                     pts[(ptrdiff_t)next * 2 + 1],
+                     col);
     }
 }
 
@@ -728,10 +733,10 @@ void dtr_gfx_polyfill(dtr_graphics_t *gfx, const int32_t *pts, int32_t count, ui
         dtr_gfx_trifill(gfx,
                         pts[0],
                         pts[1],
-                        pts[idx * 2],
-                        pts[idx * 2 + 1],
-                        pts[(idx + 1) * 2],
-                        pts[(idx + 1) * 2 + 1],
+                        pts[(ptrdiff_t)idx * 2],
+                        pts[(ptrdiff_t)idx * 2 + 1],
+                        pts[(ptrdiff_t)(idx + 1) * 2],
+                        pts[(ptrdiff_t)(idx + 1) * 2 + 1],
                         col);
     }
 }
@@ -1040,7 +1045,7 @@ void dtr_gfx_spr(dtr_graphics_t *gfx,
                 continue;
             }
             row_off = src_y * sht_w;
-            dst_row = &gfx->framebuffer[scr_y * fb_w];
+            dst_row = &gfx->framebuffer[(ptrdiff_t)scr_y * fb_w];
 
             for (int32_t scr_x = vis_x0; scr_x <= vis_x1; ++scr_x) {
                 int32_t col_idx;
@@ -1112,7 +1117,7 @@ void dtr_gfx_sspr(dtr_graphics_t *gfx,
 
             {
                 int32_t  x_acc   = 0;
-                uint8_t *src_row = sht->pixels + src_y * sht->width;
+                uint8_t *src_row = sht->pixels + (ptrdiff_t)src_y * sht->width;
 
                 for (int32_t px = 0; px < dw; ++px) {
                     int32_t src_x = sx + (x_acc >> 16);
@@ -1165,7 +1170,7 @@ void dtr_gfx_spr_rot(dtr_graphics_t *gfx,
         int32_t max_dim;
 
         max_dim = (tile_w > tile_h) ? tile_w : tile_h;
-        extent  = (int32_t)(max_dim * 1.42f) + 1;
+        extent  = (int32_t)((float)max_dim * 1.42f) + 1;
 
         for (int32_t dy_val = -extent; dy_val <= extent; ++dy_val) {
             for (int32_t dx_val = -extent; dx_val <= extent; ++dx_val) {

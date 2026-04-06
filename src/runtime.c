@@ -141,7 +141,7 @@ prv_module_normalize(JSContext *ctx, const char *base_name, const char *name, vo
         result[cur]     = '/';
         result[cur + 1] = '\0';
     }
-    strncat(result, ptr, (size_t)(cap - (int)strlen(result) - 1));
+    SDL_strlcat(result, ptr, (size_t)cap);
 
     return result;
 }

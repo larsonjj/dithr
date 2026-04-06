@@ -127,7 +127,7 @@ static JSValue js_gfx_tilemap(JSContext *ctx, JSValueConst this_val, int argc, J
         return JS_UNDEFINED;
     }
 
-    tiles = (uint8_t *)SDL_malloc((size_t)(map_w * map_h));
+    tiles = (uint8_t *)SDL_malloc((size_t)map_w * (size_t)map_h);
     if (tiles == NULL) {
         return JS_UNDEFINED;
     }

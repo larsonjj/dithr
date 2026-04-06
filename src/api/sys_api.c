@@ -363,7 +363,7 @@ static JSValue js_sys_limit(JSContext *ctx, JSValueConst this_val, int argc, JSV
             result = JS_NewInt32(ctx, CONSOLE_MAX_MAPS);
         } else if (SDL_strcmp(key, "max_map_layers") == 0) {
             result = JS_NewInt32(ctx, CONSOLE_MAX_MAP_LAYERS);
-        } else if (SDL_strcmp(key, "max_map_objects") == 0) {
+        } else if (SDL_strcmp(key, "max_map_objects") == 0) { // NOLINT(bugprone-branch-clone)
             result = JS_NewInt32(ctx, CONSOLE_MAX_MAP_OBJECTS);
         } else if (SDL_strcmp(key, "max_channels") == 0) {
             result = JS_NewInt32(ctx, CONSOLE_MAX_CHANNELS);
@@ -673,7 +673,7 @@ js_sys_list_files(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst 
         for (int32_t idx = 0; idx < count; ++idx) {
             JS_SetPropertyUint32(ctx, arr, (uint32_t)idx, JS_NewString(ctx, files[idx]));
         }
-        SDL_free(files);
+        SDL_free((void *)files);
     }
     return arr;
 }

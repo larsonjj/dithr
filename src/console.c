@@ -799,8 +799,8 @@ void dtr_console_iterate(dtr_console_t *con)
             dtr_gfx_transition_update(con->graphics);
             dtr_postfx_apply(con->postfx, con->graphics->pixels, con->fb_width, con->fb_height);
             for (int32_t y = 0; y < con->fb_height; ++y) {
-                SDL_memcpy((uint8_t *)locked + y * pitch,
-                           con->graphics->pixels + y * con->fb_width,
+                SDL_memcpy((uint8_t *)locked + (ptrdiff_t)y * pitch,
+                           con->graphics->pixels + (ptrdiff_t)y * con->fb_width,
                            (size_t)row_bytes);
             }
         }
@@ -1351,8 +1351,8 @@ static void prv_render_pause_overlay(dtr_console_t *con)
         } else {
             dtr_gfx_flip(gfx);
             for (int32_t y = 0; y < con->fb_height; ++y) {
-                SDL_memcpy((uint8_t *)locked + y * pitch,
-                           gfx->pixels + y * con->fb_width,
+                SDL_memcpy((uint8_t *)locked + (ptrdiff_t)y * pitch,
+                           gfx->pixels + (ptrdiff_t)y * con->fb_width,
                            (size_t)row_bytes);
             }
         }
@@ -1378,7 +1378,7 @@ static void prv_render_error_overlay(dtr_console_t *con)
     gfx = con->graphics;
 
     /* Black background */
-    SDL_memset(gfx->framebuffer, 0, (size_t)(con->fb_width * con->fb_height));
+    SDL_memset(gfx->framebuffer, 0, (size_t)con->fb_width * (size_t)con->fb_height);
 
     /* Red header bar */
     dtr_gfx_rectfill(gfx, 0, 0, con->fb_width - 1, 10, 8);
@@ -1458,8 +1458,8 @@ static void prv_render_error_overlay(dtr_console_t *con)
         } else {
             dtr_gfx_flip(gfx);
             for (int32_t y = 0; y < con->fb_height; ++y) {
-                SDL_memcpy((uint8_t *)locked + y * pitch,
-                           gfx->pixels + y * con->fb_width,
+                SDL_memcpy((uint8_t *)locked + (ptrdiff_t)y * pitch,
+                           gfx->pixels + (ptrdiff_t)y * con->fb_width,
                            (size_t)row_bytes);
             }
         }
