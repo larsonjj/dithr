@@ -1,7 +1,7 @@
 // ─── Find & Replace ──────────────────────────────────────────────────────────
 
 import { st } from "./state.js";
-import { FB_W, CH, GUTTER, CW, ROWS, FOOT, FG, GUTFG, HEADBG } from "./config.js";
+import { FB_W, FB_H, CH, GUTTER, CW, FOOT_Y, FOOT_H, FG, GUTFG, HEADBG } from "./config.js";
 import { clamp, ensureVisible, resetBlink, status, modKey, MOD_NAME } from "./helpers.js";
 import { selOrdered, pushUndo } from "./buffer.js";
 
@@ -112,32 +112,39 @@ export function replaceAll() {
 }
 
 export function drawFind() {
-    let footY = (ROWS - FOOT) * CH;
+    let footY = FOOT_Y;
     let gutterPx = GUTTER * CW;
 
     // Find field on footer row
-    gfx.rectfill(0, footY, FB_W - 1, footY + CH - 1, HEADBG);
+    gfx.rectfill(0, footY, FB_W - 1, FB_H - 1, HEADBG);
+    let footTextY = footY + Math.floor((FOOT_H - CH) / 2);
     let fl = "Find: ";
-    gfx.print(fl, gutterPx, footY, st.findField === 0 ? FG : GUTFG);
-    gfx.print(st.findText + (st.findField === 0 ? "_" : ""), gutterPx + fl.length * CW, footY, FG);
+    gfx.print(fl, gutterPx, footTextY, st.findField === 0 ? FG : GUTFG);
+    gfx.print(
+        st.findText + (st.findField === 0 ? "_" : ""),
+        gutterPx + fl.length * CW,
+        footTextY,
+        FG,
+    );
 
     // Hint on right
     let hint = st.findReplace
         ? "Tab:switch  " + MOD_NAME + "+Ent:all"
         : "Enter:next  Shift+Ent:prev";
     let hw = gfx.textWidth(hint);
-    gfx.print(hint, FB_W - hw - CW, footY, GUTFG);
+    gfx.print(hint, FB_W - hw - CW, footTextY, GUTFG);
 
     // Replace field one row above footer
     if (st.findReplace) {
-        let replY = footY - CH;
-        gfx.rectfill(0, replY, FB_W - 1, replY + CH - 1, HEADBG);
+        let replY = footY - FOOT_H;
+        gfx.rectfill(0, replY, FB_W - 1, replY + FOOT_H - 1, HEADBG);
+        let replTextY = replY + Math.floor((FOOT_H - CH) / 2);
         let rl = "Repl: ";
-        gfx.print(rl, gutterPx, replY, st.findField === 1 ? FG : GUTFG);
+        gfx.print(rl, gutterPx, replTextY, st.findField === 1 ? FG : GUTFG);
         gfx.print(
             st.replaceText + (st.findField === 1 ? "_" : ""),
             gutterPx + rl.length * CW,
-            replY,
+            replTextY,
             FG,
         );
     }
@@ -170,10 +177,11 @@ export function updateGoto() {
 }
 
 export function drawGoto() {
-    let footY = (ROWS - FOOT) * CH;
+    let footY = FOOT_Y;
     let gutterPx = GUTTER * CW;
-    gfx.rectfill(0, footY, FB_W - 1, footY + CH - 1, HEADBG);
+    gfx.rectfill(0, footY, FB_W - 1, FB_H - 1, HEADBG);
+    let footTextY = footY + Math.floor((FOOT_H - CH) / 2);
     let gl = "Go to line: ";
-    gfx.print(gl, gutterPx, footY, FG);
-    gfx.print(st.gotoText + "_", gutterPx + gl.length * CW, footY, FG);
+    gfx.print(gl, gutterPx, footTextY, FG);
+    gfx.print(st.gotoText + "_", gutterPx + gl.length * CW, footTextY, FG);
 }

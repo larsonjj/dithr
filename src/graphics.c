@@ -1922,3 +1922,47 @@ bool dtr_gfx_load_sheet(dtr_graphics_t *gfx,
 
     return true;
 }
+
+bool dtr_gfx_create_sheet(dtr_graphics_t *gfx,
+                          int32_t         width,
+                          int32_t         height,
+                          int32_t         tile_w,
+                          int32_t         tile_h)
+{
+    dtr_sprite_sheet_t *sht;
+    size_t              alloc_sz;
+    uint8_t            *new_pixels;
+
+    if (width <= 0 || height <= 0 || tile_w <= 0 || tile_h <= 0) {
+        return false;
+    }
+
+    sht      = &gfx->sheet;
+    alloc_sz = (size_t)width * (size_t)height;
+
+    new_pixels = DTR_CALLOC(1, alloc_sz);
+    if (new_pixels == NULL) {
+        return false;
+    }
+
+    if (sht->pixels != NULL) {
+        DTR_FREE(sht->pixels);
+    }
+
+    sht->pixels = new_pixels;
+    sht->width  = width;
+    sht->height = height;
+    sht->tile_w = tile_w;
+    sht->tile_h = tile_h;
+    sht->cols   = width / tile_w;
+    sht->rows   = height / tile_h;
+    sht->count  = sht->cols * sht->rows;
+
+    if (sht->count > CONSOLE_MAX_SPRITES) {
+        sht->count = CONSOLE_MAX_SPRITES;
+    }
+
+    memset(sht->flags, 0, sizeof(sht->flags));
+
+    return true;
+}

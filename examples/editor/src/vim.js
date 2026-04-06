@@ -1,7 +1,7 @@
 // ─── Vim mode ────────────────────────────────────────────────────────────────
 
 import { st } from "./state.js";
-import { HEAD, CH, FOOT, ROWS, GUTTER, CW } from "./config.js";
+import { EDIT_Y, FOOT_Y, CH, LINE_H, GUTTER, CW } from "./config.js";
 import {
     clamp,
     ensureVisible,
@@ -59,13 +59,13 @@ export function updateVimKeys() {
 
     let mx = mouse.x();
     let my = mouse.y();
-    let editY = HEAD * CH;
-    let footY = (ROWS - FOOT) * CH;
+    let editY = EDIT_Y;
+    let footY = FOOT_Y;
     let gutterPx = GUTTER * CW;
 
     if (my >= editY && my < footY && mx >= gutterPx) {
         if (mouse.btnp(0)) {
-            let row = (st.oy + (my - editY) / CH) | 0;
+            let row = (st.oy + (my - editY) / LINE_H) | 0;
             let col = (st.ox + (mx - gutterPx) / CW) | 0;
             row = clamp(row, 0, st.buf.length - 1);
             col = clamp(col, 0, Math.max(0, st.buf[row].length - 1));

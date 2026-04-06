@@ -711,6 +711,28 @@ static JSValue js_gfx_sheet_h(JSContext *ctx, JSValueConst this_val, int argc, J
     return JS_NewInt32(ctx, GFX(ctx)->sheet.height);
 }
 
+static JSValue js_gfx_sheet_create(JSContext *ctx,
+                                   JSValueConst this_val,
+                                   int          argc,
+                                   JSValueConst *argv)
+{
+    int32_t         wid;
+    int32_t         hei;
+    int32_t         til_w;
+    int32_t         til_h;
+    dtr_graphics_t *gfx;
+
+    (void)this_val;
+
+    wid   = dtr_api_opt_int(ctx, argc, argv, 0, 128);
+    hei   = dtr_api_opt_int(ctx, argc, argv, 1, 128);
+    til_w = dtr_api_opt_int(ctx, argc, argv, 2, 8);
+    til_h = dtr_api_opt_int(ctx, argc, argv, 3, 8);
+    gfx   = GFX(ctx);
+
+    return JS_NewBool(ctx, dtr_gfx_create_sheet(gfx, wid, hei, til_w, til_h));
+}
+
 /* ---- Function list ---------------------------------------------------- */
 
 static const JSCFunctionListEntry js_gfx_funcs[] = {
@@ -748,6 +770,7 @@ static const JSCFunctionListEntry js_gfx_funcs[] = {
     JS_CFUNC_DEF("sset", 3, js_gfx_sset),
     JS_CFUNC_DEF("sheetW", 0, js_gfx_sheet_w),
     JS_CFUNC_DEF("sheetH", 0, js_gfx_sheet_h),
+    JS_CFUNC_DEF("sheetCreate", 4, js_gfx_sheet_create),
     JS_CFUNC_DEF("fade", 2, js_gfx_fade),
     JS_CFUNC_DEF("wipe", 3, js_gfx_wipe),
     JS_CFUNC_DEF("dissolve", 2, js_gfx_dissolve),

@@ -6,10 +6,11 @@ import {
     FB_H,
     CW,
     CH,
+    LINE_H,
+    LINE_PAD,
     GUTTER,
-    ROWS,
-    HEAD,
-    FOOT,
+    EDIT_Y,
+    FOOT_Y,
     EROWS,
     ECOLS,
     TAB,
@@ -41,8 +42,12 @@ import {
     TABFG,
     TABHOV,
     TABINACT,
+    FILETABBG,
+    SEPC,
     TAB_H,
     TAB_NAMES,
+    FILE_TAB_H,
+    FOOT_H,
 } from "./config.js";
 import { clamp, ensureCaches, getCachedBracketMatch } from "./helpers.js";
 import { tokenize } from "./tokenizer.js";
@@ -80,7 +85,11 @@ export function drawTabBar() {
 
 export function drawFileTabs() {
     let y = TAB_H;
-    gfx.rectfill(0, y, FB_W - 1, y + CH - 1, TABBG);
+    let h = FILE_TAB_H;
+    let textY = y + Math.floor((h - CH) / 2);
+    gfx.rectfill(0, y, FB_W - 1, y + h - 1, FILETABBG);
+    // Separator between main tab bar and file tabs
+    gfx.line(0, y, FB_W - 1, y, SEPC);
     if (!st.openFiles.length) return;
     let mx = mouse.x();
     let my = mouse.y();
@@ -91,14 +100,14 @@ export function drawFileTabs() {
         let dirty = i === st.fileIdx ? st.dirty : f.dirty;
         let label = (dirty ? "\x07" : " ") + base + " ";
         let w = label.length * CW;
-        let hovered = mx >= tx && mx < tx + w && my >= y && my < y + CH;
+        let hovered = mx >= tx && mx < tx + w && my >= y && my < y + h;
         if (i === st.fileIdx) {
-            gfx.rectfill(tx, y, tx + w - 1, y + CH - 1, BG);
-            gfx.print(label, tx, y, FG);
-            gfx.line(tx, y + CH - 1, tx + w - 1, y + CH - 1, FG);
+            gfx.rectfill(tx, y, tx + w - 1, y + h - 1, BG);
+            gfx.print(label, tx, textY, FG);
+            gfx.line(tx, y + h - 1, tx + w - 1, y + h - 1, FG);
         } else {
-            if (hovered) gfx.rectfill(tx, y, tx + w - 1, y + CH - 1, TABHOV);
-            gfx.print(label, tx, y, hovered ? FG : TABINACT);
+            if (hovered) gfx.rectfill(tx, y, tx + w - 1, y + h - 1, TABHOV);
+            gfx.print(label, tx, textY, hovered ? FG : TABINACT);
         }
         if (mouse.btnp(0) && hovered) {
             switchToFile(i);
@@ -113,8 +122,8 @@ export function drawFileTabs() {
 // ─── Editor drawing ──────────────────────────────────────────────────────────
 
 export function drawEditor() {
-    let editY = HEAD * CH;
-    let footY = (ROWS - FOOT) * CH;
+    let editY = EDIT_Y;
+    let footY = FOOT_Y;
     let gutterPx = GUTTER * CW;
 
     // ── Vim indicator (right side of mode tab bar) ──
@@ -137,11 +146,11 @@ export function drawEditor() {
     for (let r = 0; r < EROWS; r++) {
         let li = st.oy + r;
         if (li >= st.buf.length) break;
-        let py = editY + r * CH;
+        let py = editY + r * LINE_H;
 
         // Current-line highlight
         if (li === st.cy) {
-            gfx.rectfill(gutterPx, py, FB_W - 1, py + CH - 1, LINEBG);
+            gfx.rectfill(gutterPx, py, FB_W - 1, py + LINE_H - 1, LINEBG);
         }
 
         // Selection highlight
@@ -158,7 +167,7 @@ export function drawEditor() {
                 x0 = clamp(x0, gutterPx, FB_W - 1);
                 x1 = clamp(x1, gutterPx, FB_W - 1);
                 if (x1 >= x0 && idx + highlightText.length > st.ox && idx < st.ox + ECOLS) {
-                    gfx.rectfill(x0, py, x1, py + CH - 1, MATCHBG);
+                    gfx.rectfill(x0, py, x1, py + LINE_H - 1, MATCHBG);
                 }
                 idx = line.indexOf(highlightText, idx + 1);
             }
@@ -176,7 +185,7 @@ export function drawEditor() {
                 x0 = clamp(x0, gutterPx, FB_W - 1);
                 x1 = clamp(x1, gutterPx, FB_W - 1);
                 if (x1 >= x0) {
-                    gfx.rectfill(x0, py, x1, py + CH - 2, TRAILBG);
+                    gfx.rectfill(x0, py, x1, py + LINE_H - 2, TRAILBG);
                 }
             }
         }
@@ -189,7 +198,7 @@ export function drawEditor() {
         for (let g = tabW; g < indentLevel; g += tabW) {
             let gx = gutterPx + (g - st.ox) * CW - 1;
             if (gx > gutterPx && gx < FB_W - MINIMAP_W) {
-                for (let dy = 0; dy < CH; dy += 2) {
+                for (let dy = 0; dy < LINE_H; dy += 2) {
                     gfx.pset(gx, py + dy, GUIDECOL);
                 }
             }
@@ -199,17 +208,17 @@ export function drawEditor() {
         let num = String(li + 1);
         let pad = GUTTER - 1 - num.length;
         if (li === st.cy) {
-            gfx.rectfill(0, py, gutterPx - 2, py + CH - 1, GUTBG);
-            gfx.print(num, pad * CW, py, CURFG);
+            gfx.rectfill(0, py, gutterPx - 2, py + LINE_H - 1, GUTBG);
+            gfx.print(num, pad * CW, py + LINE_PAD, CURFG);
         } else {
-            gfx.print(num, pad * CW, py, GUTFG);
+            gfx.print(num, pad * CW, py + LINE_PAD, GUTFG);
         }
 
         // Modified line indicator in gutter
         if (st.savedBuf.length > 0) {
             if (li >= st.savedBuf.length || st.buf[li] !== st.savedBuf[li]) {
                 let indicatorCol = li >= st.savedBuf.length ? ADDCOL : MODCOL;
-                gfx.rectfill(gutterPx - 2, py, gutterPx - 2, py + CH - 2, indicatorCol);
+                gfx.rectfill(gutterPx - 2, py, gutterPx - 2, py + LINE_H - 2, indicatorCol);
             }
         }
 
@@ -252,7 +261,7 @@ export function drawEditor() {
                 if (vc >= 0 && vc < ECOLS) {
                     if (charCol !== runCol || isBracket) {
                         // Flush previous run
-                        if (runStr) gfx.print(runStr, runX, py, runCol);
+                        if (runStr) gfx.print(runStr, runX, py + LINE_PAD, runCol);
                         runStr = ch;
                         runCol = charCol;
                         runX = gutterPx + vc * CW;
@@ -261,7 +270,7 @@ export function drawEditor() {
                     }
                 } else if (runStr) {
                     // Off-screen: flush any pending run
-                    gfx.print(runStr, runX, py, runCol);
+                    gfx.print(runStr, runX, py + LINE_PAD, runCol);
                     runStr = "";
                     runCol = -1;
                 }
@@ -269,7 +278,7 @@ export function drawEditor() {
             }
         }
         // Flush final run
-        if (runStr) gfx.print(runStr, runX, py, runCol);
+        if (runStr) gfx.print(runStr, runX, py + LINE_PAD, runCol);
     }
 
     // ── Matching bracket highlight ──
@@ -279,9 +288,9 @@ export function drawEditor() {
         let mc = matchBracket.x - st.ox;
         if (mr >= 0 && mr < EROWS && mc >= 0 && mc < ECOLS) {
             let mx2 = gutterPx + mc * CW;
-            let my2 = editY + mr * CH;
-            gfx.rectfill(mx2, my2, mx2 + CW - 2, my2 + CH - 2, BRACKETBG);
-            gfx.print(st.buf[matchBracket.y][matchBracket.x], mx2, my2, FG);
+            let my2 = editY + mr * LINE_H;
+            gfx.rectfill(mx2, my2 + LINE_PAD, mx2 + CW - 2, my2 + LINE_PAD + CH - 2, BRACKETBG);
+            gfx.print(st.buf[matchBracket.y][matchBracket.x], mx2, my2 + LINE_PAD, FG);
         }
     }
 
@@ -333,25 +342,26 @@ export function drawEditor() {
     // ── Cursor ──
     if (st.curOn) {
         let scrX = gutterPx + (st.cx - st.ox) * CW;
-        let scrY = editY + (st.cy - st.oy) * CH;
+        let scrY = editY + (st.cy - st.oy) * LINE_H;
         if (st.cx >= st.ox && st.cx <= st.ox + ECOLS && st.cy >= st.oy && st.cy < st.oy + EROWS) {
             if (st.vimEnabled && st.vim !== "insert") {
                 // Block cursor
-                gfx.rectfill(scrX, scrY, scrX + CW - 2, scrY + CH - 2, CURFG);
+                gfx.rectfill(scrX, scrY + LINE_PAD, scrX + CW - 2, scrY + LINE_PAD + CH - 2, CURFG);
                 if (st.cx < st.buf[st.cy].length) {
-                    gfx.print(st.buf[st.cy][st.cx], scrX, scrY, BG);
+                    gfx.print(st.buf[st.cy][st.cx], scrX, scrY + LINE_PAD, BG);
                 }
             } else {
                 // Line cursor
-                gfx.rectfill(scrX, scrY, scrX, scrY + CH - 2, CURFG);
+                gfx.rectfill(scrX, scrY + LINE_PAD, scrX, scrY + LINE_PAD + CH - 2, CURFG);
             }
         }
     }
 
     // ── Status bar ──
-    gfx.rectfill(0, footY, FB_W - 1, footY + CH - 1, FOOTBG);
+    gfx.rectfill(0, footY, FB_W - 1, FB_H - 1, FOOTBG);
+    let footTextY = footY + Math.floor((FOOT_H - CH) / 2);
     if (st.vimEnabled && st.vim === "command") {
-        gfx.print(":" + st.vimCmd + "_", gutterPx, footY, FG);
+        gfx.print(":" + st.vimCmd + "_", gutterPx, footTextY, FG);
     } else {
         let modeStr = "";
         if (st.vimEnabled) {
@@ -368,14 +378,14 @@ export function drawEditor() {
             "  (" +
             st.buf.length +
             " lines)";
-        gfx.print(pos, gutterPx, footY, FOOTFG);
+        gfx.print(pos, gutterPx, footTextY, FOOTFG);
         // Pending operator / count feedback
         let right = "";
         if (st.vimEnabled && (st.vimCount || st.vimPending)) right = st.vimCount + st.vimPending;
         if (st.msg) right = st.msg;
         if (right) {
             let rw = gfx.textWidth(right);
-            gfx.print(right, FB_W - rw - CW, footY, FOOTFG);
+            gfx.print(right, FB_W - rw - CW, footTextY, FOOTFG);
         }
     }
 }
@@ -407,6 +417,6 @@ export function drawSelection(lineIdx, py, s) {
     x0 = clamp(x0, gutterPx, FB_W - 1);
     x1 = clamp(x1, gutterPx, FB_W - 1);
     if (x1 >= x0) {
-        gfx.rectfill(x0, py, x1, py + CH - 1, SELBG);
+        gfx.rectfill(x0, py, x1, py + LINE_H - 1, SELBG);
     }
 }

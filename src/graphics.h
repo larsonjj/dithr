@@ -467,6 +467,21 @@ bool dtr_gfx_load_sheet(dtr_graphics_t *gfx,
                         int32_t         tile_w,
                         int32_t         tile_h);
 
+/**
+ * \brief           Create an empty (zeroed) sprite sheet at runtime
+ * \param[in]       gfx: Graphics state
+ * \param[in]       width: Sheet width in pixels
+ * \param[in]       height: Sheet height in pixels
+ * \param[in]       tile_w: Tile width
+ * \param[in]       tile_h: Tile height
+ * \return          true on success, false on allocation failure
+ */
+bool dtr_gfx_create_sheet(dtr_graphics_t *gfx,
+                          int32_t         width,
+                          int32_t         height,
+                          int32_t         tile_w,
+                          int32_t         tile_h);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

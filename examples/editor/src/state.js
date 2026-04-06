@@ -79,11 +79,16 @@ export const st = {
     // sprite editor state
     sprSel: 0,
     sprCol: 7,
-    sprTool: 0, // 0=pencil, 1=eraser
+    sprTool: 0, // 0=pen, 1=eraser, 2=fill, 3=rect, 4=line, 5=circle
     sprScrollY: 0,
-    sprUndoStack: [],
-    sprUndoPending: [],
-    SPR_MAX_UNDO: 100,
+    sprHoverX: -1, // pixel coord under cursor (-1 = none)
+    sprHoverY: -1,
+    sprRectAnchor: null, // {x,y} for rectangle drag start
+    sprLineAnchor: null, // {x,y} for line tool start
+    sprCircAnchor: null, // {x,y} for circle tool center
+    sprSizeW: 1, // multi-tile width (1 or 2)
+    sprSizeH: 1, // multi-tile height (1 or 2)
+    sprClipboard: null, // {w,h,pixels[]} for copy/paste
 
     // map editor state
     mapCamX: 0,
@@ -92,9 +97,7 @@ export const st = {
     mapTile: 0,
     mapTool: 0, // 0=pencil, 1=eraser
     mapGridOn: true,
-    mapUndoStack: [],
-    mapUndoPending: [],
-    MAP_MAX_UNDO: 100,
+    mapPickScrollY: 0,
 
     // caches (invalidated on edit)
     _blockStateCache: [],

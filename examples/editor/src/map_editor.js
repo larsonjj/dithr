@@ -8,8 +8,9 @@
 //
 
 import { st } from "./state.js";
-import { FB_W, FB_H, CW, CH, TAB_H, FG, GUTBG, FOOTBG, FOOTFG, GRIDC } from "./config.js";
-import { clamp, modKey } from "./helpers.js";
+import { FB_W, FB_H, CW, CH, TAB_H, FG, GUTBG, FOOTBG, FOOTFG, GRIDC, FOOT_H } from "./config.js";
+import { clamp, modKey, MOD_NAME } from "./helpers.js";
+import { createHistory, record, commit, undo, redo } from "./stroke_history.js";
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -18,11 +19,13 @@ const MAP_PICKER_W = 130; // right panel width
 const MAP_VP_X = 0;
 const MAP_VP_Y = TAB_H; // below tab bar
 const MAP_VP_W = FB_W - MAP_PICKER_W;
-const MAP_VP_H = FB_H - TAB_H - CH; // minus tab bar and footer
+const MAP_VP_H = FB_H - TAB_H - FOOT_H; // minus tab bar and footer
 const MAP_PICK_X = MAP_VP_W + 1;
 const MAP_PICK_Y = TAB_H;
 const MAP_PICK_CELL = 10; // tile picker cell size
 const MAP_PICK_COLS = Math.floor(MAP_PICKER_W / MAP_PICK_CELL);
+
+let mapHist = createHistory(100);
 
 // ─── Update ──────────────────────────────────────────────────────────────────
 
@@ -70,7 +73,7 @@ export function updateMapEditor() {
             let newTile = st.mapTool === 0 ? st.mapTile : 0;
             let prev = map.get(tx, ty, st.mapLayer);
             if (prev !== newTile) {
-                st.mapUndoPending.push({ x: tx, y: ty, layer: st.mapLayer, prev: prev });
+                record(mapHist, { x: tx, y: ty, layer: st.mapLayer, prev: prev, next: newTile });
                 map.set(tx, ty, st.mapLayer, newTile);
             }
         }
@@ -93,14 +96,30 @@ export function updateMapEditor() {
     }
 
     // ── Tile picker interaction ──
+    let pickH = FB_H - TAB_H - CH;
+    let visPickRows = Math.floor(pickH / MAP_PICK_CELL);
+    let totalPickRows = sheetCount > 0 ? Math.ceil(sheetCount / MAP_PICK_COLS) : 0;
+    let maxPickScroll = Math.max(0, totalPickRows - visPickRows);
+
+    // Scroll tile picker
+    if (
+        mx >= MAP_PICK_X &&
+        mx < MAP_PICK_X + MAP_PICK_COLS * MAP_PICK_CELL &&
+        my >= MAP_PICK_Y &&
+        my < MAP_PICK_Y + pickH
+    ) {
+        st.mapPickScrollY = clamp(st.mapPickScrollY - wheel, 0, maxPickScroll);
+    }
+
     if (
         mPress &&
         mx >= MAP_PICK_X &&
         mx < MAP_PICK_X + MAP_PICK_COLS * MAP_PICK_CELL &&
-        my >= MAP_PICK_Y
+        my >= MAP_PICK_Y &&
+        my < MAP_PICK_Y + pickH
     ) {
         let pc = Math.floor((mx - MAP_PICK_X) / MAP_PICK_CELL);
-        let pr = Math.floor((my - MAP_PICK_Y) / MAP_PICK_CELL);
+        let pr = Math.floor((my - MAP_PICK_Y) / MAP_PICK_CELL) + st.mapPickScrollY;
         let idx = pr * MAP_PICK_COLS + pc;
         if (idx >= 0 && idx < sheetCount) st.mapTile = idx;
     }
@@ -112,18 +131,24 @@ export function updateMapEditor() {
     if (key.btnp(key.RBRACKET) && st.mapLayer < layers - 1) st.mapLayer++;
 
     // Commit stroke on mouse release
-    if (!mBtn && st.mapUndoPending.length > 0) {
-        st.mapUndoStack.push(st.mapUndoPending);
-        st.mapUndoPending = [];
-        if (st.mapUndoStack.length > st.MAP_MAX_UNDO) st.mapUndoStack.shift();
+    if (!mBtn && mapHist.pending.length > 0) {
+        commit(mapHist);
     }
 
     // Undo (Ctrl+Z)
-    if (ctrl && key.btnp(key.Z) && st.mapUndoStack.length > 0) {
-        let stroke = st.mapUndoStack.pop();
-        for (let i = stroke.length - 1; i >= 0; i--) {
-            map.set(stroke[i].x, stroke[i].y, stroke[i].layer, stroke[i].prev);
-        }
+    if (ctrl && key.btnp(key.Z) && !shift) {
+        undo(mapHist, function (op) {
+            map.set(op.x, op.y, op.layer, op.prev);
+            return { x: op.x, y: op.y, layer: op.layer, prev: op.next, next: op.prev };
+        });
+    }
+
+    // Redo (Ctrl+Y or Ctrl+Shift+Z)
+    if (ctrl && (key.btnp(key.Y) || (shift && key.btnp(key.Z)))) {
+        redo(mapHist, function (op) {
+            map.set(op.x, op.y, op.layer, op.prev);
+            return { x: op.x, y: op.y, layer: op.layer, prev: op.next, next: op.prev };
+        });
     }
 
     // ── Grid toggle ──
@@ -193,14 +218,14 @@ export function drawMapEditor() {
     gfx.clip(); // reset clip
 
     // ── Tile picker panel ──
-    gfx.rectfill(MAP_PICK_X, MAP_PICK_Y, FB_W - 1, FB_H - CH - 1, GUTBG);
+    gfx.rectfill(MAP_PICK_X, MAP_PICK_Y, FB_W - 1, FB_H - FOOT_H - 1, GUTBG);
 
     if (sheetCols > 0) {
         let pickRows = Math.ceil(sheetCount / MAP_PICK_COLS);
-        let visPickRows = Math.floor((FB_H - CH * 2) / MAP_PICK_CELL);
-        for (let r = 0; r < visPickRows && r < pickRows; r++) {
+        let visPickRows = Math.floor((FB_H - TAB_H - CH) / MAP_PICK_CELL);
+        for (let r = 0; r < visPickRows && r + st.mapPickScrollY < pickRows; r++) {
             for (let c = 0; c < MAP_PICK_COLS; c++) {
-                let idx = r * MAP_PICK_COLS + c;
+                let idx = (r + st.mapPickScrollY) * MAP_PICK_COLS + c;
                 if (idx >= sheetCount) break;
                 let dx = MAP_PICK_X + c * MAP_PICK_CELL;
                 let dy = MAP_PICK_Y + r * MAP_PICK_CELL;
@@ -215,8 +240,9 @@ export function drawMapEditor() {
     }
 
     // ── Footer ──
-    let footY = FB_H - CH;
+    let footY = FB_H - FOOT_H;
     gfx.rectfill(0, footY, FB_W - 1, FB_H - 1, FOOTBG);
+    let footTextY = footY + Math.floor((FOOT_H - CH) / 2);
     let layers = map.layers().length;
     let info =
         "L:" +
@@ -232,6 +258,11 @@ export function drawMapEditor() {
         "," +
         st.mapCamY +
         ")";
-    gfx.print(info, 1 * CW, footY, FOOTFG);
-    gfx.print("[/]:layer B:pen E:era G:grid", FB_W - 30 * CW, footY, FOOTFG);
+    gfx.print(info, 1 * CW, footTextY, FOOTFG);
+    gfx.print(
+        "[/]:layer B:pen E:era G:grid " + MOD_NAME + "+Z/Y:undo/redo",
+        FB_W - 40 * CW,
+        footTextY,
+        FOOTFG,
+    );
 }

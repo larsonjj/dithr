@@ -36,16 +36,21 @@
 // ─── Layout ──────────────────────────────────────────────────────────────────
 
 export const CW = 5; // char advance (4px glyph + 1px)
-export const CH = 7; // line advance (6px glyph + 1px)
+export const CH = 8; // line advance (6px glyph + 2px spacing)
 export const FB_W = 640;
 export const FB_H = 360;
 export const COLS = (FB_W / CW) | 0; // 128
 export const ROWS = (FB_H / CH) | 0; // 51
 
 export const GUTTER = 5; // chars for line numbers
-export const HEAD = 3; // tab bar rows + file tab row
-export const FOOT = 1; // status-bar rows
-export const EROWS = ROWS - HEAD - FOOT; // 49
+export const TAB_H = CH * 2; // tab bar height in pixels
+export const FILE_TAB_H = CH * 2 - 2; // file tab bar height in pixels (12)
+export const FOOT_H = CH * 2 - 2; // footer height in pixels (12)
+export const EDIT_Y = TAB_H + FILE_TAB_H; // first text pixel row
+export const LINE_H = CH + 2; // code editor line height (glyph + 2px spacing)
+export const LINE_PAD = 2; // vertical text offset within LINE_H
+export const FOOT_Y = FB_H - FOOT_H; // footer start pixel row (348)
+export const EROWS = ((FOOT_Y - EDIT_Y) / LINE_H) | 0; // visible text rows
 export const MINIMAP_W = 10; // minimap width in pixels
 export const SCROLLBAR_W = 2; // scrollbar width in pixels
 export const ECOLS = COLS - GUTTER; // 123 (minimap overlays text area)
@@ -80,11 +85,13 @@ export const SCROLLFG = 6; // scrollbar thumb
 export const ADDCOL = 11; // green — added line indicator
 export const MODCOL = 12; // cyan — modified line indicator
 export const TABBG = 1; // tab bar background
+export const FILETABBG = 1; // file sub-header background (dark blue, same family as main tab)
 export const TABFG = 7; // active tab text
 export const TABINACT = 5; // inactive tab text
 export const TABHOV = 17; // tab hover background
-export const TAB_H = CH * 2; // tab bar height in pixels
 export const GRIDC = 17; // sprite/map grid lines
+export const PANELBG = 16; // panel background (distinct from header/footer)
+export const SEPC = 18; // separator / panel grid lines
 
 // ─── Tab names ───────────────────────────────────────────────────────────────
 

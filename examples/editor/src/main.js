@@ -67,6 +67,12 @@ function onTextInput(ch) {
 export function _init() {
     sys.textInput(true);
     evt.on("text:input", onTextInput);
+
+    // Create a default spritesheet if none was loaded from cart
+    if (gfx.sheetW() === 0 || gfx.sheetH() === 0) {
+        gfx.sheetCreate(128, 128, 8, 8);
+    }
+
     if (!st.restored) {
         openFile("src/main.js");
     }
@@ -86,6 +92,8 @@ export function _save() {
         sprCol: st.sprCol,
         sprTool: st.sprTool,
         sprScrollY: st.sprScrollY,
+        sprSizeW: st.sprSizeW,
+        sprSizeH: st.sprSizeH,
         mapCamX: st.mapCamX,
         mapCamY: st.mapCamY,
         mapLayer: st.mapLayer,
@@ -143,6 +151,8 @@ export function _restore(s) {
     st.sprCol = s.sprCol || 7;
     st.sprTool = s.sprTool || 0;
     st.sprScrollY = s.sprScrollY || 0;
+    st.sprSizeW = s.sprSizeW || 1;
+    st.sprSizeH = s.sprSizeH || 1;
     st.mapCamX = s.mapCamX || 0;
     st.mapCamY = s.mapCamY || 0;
     st.mapLayer = s.mapLayer || 0;
@@ -175,16 +185,25 @@ export function _update(dt) {
     // Smooth scroll interpolation
     if (st.oy !== st.targetOy) {
         let diff = st.targetOy - st.oy;
-        if (Math.abs(diff) < 0.5) {
+        if (Math.abs(diff) <= 1) {
             st.oy = st.targetOy;
         } else {
-            st.oy = st.oy + diff * 0.3;
-            st.oy = Math.round(st.oy);
+            let step = diff * 0.3;
+            let newOy = diff < 0 ? Math.floor(st.oy + step) : Math.ceil(st.oy + step);
+            newOy = Math.max(0, newOy);
+            if (newOy === st.oy) {
+                st.oy = st.targetOy;
+            } else {
+                st.oy = newOy;
+            }
         }
     }
 
     // Tab switching (Ctrl+1/2/3) — handled once here for all tabs
-    if (handleTabSwitch()) return;
+    if (handleTabSwitch()) {
+        mouse.show(); // restore cursor when leaving sprite editor
+        return;
+    }
 
     if (st.activeTab === TAB_SPRITES) {
         updateSpriteEditor();

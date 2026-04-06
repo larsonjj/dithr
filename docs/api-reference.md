@@ -107,14 +107,18 @@ gfx.spr(8, player.x, player.y, 2, 1, player.facing < 0, false);
 
 ### Spritesheet pixel access
 
-| Function | Parameters     | Returns | Description                            |
-| -------- | -------------- | ------- | -------------------------------------- |
-| `sget`   | `x?, y?`       | `int`   | Get palette index at spritesheet pixel |
-| `sset`   | `x?, y?, col?` | —       | Set palette index at spritesheet pixel |
-| `sheetW` |                | `int`   | Spritesheet width in pixels            |
-| `sheetH` |                | `int`   | Spritesheet height in pixels           |
+| Function      | Parameters               | Returns | Description                              |
+| ------------- | ------------------------ | ------- | ---------------------------------------- |
+| `sget`        | `x?, y?`                 | `int`   | Get palette index at spritesheet pixel   |
+| `sset`        | `x?, y?, col?`           | —       | Set palette index at spritesheet pixel   |
+| `sheetW`      |                          | `int`   | Spritesheet width in pixels              |
+| `sheetH`      |                          | `int`   | Spritesheet height in pixels             |
+| `sheetCreate` | `w?, h?, tileW?, tileH?` | `bool`  | Create empty sheet (default 128×128 8×8) |
 
 ```js
+/* Create a sheet at runtime if none was loaded */
+if (gfx.sheetW() === 0) gfx.sheetCreate(128, 128, 8, 8);
+
 /* Read and modify a pixel on the spritesheet */
 var old = gfx.sget(16, 8); // get colour at (16, 8) on sheet
 gfx.sset(16, 8, 7); // set it to white

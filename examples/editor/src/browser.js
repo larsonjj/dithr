@@ -1,21 +1,35 @@
 // ─── File browser ────────────────────────────────────────────────────────────
 
-import { st } from './state.js';
-import { FB_W, CW, CH, HEAD, EROWS, FG, GUTFG, SELBG, HEADBG, HEADFG } from './config.js';
-import { clamp } from './helpers.js';
-import { openFile, refreshBrowser } from './buffer.js';
+import { st } from "./state.js";
+import {
+    FB_W,
+    CW,
+    CH,
+    LINE_H,
+    LINE_PAD,
+    EDIT_Y,
+    EROWS,
+    FG,
+    GUTFG,
+    SELBG,
+    HEADBG,
+    HEADFG,
+} from "./config.js";
+import { clamp } from "./helpers.js";
+import { openFile, refreshBrowser } from "./buffer.js";
 
 export function updateBrowser() {
     if (key.btnr(key.UP)) st.brIdx = Math.max(0, st.brIdx - 1);
-    if (key.btnr(key.DOWN) && st.brEntries.length) st.brIdx = Math.min(st.brEntries.length - 1, st.brIdx + 1);
+    if (key.btnr(key.DOWN) && st.brEntries.length)
+        st.brIdx = Math.min(st.brEntries.length - 1, st.brIdx + 1);
     if (st.brIdx < st.brScroll) st.brScroll = st.brIdx;
     if (st.brIdx >= st.brScroll + EROWS) st.brScroll = st.brIdx - EROWS + 1;
 
     // Mouse click in browser list
     let my = mouse.y();
-    let editY = HEAD * CH;
+    let editY = EDIT_Y;
     if (mouse.btnp(0) && my >= editY && st.brEntries.length) {
-        let row = (st.brScroll + (my - editY) / CH) | 0;
+        let row = (st.brScroll + (my - editY) / LINE_H) | 0;
         if (row >= 0 && row < st.brEntries.length) {
             st.brIdx = row;
         }
@@ -56,19 +70,19 @@ export function drawBrowser() {
     let hdr = "Open: /" + st.brDir + "  Up/Down select  Enter open  Esc cancel";
     gfx.print(hdr, CW, 0, HEADFG);
 
-    let editY = HEAD * CH;
+    let editY = EDIT_Y;
     for (let i = 0; i < EROWS && st.brScroll + i < st.brEntries.length; i++) {
         let fi = st.brScroll + i;
         let entry = st.brEntries[fi];
-        let py = editY + i * CH;
+        let py = editY + i * LINE_H;
         if (fi === st.brIdx) {
-            gfx.rectfill(0, py, FB_W - 1, py + CH - 1, SELBG);
+            gfx.rectfill(0, py, FB_W - 1, py + LINE_H - 1, SELBG);
         }
         let label = entry.isDir ? entry.name + "/" : entry.name;
-        gfx.print(label, CW * 2, py, fi === st.brIdx ? FG : GUTFG);
+        gfx.print(label, CW * 2, py + LINE_PAD, fi === st.brIdx ? FG : GUTFG);
     }
 
     if (!st.brEntries.length) {
-        gfx.print("Empty directory", CW * 2, editY, GUTFG);
+        gfx.print("Empty directory", CW * 2, editY + LINE_PAD, GUTFG);
     }
 }
