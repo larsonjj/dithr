@@ -4,10 +4,10 @@
  *                  list dispatch)
  */
 
-#include <string.h>
-
 #include "graphics.h"
 #include "test_harness.h"
+
+#include <string.h>
 
 /* Small framebuffer for fast tests */
 #define TW 16
@@ -324,7 +324,7 @@ static void test_gfx_load_sheet(void)
     /* Fill with pure black RGBA → should quantise to palette 0 */
     memset(rgba, 0, sizeof(rgba));
     for (int32_t idx = 0; idx < 8 * 8; ++idx) {
-        rgba[idx * 4 + 3] = 255;    /* opaque alpha */
+        rgba[idx * 4 + 3] = 255; /* opaque alpha */
     }
 
     DTR_ASSERT(dtr_gfx_load_sheet(gfx, rgba, 8, 8, 8, 8));

@@ -8,6 +8,7 @@
 
 #include "console_defs.h"
 #include "tween.h"
+
 #include <SDL3/SDL.h>
 
 #ifdef __cplusplus
@@ -33,20 +34,20 @@ extern "C" {
  * \brief           Top-level console state that owns every subsystem
  */
 typedef struct dtr_console {
-    SDL_Window *  window;
+    SDL_Window   *window;
     SDL_Renderer *renderer;
-    SDL_Texture * screen_tex;
+    SDL_Texture  *screen_tex;
 
-    dtr_runtime_t *      runtime;
-    dtr_graphics_t *     graphics;
-    dtr_audio_t *        audio;
-    dtr_key_state_t *    keys;
-    dtr_mouse_state_t *  mouse;
+    dtr_runtime_t       *runtime;
+    dtr_graphics_t      *graphics;
+    dtr_audio_t         *audio;
+    dtr_key_state_t     *keys;
+    dtr_mouse_state_t   *mouse;
     dtr_gamepad_state_t *gamepads;
-    dtr_input_state_t *  input;
-    dtr_event_bus_t *    events;
-    dtr_cart_t *         cart;
-    dtr_postfx_t *       postfx;
+    dtr_input_state_t   *input;
+    dtr_event_bus_t     *events;
+    dtr_cart_t          *cart;
+    dtr_postfx_t        *postfx;
     dtr_tween_t          tween;
 
     /* Math PRNG state (xorshift64, per-console instance) */
@@ -56,9 +57,9 @@ typedef struct dtr_console {
     bool paused;
     bool fullscreen;
     bool restart;
-    bool reload;         /**< Hot-reload: re-eval JS without tearing down subsystems */
-    bool reload_assets;  /**< Deferred asset-only reload (set from WASM SSE handler) */
-    bool new_frame; /**< Set true at start of each iterate, cleared after resets */
+    bool reload;        /**< Hot-reload: re-eval JS without tearing down subsystems */
+    bool reload_assets; /**< Deferred asset-only reload (set from WASM SSE handler) */
+    bool new_frame;     /**< Set true at start of each iterate, cleared after resets */
 
     uint64_t frame_count;
     uint64_t time_prev;
@@ -79,19 +80,19 @@ typedef struct dtr_console {
 
 #if DEV_BUILD
     /* Hot-reload: JS source file watching */
-    char     watch_dir[1024];  /**< Directory to scan for .js changes */
-    char     watch_path[1024]; /**< Resolved path to the JS source file */
-    int64_t  watch_mtime;      /**< Newest modify_time across all .js files */
-    uint64_t watch_last_poll;  /**< SDL_GetPerformanceCounter at last poll */
-    float    reload_toast;     /**< Countdown for "RELOADED" toast overlay */
+    char     watch_dir[1024];     /**< Directory to scan for .js changes */
+    char     watch_path[1024];    /**< Resolved path to the JS source file */
+    int64_t  watch_mtime;         /**< Newest modify_time across all .js files */
+    uint64_t watch_last_poll;     /**< SDL_GetPerformanceCounter at last poll */
+    float    reload_toast;        /**< Countdown for "RELOADED" toast overlay */
     bool     reload_toast_failed; /**< True when toast shows a failure message */
-    int32_t  reload_count;     /**< Running count of successful reloads */
-    bool     reload_pending;   /**< A change was detected, debounce in progress */
-    uint64_t reload_detect_time; /**< Time the first change was detected */
+    int32_t  reload_count;        /**< Running count of successful reloads */
+    bool     reload_pending;      /**< A change was detected, debounce in progress */
+    uint64_t reload_detect_time;  /**< Time the first change was detected */
 
     /* Undo: previous code buffer for one-step revert */
-    char    *prev_code;        /**< Previous JS code before last reload */
-    size_t   prev_code_len;    /**< Length of prev_code */
+    char  *prev_code;     /**< Previous JS code before last reload */
+    size_t prev_code_len; /**< Length of prev_code */
 #endif
 } dtr_console_t;
 

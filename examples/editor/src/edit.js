@@ -1,30 +1,82 @@
 // ─── Edit-mode update ────────────────────────────────────────────────────────
 
-function updateEdit() {
+import { st } from "./state.js";
+import {
+    TAB_CODE,
+    TAB_SPRITES,
+    TAB_MAP,
+    HEAD,
+    CH,
+    FOOT,
+    ROWS,
+    GUTTER,
+    CW,
+    EROWS,
+    TAB,
+} from "./config.js";
+import {
+    clamp,
+    ensureVisible,
+    resetBlink,
+    status,
+    isWordChar,
+    wordBoundaryLeft,
+    wordBoundaryRight,
+    getIndent,
+    firstNonBlank,
+} from "./helpers.js";
+import {
+    selOrdered,
+    selText,
+    deleteSel,
+    pushUndo,
+    doUndo,
+    doRedo,
+    saveFile,
+    openBrowser,
+    switchToFile,
+    closeFile,
+} from "./buffer.js";
+import { updateVimKeys, vimNormal } from "./vim.js";
+
+export function updateEdit() {
     let ctrl = key.btn(key.LCTRL) || key.btn(key.RCTRL);
     let shift = key.btn(key.LSHIFT) || key.btn(key.RSHIFT);
 
     // ── Ctrl shortcuts ──
     if (ctrl) {
         if (key.btnp(key.NUM1)) {
-            activeTab = TAB_CODE;
+            st.activeTab = TAB_CODE;
             return;
         }
         if (key.btnp(key.NUM2)) {
-            activeTab = TAB_SPRITES;
+            st.activeTab = TAB_SPRITES;
             return;
         }
         if (key.btnp(key.NUM3)) {
-            activeTab = TAB_MAP;
+            st.activeTab = TAB_MAP;
+            return;
+        }
+        if (key.btnp(key.TAB)) {
+            if (st.openFiles.length > 1) {
+                let next = shift
+                    ? (st.fileIdx - 1 + st.openFiles.length) % st.openFiles.length
+                    : (st.fileIdx + 1) % st.openFiles.length;
+                switchToFile(next);
+            }
+            return;
+        }
+        if (key.btnp(key.W)) {
+            closeFile(st.fileIdx);
             return;
         }
         if (key.btnp(key.GRAVE)) {
-            vimEnabled = !vimEnabled;
-            if (vimEnabled) {
-                vim = "normal";
-                vimCount = "";
-                vimPending = "";
-                anchor = null;
+            st.vimEnabled = !st.vimEnabled;
+            if (st.vimEnabled) {
+                st.vim = "normal";
+                st.vimCount = "";
+                st.vimPending = "";
+                st.anchor = null;
                 status("Vim ON");
             } else {
                 status("Vim OFF");
@@ -52,15 +104,15 @@ function updateEdit() {
             return;
         }
         if (key.btnp(key.A)) {
-            anchor = { x: 0, y: 0 };
-            cy = buf.length - 1;
-            cx = buf[cy].length;
+            st.anchor = { x: 0, y: 0 };
+            st.cy = st.buf.length - 1;
+            st.cx = st.buf[st.cy].length;
             return;
         }
         if (key.btnp(key.C)) {
             let t = selText();
             if (t) sys.clipboardSet(t);
-            else sys.clipboardSet(buf[cy]);
+            else sys.clipboardSet(st.buf[st.cy]);
             status("Copied");
             return;
         }
@@ -70,13 +122,13 @@ function updateEdit() {
                 sys.clipboardSet(t);
                 deleteSel();
             } else {
-                sys.clipboardSet(buf[cy] + "\n");
+                sys.clipboardSet(st.buf[st.cy] + "\n");
                 pushUndo();
-                buf.splice(cy, 1);
-                if (!buf.length) buf = [""];
-                cy = Math.min(cy, buf.length - 1);
-                cx = Math.min(cx, buf[cy].length);
-                dirty = true;
+                st.buf.splice(st.cy, 1);
+                if (!st.buf.length) st.buf = [""];
+                st.cy = Math.min(st.cy, st.buf.length - 1);
+                st.cx = Math.min(st.cx, st.buf[st.cy].length);
+                st.dirty = true;
             }
             ensureVisible();
             resetBlink();
@@ -89,117 +141,119 @@ function updateEdit() {
             pushUndo();
             let parts = t.replace(/\r\n/g, "\n").split("\n");
             if (parts.length === 1) {
-                buf[cy] = buf[cy].slice(0, cx) + t + buf[cy].slice(cx);
-                cx += t.length;
+                st.buf[st.cy] = st.buf[st.cy].slice(0, st.cx) + t + st.buf[st.cy].slice(st.cx);
+                st.cx += t.length;
             } else {
-                let after = buf[cy].slice(cx);
-                buf[cy] = buf[cy].slice(0, cx) + parts[0];
+                let after = st.buf[st.cy].slice(st.cx);
+                st.buf[st.cy] = st.buf[st.cy].slice(0, st.cx) + parts[0];
                 for (let i = 1; i < parts.length - 1; i++) {
-                    buf.splice(cy + i, 0, parts[i]);
+                    st.buf.splice(st.cy + i, 0, parts[i]);
                 }
-                buf.splice(cy + parts.length - 1, 0, parts[parts.length - 1] + after);
-                cy += parts.length - 1;
-                cx = parts[parts.length - 1].length;
+                st.buf.splice(st.cy + parts.length - 1, 0, parts[parts.length - 1] + after);
+                st.cy += parts.length - 1;
+                st.cx = parts[parts.length - 1].length;
             }
-            dirty = true;
+            st.dirty = true;
             ensureVisible();
             resetBlink();
             return;
         }
         if (key.btnp(key.D)) {
-            if (shift && anchor) {
+            if (shift && st.anchor) {
                 // Ctrl+Shift+D: duplicate selection inline
                 let t = selText();
                 if (t) {
                     let s = selOrdered();
                     pushUndo();
-                    buf[s.b.y] = buf[s.b.y].slice(0, s.b.x) + t + buf[s.b.y].slice(s.b.x);
-                    dirty = true;
+                    st.buf[s.b.y] = st.buf[s.b.y].slice(0, s.b.x) + t + st.buf[s.b.y].slice(s.b.x);
+                    st.dirty = true;
                 }
             } else {
                 // Ctrl+D: duplicate line
                 pushUndo();
-                buf.splice(cy + 1, 0, buf[cy]);
-                cy++;
-                dirty = true;
+                st.buf.splice(st.cy + 1, 0, st.buf[st.cy]);
+                st.cy++;
+                st.dirty = true;
             }
             ensureVisible();
             resetBlink();
             return;
         }
         if (key.btnp(key.F)) {
-            findMode = true;
-            findReplace = false;
-            findField = 0;
+            st.findMode = true;
+            st.findReplace = false;
+            st.findField = 0;
             return;
         }
         if (key.btnp(key.H)) {
-            findMode = true;
-            findReplace = true;
-            findField = 0;
+            st.findMode = true;
+            st.findReplace = true;
+            st.findField = 0;
             return;
         }
         if (key.btnp(key.G)) {
-            gotoMode = true;
-            gotoText = "";
+            st.gotoMode = true;
+            st.gotoText = "";
             return;
         }
         if (shift && key.btnp(key.K)) {
             pushUndo();
             let s = selOrdered();
             if (s) {
-                buf.splice(s.a.y, s.b.y - s.a.y + 1);
-                anchor = null;
-                cy = Math.min(s.a.y, buf.length - 1);
+                st.buf.splice(s.a.y, s.b.y - s.a.y + 1);
+                st.anchor = null;
+                st.cy = Math.min(s.a.y, st.buf.length - 1);
             } else {
-                buf.splice(cy, 1);
+                st.buf.splice(st.cy, 1);
             }
-            if (!buf.length) buf = [""];
-            cy = Math.min(cy, buf.length - 1);
-            cx = Math.min(cx, buf[cy].length);
-            dirty = true;
+            if (!st.buf.length) st.buf = [""];
+            st.cy = Math.min(st.cy, st.buf.length - 1);
+            st.cx = Math.min(st.cx, st.buf[st.cy].length);
+            st.dirty = true;
             ensureVisible();
             resetBlink();
             return;
         }
         if (key.btnr(key.LEFT)) {
-            let ox0 = cx,
-                oy0 = cy;
-            if (cx > 0) {
-                let line = buf[cy];
-                cx--;
-                if (isWordChar(line[cx])) {
-                    while (cx > 0 && isWordChar(line[cx - 1])) cx--;
+            let ox0 = st.cx,
+                oy0 = st.cy;
+            if (st.cx > 0) {
+                let line = st.buf[st.cy];
+                st.cx--;
+                if (isWordChar(line[st.cx])) {
+                    while (st.cx > 0 && isWordChar(line[st.cx - 1])) st.cx--;
                 } else {
-                    while (cx > 0 && !isWordChar(line[cx - 1]) && line[cx - 1] !== " ") cx--;
+                    while (st.cx > 0 && !isWordChar(line[st.cx - 1]) && line[st.cx - 1] !== " ")
+                        st.cx--;
                 }
-            } else if (cy > 0) {
-                cy--;
-                cx = buf[cy].length;
+            } else if (st.cy > 0) {
+                st.cy--;
+                st.cx = st.buf[st.cy].length;
             }
-            if (shift && !anchor) anchor = { x: ox0, y: oy0 };
-            if (!shift) anchor = null;
+            if (shift && !st.anchor) st.anchor = { x: ox0, y: oy0 };
+            if (!shift) st.anchor = null;
             ensureVisible();
             resetBlink();
             return;
         }
         if (key.btnr(key.RIGHT)) {
-            let ox0 = cx,
-                oy0 = cy;
-            let line = buf[cy];
-            if (cx < line.length) {
-                if (isWordChar(line[cx])) {
-                    while (cx < line.length && isWordChar(line[cx])) cx++;
-                } else if (line[cx] !== " ") {
-                    while (cx < line.length && !isWordChar(line[cx]) && line[cx] !== " ") cx++;
+            let ox0 = st.cx,
+                oy0 = st.cy;
+            let line = st.buf[st.cy];
+            if (st.cx < line.length) {
+                if (isWordChar(line[st.cx])) {
+                    while (st.cx < line.length && isWordChar(line[st.cx])) st.cx++;
+                } else if (line[st.cx] !== " ") {
+                    while (st.cx < line.length && !isWordChar(line[st.cx]) && line[st.cx] !== " ")
+                        st.cx++;
                 }
-                while (cx < line.length && line[cx] === " ") cx++;
-            } else if (cy < buf.length - 1) {
-                cy++;
-                cx = 0;
+                while (st.cx < line.length && line[st.cx] === " ") st.cx++;
+            } else if (st.cy < st.buf.length - 1) {
+                st.cy++;
+                st.cx = 0;
             }
-            if (shift && !anchor) anchor = { x: ox0, y: oy0 };
-            if (!shift) anchor = null;
+            if (shift && !st.anchor) st.anchor = { x: ox0, y: oy0 };
+            if (!shift) st.anchor = null;
             ensureVisible();
             resetBlink();
             return;
@@ -208,12 +262,12 @@ function updateEdit() {
             // Toggle line comment
             pushUndo();
             let s = selOrdered();
-            let startLine = s ? s.a.y : cy;
-            let endLine = s ? s.b.y : cy;
+            let startLine = s ? s.a.y : st.cy;
+            let endLine = s ? s.b.y : st.cy;
             // Check if all lines are commented
             let allCommented = true;
             for (let i = startLine; i <= endLine; i++) {
-                let stripped = buf[i].replace(/^\s*/, "");
+                let stripped = st.buf[i].replace(/^\s*/, "");
                 if (stripped.length && stripped.slice(0, 2) !== "//") {
                     allCommented = false;
                     break;
@@ -221,36 +275,39 @@ function updateEdit() {
             }
             for (let i = startLine; i <= endLine; i++) {
                 if (allCommented) {
-                    let idx = buf[i].indexOf("//");
+                    let idx = st.buf[i].indexOf("//");
                     if (idx >= 0) {
-                        let after = buf[i][idx + 2] === " " ? idx + 3 : idx + 2;
-                        buf[i] = buf[i].slice(0, idx) + buf[i].slice(after);
+                        let after = st.buf[i][idx + 2] === " " ? idx + 3 : idx + 2;
+                        st.buf[i] = st.buf[i].slice(0, idx) + st.buf[i].slice(after);
                     }
                 } else {
                     let fnb = 0;
-                    while (fnb < buf[i].length && (buf[i][fnb] === " " || buf[i][fnb] === "\t"))
+                    while (
+                        fnb < st.buf[i].length &&
+                        (st.buf[i][fnb] === " " || st.buf[i][fnb] === "\t")
+                    )
                         fnb++;
-                    buf[i] = buf[i].slice(0, fnb) + "// " + buf[i].slice(fnb);
+                    st.buf[i] = st.buf[i].slice(0, fnb) + "// " + st.buf[i].slice(fnb);
                 }
             }
-            dirty = true;
+            st.dirty = true;
             resetBlink();
             return;
         }
         if (shift && key.btnr(key.UP)) {
             // Move line(s) up
             let s = selOrdered();
-            let startLine = s ? s.a.y : cy;
-            let endLine = s ? s.b.y : cy;
+            let startLine = s ? s.a.y : st.cy;
+            let endLine = s ? s.b.y : st.cy;
             if (startLine > 0) {
                 pushUndo();
-                let removed = buf.splice(startLine - 1, 1)[0];
-                buf.splice(endLine, 0, removed);
-                cy--;
+                let removed = st.buf.splice(startLine - 1, 1)[0];
+                st.buf.splice(endLine, 0, removed);
+                st.cy--;
                 if (s) {
-                    anchor = { x: s.a.x, y: s.a.y - 1 };
+                    st.anchor = { x: s.a.x, y: s.a.y - 1 };
                 }
-                dirty = true;
+                st.dirty = true;
                 ensureVisible();
                 resetBlink();
             }
@@ -259,17 +316,17 @@ function updateEdit() {
         if (shift && key.btnr(key.DOWN)) {
             // Move line(s) down
             let s = selOrdered();
-            let startLine = s ? s.a.y : cy;
-            let endLine = s ? s.b.y : cy;
-            if (endLine < buf.length - 1) {
+            let startLine = s ? s.a.y : st.cy;
+            let endLine = s ? s.b.y : st.cy;
+            if (endLine < st.buf.length - 1) {
                 pushUndo();
-                let removed = buf.splice(endLine + 1, 1)[0];
-                buf.splice(startLine, 0, removed);
-                cy++;
+                let removed = st.buf.splice(endLine + 1, 1)[0];
+                st.buf.splice(startLine, 0, removed);
+                st.cy++;
                 if (s) {
-                    anchor = { x: s.a.x, y: s.a.y + 1 };
+                    st.anchor = { x: s.a.x, y: s.a.y + 1 };
                 }
-                dirty = true;
+                st.dirty = true;
                 ensureVisible();
                 resetBlink();
             }
@@ -278,10 +335,10 @@ function updateEdit() {
         if (shift && key.btnp(key.ENTER)) {
             // Insert line above
             pushUndo();
-            let indent = getIndent(cy);
-            buf.splice(cy, 0, indent);
-            cx = indent.length;
-            dirty = true;
+            let indent = getIndent(st.cy);
+            st.buf.splice(st.cy, 0, indent);
+            st.cx = indent.length;
+            st.dirty = true;
             ensureVisible();
             resetBlink();
             return;
@@ -294,17 +351,17 @@ function updateEdit() {
                 return;
             }
             pushUndo();
-            if (cx > 0) {
-                let nc = wordBoundaryLeft(buf[cy], cx);
-                buf[cy] = buf[cy].slice(0, nc) + buf[cy].slice(cx);
-                cx = nc;
-            } else if (cy > 0) {
-                cx = buf[cy - 1].length;
-                buf[cy - 1] += buf[cy];
-                buf.splice(cy, 1);
-                cy--;
+            if (st.cx > 0) {
+                let nc = wordBoundaryLeft(st.buf[st.cy], st.cx);
+                st.buf[st.cy] = st.buf[st.cy].slice(0, nc) + st.buf[st.cy].slice(st.cx);
+                st.cx = nc;
+            } else if (st.cy > 0) {
+                st.cx = st.buf[st.cy - 1].length;
+                st.buf[st.cy - 1] += st.buf[st.cy];
+                st.buf.splice(st.cy, 1);
+                st.cy--;
             }
-            dirty = true;
+            st.dirty = true;
             ensureVisible();
             resetBlink();
             return;
@@ -317,85 +374,91 @@ function updateEdit() {
                 return;
             }
             pushUndo();
-            if (cx < buf[cy].length) {
-                let nc = wordBoundaryRight(buf[cy], cx);
-                buf[cy] = buf[cy].slice(0, cx) + buf[cy].slice(nc);
-            } else if (cy < buf.length - 1) {
-                buf[cy] += buf[cy + 1];
-                buf.splice(cy + 1, 1);
+            if (st.cx < st.buf[st.cy].length) {
+                let nc = wordBoundaryRight(st.buf[st.cy], st.cx);
+                st.buf[st.cy] = st.buf[st.cy].slice(0, st.cx) + st.buf[st.cy].slice(nc);
+            } else if (st.cy < st.buf.length - 1) {
+                st.buf[st.cy] += st.buf[st.cy + 1];
+                st.buf.splice(st.cy + 1, 1);
             }
-            dirty = true;
+            st.dirty = true;
             resetBlink();
             return;
         }
         return;
     }
 
+    // ── Mouse wheel (always active, including Vim normal) ──
+    let wheel = mouse.wheel();
+    if (wheel !== 0) {
+        st.targetOy = clamp(st.targetOy - wheel * 3, 0, Math.max(0, st.buf.length - 1));
+    }
+
     // ── Vim non-insert modes ──
-    if (vimEnabled && vim !== "insert") {
+    if (st.vimEnabled && st.vim !== "insert") {
         updateVimKeys();
         return;
     }
 
     // ── Vim insert: Escape returns to normal ──
-    if (vimEnabled && key.btnp(key.ESCAPE)) {
-        vim = "normal";
-        cx = Math.max(0, cx - 1);
-        anchor = null;
+    if (st.vimEnabled && key.btnp(key.ESCAPE)) {
+        st.vim = "normal";
+        st.cx = Math.max(0, st.cx - 1);
+        st.anchor = null;
         ensureVisible();
         resetBlink();
         return;
     }
 
     // ── Navigation (with key repeat) ──
-    let pcx = cx,
-        pcy = cy;
+    let pcx = st.cx,
+        pcy = st.cy;
 
     if (key.btnr(key.LEFT)) {
-        if (cx > 0) cx--;
-        else if (cy > 0) {
-            cy--;
-            cx = buf[cy].length;
+        if (st.cx > 0) st.cx--;
+        else if (st.cy > 0) {
+            st.cy--;
+            st.cx = st.buf[st.cy].length;
         }
     }
     if (key.btnr(key.RIGHT)) {
-        if (cx < buf[cy].length) cx++;
-        else if (cy < buf.length - 1) {
-            cy++;
-            cx = 0;
+        if (st.cx < st.buf[st.cy].length) st.cx++;
+        else if (st.cy < st.buf.length - 1) {
+            st.cy++;
+            st.cx = 0;
         }
     }
-    if (key.btnr(key.UP) && cy > 0) {
-        cy--;
-        cx = clamp(cx, 0, buf[cy].length);
+    if (key.btnr(key.UP) && st.cy > 0) {
+        st.cy--;
+        st.cx = clamp(st.cx, 0, st.buf[st.cy].length);
     }
-    if (key.btnr(key.DOWN) && cy < buf.length - 1) {
-        cy++;
-        cx = clamp(cx, 0, buf[cy].length);
+    if (key.btnr(key.DOWN) && st.cy < st.buf.length - 1) {
+        st.cy++;
+        st.cx = clamp(st.cx, 0, st.buf[st.cy].length);
     }
     if (key.btnr(key.HOME)) {
-        let firstNonBlank = 0;
+        let fnb = 0;
         while (
-            firstNonBlank < buf[cy].length &&
-            (buf[cy][firstNonBlank] === " " || buf[cy][firstNonBlank] === "\t")
+            fnb < st.buf[st.cy].length &&
+            (st.buf[st.cy][fnb] === " " || st.buf[st.cy][fnb] === "\t")
         )
-            firstNonBlank++;
-        cx = cx === firstNonBlank ? 0 : firstNonBlank;
+            fnb++;
+        st.cx = st.cx === fnb ? 0 : fnb;
     }
-    if (key.btnr(key.END)) cx = buf[cy].length;
+    if (key.btnr(key.END)) st.cx = st.buf[st.cy].length;
     if (key.btnr(key.PAGEUP)) {
-        cy = Math.max(0, cy - EROWS);
-        cx = clamp(cx, 0, buf[cy].length);
+        st.cy = Math.max(0, st.cy - EROWS);
+        st.cx = clamp(st.cx, 0, st.buf[st.cy].length);
     }
     if (key.btnr(key.PAGEDOWN)) {
-        cy = Math.min(buf.length - 1, cy + EROWS);
-        cx = clamp(cx, 0, buf[cy].length);
+        st.cy = Math.min(st.buf.length - 1, st.cy + EROWS);
+        st.cx = clamp(st.cx, 0, st.buf[st.cy].length);
     }
 
     // Update selection anchor if shifted, clear if not
-    if (cx !== pcx || cy !== pcy) {
-        if (shift && !anchor) anchor = { x: pcx, y: pcy };
-        if (!shift) anchor = null;
+    if (st.cx !== pcx || st.cy !== pcy) {
+        if (shift && !st.anchor) st.anchor = { x: pcx, y: pcy };
+        if (!shift) st.anchor = null;
         ensureVisible();
         resetBlink();
     }
@@ -408,16 +471,16 @@ function updateEdit() {
             return;
         }
         pushUndo();
-        if (cx > 0) {
-            buf[cy] = buf[cy].slice(0, cx - 1) + buf[cy].slice(cx);
-            cx--;
-        } else if (cy > 0) {
-            cx = buf[cy - 1].length;
-            buf[cy - 1] += buf[cy];
-            buf.splice(cy, 1);
-            cy--;
+        if (st.cx > 0) {
+            st.buf[st.cy] = st.buf[st.cy].slice(0, st.cx - 1) + st.buf[st.cy].slice(st.cx);
+            st.cx--;
+        } else if (st.cy > 0) {
+            st.cx = st.buf[st.cy - 1].length;
+            st.buf[st.cy - 1] += st.buf[st.cy];
+            st.buf.splice(st.cy, 1);
+            st.cy--;
         }
-        dirty = true;
+        st.dirty = true;
         ensureVisible();
         resetBlink();
     }
@@ -429,13 +492,13 @@ function updateEdit() {
             return;
         }
         pushUndo();
-        if (cx < buf[cy].length) {
-            buf[cy] = buf[cy].slice(0, cx) + buf[cy].slice(cx + 1);
-        } else if (cy < buf.length - 1) {
-            buf[cy] += buf[cy + 1];
-            buf.splice(cy + 1, 1);
+        if (st.cx < st.buf[st.cy].length) {
+            st.buf[st.cy] = st.buf[st.cy].slice(0, st.cx) + st.buf[st.cy].slice(st.cx + 1);
+        } else if (st.cy < st.buf.length - 1) {
+            st.buf[st.cy] += st.buf[st.cy + 1];
+            st.buf.splice(st.cy + 1, 1);
         }
-        dirty = true;
+        st.dirty = true;
         resetBlink();
     }
 
@@ -444,28 +507,28 @@ function updateEdit() {
         pushUndo();
         // Auto-indent: match leading whitespace of current line
         let indent = "";
-        let m = buf[cy].match(/^(\s+)/);
+        let m = st.buf[st.cy].match(/^(\s+)/);
         if (m) indent = m[1];
-        let charBefore = cx > 0 ? buf[cy][cx - 1] : "";
-        let charAfter = cx < buf[cy].length ? buf[cy][cx] : "";
-        let after = buf[cy].slice(cx);
-        buf[cy] = buf[cy].slice(0, cx);
+        let charBefore = st.cx > 0 ? st.buf[st.cy][st.cx - 1] : "";
+        let charAfter = st.cx < st.buf[st.cy].length ? st.buf[st.cy][st.cx] : "";
+        let after = st.buf[st.cy].slice(st.cx);
+        st.buf[st.cy] = st.buf[st.cy].slice(0, st.cx);
         if (charBefore === "{") {
             let newIndent = indent + TAB;
-            cy++;
+            st.cy++;
             if (charAfter === "}") {
                 // Split braces: cursor on indented middle line, closing brace on dedented line below
-                buf.splice(cy, 0, newIndent, indent + after);
+                st.buf.splice(st.cy, 0, newIndent, indent + after);
             } else {
-                buf.splice(cy, 0, newIndent + after);
+                st.buf.splice(st.cy, 0, newIndent + after);
             }
-            cx = newIndent.length;
+            st.cx = newIndent.length;
         } else {
-            cy++;
-            buf.splice(cy, 0, indent + after);
-            cx = indent.length;
+            st.cy++;
+            st.buf.splice(st.cy, 0, indent + after);
+            st.cx = indent.length;
         }
-        dirty = true;
+        st.dirty = true;
         ensureVisible();
         resetBlink();
     }
@@ -478,37 +541,37 @@ function updateEdit() {
             for (let i = s.a.y; i <= s.b.y; i++) {
                 if (shift) {
                     // Dedent: remove leading TAB
-                    if (buf[i].slice(0, TAB.length) === TAB) {
-                        buf[i] = buf[i].slice(TAB.length);
+                    if (st.buf[i].slice(0, TAB.length) === TAB) {
+                        st.buf[i] = st.buf[i].slice(TAB.length);
                     }
                 } else {
-                    buf[i] = TAB + buf[i];
+                    st.buf[i] = TAB + st.buf[i];
                 }
             }
-            dirty = true;
+            st.dirty = true;
             resetBlink();
         } else if (shift) {
             // Dedent current line
             pushUndo();
-            if (buf[cy].slice(0, TAB.length) === TAB) {
-                buf[cy] = buf[cy].slice(TAB.length);
-                cx = Math.max(0, cx - TAB.length);
-                dirty = true;
+            if (st.buf[st.cy].slice(0, TAB.length) === TAB) {
+                st.buf[st.cy] = st.buf[st.cy].slice(TAB.length);
+                st.cx = Math.max(0, st.cx - TAB.length);
+                st.dirty = true;
             }
             resetBlink();
         } else {
             deleteSel();
             pushUndo();
-            buf[cy] = buf[cy].slice(0, cx) + TAB + buf[cy].slice(cx);
-            cx += TAB.length;
-            dirty = true;
+            st.buf[st.cy] = st.buf[st.cy].slice(0, st.cx) + TAB + st.buf[st.cy].slice(st.cx);
+            st.cx += TAB.length;
+            st.dirty = true;
             ensureVisible();
             resetBlink();
         }
     }
 
     if (key.btnp(key.ESCAPE)) {
-        anchor = null;
+        st.anchor = null;
     }
 
     // ── Mouse ──
@@ -521,68 +584,62 @@ function updateEdit() {
     if (my >= editY && my < footY && mx >= gutterPx) {
         if (mouse.btnp(0)) {
             // Click to place cursor
-            let row = (oy + (my - editY) / CH) | 0;
-            let col = (ox + (mx - gutterPx) / CW) | 0;
-            row = clamp(row, 0, buf.length - 1);
-            col = clamp(col, 0, buf[row].length);
+            let row = (st.oy + (my - editY) / CH) | 0;
+            let col = (st.ox + (mx - gutterPx) / CW) | 0;
+            row = clamp(row, 0, st.buf.length - 1);
+            col = clamp(col, 0, st.buf[row].length);
             // Detect double/triple click
             let now = Date.now();
             if (
-                now - lastClickTime < 400 &&
-                Math.abs(mx - lastClickX) < 4 &&
-                Math.abs(my - lastClickY) < 4
+                now - st.lastClickTime < 400 &&
+                Math.abs(mx - st.lastClickX) < 4 &&
+                Math.abs(my - st.lastClickY) < 4
             ) {
-                clickCount++;
+                st.clickCount++;
             } else {
-                clickCount = 1;
+                st.clickCount = 1;
             }
-            lastClickTime = now;
-            lastClickX = mx;
-            lastClickY = my;
-            if (clickCount === 2) {
+            st.lastClickTime = now;
+            st.lastClickX = mx;
+            st.lastClickY = my;
+            if (st.clickCount === 2) {
                 // Double-click: select word
-                cy = row;
-                let line = buf[cy];
+                st.cy = row;
+                let line = st.buf[st.cy];
                 let wl = col,
                     wr = col;
                 while (wl > 0 && isWordChar(line[wl - 1])) wl--;
                 while (wr < line.length && isWordChar(line[wr])) wr++;
-                anchor = { x: wl, y: cy };
-                cx = wr;
-            } else if (clickCount >= 3) {
+                st.anchor = { x: wl, y: st.cy };
+                st.cx = wr;
+            } else if (st.clickCount >= 3) {
                 // Triple-click: select line
-                cy = row;
-                anchor = { x: 0, y: cy };
-                cx = buf[cy].length;
-                clickCount = 3;
+                st.cy = row;
+                st.anchor = { x: 0, y: st.cy };
+                st.cx = st.buf[st.cy].length;
+                st.clickCount = 3;
             } else {
                 if (shift) {
-                    if (!anchor) anchor = { x: cx, y: cy };
+                    if (!st.anchor) st.anchor = { x: st.cx, y: st.cy };
                 } else {
-                    anchor = null;
+                    st.anchor = null;
                 }
-                cx = col;
-                cy = row;
+                st.cx = col;
+                st.cy = row;
             }
             ensureVisible();
             resetBlink();
         } else if (mouse.btn(0)) {
             // Drag to extend selection
-            let row = (oy + (my - editY) / CH) | 0;
-            let col = (ox + (mx - gutterPx) / CW) | 0;
-            row = clamp(row, 0, buf.length - 1);
-            col = clamp(col, 0, buf[row].length);
-            if (!anchor) anchor = { x: cx, y: cy };
-            cx = col;
-            cy = row;
+            let row = (st.oy + (my - editY) / CH) | 0;
+            let col = (st.ox + (mx - gutterPx) / CW) | 0;
+            row = clamp(row, 0, st.buf.length - 1);
+            col = clamp(col, 0, st.buf[row].length);
+            if (!st.anchor) st.anchor = { x: st.cx, y: st.cy };
+            st.cx = col;
+            st.cy = row;
             ensureVisible();
             resetBlink();
         }
-    }
-
-    // Mouse wheel scroll (smooth)
-    let wheel = mouse.wheel();
-    if (wheel !== 0) {
-        targetOy = clamp(targetOy - wheel * 3, 0, Math.max(0, buf.length - EROWS));
     }
 }

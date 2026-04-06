@@ -3,10 +3,10 @@
  * \brief           Unit tests for the post-processing pipeline
  */
 
-#include <string.h>
-
 #include "postfx.h"
 #include "test_harness.h"
+
+#include <string.h>
 
 #define TW 16
 #define TH 16

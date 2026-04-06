@@ -41,7 +41,7 @@ void dtr_cart_defaults(dtr_cart_t *cart)
     cart->display.scale_mode = 0; /* integer */
     cart->display.palette    = 0;
     cart->display.fullscreen = false;
-    cart->display.pause_key   = true;
+    cart->display.pause_key  = true;
 
     /* Timing defaults */
     cart->timing.fps    = CONSOLE_FPS;
@@ -94,10 +94,10 @@ static int32_t prv_json_int(JSContext *ctx, JSValue obj, const char *key, int32_
 /**
  * \brief           Read a string from a JSON object property
  */
-static void prv_json_str(JSContext * ctx,
+static void prv_json_str(JSContext  *ctx,
                          JSValue     obj,
                          const char *key,
-                         char *      out,
+                         char       *out,
                          size_t      out_sz,
                          const char *dflt)
 {
@@ -182,10 +182,14 @@ bool dtr_cart_parse(dtr_cart_t *cart, JSContext *ctx, const char *json, size_t l
         {
             char mode_str[32] = "";
             prv_json_str(ctx, sub, "scaleMode", mode_str, sizeof(mode_str), "integer");
-            if (SDL_strcmp(mode_str, "letterbox") == 0)      cart->display.scale_mode = 1;
-            else if (SDL_strcmp(mode_str, "stretch") == 0)   cart->display.scale_mode = 2;
-            else if (SDL_strcmp(mode_str, "overscan") == 0)  cart->display.scale_mode = 3;
-            else                                             cart->display.scale_mode = 0;
+            if (SDL_strcmp(mode_str, "letterbox") == 0)
+                cart->display.scale_mode = 1;
+            else if (SDL_strcmp(mode_str, "stretch") == 0)
+                cart->display.scale_mode = 2;
+            else if (SDL_strcmp(mode_str, "overscan") == 0)
+                cart->display.scale_mode = 3;
+            else
+                cart->display.scale_mode = 0;
         }
     }
     JS_FreeValue(ctx, sub);
@@ -265,8 +269,7 @@ bool dtr_cart_parse(dtr_cart_t *cart, JSContext *ctx, const char *json, size_t l
 
                     str = JS_ToCString(ctx, elem);
                     if (str != NULL) {
-                        SDL_strlcpy(cart->sfx_paths[idx], str,
-                                    sizeof(cart->sfx_paths[idx]));
+                        SDL_strlcpy(cart->sfx_paths[idx], str, sizeof(cart->sfx_paths[idx]));
                         JS_FreeCString(ctx, str);
                     }
                 }
@@ -289,8 +292,7 @@ bool dtr_cart_parse(dtr_cart_t *cart, JSContext *ctx, const char *json, size_t l
             JS_ToInt32(ctx, &arr_len, len_val);
             JS_FreeValue(ctx, len_val);
 
-            cart->music_count = (arr_len > DTR_CART_MAX_MUSIC)
-                                    ? DTR_CART_MAX_MUSIC : arr_len;
+            cart->music_count = (arr_len > DTR_CART_MAX_MUSIC) ? DTR_CART_MAX_MUSIC : arr_len;
             for (int32_t idx = 0; idx < cart->music_count; ++idx) {
                 JSValue elem;
 
@@ -300,8 +302,7 @@ bool dtr_cart_parse(dtr_cart_t *cart, JSContext *ctx, const char *json, size_t l
 
                     str = JS_ToCString(ctx, elem);
                     if (str != NULL) {
-                        SDL_strlcpy(cart->music_paths[idx], str,
-                                    sizeof(cart->music_paths[idx]));
+                        SDL_strlcpy(cart->music_paths[idx], str, sizeof(cart->music_paths[idx]));
                         JS_FreeCString(ctx, str);
                     }
                 }
@@ -364,20 +365,20 @@ bool dtr_cart_parse(dtr_cart_t *cart, JSContext *ctx, const char *json, size_t l
     /* --- input.default_mappings --- */
     sub = JS_GetPropertyStr(ctx, root, "input");
     if (JS_IsObject(sub)) {
-        JSValue           dm;
-        JSPropertyEnum *  props;
-        uint32_t          prop_count;
+        JSValue         dm;
+        JSPropertyEnum *props;
+        uint32_t        prop_count;
 
         dm = JS_GetPropertyStr(ctx, sub, "default_mappings");
         if (JS_IsObject(dm)) {
-            if (JS_GetOwnPropertyNames(ctx, &props, &prop_count, dm,
-                                       JS_GPN_STRING_MASK | JS_GPN_ENUM_ONLY) == 0) {
-                for (uint32_t pi = 0; pi < prop_count && cart->input.mapping_count <
-                                                             DTR_CART_MAX_INPUT_ACTIONS;
+            if (JS_GetOwnPropertyNames(
+                    ctx, &props, &prop_count, dm, JS_GPN_STRING_MASK | JS_GPN_ENUM_ONLY) == 0) {
+                for (uint32_t pi = 0;
+                     pi < prop_count && cart->input.mapping_count < DTR_CART_MAX_INPUT_ACTIONS;
                      ++pi) {
-                    const char *                action_name;
-                    JSValue                     bindings_arr;
-                    dtr_cart_input_mapping_t *  mapping;
+                    const char               *action_name;
+                    JSValue                   bindings_arr;
+                    dtr_cart_input_mapping_t *mapping;
 
                     action_name = JS_AtomToCString(ctx, props[pi].atom);
                     if (action_name == NULL) {
@@ -430,7 +431,8 @@ bool dtr_cart_parse(dtr_cart_t *cart, JSContext *ctx, const char *json, size_t l
                 if (prop_count > DTR_CART_MAX_INPUT_ACTIONS) {
                     SDL_Log("Warning: cart defines %u input actions, max is %d — "
                             "excess mappings ignored",
-                            (unsigned)prop_count, DTR_CART_MAX_INPUT_ACTIONS);
+                            (unsigned)prop_count,
+                            DTR_CART_MAX_INPUT_ACTIONS);
                 }
 
                 for (uint32_t pi = 0; pi < prop_count; ++pi) {
@@ -461,72 +463,72 @@ bool dtr_cart_validate(dtr_cart_t *cart)
     if (cart->display.width < 64 || cart->display.width > CONSOLE_FB_MAX_WIDTH) {
         SDL_Log("Cart: display.width %d out of range, clamped", cart->display.width);
         cart->display.width = CONSOLE_FB_WIDTH;
-        valid = false;
+        valid               = false;
     }
     if (cart->display.height < 64 || cart->display.height > CONSOLE_FB_MAX_HEIGHT) {
         SDL_Log("Cart: display.height %d out of range, clamped", cart->display.height);
         cart->display.height = CONSOLE_FB_HEIGHT;
-        valid = false;
+        valid                = false;
     }
 
     /* Scale must be at least 1 */
     if (cart->display.scale < 1 || cart->display.scale > 8) {
         SDL_Log("Cart: display.scale %d out of range, clamped", cart->display.scale);
         cart->display.scale = CONSOLE_DEFAULT_SCALE;
-        valid = false;
+        valid               = false;
     }
 
     /* Clamp FPS */
     if (cart->timing.fps < 15) {
         cart->timing.fps = 15;
-        valid = false;
+        valid            = false;
     }
     if (cart->timing.fps > CONSOLE_FPS) {
         cart->timing.fps = CONSOLE_FPS;
-        valid = false;
+        valid            = false;
     }
 
     /* Audio channels */
     if (cart->audio.channels < 0 || cart->audio.channels > CONSOLE_MAX_CHANNELS) {
         SDL_Log("Cart: audio.channels %d out of range, clamped", cart->audio.channels);
         cart->audio.channels = CONSOLE_AUDIO_CHANNELS;
-        valid = false;
+        valid                = false;
     }
 
     /* Audio frequency */
     if (cart->audio.frequency < 8000 || cart->audio.frequency > 96000) {
         SDL_Log("Cart: audio.frequency %d out of range, clamped", cart->audio.frequency);
         cart->audio.frequency = CONSOLE_AUDIO_FREQ;
-        valid = false;
+        valid                 = false;
     }
 
     /* Audio buffer size */
     if (cart->audio.buffer_size < 256 || cart->audio.buffer_size > 8192) {
         SDL_Log("Cart: audio.buffer_size %d out of range, clamped", cart->audio.buffer_size);
         cart->audio.buffer_size = CONSOLE_AUDIO_BUFFER;
-        valid = false;
+        valid                   = false;
     }
 
     /* Clamp memory limits */
     if (cart->runtime.mem_limit > (uint32_t)CONSOLE_JS_MEM_MB * 1024u * 1024u) {
         cart->runtime.mem_limit = (uint32_t)CONSOLE_JS_MEM_MB * 1024u * 1024u;
-        valid = false;
+        valid                   = false;
     }
 
     /* Stack limit */
     if (cart->runtime.stack_limit > (uint32_t)CONSOLE_JS_STACK_KB * 1024u) {
         cart->runtime.stack_limit = (uint32_t)CONSOLE_JS_STACK_KB * 1024u;
-        valid = false;
+        valid                     = false;
     }
 
     /* Tile dimensions must be in range 4-64 */
     if (cart->sprites.tile_w < 4 || cart->sprites.tile_w > 64) {
         cart->sprites.tile_w = CONSOLE_TILE_W;
-        valid = false;
+        valid                = false;
     }
     if (cart->sprites.tile_h < 4 || cart->sprites.tile_h > 64) {
         cart->sprites.tile_h = CONSOLE_TILE_H;
-        valid = false;
+        valid                = false;
     }
 
     return valid;
@@ -538,7 +540,7 @@ bool dtr_cart_validate(dtr_cart_t *cart)
 
 bool dtr_cart_load(dtr_cart_t *cart, JSContext *ctx, const char *path)
 {
-    char * json;
+    char  *json;
     size_t len;
     bool   result;
     char   dir[512];
@@ -589,7 +591,7 @@ bool dtr_cart_load(dtr_cart_t *cart, JSContext *ctx, const char *path)
 char *dtr_cart_load_code(dtr_cart_t *cart)
 {
     char   full_path[1024];
-    char * code;
+    char  *code;
     size_t len;
 
     if (cart->code_path[0] == '\0') {
@@ -710,7 +712,7 @@ double dtr_cart_dget(dtr_cart_t *cart, int32_t slot)
 static bool prv_save_path(dtr_cart_t *cart, char *out, size_t out_sz)
 {
     const char *title;
-    char *      pref;
+    char       *pref;
 
     out[0] = '\0';
 
@@ -732,7 +734,7 @@ static bool prv_save_path(dtr_cart_t *cart, char *out, size_t out_sz)
 bool dtr_cart_persist_save(dtr_cart_t *cart)
 {
     char    path[512];
-    char *  buf;
+    char   *buf;
     size_t  cap;
     size_t  pos;
     int32_t idx;
@@ -768,10 +770,8 @@ bool dtr_cart_persist_save(dtr_cart_t *cart)
             pos += (size_t)SDL_snprintf(buf + pos, cap - pos, ",");
         }
         first = false;
-        pos += (size_t)SDL_snprintf(buf + pos, cap - pos,
-                                     "\"%s\":\"%s\"",
-                                     cart->kv_keys[idx],
-                                     cart->kv_values[idx]);
+        pos += (size_t)SDL_snprintf(
+            buf + pos, cap - pos, "\"%s\":\"%s\"", cart->kv_keys[idx], cart->kv_values[idx]);
     }
     pos += (size_t)SDL_snprintf(buf + pos, cap - pos, "}\n}");
 
@@ -790,11 +790,11 @@ bool dtr_cart_persist_save(dtr_cart_t *cart)
         if (ok) {
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wvariadic-macro-arguments-omitted"
-            EM_ASM(
-                FS.syncfs(false, function(err) {
-                    if (err) console.warn('IDBFS sync failed:', err);
-                });
-            );
+            EM_ASM(FS.syncfs(
+                false, function(err) {
+                    if (err)
+                        console.warn('IDBFS sync failed:', err);
+                }););
 #pragma clang diagnostic pop
         }
 #endif
@@ -806,9 +806,9 @@ bool dtr_cart_persist_save(dtr_cart_t *cart)
 bool dtr_cart_persist_load(dtr_cart_t *cart)
 {
     char       path[512];
-    char *     json;
+    char      *json;
     size_t     len;
-    JSContext * ctx;
+    JSContext *ctx;
     JSRuntime *jrt;
     JSValue    root;
     JSValue    dslots;
@@ -860,8 +860,8 @@ bool dtr_cart_persist_load(dtr_cart_t *cart)
         JSPropertyEnum *props;
         uint32_t        prop_count;
 
-        if (JS_GetOwnPropertyNames(ctx, &props, &prop_count, kv_obj,
-                                    JS_GPN_STRING_MASK | JS_GPN_ENUM_ONLY) == 0) {
+        if (JS_GetOwnPropertyNames(
+                ctx, &props, &prop_count, kv_obj, JS_GPN_STRING_MASK | JS_GPN_ENUM_ONLY) == 0) {
             for (uint32_t pi = 0; pi < prop_count && cart->kv_count < DTR_CART_MAX_KV; ++pi) {
                 const char *key;
                 JSValue     val;
@@ -872,9 +872,10 @@ bool dtr_cart_persist_load(dtr_cart_t *cart)
                 str = JS_ToCString(ctx, val);
 
                 if (key != NULL && str != NULL) {
-                    SDL_strlcpy(cart->kv_keys[cart->kv_count], key,
-                                sizeof(cart->kv_keys[cart->kv_count]));
-                    SDL_strlcpy(cart->kv_values[cart->kv_count], str,
+                    SDL_strlcpy(
+                        cart->kv_keys[cart->kv_count], key, sizeof(cart->kv_keys[cart->kv_count]));
+                    SDL_strlcpy(cart->kv_values[cart->kv_count],
+                                str,
                                 sizeof(cart->kv_values[cart->kv_count]));
                     ++cart->kv_count;
                 }

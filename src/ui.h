@@ -27,8 +27,7 @@ typedef struct dtr_ui_rect {
 /**
  * \brief           Create a rect from position and size
  */
-dtr_ui_rect_t dtr_ui_rect(int32_t pos_x, int32_t pos_y,
-                           int32_t width, int32_t height);
+dtr_ui_rect_t dtr_ui_rect(int32_t pos_x, int32_t pos_y, int32_t width, int32_t height);
 
 /* ---- Transforms -------------------------------------------------------- */
 
@@ -44,9 +43,12 @@ dtr_ui_rect_t dtr_ui_inset(dtr_ui_rect_t rect, int32_t inset);
  * \param[in]       scr_w: Screen width
  * \param[in]       scr_h: Screen height
  */
-dtr_ui_rect_t dtr_ui_anchor(double anc_x, double anc_y,
-                             int32_t width, int32_t height,
-                             int32_t scr_w, int32_t scr_h);
+dtr_ui_rect_t dtr_ui_anchor(double  anc_x,
+                            double  anc_y,
+                            int32_t width,
+                            int32_t height,
+                            int32_t scr_w,
+                            int32_t scr_h);
 
 /* ---- Splitting --------------------------------------------------------- */
 
@@ -57,16 +59,22 @@ dtr_ui_rect_t dtr_ui_anchor(double anc_x, double anc_y,
  * \param[in]       frac: Split point 0..1
  * \param[in]       gap: Pixel gap between halves
  */
-void dtr_ui_hsplit(dtr_ui_rect_t rect, double frac, int32_t gap,
-                   dtr_ui_rect_t *left, dtr_ui_rect_t *right);
+void dtr_ui_hsplit(dtr_ui_rect_t  rect,
+                   double         frac,
+                   int32_t        gap,
+                   dtr_ui_rect_t *left,
+                   dtr_ui_rect_t *right);
 
 /**
  * \brief           Split a rect vertically at fraction t
  * \param[out]      top: Top portion
  * \param[out]      bottom: Bottom portion
  */
-void dtr_ui_vsplit(dtr_ui_rect_t rect, double frac, int32_t gap,
-                   dtr_ui_rect_t *top, dtr_ui_rect_t *bottom);
+void dtr_ui_vsplit(dtr_ui_rect_t  rect,
+                   double         frac,
+                   int32_t        gap,
+                   dtr_ui_rect_t *top,
+                   dtr_ui_rect_t *bottom);
 
 /* ---- Stacking ---------------------------------------------------------- */
 
@@ -76,15 +84,13 @@ void dtr_ui_vsplit(dtr_ui_rect_t rect, double frac, int32_t gap,
  * \param[in]       count: Number of columns
  * \param[in]       gap: Pixel gap between columns
  */
-void dtr_ui_hstack(dtr_ui_rect_t rect, int32_t count, int32_t gap,
-                   dtr_ui_rect_t *out);
+void dtr_ui_hstack(dtr_ui_rect_t rect, int32_t count, int32_t gap, dtr_ui_rect_t *out);
 
 /**
  * \brief           Divide a rect into n equal rows
  * \param[out]      out: Array of at least n rects
  */
-void dtr_ui_vstack(dtr_ui_rect_t rect, int32_t count, int32_t gap,
-                   dtr_ui_rect_t *out);
+void dtr_ui_vstack(dtr_ui_rect_t rect, int32_t count, int32_t gap, dtr_ui_rect_t *out);
 
 /* ---- Placement --------------------------------------------------------- */
 
@@ -93,8 +99,8 @@ void dtr_ui_vstack(dtr_ui_rect_t rect, int32_t count, int32_t gap,
  * \param[in]       anc_x: Horizontal placement (0=left, 0.5=center, 1=right)
  * \param[in]       anc_y: Vertical placement (0=top, 0.5=middle, 1=bottom)
  */
-dtr_ui_rect_t dtr_ui_place(dtr_ui_rect_t parent, double anc_x, double anc_y,
-                            int32_t width, int32_t height);
+dtr_ui_rect_t
+dtr_ui_place(dtr_ui_rect_t parent, double anc_x, double anc_y, int32_t width, int32_t height);
 
 #ifdef __cplusplus
 }

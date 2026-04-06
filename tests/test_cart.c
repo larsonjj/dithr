@@ -3,22 +3,21 @@
  * \brief           Unit tests for cart parsing and validation
  */
 
+#include "cart.h"
+#include "quickjs.h"
+#include "test_harness.h"
 
 #include <assert.h>
 #include <math.h>
 #include <stdio.h>
 #include <string.h>
 
-#include "cart.h"
-#include "quickjs.h"
-#include "test_harness.h"
-
 /* ------------------------------------------------------------------ */
 /*  Helper: create a minimal QuickJS context for JSON parsing          */
 /* ------------------------------------------------------------------ */
 
 static JSRuntime *s_rt;
-static JSContext * s_ctx;
+static JSContext *s_ctx;
 
 static void prv_setup(void)
 {
@@ -86,14 +85,13 @@ static void test_cart_parse_display(void)
 {
     dtr_cart_t *cart;
     bool        ok;
-    const char *json =
-        "{"
-        "  \"display\": {"
-        "    \"width\": 128,"
-        "    \"height\": 128,"
-        "    \"scale\": 2"
-        "  }"
-        "}";
+    const char *json = "{"
+                       "  \"display\": {"
+                       "    \"width\": 128,"
+                       "    \"height\": 128,"
+                       "    \"scale\": 2"
+                       "  }"
+                       "}";
 
     cart = dtr_cart_create();
     prv_setup();
@@ -115,14 +113,13 @@ static void test_cart_parse_meta(void)
 {
     dtr_cart_t *cart;
     bool        ok;
-    const char *json =
-        "{"
-        "  \"meta\": {"
-        "    \"title\": \"My Game\","
-        "    \"author\": \"Dev\","
-        "    \"version\": \"1.0.0\""
-        "  }"
-        "}";
+    const char *json = "{"
+                       "  \"meta\": {"
+                       "    \"title\": \"My Game\","
+                       "    \"author\": \"Dev\","
+                       "    \"version\": \"1.0.0\""
+                       "  }"
+                       "}";
 
     cart = dtr_cart_create();
     prv_setup();
@@ -144,15 +141,14 @@ static void test_cart_parse_input(void)
 {
     dtr_cart_t *cart;
     bool        ok;
-    const char *json =
-        "{"
-        "  \"input\": {"
-        "    \"default_mappings\": {"
-        "      \"jump\": [\"KEY_Z\", \"PAD_A\"],"
-        "      \"fire\": [\"KEY_X\"]"
-        "    }"
-        "  }"
-        "}";
+    const char *json = "{"
+                       "  \"input\": {"
+                       "    \"default_mappings\": {"
+                       "      \"jump\": [\"KEY_Z\", \"PAD_A\"],"
+                       "      \"fire\": [\"KEY_X\"]"
+                       "    }"
+                       "  }"
+                       "}";
 
     cart = dtr_cart_create();
     prv_setup();
@@ -219,7 +215,7 @@ static void test_cart_validate_clamp_width(void)
 {
     dtr_cart_t *cart;
 
-    cart = dtr_cart_create();
+    cart                = dtr_cart_create();
     cart->display.width = 9999;
     dtr_cart_validate(cart);
     assert(cart->display.width == CONSOLE_FB_WIDTH);
@@ -235,7 +231,7 @@ static void test_cart_validate_clamp_fps(void)
 {
     dtr_cart_t *cart;
 
-    cart = dtr_cart_create();
+    cart             = dtr_cart_create();
     cart->timing.fps = 1;
     dtr_cart_validate(cart);
     assert(cart->timing.fps == 15);
@@ -251,7 +247,7 @@ static void test_cart_validate_clamp_tile(void)
 {
     dtr_cart_t *cart;
 
-    cart = dtr_cart_create();
+    cart                 = dtr_cart_create();
     cart->sprites.tile_w = 2;
     cart->sprites.tile_h = 128;
     dtr_cart_validate(cart);
@@ -312,7 +308,7 @@ static void test_cart_dset_dget_out_of_range(void)
 
 static void test_cart_kv_save_load(void)
 {
-    dtr_cart_t  *cart;
+    dtr_cart_t *cart;
     const char *val;
 
     cart = dtr_cart_create();
@@ -400,7 +396,7 @@ static void test_cart_validate_clamp_height(void)
 {
     dtr_cart_t *cart;
 
-    cart = dtr_cart_create();
+    cart                 = dtr_cart_create();
     cart->display.height = 9999;
     dtr_cart_validate(cart);
     DTR_ASSERT_EQ_INT(cart->display.height, CONSOLE_FB_HEIGHT);
@@ -416,13 +412,12 @@ static void test_cart_parse_timing(void)
 {
     dtr_cart_t *cart;
     bool        ok;
-    const char *json =
-        "{"
-        "  \"timing\": {"
-        "    \"fps\": 30,"
-        "    \"ups\": 2"
-        "  }"
-        "}";
+    const char *json = "{"
+                       "  \"timing\": {"
+                       "    \"fps\": 30,"
+                       "    \"ups\": 2"
+                       "  }"
+                       "}";
 
     cart = dtr_cart_create();
     prv_setup();
@@ -443,13 +438,12 @@ static void test_cart_parse_audio(void)
 {
     dtr_cart_t *cart;
     bool        ok;
-    const char *json =
-        "{"
-        "  \"audio\": {"
-        "    \"channels\": 4,"
-        "    \"frequency\": 22050"
-        "  }"
-        "}";
+    const char *json = "{"
+                       "  \"audio\": {"
+                       "    \"channels\": 4,"
+                       "    \"frequency\": 22050"
+                       "  }"
+                       "}";
 
     cart = dtr_cart_create();
     prv_setup();
@@ -470,7 +464,7 @@ static void test_cart_validate_clamp_scale(void)
 {
     dtr_cart_t *cart;
 
-    cart = dtr_cart_create();
+    cart                = dtr_cart_create();
     cart->display.scale = 0;
     dtr_cart_validate(cart);
     DTR_ASSERT_EQ_INT(cart->display.scale, CONSOLE_DEFAULT_SCALE);
@@ -491,7 +485,7 @@ static void test_cart_validate_clamp_fps_upper(void)
 {
     dtr_cart_t *cart;
 
-    cart = dtr_cart_create();
+    cart             = dtr_cart_create();
     cart->timing.fps = 999;
     dtr_cart_validate(cart);
     DTR_ASSERT_EQ_INT(cart->timing.fps, CONSOLE_FPS);
@@ -508,7 +502,7 @@ static void test_cart_validate_clamp_audio_channels(void)
 {
     dtr_cart_t *cart;
 
-    cart = dtr_cart_create();
+    cart                 = dtr_cart_create();
     cart->audio.channels = -1;
     dtr_cart_validate(cart);
     DTR_ASSERT_EQ_INT(cart->audio.channels, CONSOLE_AUDIO_CHANNELS);
@@ -533,7 +527,7 @@ static void test_cart_validate_clamp_audio_freq(void)
 {
     dtr_cart_t *cart;
 
-    cart = dtr_cart_create();
+    cart                  = dtr_cart_create();
     cart->audio.frequency = 100;
     dtr_cart_validate(cart);
     DTR_ASSERT_EQ_INT(cart->audio.frequency, CONSOLE_AUDIO_FREQ);
@@ -554,7 +548,7 @@ static void test_cart_validate_clamp_audio_buffer(void)
 {
     dtr_cart_t *cart;
 
-    cart = dtr_cart_create();
+    cart                    = dtr_cart_create();
     cart->audio.buffer_size = 10;
     dtr_cart_validate(cart);
     DTR_ASSERT_EQ_INT(cart->audio.buffer_size, CONSOLE_AUDIO_BUFFER);
@@ -601,13 +595,12 @@ static void test_cart_parse_runtime(void)
 {
     dtr_cart_t *cart;
     bool        ok;
-    const char *json =
-        "{"
-        "  \"runtime\": {"
-        "    \"memoryLimitMB\": 32,"
-        "    \"stackLimitKB\": 256"
-        "  }"
-        "}";
+    const char *json = "{"
+                       "  \"runtime\": {"
+                       "    \"memoryLimitMB\": 32,"
+                       "    \"stackLimitKB\": 256"
+                       "  }"
+                       "}";
 
     cart = dtr_cart_create();
     prv_setup();
@@ -628,11 +621,10 @@ static void test_cart_parse_sfx_music(void)
 {
     dtr_cart_t *cart;
     bool        ok;
-    const char *json =
-        "{"
-        "  \"sfx\": [\"jump.wav\", \"hit.wav\"],"
-        "  \"music\": [\"theme.ogg\"]"
-        "}";
+    const char *json = "{"
+                       "  \"sfx\": [\"jump.wav\", \"hit.wav\"],"
+                       "  \"music\": [\"theme.ogg\"]"
+                       "}";
 
     cart = dtr_cart_create();
     prv_setup();
@@ -656,11 +648,10 @@ static void test_cart_parse_code_maps(void)
 {
     dtr_cart_t *cart;
     bool        ok;
-    const char *json =
-        "{"
-        "  \"code\": \"main.js\","
-        "  \"maps\": [\"level1.json\", \"level2.json\"]"
-        "}";
+    const char *json = "{"
+                       "  \"code\": \"main.js\","
+                       "  \"maps\": [\"level1.json\", \"level2.json\"]"
+                       "}";
 
     cart = dtr_cart_create();
     prv_setup();
@@ -683,13 +674,12 @@ static void test_cart_parse_sprites(void)
 {
     dtr_cart_t *cart;
     bool        ok;
-    const char *json =
-        "{"
-        "  \"sprites\": {"
-        "    \"tileW\": 16,"
-        "    \"tileH\": 16"
-        "  }"
-        "}";
+    const char *json = "{"
+                       "  \"sprites\": {"
+                       "    \"tileW\": 16,"
+                       "    \"tileH\": 16"
+                       "  }"
+                       "}";
 
     cart = dtr_cart_create();
     prv_setup();
@@ -720,14 +710,13 @@ static void test_cart_parse_huge_display(void)
 {
     dtr_cart_t *cart;
     bool        ok;
-    const char *json =
-        "{"
-        "  \"display\": {"
-        "    \"width\": 99999,"
-        "    \"height\": 99999,"
-        "    \"scale\": 100"
-        "  }"
-        "}";
+    const char *json = "{"
+                       "  \"display\": {"
+                       "    \"width\": 99999,"
+                       "    \"height\": 99999,"
+                       "    \"scale\": 100"
+                       "  }"
+                       "}";
 
     cart = dtr_cart_create();
     prv_setup();
@@ -751,12 +740,11 @@ static void test_cart_parse_negative_values(void)
 {
     dtr_cart_t *cart;
     bool        ok;
-    const char *json =
-        "{"
-        "  \"display\": { \"width\": -1, \"height\": -100 },"
-        "  \"timing\": { \"fps\": -5 },"
-        "  \"audio\": { \"channels\": -10, \"frequency\": -1 }"
-        "}";
+    const char *json = "{"
+                       "  \"display\": { \"width\": -1, \"height\": -100 },"
+                       "  \"timing\": { \"fps\": -5 },"
+                       "  \"audio\": { \"channels\": -10, \"frequency\": -1 }"
+                       "}";
 
     cart = dtr_cart_create();
     prv_setup();
@@ -784,13 +772,12 @@ static void test_cart_parse_huge_runtime(void)
     bool        ok;
     uint32_t    max_mem;
     uint32_t    max_stack;
-    const char *json =
-        "{"
-        "  \"runtime\": {"
-        "    \"memoryLimitMB\": 99999,"
-        "    \"stackLimitKB\": 99999"
-        "  }"
-        "}";
+    const char *json = "{"
+                       "  \"runtime\": {"
+                       "    \"memoryLimitMB\": 99999,"
+                       "    \"stackLimitKB\": 99999"
+                       "  }"
+                       "}";
 
     cart = dtr_cart_create();
     prv_setup();
@@ -814,14 +801,13 @@ static void test_cart_parse_empty_strings(void)
 {
     dtr_cart_t *cart;
     bool        ok;
-    const char *json =
-        "{"
-        "  \"meta\": { \"title\": \"\", \"author\": \"\" },"
-        "  \"code\": \"\","
-        "  \"sfx\": [],"
-        "  \"music\": [],"
-        "  \"maps\": []"
-        "}";
+    const char *json = "{"
+                       "  \"meta\": { \"title\": \"\", \"author\": \"\" },"
+                       "  \"code\": \"\","
+                       "  \"sfx\": [],"
+                       "  \"music\": [],"
+                       "  \"maps\": []"
+                       "}";
 
     cart = dtr_cart_create();
     prv_setup();
@@ -843,12 +829,11 @@ static void test_cart_parse_unknown_keys(void)
 {
     dtr_cart_t *cart;
     bool        ok;
-    const char *json =
-        "{"
-        "  \"unknown_key\": 42,"
-        "  \"another\": { \"nested\": true },"
-        "  \"display\": { \"width\": 256 }"
-        "}";
+    const char *json = "{"
+                       "  \"unknown_key\": 42,"
+                       "  \"another\": { \"nested\": true },"
+                       "  \"display\": { \"width\": 256 }"
+                       "}";
 
     cart = dtr_cart_create();
     prv_setup();

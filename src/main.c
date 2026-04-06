@@ -5,8 +5,8 @@
 
 #define SDL_MAIN_USE_CALLBACKS 1
 
-#include "console.h"
 #include "audio.h"
+#include "console.h"
 
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_main.h>
@@ -22,9 +22,9 @@
 
 typedef struct app_state {
     dtr_console_t *con;
-    const char *   cart_path;
+    const char    *cart_path;
 #ifdef __EMSCRIPTEN__
-    bool           idbfs_ready; /* true once IDBFS initial sync completes */
+    bool idbfs_ready; /* true once IDBFS initial sync completes */
 #endif
 } app_state_t;
 
@@ -65,23 +65,21 @@ EMSCRIPTEN_KEEPALIVE void dtr_wasm_reload_assets(void)
 
 typedef struct cli_opts {
     const char *cart_path;
-    int32_t     scale;      /* 0 = use cart default */
+    int32_t     scale; /* 0 = use cart default */
     bool        fullscreen;
     bool        mute;
 } cli_opts_t;
 
 static void prv_print_usage(void)
 {
-    SDL_Log(
-        "Usage: dithr [options] [cart.json]\n"
-        "\n"
-        "Options:\n"
-        "  --help        Show this help and exit\n"
-        "  --version     Show version and exit\n"
-        "  --fullscreen  Start in fullscreen mode\n"
-        "  --scale N     Window scale factor (1-10)\n"
-        "  --mute        Start with audio muted\n"
-    );
+    SDL_Log("Usage: dithr [options] [cart.json]\n"
+            "\n"
+            "Options:\n"
+            "  --help        Show this help and exit\n"
+            "  --version     Show version and exit\n"
+            "  --fullscreen  Start in fullscreen mode\n"
+            "  --scale N     Window scale factor (1-10)\n"
+            "  --mute        Start with audio muted\n");
 }
 
 /**
@@ -112,8 +110,8 @@ static bool prv_parse_cli(int argc, char **argv, cli_opts_t *opts)
             opts->mute = true;
             continue;
         }
-        if ((SDL_strcmp(argv[i], "--scale") == 0 || SDL_strcmp(argv[i], "-s") == 0)
-            && i + 1 < argc) {
+        if ((SDL_strcmp(argv[i], "--scale") == 0 || SDL_strcmp(argv[i], "-s") == 0) &&
+            i + 1 < argc) {
             int val = SDL_atoi(argv[++i]);
             if (val >= 1 && val <= 10) {
                 opts->scale = val;
@@ -145,9 +143,10 @@ static bool prv_parse_cli(int argc, char **argv, cli_opts_t *opts)
  * browser renders as console.warn/error.  This callback maps SDL log
  * priorities to console.log, console.warn, and console.error instead.
  */
-static void prv_emscripten_log_output(void *userdata, int category,
+static void prv_emscripten_log_output(void           *userdata,
+                                      int             category,
                                       SDL_LogPriority priority,
-                                      const char *message)
+                                      const char     *message)
 {
     (void)userdata;
     (void)category;
@@ -172,7 +171,7 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char **argv)
 {
     app_state_t *app;
 #ifndef DTR_WASM_CART_PATH
-    cli_opts_t   opts;
+    cli_opts_t opts;
 #endif
 
     SDL_SetLogPriorities(SDL_LOG_PRIORITY_INFO);
@@ -205,19 +204,17 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char **argv)
      * so the virtual FS is populated before persist_load runs. */
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wvariadic-macro-arguments-omitted"
-    EM_ASM(
-        FS.mkdir('/libsdl');
-        FS.mount(IDBFS, {}, '/libsdl');
-        FS.syncfs(true, function(err) {
-            if (err) console.warn('IDBFS initial sync failed:', err);
+    EM_ASM(FS.mkdir('/libsdl'); FS.mount(IDBFS, {}, '/libsdl'); FS.syncfs(
+        true, function(err) {
+            if (err)
+                console.warn('IDBFS initial sync failed:', err);
             Module._dtr_idbfs_ready();
-        });
-    );
+        }););
 #pragma clang diagnostic pop
 
     app->idbfs_ready = false;
-    s_wasm_app = app;
-    *appstate = app;
+    s_wasm_app       = app;
+    *appstate        = app;
     return SDL_APP_CONTINUE;
 #endif
 

@@ -3,8 +3,8 @@
  * \brief           JS camera helpers — set, get, reset, follow
  */
 
-#include "api_common.h"
 #include "../graphics.h"
+#include "api_common.h"
 
 /* ------------------------------------------------------------------ */
 /*  cam.set(x, y) — set the camera position                           */
@@ -17,8 +17,8 @@ static JSValue js_cam_set(JSContext *ctx, JSValueConst this_val, int argc, JSVal
     (void)this_val;
     con = dtr_api_get_console(ctx);
     dtr_gfx_camera(con->graphics,
-                    dtr_api_opt_int(ctx, argc, argv, 0, 0),
-                    dtr_api_opt_int(ctx, argc, argv, 1, 0));
+                   dtr_api_opt_int(ctx, argc, argv, 0, 0),
+                   dtr_api_opt_int(ctx, argc, argv, 1, 0));
     return JS_UNDEFINED;
 }
 

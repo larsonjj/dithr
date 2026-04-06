@@ -114,7 +114,7 @@ static JSValue js_map_set(JSContext *ctx, JSValueConst this_val, int argc, JSVal
 
 static JSValue js_map_flag(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
-    dtr_console_t *  con;
+    dtr_console_t   *con;
     dtr_map_level_t *level;
     int32_t          cx;
     int32_t          cy;
@@ -159,7 +159,7 @@ static JSValue js_map_flag(JSContext *ctx, JSValueConst this_val, int argc, JSVa
 
 static JSValue js_map_draw(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
-    dtr_console_t *  con;
+    dtr_console_t   *con;
     dtr_map_level_t *level;
     int32_t          sx;
     int32_t          sy;
@@ -272,8 +272,7 @@ static JSValue js_map_layers(JSContext *ctx, JSValueConst this_val, int argc, JS
 
     arr = JS_NewArray(ctx);
     for (int32_t idx = 0; idx < level->layer_count; ++idx) {
-        JS_SetPropertyUint32(ctx, arr, (uint32_t)idx,
-                             JS_NewString(ctx, level->layers[idx].name));
+        JS_SetPropertyUint32(ctx, arr, (uint32_t)idx, JS_NewString(ctx, level->layers[idx].name));
     }
     return arr;
 }
@@ -295,8 +294,8 @@ static JSValue js_map_levels(JSContext *ctx, JSValueConst this_val, int argc, JS
 
     for (int32_t idx = 0; idx < con->cart->map_count; ++idx) {
         if (con->cart->maps[idx] != NULL) {
-            JS_SetPropertyUint32(ctx, arr, (uint32_t)idx,
-                                 JS_NewString(ctx, con->cart->maps[idx]->name));
+            JS_SetPropertyUint32(
+                ctx, arr, (uint32_t)idx, JS_NewString(ctx, con->cart->maps[idx]->name));
         }
     }
     return arr;
@@ -309,7 +308,7 @@ static JSValue js_map_levels(JSContext *ctx, JSValueConst this_val, int argc, JS
 static JSValue
 js_map_current_level(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
-    dtr_console_t *  con;
+    dtr_console_t   *con;
     dtr_map_level_t *level;
 
     (void)this_val;
@@ -333,7 +332,7 @@ js_map_current_level(JSContext *ctx, JSValueConst this_val, int argc, JSValueCon
 static JSValue js_map_load(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
     dtr_console_t *con;
-    const char *   name;
+    const char    *name;
 
     (void)this_val;
     if (argc < 1) {
@@ -347,8 +346,7 @@ static JSValue js_map_load(JSContext *ctx, JSValueConst this_val, int argc, JSVa
     }
 
     for (int32_t idx = 0; idx < con->cart->map_count; ++idx) {
-        if (con->cart->maps[idx] != NULL &&
-            SDL_strcmp(con->cart->maps[idx]->name, name) == 0) {
+        if (con->cart->maps[idx] != NULL && SDL_strcmp(con->cart->maps[idx]->name, name) == 0) {
             con->cart->current_map = idx;
             JS_FreeCString(ctx, name);
             return JS_TRUE;
@@ -387,7 +385,7 @@ static JSValue prv_obj_to_js(JSContext *ctx, dtr_map_object_t *obj)
 static JSValue js_map_objects(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
     dtr_map_level_t *level;
-    const char *     filter_name;
+    const char      *filter_name;
     JSValue          arr;
     uint32_t         out_idx;
 
@@ -435,7 +433,7 @@ static JSValue js_map_objects(JSContext *ctx, JSValueConst this_val, int argc, J
 static JSValue js_map_object(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
     dtr_map_level_t *level;
-    const char *     name;
+    const char      *name;
 
     (void)this_val;
     if (argc < 1) {
@@ -506,8 +504,8 @@ js_map_objects_in(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst 
 
             obj = &layer->objects[oi];
             /* AABB overlap test */
-            if (obj->x + obj->w > rx && obj->x < rx + rw &&
-                obj->y + obj->h > ry && obj->y < ry + rh) {
+            if (obj->x + obj->w > rx && obj->x < rx + rw && obj->y + obj->h > ry &&
+                obj->y < ry + rh) {
                 JS_SetPropertyUint32(ctx, arr, out_idx, prv_obj_to_js(ctx, obj));
                 ++out_idx;
             }
@@ -525,7 +523,7 @@ static JSValue
 js_map_objects_with(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
     dtr_map_level_t *level;
-    const char *     prop;
+    const char      *prop;
     JSValue          arr;
     uint32_t         out_idx;
 
@@ -584,8 +582,10 @@ js_map_objects_with(JSContext *ctx, JSValueConst this_val, int argc, JSValueCons
                         } else {
                             match = false;
                         }
-                        if (want != NULL) JS_FreeCString(ctx, want);
-                        if (got != NULL) JS_FreeCString(ctx, got);
+                        if (want != NULL)
+                            JS_FreeCString(ctx, want);
+                        if (got != NULL)
+                            JS_FreeCString(ctx, got);
                     }
                     if (match) {
                         JS_SetPropertyUint32(ctx, arr, out_idx, prv_obj_to_js(ctx, obj));

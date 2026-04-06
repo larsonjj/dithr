@@ -7,6 +7,13 @@
 //   Bottom strip  : layer selector, info, grid toggle
 //
 
+import { st } from './state.js';
+import {
+    FB_W, FB_H, CW, CH, TAB_H, TAB_CODE, TAB_SPRITES, TAB_MAP,
+    FG, GUTBG, FOOTBG, FOOTFG, GRIDC
+} from './config.js';
+import { clamp } from './helpers.js';
+
 // ─── Constants ───────────────────────────────────────────────────────────────
 
 const MAP_TILE_PX = 8; // default tile size in pixels
@@ -22,21 +29,21 @@ const MAP_PICK_COLS = Math.floor(MAP_PICKER_W / MAP_PICK_CELL);
 
 // ─── Update ──────────────────────────────────────────────────────────────────
 
-function updateMapEditor() {
+export function updateMapEditor() {
     let ctrl = key.btn(key.LCTRL) || key.btn(key.RCTRL);
 
     // Tab switching
     if (ctrl) {
         if (key.btnp(key.NUM1)) {
-            activeTab = TAB_CODE;
+            st.activeTab = TAB_CODE;
             return;
         }
         if (key.btnp(key.NUM2)) {
-            activeTab = TAB_SPRITES;
+            st.activeTab = TAB_SPRITES;
             return;
         }
         if (key.btnp(key.NUM3)) {
-            activeTab = TAB_MAP;
+            st.activeTab = TAB_MAP;
             return;
         }
     }
@@ -61,12 +68,12 @@ function updateMapEditor() {
 
     // ── Map viewport panning (arrow keys / WASD) ──
     let speed = shift ? 4 : 1;
-    if (key.btn(key.LEFT) || key.btn(key.A)) mapCamX -= speed;
-    if (key.btn(key.RIGHT) || key.btn(key.D)) mapCamX += speed;
-    if (key.btn(key.UP) || key.btn(key.W)) mapCamY -= speed;
-    if (key.btn(key.DOWN) || key.btn(key.S)) mapCamY += speed;
-    mapCamX = clamp(mapCamX, 0, Math.max(0, mw - Math.floor(MAP_VP_W / tileW)));
-    mapCamY = clamp(mapCamY, 0, Math.max(0, mh - Math.floor(MAP_VP_H / tileH)));
+    if (key.btn(key.LEFT) || key.btn(key.A)) st.mapCamX -= speed;
+    if (key.btn(key.RIGHT) || key.btn(key.D)) st.mapCamX += speed;
+    if (key.btn(key.UP) || key.btn(key.W)) st.mapCamY -= speed;
+    if (key.btn(key.DOWN) || key.btn(key.S)) st.mapCamY += speed;
+    st.mapCamX = clamp(st.mapCamX, 0, Math.max(0, mw - Math.floor(MAP_VP_W / tileW)));
+    st.mapCamY = clamp(st.mapCamY, 0, Math.max(0, mh - Math.floor(MAP_VP_H / tileH)));
 
     // ── Paint tile on map viewport ──
     if (
@@ -76,14 +83,14 @@ function updateMapEditor() {
         my >= MAP_VP_Y &&
         my < MAP_VP_Y + MAP_VP_H
     ) {
-        let tx = Math.floor((mx - MAP_VP_X) / tileW) + mapCamX;
-        let ty = Math.floor((my - MAP_VP_Y) / tileH) + mapCamY;
+        let tx = Math.floor((mx - MAP_VP_X) / tileW) + st.mapCamX;
+        let ty = Math.floor((my - MAP_VP_Y) / tileH) + st.mapCamY;
         if (tx >= 0 && tx < mw && ty >= 0 && ty < mh) {
-            let newTile = mapTool === 0 ? mapTile : 0;
-            let prev = map.get(tx, ty, mapLayer);
+            let newTile = st.mapTool === 0 ? st.mapTile : 0;
+            let prev = map.get(tx, ty, st.mapLayer);
             if (prev !== newTile) {
-                mapUndoPending.push({ x: tx, y: ty, layer: mapLayer, prev: prev });
-                map.set(tx, ty, mapLayer, newTile);
+                st.mapUndoPending.push({ x: tx, y: ty, layer: st.mapLayer, prev: prev });
+                map.set(tx, ty, st.mapLayer, newTile);
             }
         }
     }
@@ -96,11 +103,11 @@ function updateMapEditor() {
         my >= MAP_VP_Y &&
         my < MAP_VP_Y + MAP_VP_H
     ) {
-        let tx = Math.floor((mx - MAP_VP_X) / tileW) + mapCamX;
-        let ty = Math.floor((my - MAP_VP_Y) / tileH) + mapCamY;
+        let tx = Math.floor((mx - MAP_VP_X) / tileW) + st.mapCamX;
+        let ty = Math.floor((my - MAP_VP_Y) / tileH) + st.mapCamY;
         if (tx >= 0 && tx < mw && ty >= 0 && ty < mh) {
-            mapTile = map.get(tx, ty, mapLayer);
-            mapTool = 0;
+            st.mapTile = map.get(tx, ty, st.mapLayer);
+            st.mapTool = 0;
         }
     }
 
@@ -114,41 +121,41 @@ function updateMapEditor() {
         let pc = Math.floor((mx - MAP_PICK_X) / MAP_PICK_CELL);
         let pr = Math.floor((my - MAP_PICK_Y) / MAP_PICK_CELL);
         let idx = pr * MAP_PICK_COLS + pc;
-        if (idx >= 0 && idx < sheetCount) mapTile = idx;
+        if (idx >= 0 && idx < sheetCount) st.mapTile = idx;
     }
 
     // ── Layer switching (keyboard) ──
     let layers = map.layers();
-    if (mapLayer >= layers) mapLayer = Math.max(0, layers - 1);
-    if (key.btnp(key.LEFTBRACKET) && mapLayer > 0) mapLayer--;
-    if (key.btnp(key.RIGHTBRACKET) && mapLayer < layers - 1) mapLayer++;
+    if (st.mapLayer >= layers) st.mapLayer = Math.max(0, layers - 1);
+    if (key.btnp(key.LEFTBRACKET) && st.mapLayer > 0) st.mapLayer--;
+    if (key.btnp(key.RIGHTBRACKET) && st.mapLayer < layers - 1) st.mapLayer++;
 
     // Commit stroke on mouse release
-    if (!mBtn && mapUndoPending.length > 0) {
-        mapUndoStack.push(mapUndoPending);
-        mapUndoPending = [];
-        if (mapUndoStack.length > MAP_MAX_UNDO) mapUndoStack.shift();
+    if (!mBtn && st.mapUndoPending.length > 0) {
+        st.mapUndoStack.push(st.mapUndoPending);
+        st.mapUndoPending = [];
+        if (st.mapUndoStack.length > st.MAP_MAX_UNDO) st.mapUndoStack.shift();
     }
 
     // Undo (Ctrl+Z)
-    if (ctrl && key.btnp(key.Z) && mapUndoStack.length > 0) {
-        let stroke = mapUndoStack.pop();
+    if (ctrl && key.btnp(key.Z) && st.mapUndoStack.length > 0) {
+        let stroke = st.mapUndoStack.pop();
         for (let i = stroke.length - 1; i >= 0; i--) {
             map.set(stroke[i].x, stroke[i].y, stroke[i].layer, stroke[i].prev);
         }
     }
 
     // ── Grid toggle ──
-    if (key.btnp(key.G) && !ctrl) mapGridOn = !mapGridOn;
+    if (key.btnp(key.G) && !ctrl) st.mapGridOn = !st.mapGridOn;
 
     // ── Tool switch ──
-    if (key.btnp(key.E)) mapTool = 1;
-    if (key.btnp(key.B)) mapTool = 0;
+    if (key.btnp(key.E)) st.mapTool = 1;
+    if (key.btnp(key.B)) st.mapTool = 0;
 }
 
 // ─── Draw ────────────────────────────────────────────────────────────────────
 
-function drawMapEditor() {
+export function drawMapEditor() {
     let mw = map.width();
     let mh = map.height();
     if (mw === 0 || mh === 0) {
@@ -168,18 +175,18 @@ function drawMapEditor() {
     gfx.clip(MAP_VP_X, MAP_VP_Y, MAP_VP_W, MAP_VP_H);
 
     // Draw the map using map.draw — it draws all visible tiles
-    let drawX = MAP_VP_X - ((mapCamX * tileW) % tileW);
-    let drawY = MAP_VP_Y - ((mapCamY * tileH) % tileH);
+    let drawX = MAP_VP_X - ((st.mapCamX * tileW) % tileW);
+    let drawY = MAP_VP_Y - ((st.mapCamY * tileH) % tileH);
     let visCols = Math.ceil(MAP_VP_W / tileW) + 1;
     let visRows = Math.ceil(MAP_VP_H / tileH) + 1;
 
     // Draw each visible tile manually so we control the layer
     for (let r = 0; r < visRows; r++) {
         for (let c = 0; c < visCols; c++) {
-            let tx = mapCamX + c;
-            let ty = mapCamY + r;
+            let tx = st.mapCamX + c;
+            let ty = st.mapCamY + r;
             if (tx >= mw || ty >= mh) continue;
-            let tile = map.get(tx, ty, mapLayer);
+            let tile = map.get(tx, ty, st.mapLayer);
             if (tile > 0 && sheetCols > 0) {
                 let srcX = (tile % sheetCols) * tileW;
                 let srcY = Math.floor(tile / sheetCols) * tileH;
@@ -191,7 +198,7 @@ function drawMapEditor() {
     }
 
     // Grid overlay
-    if (mapGridOn) {
+    if (st.mapGridOn) {
         for (let c = 0; c <= visCols; c++) {
             let x = MAP_VP_X + c * tileW;
             gfx.line(x, MAP_VP_Y, x, MAP_VP_Y + MAP_VP_H - 1, GRIDC);
@@ -219,7 +226,7 @@ function drawMapEditor() {
                 let srcX = (idx % sheetCols) * tileW;
                 let srcY = Math.floor(idx / sheetCols) * tileH;
                 gfx.sspr(srcX, srcY, tileW, tileH, dx, dy, MAP_PICK_CELL, MAP_PICK_CELL);
-                if (idx === mapTile) {
+                if (idx === st.mapTile) {
                     gfx.rect(dx, dy, dx + MAP_PICK_CELL - 1, dy + MAP_PICK_CELL - 1, FG);
                 }
             }
@@ -232,17 +239,17 @@ function drawMapEditor() {
     let layers = map.layers();
     let info =
         "L:" +
-        mapLayer +
+        st.mapLayer +
         "/" +
         (layers - 1) +
         " T:" +
-        mapTile +
+        st.mapTile +
         " G:" +
-        (mapGridOn ? "on" : "off") +
+        (st.mapGridOn ? "on" : "off") +
         " (" +
-        mapCamX +
+        st.mapCamX +
         "," +
-        mapCamY +
+        st.mapCamY +
         ")";
     gfx.print(info, 1 * CW, footY, FOOTFG);
     gfx.print("[/]:layer B:pen E:era G:grid", FB_W - 30 * CW, footY, FOOTFG);

@@ -3,8 +3,8 @@
  * \brief           Unit tests for tween engine — easing + managed pool
  */
 
-#include "tween.h"
 #include "test_harness.h"
+#include "tween.h"
 
 #define EPS 0.001
 
@@ -45,7 +45,7 @@ static void test_ease_out_quad(void)
     double val;
 
     val = dtr_ease_apply(DTR_EASE_OUT_QUAD, 0.5);
-    DTR_ASSERT(val > 0.5);    /* Out-ease should be ahead at midpoint */
+    DTR_ASSERT(val > 0.5); /* Out-ease should be ahead at midpoint */
     DTR_PASS();
 }
 
@@ -54,7 +54,7 @@ static void test_ease_in_quad(void)
     double val;
 
     val = dtr_ease_apply(DTR_EASE_IN_QUAD, 0.5);
-    DTR_ASSERT(val < 0.5);    /* In-ease should be behind at midpoint */
+    DTR_ASSERT(val < 0.5); /* In-ease should be behind at midpoint */
     DTR_PASS();
 }
 
@@ -121,7 +121,7 @@ static void test_tween_delay(void)
     DTR_ASSERT_NEAR(val, 0.0, EPS);
 
     /* Tick past delay — leftover carries over */
-    dtr_tween_tick(&twn, 0.4);    /* 0.2 into delay left, 0.2 into tween */
+    dtr_tween_tick(&twn, 0.4); /* 0.2 into delay left, 0.2 into tween */
     val = dtr_tween_val(&twn, idx);
     DTR_ASSERT(val > 0.0);
     DTR_ASSERT(!dtr_tween_done(&twn, idx));

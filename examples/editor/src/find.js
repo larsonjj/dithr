@@ -1,28 +1,33 @@
 // ─── Find & Replace ──────────────────────────────────────────────────────────
 
-function updateFind() {
+import { st } from './state.js';
+import { FB_W, CH, GUTTER, CW, ROWS, FOOT, FG, GUTFG, HEADBG } from './config.js';
+import { clamp, ensureVisible, resetBlink, status } from './helpers.js';
+import { selOrdered, pushUndo } from './buffer.js';
+
+export function updateFind() {
     let ctrl = key.btn(key.LCTRL) || key.btn(key.RCTRL);
     let shift = key.btn(key.LSHIFT) || key.btn(key.RSHIFT);
 
     if (key.btnp(key.ESCAPE)) {
-        if (findText) lastFindText = findText;
-        findMode = false;
+        if (st.findText) st.lastFindText = st.findText;
+        st.findMode = false;
         return;
     }
 
     if (key.btnr(key.BACKSPACE)) {
-        if (findField === 0 && findText.length) findText = findText.slice(0, -1);
-        if (findField === 1 && replaceText.length) replaceText = replaceText.slice(0, -1);
+        if (st.findField === 0 && st.findText.length) st.findText = st.findText.slice(0, -1);
+        if (st.findField === 1 && st.replaceText.length) st.replaceText = st.replaceText.slice(0, -1);
         return;
     }
 
-    if (key.btnp(key.TAB) && findReplace) {
-        findField = 1 - findField;
+    if (key.btnp(key.TAB) && st.findReplace) {
+        st.findField = 1 - st.findField;
         return;
     }
 
     if (key.btnp(key.ENTER)) {
-        if (findField === 0) {
+        if (st.findField === 0) {
             findNext(shift ? -1 : 1);
         } else {
             if (ctrl) {
@@ -36,130 +41,130 @@ function updateFind() {
     }
 }
 
-function findNext(dir) {
-    if (!findText) return;
-    let total = buf.length;
-    let startCol = cx + (dir > 0 ? 1 : 0);
+export function findNext(dir) {
+    if (!st.findText) return;
+    let total = st.buf.length;
+    let startCol = st.cx + (dir > 0 ? 1 : 0);
 
     for (let i = 0; i < total; i++) {
-        let li = (cy + i * dir + total) % total;
-        let line = buf[li];
+        let li = (st.cy + i * dir + total) % total;
+        let line = st.buf[li];
         let col;
 
         if (i === 0) {
             col =
                 dir > 0
-                    ? line.indexOf(findText, startCol)
-                    : line.lastIndexOf(findText, Math.max(0, startCol - 1));
+                    ? line.indexOf(st.findText, startCol)
+                    : line.lastIndexOf(st.findText, Math.max(0, startCol - 1));
         } else {
-            col = dir > 0 ? line.indexOf(findText) : line.lastIndexOf(findText);
+            col = dir > 0 ? line.indexOf(st.findText) : line.lastIndexOf(st.findText);
         }
 
         if (col >= 0) {
-            cy = li;
-            cx = col;
-            anchor = { x: col, y: li };
-            cx = col + findText.length;
+            st.cy = li;
+            st.cx = col;
+            st.anchor = { x: col, y: li };
+            st.cx = col + st.findText.length;
             ensureVisible();
             resetBlink();
             return;
         }
     }
-    status("Not found: " + findText);
+    status("Not found: " + st.findText);
 }
 
-function replaceCurrent() {
-    if (!findText) return;
+export function replaceCurrent() {
+    if (!st.findText) return;
     let s = selOrdered();
     if (s && s.a.y === s.b.y) {
-        let sel = buf[s.a.y].slice(s.a.x, s.b.x);
-        if (sel === findText) {
+        let sel = st.buf[s.a.y].slice(s.a.x, s.b.x);
+        if (sel === st.findText) {
             pushUndo();
-            buf[s.a.y] = buf[s.a.y].slice(0, s.a.x) + replaceText + buf[s.a.y].slice(s.b.x);
-            cx = s.a.x + replaceText.length;
-            cy = s.a.y;
-            anchor = null;
-            dirty = true;
+            st.buf[s.a.y] = st.buf[s.a.y].slice(0, s.a.x) + st.replaceText + st.buf[s.a.y].slice(s.b.x);
+            st.cx = s.a.x + st.replaceText.length;
+            st.cy = s.a.y;
+            st.anchor = null;
+            st.dirty = true;
         }
     }
 }
 
-function replaceAll() {
-    if (!findText) return;
+export function replaceAll() {
+    if (!st.findText) return;
     pushUndo();
     let count = 0;
-    for (let i = 0; i < buf.length; i++) {
-        let parts = buf[i].split(findText);
+    for (let i = 0; i < st.buf.length; i++) {
+        let parts = st.buf[i].split(st.findText);
         if (parts.length > 1) {
             count += parts.length - 1;
-            buf[i] = parts.join(replaceText);
+            st.buf[i] = parts.join(st.replaceText);
         }
     }
-    anchor = null;
+    st.anchor = null;
     if (count) {
-        dirty = true;
+        st.dirty = true;
         status("Replaced " + count + " occurrences");
     } else {
         status("No occurrences found");
     }
 }
 
-function drawFind() {
+export function drawFind() {
     let footY = (ROWS - FOOT) * CH;
     let gutterPx = GUTTER * CW;
 
     // Find field on footer row
     gfx.rectfill(0, footY, FB_W - 1, footY + CH - 1, HEADBG);
     let fl = "Find: ";
-    gfx.print(fl, gutterPx, footY, findField === 0 ? FG : GUTFG);
-    gfx.print(findText + (findField === 0 ? "_" : ""), gutterPx + fl.length * CW, footY, FG);
+    gfx.print(fl, gutterPx, footY, st.findField === 0 ? FG : GUTFG);
+    gfx.print(st.findText + (st.findField === 0 ? "_" : ""), gutterPx + fl.length * CW, footY, FG);
 
     // Hint on right
-    let hint = findReplace ? "Tab:switch  Ctrl+Ent:all" : "Enter:next  Shift+Ent:prev";
+    let hint = st.findReplace ? "Tab:switch  Ctrl+Ent:all" : "Enter:next  Shift+Ent:prev";
     let hw = gfx.textWidth(hint);
     gfx.print(hint, FB_W - hw - CW, footY, GUTFG);
 
     // Replace field one row above footer
-    if (findReplace) {
+    if (st.findReplace) {
         let replY = footY - CH;
         gfx.rectfill(0, replY, FB_W - 1, replY + CH - 1, HEADBG);
         let rl = "Repl: ";
-        gfx.print(rl, gutterPx, replY, findField === 1 ? FG : GUTFG);
-        gfx.print(replaceText + (findField === 1 ? "_" : ""), gutterPx + rl.length * CW, replY, FG);
+        gfx.print(rl, gutterPx, replY, st.findField === 1 ? FG : GUTFG);
+        gfx.print(st.replaceText + (st.findField === 1 ? "_" : ""), gutterPx + rl.length * CW, replY, FG);
     }
 }
 
 // ─── Go to line ──────────────────────────────────────────────────────────────
 
-function updateGoto() {
+export function updateGoto() {
     if (key.btnp(key.ESCAPE)) {
-        gotoMode = false;
+        st.gotoMode = false;
         return;
     }
     if (key.btnr(key.BACKSPACE)) {
-        if (gotoText.length) gotoText = gotoText.slice(0, -1);
-        else gotoMode = false;
+        if (st.gotoText.length) st.gotoText = st.gotoText.slice(0, -1);
+        else st.gotoMode = false;
         return;
     }
     if (key.btnp(key.ENTER)) {
-        let line = parseInt(gotoText);
+        let line = parseInt(st.gotoText);
         if (line > 0) {
-            cy = clamp(line - 1, 0, buf.length - 1);
-            cx = 0;
-            anchor = null;
+            st.cy = clamp(line - 1, 0, st.buf.length - 1);
+            st.cx = 0;
+            st.anchor = null;
             ensureVisible();
             resetBlink();
         }
-        gotoMode = false;
+        st.gotoMode = false;
         return;
     }
 }
 
-function drawGoto() {
+export function drawGoto() {
     let footY = (ROWS - FOOT) * CH;
     let gutterPx = GUTTER * CW;
     gfx.rectfill(0, footY, FB_W - 1, footY + CH - 1, HEADBG);
     let gl = "Go to line: ";
     gfx.print(gl, gutterPx, footY, FG);
-    gfx.print(gotoText + "_", gutterPx + gl.length * CW, footY, FG);
+    gfx.print(st.gotoText + "_", gutterPx + gl.length * CW, footY, FG);
 }

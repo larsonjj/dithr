@@ -3,10 +3,10 @@
  * \brief           JS sys namespace — system info, timing, debug
  */
 
-#include "api_common.h"
+#include "../audio.h"
 #include "../cart.h"
 #include "../mouse.h"
-#include "../audio.h"
+#include "api_common.h"
 
 /* ------------------------------------------------------------------ */
 /*  Timing                                                             */
@@ -216,9 +216,9 @@ static JSValue js_sys_restart(JSContext *ctx, JSValueConst this_val, int argc, J
     (void)this_val;
     (void)argc;
     (void)argv;
-    con             = dtr_api_get_console(ctx);
-    con->restart    = true;
-    con->running    = false;
+    con          = dtr_api_get_console(ctx);
+    con->restart = true;
+    con->running = false;
     return JS_UNDEFINED;
 }
 
@@ -398,12 +398,10 @@ static JSValue js_sys_stat(JSContext *ctx, JSValueConst this_val, int argc, JSVa
             return JS_NewFloat64(ctx, 0.0);
         case 1:
             /* CPU usage (frame time / target) */
-            return JS_NewFloat64(ctx,
-                                 (double)(con->delta * (float)con->target_fps));
+            return JS_NewFloat64(ctx, (double)(con->delta * (float)con->target_fps));
         case 7:
             /* FPS */
-            return JS_NewFloat64(ctx,
-                                 1.0 / (con->delta > 0.0f ? con->delta : 0.016f));
+            return JS_NewFloat64(ctx, 1.0 / (con->delta > 0.0f ? con->delta : 0.016f));
         case 30:
             /* key pressed */
             return JS_FALSE;
@@ -420,8 +418,8 @@ static JSValue js_sys_stat(JSContext *ctx, JSValueConst this_val, int argc, JSVa
             /* mouse buttons bitmask */
             return JS_NewInt32(ctx,
                                (con->mouse->btn_current[0] ? 1 : 0) |
-                               (con->mouse->btn_current[1] ? 2 : 0) |
-                               (con->mouse->btn_current[2] ? 4 : 0));
+                                   (con->mouse->btn_current[1] ? 2 : 0) |
+                                   (con->mouse->btn_current[2] ? 4 : 0));
         case 36:
             /* mouse wheel */
             return JS_NewFloat64(ctx, (double)con->mouse->wheel);
@@ -521,8 +519,7 @@ js_sys_clipboard_set(JSContext *ctx, JSValueConst this_val, int argc, JSValueCon
  *                  it stays within the sandbox.
  * \return          true if the resolved path is safe; full is populated.
  */
-static bool prv_resolve_sandboxed(JSContext *ctx, const char *rel,
-                                  char *full, size_t full_size)
+static bool prv_resolve_sandboxed(JSContext *ctx, const char *rel, char *full, size_t full_size)
 {
     dtr_console_t *con;
     const char    *base;
@@ -567,8 +564,7 @@ static bool prv_resolve_sandboxed(JSContext *ctx, const char *rel,
     return true;
 }
 
-static JSValue
-js_sys_read_file(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+static JSValue js_sys_read_file(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
     const char *rel;
     char        full[1024];
@@ -675,8 +671,7 @@ js_sys_list_files(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst 
     arr   = JS_NewArray(ctx);
     if (files != NULL) {
         for (int32_t idx = 0; idx < count; ++idx) {
-            JS_SetPropertyUint32(ctx, arr, (uint32_t)idx,
-                                 JS_NewString(ctx, files[idx]));
+            JS_SetPropertyUint32(ctx, arr, (uint32_t)idx, JS_NewString(ctx, files[idx]));
         }
         SDL_free(files);
     }
@@ -688,9 +683,9 @@ js_sys_list_files(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst 
 /* ------------------------------------------------------------------ */
 
 typedef struct {
-    JSContext *ctx;
-    JSValue    arr;
-    uint32_t   idx;
+    JSContext  *ctx;
+    JSValue     arr;
+    uint32_t    idx;
     const char *base;
 } prv_list_dirs_ctx_t;
 
@@ -706,15 +701,13 @@ prv_list_dirs_cb(void *userdata, const char *dirname, const char *fname)
 
     SDL_snprintf(full, sizeof(full), "%s%s", ld->base, fname);
     if (SDL_GetPathInfo(full, &info) && info.type == SDL_PATHTYPE_DIRECTORY) {
-        JS_SetPropertyUint32(ld->ctx, ld->arr, ld->idx,
-                             JS_NewString(ld->ctx, fname));
+        JS_SetPropertyUint32(ld->ctx, ld->arr, ld->idx, JS_NewString(ld->ctx, fname));
         ++ld->idx;
     }
     return SDL_ENUM_CONTINUE;
 }
 
-static JSValue
-js_sys_list_dirs(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+static JSValue js_sys_list_dirs(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
     const char         *rel;
     char                full[1024];

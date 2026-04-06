@@ -16,6 +16,8 @@
 //   Ctrl+Shift+Up/Down  Move line    Ctrl+Shift+Enter  Insert line above
 //   Ctrl+Backspace  Delete word left Ctrl+Delete  Delete word right
 //   Tab   Indent selection   Shift+Tab  Dedent selection   Esc  Clear sel
+//   Ctrl+Tab / Ctrl+Shift+Tab  Cycle open files
+//   Ctrl+W   Close current file tab
 //   Home  Smart home (toggle col 0 / first non-blank)
 //   Double-click  Select word        Triple-click  Select line
 //
@@ -33,74 +35,74 @@
 
 // ─── Layout ──────────────────────────────────────────────────────────────────
 
-const CW = 5; // char advance (4px glyph + 1px)
-const CH = 7; // line advance (6px glyph + 1px)
-const FB_W = 640,
-    FB_H = 360;
-const COLS = (FB_W / CW) | 0; // 128
-const ROWS = (FB_H / CH) | 0; // 51
+export const CW = 5; // char advance (4px glyph + 1px)
+export const CH = 7; // line advance (6px glyph + 1px)
+export const FB_W = 640;
+export const FB_H = 360;
+export const COLS = (FB_W / CW) | 0; // 128
+export const ROWS = (FB_H / CH) | 0; // 51
 
-const GUTTER = 5; // chars for line numbers
-const HEAD = 2; // tab bar rows
-const FOOT = 1; // status-bar rows
-const EROWS = ROWS - HEAD - FOOT; // 49
-const MINIMAP_W = 10; // minimap width in pixels
-const SCROLLBAR_W = 2; // scrollbar width in pixels
-const ECOLS = COLS - GUTTER; // 123 (minimap overlays text area)
+export const GUTTER = 5; // chars for line numbers
+export const HEAD = 3; // tab bar rows + file tab row
+export const FOOT = 1; // status-bar rows
+export const EROWS = ROWS - HEAD - FOOT; // 49
+export const MINIMAP_W = 10; // minimap width in pixels
+export const SCROLLBAR_W = 2; // scrollbar width in pixels
+export const ECOLS = COLS - GUTTER; // 123 (minimap overlays text area)
 
-const TAB = "  "; // soft tab (2 spaces)
-const SCROLL_MARGIN = 4; // lines of context kept above/below cursor
+export const TAB = "  "; // soft tab (2 spaces)
+export const SCROLL_MARGIN = 4; // lines of context kept above/below cursor
 
 // ─── Palette indices ─────────────────────────────────────────────────────────
 
-const BG = 0; // black
-const FG = 7; // white (near-white #FFF1E8)
-const GUTBG = 1; // dark blue
-const GUTFG = 6; // light gray
-const HEADBG = 1;
-const HEADFG = 7;
-const FOOTBG = 1;
-const FOOTFG = 6;
-const CURFG = 7; // cursor colour
-const LINEBG = 17; // #222222 — subtle current-line highlight
-const SELBG = 2; // dark purple — selection
-const KWCOL = 12; // cyan — keywords
-const STRCOL = 11; // green — strings
-const COMCOL = 5; // dark gray — comments
-const NUMCOL = 9; // orange — numbers
-const DIRTCOL = 8; // red — unsaved indicator
-const TRAILBG = 20; // dark brown — trailing whitespace
-const MATCHBG = 9; // orange — find match highlight
-const BRACKETBG = 18; // #3A3A3A — matching bracket highlight
-const GUIDECOL = 17; // #222222 — indent guide
-const SCROLLBG = 17; // scrollbar track
-const SCROLLFG = 6; // scrollbar thumb
-const ADDCOL = 11; // green — added line indicator
-const MODCOL = 12; // cyan — modified line indicator
-const TABBG = 1; // tab bar background
-const TABACT = 0; // active tab background
-const TABFG = 7; // active tab text
-const TABINACT = 5; // inactive tab text
-const TABHOV = 17; // tab hover background
-const TAB_H = CH * 2; // tab bar height in pixels
-const GRIDC = 17; // sprite/map grid lines
+export const BG = 0; // black
+export const FG = 7; // white (near-white #FFF1E8)
+export const GUTBG = 1; // dark blue
+export const GUTFG = 6; // light gray
+export const HEADBG = 1;
+export const HEADFG = 7;
+export const FOOTBG = 1;
+export const FOOTFG = 6;
+export const CURFG = 7; // cursor colour
+export const LINEBG = 17; // #222222 — subtle current-line highlight
+export const SELBG = 2; // dark purple — selection
+export const KWCOL = 12; // cyan — keywords
+export const STRCOL = 11; // green — strings
+export const COMCOL = 5; // dark gray — comments
+export const NUMCOL = 9; // orange — numbers
+export const DIRTCOL = 8; // red — unsaved indicator
+export const TRAILBG = 20; // dark brown — trailing whitespace
+export const MATCHBG = 9; // orange — find match highlight
+export const BRACKETBG = 18; // #3A3A3A — matching bracket highlight
+export const GUIDECOL = 17; // #222222 — indent guide
+export const SCROLLBG = 17; // scrollbar track
+export const SCROLLFG = 6; // scrollbar thumb
+export const ADDCOL = 11; // green — added line indicator
+export const MODCOL = 12; // cyan — modified line indicator
+export const TABBG = 1; // tab bar background
+export const TABACT = 0; // active tab background
+export const TABFG = 7; // active tab text
+export const TABINACT = 5; // inactive tab text
+export const TABHOV = 17; // tab hover background
+export const TAB_H = CH * 2; // tab bar height in pixels
+export const GRIDC = 17; // sprite/map grid lines
 
 // ─── Tab names ───────────────────────────────────────────────────────────────
 
-const TAB_CODE = 0;
-const TAB_SPRITES = 1;
-const TAB_MAP = 2;
-const TAB_NAMES = ["CODE", "SPRITES", "MAP"];
+export const TAB_CODE = 0;
+export const TAB_SPRITES = 1;
+export const TAB_MAP = 2;
+export const TAB_NAMES = ["CODE", "SPRITES", "MAP"];
 
 // ─── Bracket / auto-close tables ─────────────────────────────────────────────
 
-const AUTO_CLOSE = { "(": ")", "[": "]", "{": "}" };
-const BRACKET_PAIRS = { "(": ")", ")": "(", "[": "]", "]": "[", "{": "}", "}": "{" };
-const BRACKET_COLORS = [8, 9, 12, 11, 13, 14]; // rainbow bracket colors
+export const AUTO_CLOSE = { "(": ")", "[": "]", "{": "}" };
+export const BRACKET_PAIRS = { "(": ")", ")": "(", "[": "]", "]": "[", "{": "}", "}": "{" };
+export const BRACKET_COLORS = [8, 9, 12, 11, 13, 14]; // rainbow bracket colors
 
 // ─── JS keywords for syntax highlighting ─────────────────────────────────────
 
-const KEYWORDS = new Set([
+export const KEYWORDS = new Set([
     "break",
     "case",
     "catch",

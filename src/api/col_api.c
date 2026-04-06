@@ -4,6 +4,7 @@
  */
 
 #include "api_common.h"
+
 #include <math.h>
 
 /* ------------------------------------------------------------------ */
@@ -135,8 +136,7 @@ js_col_point_circ(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst 
 /*  Circle vs rect                                                     */
 /* ------------------------------------------------------------------ */
 
-static JSValue
-js_col_circ_rect(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+static JSValue js_col_circ_rect(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
     double cx;
     double cy;

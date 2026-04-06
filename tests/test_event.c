@@ -3,20 +3,19 @@
  * \brief           Unit tests for the event bus subsystem
  */
 
-
-#include <stdio.h>
-#include <string.h>
-
 #include "event.h"
 #include "quickjs.h"
 #include "test_harness.h"
+
+#include <stdio.h>
+#include <string.h>
 
 /* ------------------------------------------------------------------ */
 /*  Helpers                                                            */
 /* ------------------------------------------------------------------ */
 
 static JSRuntime *s_rt;
-static JSContext * s_ctx;
+static JSContext *s_ctx;
 
 static void prv_setup(void)
 {

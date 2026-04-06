@@ -3,10 +3,10 @@
  * \brief           Unit tests for the graphics subsystem
  */
 
-#include <string.h>
-
 #include "graphics.h"
 #include "test_harness.h"
+
+#include <string.h>
 
 /* Small framebuffer for fast tests */
 #define TW 16
@@ -519,7 +519,8 @@ static void test_gfx_fill_pattern(void)
     int count = 0;
     for (int y = 0; y < 4; ++y) {
         for (int x = 0; x < 4; ++x) {
-            if (gfx->framebuffer[y * TW + x] == 2) ++count;
+            if (gfx->framebuffer[y * TW + x] == 2)
+                ++count;
         }
     }
     DTR_ASSERT_EQ_INT(count, 8);
@@ -533,7 +534,8 @@ static void test_gfx_fill_pattern(void)
     count = 0;
     for (int y = 0; y < 4; ++y) {
         for (int x = 0; x < 4; ++x) {
-            if (gfx->framebuffer[y * TW + x] == 2) ++count;
+            if (gfx->framebuffer[y * TW + x] == 2)
+                ++count;
         }
     }
     DTR_ASSERT_EQ_INT(count, 16);
@@ -602,8 +604,8 @@ static void test_gfx_reset(void)
 
 static void test_gfx_poly_outline(void)
 {
-    dtr_graphics_t *gfx = dtr_gfx_create(TW, TH);
-    int32_t pts[] = { 2, 2, 8, 2, 8, 8, 2, 8 };
+    dtr_graphics_t *gfx   = dtr_gfx_create(TW, TH);
+    int32_t         pts[] = {2, 2, 8, 2, 8, 8, 2, 8};
 
     dtr_gfx_cls(gfx, 0);
     dtr_gfx_poly(gfx, pts, 4, 7);
@@ -623,8 +625,8 @@ static void test_gfx_poly_outline(void)
 
 static void test_gfx_polyfill(void)
 {
-    dtr_graphics_t *gfx = dtr_gfx_create(TW, TH);
-    int32_t pts[] = { 2, 2, 8, 2, 8, 8, 2, 8 };
+    dtr_graphics_t *gfx   = dtr_gfx_create(TW, TH);
+    int32_t         pts[] = {2, 2, 8, 2, 8, 8, 2, 8};
 
     dtr_gfx_cls(gfx, 0);
     dtr_gfx_polyfill(gfx, pts, 4, 3);
@@ -641,8 +643,8 @@ static void test_gfx_polyfill(void)
 
 static void test_gfx_poly_degenerate(void)
 {
-    dtr_graphics_t *gfx = dtr_gfx_create(TW, TH);
-    int32_t pts[] = { 0, 0, 1, 1 };
+    dtr_graphics_t *gfx   = dtr_gfx_create(TW, TH);
+    int32_t         pts[] = {0, 0, 1, 1};
 
     dtr_gfx_cls(gfx, 0);
 
@@ -879,7 +881,8 @@ static void test_gfx_trifill_clipped(void)
 
     int count = 0;
     for (int i = 0; i < TW * TH; ++i) {
-        if (gfx->framebuffer[i] == 2) ++count;
+        if (gfx->framebuffer[i] == 2)
+            ++count;
     }
     DTR_ASSERT(count > 0);
 
@@ -905,7 +908,8 @@ static void test_gfx_print_basic(void)
     /* Some pixels should have been drawn */
     int count = 0;
     for (int i = 0; i < TW * TH; ++i) {
-        if (gfx->framebuffer[i] == 7) ++count;
+        if (gfx->framebuffer[i] == 7)
+            ++count;
     }
     DTR_ASSERT(count > 0);
 
@@ -1280,8 +1284,8 @@ static void test_gfx_tilemap_basic(void)
     dtr_graphics_t *gfx = dtr_gfx_create(TW, TH);
 
     /* 2x2 tile map, 8x8 tiles */
-    uint8_t tiles[]  = { 0, 1, 2, 0 };
-    uint8_t colors[] = { 1, 2, 3 };
+    uint8_t tiles[]  = {0, 1, 2, 0};
+    uint8_t colors[] = {1, 2, 3};
 
     dtr_gfx_cls(gfx, 0);
     dtr_gfx_tilemap(gfx, tiles, 2, 2, 8, 8, colors, 3);

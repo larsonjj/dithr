@@ -182,8 +182,10 @@ void dtr_gamepad_on_removed(dtr_gamepad_state_t *gp, SDL_JoystickID id)
     }
 }
 
-void dtr_gamepad_on_button(dtr_gamepad_state_t *gp, SDL_JoystickID id,
-                           SDL_GamepadButton btn, bool down)
+void dtr_gamepad_on_button(dtr_gamepad_state_t *gp,
+                           SDL_JoystickID       id,
+                           SDL_GamepadButton    btn,
+                           bool                 down)
 {
     for (int32_t idx = 0; idx < DTR_MAX_GAMEPADS; ++idx) {
         dtr_gamepad_t *pad;
@@ -205,8 +207,10 @@ void dtr_gamepad_on_button(dtr_gamepad_state_t *gp, SDL_JoystickID id,
     }
 }
 
-void dtr_gamepad_on_axis(dtr_gamepad_state_t *gp, SDL_JoystickID id,
-                         SDL_GamepadAxis axis, int16_t value)
+void dtr_gamepad_on_axis(dtr_gamepad_state_t *gp,
+                         SDL_JoystickID       id,
+                         SDL_GamepadAxis      axis,
+                         int16_t              value)
 {
     static const dtr_pad_axis_t axis_map[] = {
         [SDL_GAMEPAD_AXIS_LEFTX]         = DTR_PAD_AXIS_LX,

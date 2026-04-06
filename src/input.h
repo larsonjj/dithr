@@ -151,7 +151,7 @@ void             dtr_key_set(dtr_key_state_t *keys, dtr_key_t key, bool down);
 bool             dtr_key_btn(dtr_key_state_t *keys, dtr_key_t key);
 bool             dtr_key_btnp(dtr_key_state_t *keys, dtr_key_t key);
 bool             dtr_key_btnr(dtr_key_state_t *keys, dtr_key_t key);
-const char *     dtr_key_name(dtr_key_t key);
+const char      *dtr_key_name(dtr_key_t key);
 
 /**
  * \brief           Map an SDL scancode to our dtr_key_t enum
@@ -197,12 +197,12 @@ struct dtr_input_state {
 dtr_input_state_t *dtr_input_create(void);
 void               dtr_input_destroy(dtr_input_state_t *inp);
 void  dtr_input_update(dtr_input_state_t *inp, dtr_key_state_t *keys, dtr_gamepad_state_t *pads);
-void  dtr_input_map(dtr_input_state_t *  inp,
-                    const char *         action,
+void  dtr_input_map(dtr_input_state_t   *inp,
+                    const char          *action,
                     const dtr_binding_t *bindings,
                     int32_t              count);
-void  dtr_input_remap(dtr_input_state_t *  inp,
-                      const char *         action,
+void  dtr_input_remap(dtr_input_state_t   *inp,
+                      const char          *action,
                       const dtr_binding_t *bindings,
                       int32_t              count);
 void  dtr_input_clear_action(dtr_input_state_t *inp, const char *action);

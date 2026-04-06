@@ -34,19 +34,19 @@ typedef enum dtr_ease {
 /** \brief A single managed tween */
 typedef struct dtr_tween_entry {
     double     from;
-    double     too;          /**< Target value */
+    double     too; /**< Target value */
     double     duration;
     double     elapsed;
     double     delay;
     dtr_ease_t ease;
     bool       active;
-    bool       resolved;     /**< True once Promise was resolved */
+    bool       resolved; /**< True once Promise was resolved */
 } dtr_tween_entry_t;
 
 /** \brief Tween pool */
 typedef struct dtr_tween {
     dtr_tween_entry_t pool[CONSOLE_MAX_TWEENS];
-    int32_t           count;    /**< High-water mark for scan range */
+    int32_t           count; /**< High-water mark for scan range */
 } dtr_tween_t;
 
 /* ---- Easing (stateless) ------------------------------------------------ */
@@ -64,8 +64,12 @@ dtr_ease_t dtr_ease_from_name(const char *name);
 /* ---- Managed tweens ---------------------------------------------------- */
 
 void    dtr_tween_init(dtr_tween_t *twn);
-int32_t dtr_tween_add(dtr_tween_t *twn, double from, double too,
-                       double duration, dtr_ease_t ease, double delay);
+int32_t dtr_tween_add(dtr_tween_t *twn,
+                      double       from,
+                      double       too,
+                      double       duration,
+                      dtr_ease_t   ease,
+                      double       delay);
 void    dtr_tween_tick(dtr_tween_t *twn, double delta);
 double  dtr_tween_val(dtr_tween_t *twn, int32_t idx);
 bool    dtr_tween_done(dtr_tween_t *twn, int32_t idx);

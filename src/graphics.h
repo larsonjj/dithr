@@ -74,14 +74,14 @@ typedef struct dtr_transition {
  * \\brief           Custom monospaced font loaded from the sprite sheet
  */
 typedef struct dtr_custom_font {
-    bool    active;   /**< True when a custom font is in use */
-    int32_t sx;       /**< Source X in sprite sheet pixels */
-    int32_t sy;       /**< Source Y in sprite sheet pixels */
-    int32_t char_w;   /**< Character width in pixels */
-    int32_t char_h;   /**< Character height in pixels */
-    int32_t cols;     /**< Characters per row in the font grid */
-    char    first;    /**< First ASCII character in the grid */
-    int32_t count;    /**< Total number of characters */
+    bool    active; /**< True when a custom font is in use */
+    int32_t sx;     /**< Source X in sprite sheet pixels */
+    int32_t sy;     /**< Source Y in sprite sheet pixels */
+    int32_t char_w; /**< Character width in pixels */
+    int32_t char_h; /**< Character height in pixels */
+    int32_t cols;   /**< Characters per row in the font grid */
+    char    first;  /**< First ASCII character in the grid */
+    int32_t count;  /**< Total number of characters */
 } dtr_custom_font_t;
 
 /* ------------------------------------------------------------------------ */
@@ -103,8 +103,8 @@ typedef enum dtr_draw_cmd_type {
  */
 typedef struct dtr_draw_cmd {
     dtr_draw_cmd_type_t type;
-    int32_t             layer;     /**< Sort key — lower layers drawn first */
-    int32_t             order;     /**< Insertion order for stable sort */
+    int32_t             layer; /**< Sort key — lower layers drawn first */
+    int32_t             order; /**< Insertion order for stable sort */
     union {
         struct {
             int32_t idx, x, y, w, h;
@@ -129,8 +129,8 @@ typedef struct dtr_draw_cmd {
  */
 typedef struct dtr_draw_list {
     dtr_draw_cmd_t cmds[CONSOLE_MAX_DRAW_CMDS];
-    int32_t        count;   /**< Number of queued commands */
-    bool           active;  /**< True between dl_begin and dl_end */
+    int32_t        count;  /**< Number of queued commands */
+    bool           active; /**< True between dl_begin and dl_end */
 } dtr_draw_list_t;
 
 /* ------------------------------------------------------------------------ */
@@ -461,7 +461,7 @@ void dtr_gfx_init_default_palette(dtr_graphics_t *gfx);
  * \param[in]       tile_h: Tile height
  */
 bool dtr_gfx_load_sheet(dtr_graphics_t *gfx,
-                        const uint8_t * rgba,
+                        const uint8_t  *rgba,
                         int32_t         width,
                         int32_t         height,
                         int32_t         tile_w,

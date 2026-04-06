@@ -1,13 +1,12 @@
 // ─── Syntax highlighting ─────────────────────────────────────────────────────
-// Returns {toks: [{text, col}], inBlock: bool} for one source line.
-// Pass inBlock=true when the line starts inside a /* block comment.
 
-function tokenize(line, inBlock) {
+import { COMCOL, STRCOL, NUMCOL, FG, KWCOL, KEYWORDS } from './config.js';
+
+export function tokenize(line, inBlock) {
     let toks = [];
     let i = 0,
         n = line.length;
 
-    // Continued block comment from previous line
     if (inBlock) {
         let end = line.indexOf("*/");
         if (end >= 0) {
@@ -21,7 +20,6 @@ function tokenize(line, inBlock) {
     }
 
     while (i < n) {
-        // Block comment start
         if (line[i] === "/" && i + 1 < n && line[i + 1] === "*") {
             let end = line.indexOf("*/", i + 2);
             if (end >= 0) {
@@ -34,13 +32,11 @@ function tokenize(line, inBlock) {
             }
         }
 
-        // Single-line comment
         if (line[i] === "/" && i + 1 < n && line[i + 1] === "/") {
             toks.push({ text: line.slice(i), col: COMCOL });
             return { toks: toks, inBlock: false };
         }
 
-        // String literal
         if (line[i] === '"' || line[i] === "'" || line[i] === "`") {
             let q = line[i],
                 j = i + 1;
@@ -54,7 +50,6 @@ function tokenize(line, inBlock) {
             continue;
         }
 
-        // Number
         if (line[i] >= "0" && line[i] <= "9") {
             let j = i;
             while (
@@ -72,7 +67,6 @@ function tokenize(line, inBlock) {
             continue;
         }
 
-        // Identifier / keyword
         let ch = line[i];
         if ((ch >= "a" && ch <= "z") || (ch >= "A" && ch <= "Z") || ch === "_" || ch === "$") {
             let j = i + 1;
@@ -94,7 +88,6 @@ function tokenize(line, inBlock) {
             continue;
         }
 
-        // Single character (whitespace, operator, punctuation)
         toks.push({ text: line[i], col: FG });
         i++;
     }

@@ -5,8 +5,7 @@
 
 #include "ui.h"
 
-dtr_ui_rect_t
-dtr_ui_rect(int32_t pos_x, int32_t pos_y, int32_t width, int32_t height)
+dtr_ui_rect_t dtr_ui_rect(int32_t pos_x, int32_t pos_y, int32_t width, int32_t height)
 {
     dtr_ui_rect_t rect;
 
@@ -17,8 +16,7 @@ dtr_ui_rect(int32_t pos_x, int32_t pos_y, int32_t width, int32_t height)
     return rect;
 }
 
-dtr_ui_rect_t
-dtr_ui_inset(dtr_ui_rect_t rect, int32_t inset)
+dtr_ui_rect_t dtr_ui_inset(dtr_ui_rect_t rect, int32_t inset)
 {
     dtr_ui_rect_t out;
 
@@ -35,9 +33,12 @@ dtr_ui_inset(dtr_ui_rect_t rect, int32_t inset)
     return out;
 }
 
-dtr_ui_rect_t
-dtr_ui_anchor(double anc_x, double anc_y, int32_t width, int32_t height,
-              int32_t scr_w, int32_t scr_h)
+dtr_ui_rect_t dtr_ui_anchor(double  anc_x,
+                            double  anc_y,
+                            int32_t width,
+                            int32_t height,
+                            int32_t scr_w,
+                            int32_t scr_h)
 {
     dtr_ui_rect_t out;
 
@@ -48,9 +49,11 @@ dtr_ui_anchor(double anc_x, double anc_y, int32_t width, int32_t height,
     return out;
 }
 
-void
-dtr_ui_hsplit(dtr_ui_rect_t rect, double frac, int32_t gap,
-              dtr_ui_rect_t *left, dtr_ui_rect_t *right)
+void dtr_ui_hsplit(dtr_ui_rect_t  rect,
+                   double         frac,
+                   int32_t        gap,
+                   dtr_ui_rect_t *left,
+                   dtr_ui_rect_t *right)
 {
     int32_t usable;
     int32_t left_w;
@@ -72,9 +75,11 @@ dtr_ui_hsplit(dtr_ui_rect_t rect, double frac, int32_t gap,
     right->height = rect.height;
 }
 
-void
-dtr_ui_vsplit(dtr_ui_rect_t rect, double frac, int32_t gap,
-              dtr_ui_rect_t *top, dtr_ui_rect_t *bottom)
+void dtr_ui_vsplit(dtr_ui_rect_t  rect,
+                   double         frac,
+                   int32_t        gap,
+                   dtr_ui_rect_t *top,
+                   dtr_ui_rect_t *bottom)
 {
     int32_t usable;
     int32_t top_h;
@@ -96,9 +101,7 @@ dtr_ui_vsplit(dtr_ui_rect_t rect, double frac, int32_t gap,
     bottom->height = usable - top_h;
 }
 
-void
-dtr_ui_hstack(dtr_ui_rect_t rect, int32_t count, int32_t gap,
-              dtr_ui_rect_t *out)
+void dtr_ui_hstack(dtr_ui_rect_t rect, int32_t count, int32_t gap, dtr_ui_rect_t *out)
 {
     int32_t usable;
     int32_t cell_w;
@@ -124,9 +127,7 @@ dtr_ui_hstack(dtr_ui_rect_t rect, int32_t count, int32_t gap,
     }
 }
 
-void
-dtr_ui_vstack(dtr_ui_rect_t rect, int32_t count, int32_t gap,
-              dtr_ui_rect_t *out)
+void dtr_ui_vstack(dtr_ui_rect_t rect, int32_t count, int32_t gap, dtr_ui_rect_t *out)
 {
     int32_t usable;
     int32_t cell_h;
@@ -153,8 +154,7 @@ dtr_ui_vstack(dtr_ui_rect_t rect, int32_t count, int32_t gap,
 }
 
 dtr_ui_rect_t
-dtr_ui_place(dtr_ui_rect_t parent, double anc_x, double anc_y,
-             int32_t width, int32_t height)
+dtr_ui_place(dtr_ui_rect_t parent, double anc_x, double anc_y, int32_t width, int32_t height)
 {
     dtr_ui_rect_t out;
 

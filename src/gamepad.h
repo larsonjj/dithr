@@ -19,7 +19,7 @@ extern "C" {
  * \brief           State for a single gamepad
  */
 typedef struct dtr_gamepad {
-    SDL_Gamepad *  handle;
+    SDL_Gamepad   *handle;
     SDL_JoystickID joy_id;
     bool           connected;
     char           name[128];
@@ -49,10 +49,14 @@ void                 dtr_gamepad_update(dtr_gamepad_state_t *gp);
 /* Hotplug */
 void dtr_gamepad_on_added(dtr_gamepad_state_t *gp, SDL_JoystickID id);
 void dtr_gamepad_on_removed(dtr_gamepad_state_t *gp, SDL_JoystickID id);
-void dtr_gamepad_on_button(dtr_gamepad_state_t *gp, SDL_JoystickID id,
-                          SDL_GamepadButton btn, bool down);
-void dtr_gamepad_on_axis(dtr_gamepad_state_t *gp, SDL_JoystickID id,
-                        SDL_GamepadAxis axis, int16_t value);
+void dtr_gamepad_on_button(dtr_gamepad_state_t *gp,
+                           SDL_JoystickID       id,
+                           SDL_GamepadButton    btn,
+                           bool                 down);
+void dtr_gamepad_on_axis(dtr_gamepad_state_t *gp,
+                         SDL_JoystickID       id,
+                         SDL_GamepadAxis      axis,
+                         int16_t              value);
 
 /* Queries */
 bool        dtr_gamepad_btn(dtr_gamepad_state_t *gp, dtr_pad_btn_t b, int32_t index);

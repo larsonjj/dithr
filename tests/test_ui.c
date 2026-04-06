@@ -3,8 +3,8 @@
  * \brief           Unit tests for stateless UI layout helpers
  */
 
-#include "ui.h"
 #include "test_harness.h"
+#include "ui.h"
 
 /* ------------------------------------------------------------------ */
 /*  ui.rect                                                            */
@@ -73,8 +73,8 @@ static void test_anchor_center(void)
     dtr_ui_rect_t out;
 
     out = dtr_ui_anchor(0.5, 0.5, 32, 16, 320, 180);
-    DTR_ASSERT_EQ_INT(out.pos_x, 144);    /* (320-32)/2 = 144 */
-    DTR_ASSERT_EQ_INT(out.pos_y, 82);     /* (180-16)/2 = 82 */
+    DTR_ASSERT_EQ_INT(out.pos_x, 144); /* (320-32)/2 = 144 */
+    DTR_ASSERT_EQ_INT(out.pos_y, 82);  /* (180-16)/2 = 82 */
     DTR_PASS();
 }
 
@@ -83,8 +83,8 @@ static void test_anchor_bottom_right(void)
     dtr_ui_rect_t out;
 
     out = dtr_ui_anchor(1.0, 1.0, 32, 16, 320, 180);
-    DTR_ASSERT_EQ_INT(out.pos_x, 288);    /* 320-32 */
-    DTR_ASSERT_EQ_INT(out.pos_y, 164);    /* 180-16 */
+    DTR_ASSERT_EQ_INT(out.pos_x, 288); /* 320-32 */
+    DTR_ASSERT_EQ_INT(out.pos_y, 164); /* 180-16 */
     DTR_PASS();
 }
 
@@ -119,7 +119,7 @@ static void test_hsplit_with_gap(void)
     dtr_ui_hsplit(rect, 0.5, 4, &left, &right);
     DTR_ASSERT_EQ_INT(left.pos_x, 10);
     DTR_ASSERT_EQ_INT(left.width, 50);
-    DTR_ASSERT_EQ_INT(right.pos_x, 64);    /* 10 + 50 + 4 */
+    DTR_ASSERT_EQ_INT(right.pos_x, 64); /* 10 + 50 + 4 */
     DTR_ASSERT_EQ_INT(right.width, 50);
     DTR_PASS();
 }
@@ -153,7 +153,7 @@ static void test_vsplit_with_gap(void)
     dtr_ui_vsplit(rect, 0.5, 4, &top, &bot);
     DTR_ASSERT_EQ_INT(top.pos_y, 10);
     DTR_ASSERT_EQ_INT(top.height, 40);
-    DTR_ASSERT_EQ_INT(bot.pos_y, 54);    /* 10 + 40 + 4 */
+    DTR_ASSERT_EQ_INT(bot.pos_y, 54); /* 10 + 40 + 4 */
     DTR_ASSERT_EQ_INT(bot.height, 40);
     DTR_PASS();
 }
@@ -238,8 +238,8 @@ static void test_place_center(void)
 
     parent = dtr_ui_rect(0, 0, 100, 80);
     child  = dtr_ui_place(parent, 0.5, 0.5, 20, 10);
-    DTR_ASSERT_EQ_INT(child.pos_x, 40);    /* (100-20)/2 */
-    DTR_ASSERT_EQ_INT(child.pos_y, 35);    /* (80-10)/2 */
+    DTR_ASSERT_EQ_INT(child.pos_x, 40); /* (100-20)/2 */
+    DTR_ASSERT_EQ_INT(child.pos_y, 35); /* (80-10)/2 */
     DTR_ASSERT_EQ_INT(child.width, 20);
     DTR_ASSERT_EQ_INT(child.height, 10);
     DTR_PASS();
@@ -252,8 +252,8 @@ static void test_place_bottom_right(void)
 
     parent = dtr_ui_rect(10, 10, 100, 80);
     child  = dtr_ui_place(parent, 1.0, 1.0, 20, 10);
-    DTR_ASSERT_EQ_INT(child.pos_x, 90);     /* 10 + (100-20) */
-    DTR_ASSERT_EQ_INT(child.pos_y, 80);     /* 10 + (80-10) */
+    DTR_ASSERT_EQ_INT(child.pos_x, 90); /* 10 + (100-20) */
+    DTR_ASSERT_EQ_INT(child.pos_y, 80); /* 10 + (80-10) */
     DTR_PASS();
 }
 

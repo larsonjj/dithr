@@ -3,12 +3,12 @@
  * \brief           Unit tests for Tiled / LDtk map importers
  */
 
-#include <stdio.h>
-#include <string.h>
-
 #include "cart_import.h"
 #include "quickjs.h"
 #include "test_harness.h"
+
+#include <stdio.h>
+#include <string.h>
 
 /* ------------------------------------------------------------------ */
 /*  Helpers                                                            */
@@ -69,26 +69,25 @@ static void prv_free_level(dtr_map_level_t *level)
 /*  Tiled importer                                                     */
 /* ------------------------------------------------------------------ */
 
-static const char *TILED_TILE_LAYER_JSON =
-    "{"
-    "  \"width\": 4,"
-    "  \"height\": 3,"
-    "  \"layers\": ["
-    "    {"
-    "      \"name\": \"ground\","
-    "      \"type\": \"tilelayer\","
-    "      \"width\": 4,"
-    "      \"height\": 3,"
-    "      \"data\": [1,2,3,0, 0,1,0,2, 3,0,1,0]"
-    "    }"
-    "  ]"
-    "}";
+static const char *TILED_TILE_LAYER_JSON = "{"
+                                           "  \"width\": 4,"
+                                           "  \"height\": 3,"
+                                           "  \"layers\": ["
+                                           "    {"
+                                           "      \"name\": \"ground\","
+                                           "      \"type\": \"tilelayer\","
+                                           "      \"width\": 4,"
+                                           "      \"height\": 3,"
+                                           "      \"data\": [1,2,3,0, 0,1,0,2, 3,0,1,0]"
+                                           "    }"
+                                           "  ]"
+                                           "}";
 
 static void test_tiled_tile_layer(void)
 {
     dtr_map_level_t *level = NULL;
     bool             ok;
-    const char *     path = "_test_tiled_tile.tmj";
+    const char      *path = "_test_tiled_tile.tmj";
 
     prv_setup();
 
@@ -117,34 +116,33 @@ static void test_tiled_tile_layer(void)
     DTR_PASS();
 }
 
-static const char *TILED_OBJECT_LAYER_JSON =
-    "{"
-    "  \"width\": 2,"
-    "  \"height\": 2,"
-    "  \"layers\": ["
-    "    {"
-    "      \"name\": \"entities\","
-    "      \"type\": \"objectgroup\","
-    "      \"objects\": ["
-    "        {"
-    "          \"name\": \"player\","
-    "          \"type\": \"spawn\","
-    "          \"x\": 10.5,"
-    "          \"y\": 20.0,"
-    "          \"width\": 16,"
-    "          \"height\": 16,"
-    "          \"gid\": 7"
-    "        }"
-    "      ]"
-    "    }"
-    "  ]"
-    "}";
+static const char *TILED_OBJECT_LAYER_JSON = "{"
+                                             "  \"width\": 2,"
+                                             "  \"height\": 2,"
+                                             "  \"layers\": ["
+                                             "    {"
+                                             "      \"name\": \"entities\","
+                                             "      \"type\": \"objectgroup\","
+                                             "      \"objects\": ["
+                                             "        {"
+                                             "          \"name\": \"player\","
+                                             "          \"type\": \"spawn\","
+                                             "          \"x\": 10.5,"
+                                             "          \"y\": 20.0,"
+                                             "          \"width\": 16,"
+                                             "          \"height\": 16,"
+                                             "          \"gid\": 7"
+                                             "        }"
+                                             "      ]"
+                                             "    }"
+                                             "  ]"
+                                             "}";
 
 static void test_tiled_object_layer(void)
 {
     dtr_map_level_t *level = NULL;
     bool             ok;
-    const char *     path = "_test_tiled_obj.tmj";
+    const char      *path = "_test_tiled_obj.tmj";
 
     prv_setup();
 
@@ -187,7 +185,7 @@ static void test_tiled_invalid_json(void)
 {
     dtr_map_level_t *level = NULL;
     bool             ok;
-    const char *     path = "_test_tiled_bad.tmj";
+    const char      *path = "_test_tiled_bad.tmj";
 
     prv_setup();
 
@@ -205,8 +203,8 @@ static void test_tiled_no_layers(void)
 {
     dtr_map_level_t *level = NULL;
     bool             ok;
-    const char *     path = "_test_tiled_nolayers.tmj";
-    const char *     json = "{\"width\": 2, \"height\": 2}";
+    const char      *path = "_test_tiled_nolayers.tmj";
+    const char      *json = "{\"width\": 2, \"height\": 2}";
 
     prv_setup();
 
@@ -226,31 +224,30 @@ static void test_tiled_no_layers(void)
     DTR_PASS();
 }
 
-static const char *TILED_MIXED_LAYERS_JSON =
-    "{"
-    "  \"width\": 2,"
-    "  \"height\": 2,"
-    "  \"layers\": ["
-    "    {"
-    "      \"name\": \"bg\","
-    "      \"type\": \"tilelayer\","
-    "      \"width\": 2,"
-    "      \"height\": 2,"
-    "      \"data\": [1, 2, 3, 4]"
-    "    },"
-    "    {"
-    "      \"name\": \"objs\","
-    "      \"type\": \"objectgroup\","
-    "      \"objects\": []"
-    "    }"
-    "  ]"
-    "}";
+static const char *TILED_MIXED_LAYERS_JSON = "{"
+                                             "  \"width\": 2,"
+                                             "  \"height\": 2,"
+                                             "  \"layers\": ["
+                                             "    {"
+                                             "      \"name\": \"bg\","
+                                             "      \"type\": \"tilelayer\","
+                                             "      \"width\": 2,"
+                                             "      \"height\": 2,"
+                                             "      \"data\": [1, 2, 3, 4]"
+                                             "    },"
+                                             "    {"
+                                             "      \"name\": \"objs\","
+                                             "      \"type\": \"objectgroup\","
+                                             "      \"objects\": []"
+                                             "    }"
+                                             "  ]"
+                                             "}";
 
 static void test_tiled_mixed_layers(void)
 {
     dtr_map_level_t *level = NULL;
     bool             ok;
-    const char *     path = "_test_tiled_mixed.tmj";
+    const char      *path = "_test_tiled_mixed.tmj";
 
     prv_setup();
 
@@ -303,7 +300,7 @@ static void test_tiled_object_properties(void)
 {
     dtr_map_level_t *level = NULL;
     bool             ok;
-    const char *     path = "_test_tiled_props.tmj";
+    const char      *path = "_test_tiled_props.tmj";
 
     prv_setup();
 
@@ -319,7 +316,7 @@ static void test_tiled_object_properties(void)
     {
         dtr_map_object_t *obj = &level->layers[0].objects[0];
         JSValue           val;
-        const char *      str;
+        const char       *str;
 
         DTR_ASSERT(!JS_IsUndefined(obj->props));
         val = JS_GetPropertyStr(s_ctx, obj->props, "target");
@@ -339,31 +336,30 @@ static void test_tiled_object_properties(void)
 /*  LDtk importer                                                     */
 /* ------------------------------------------------------------------ */
 
-static const char *LDTK_BASIC_JSON =
-    "{"
-    "  \"levels\": ["
-    "    {"
-    "      \"pxWid\": 160,"
-    "      \"pxHid\": 128,"
-    "      \"layerInstances\": ["
-    "        {"
-    "          \"__type\": \"Tiles\","
-    "          \"__gridSize\": 16,"
-    "          \"gridTiles\": ["
-    "            { \"px\": [0, 0], \"t\": 5 },"
-    "            { \"px\": [16, 0], \"t\": 3 }"
-    "          ]"
-    "        }"
-    "      ]"
-    "    }"
-    "  ]"
-    "}";
+static const char *LDTK_BASIC_JSON = "{"
+                                     "  \"levels\": ["
+                                     "    {"
+                                     "      \"pxWid\": 160,"
+                                     "      \"pxHid\": 128,"
+                                     "      \"layerInstances\": ["
+                                     "        {"
+                                     "          \"__type\": \"Tiles\","
+                                     "          \"__gridSize\": 16,"
+                                     "          \"gridTiles\": ["
+                                     "            { \"px\": [0, 0], \"t\": 5 },"
+                                     "            { \"px\": [16, 0], \"t\": 3 }"
+                                     "          ]"
+                                     "        }"
+                                     "      ]"
+                                     "    }"
+                                     "  ]"
+                                     "}";
 
 static void test_ldtk_basic(void)
 {
     dtr_map_level_t *level = NULL;
     bool             ok;
-    const char *     path = "_test_ldtk_basic.ldtk";
+    const char      *path = "_test_ldtk_basic.ldtk";
 
     prv_setup();
 
@@ -409,7 +405,7 @@ static void test_ldtk_invalid_json(void)
 {
     dtr_map_level_t *level = NULL;
     bool             ok;
-    const char *     path = "_test_ldtk_bad.ldtk";
+    const char      *path = "_test_ldtk_bad.ldtk";
 
     prv_setup();
 
@@ -427,8 +423,8 @@ static void test_ldtk_empty_levels(void)
 {
     dtr_map_level_t *level = NULL;
     bool             ok;
-    const char *     path = "_test_ldtk_empty.ldtk";
-    const char *     json = "{\"levels\": []}";
+    const char      *path = "_test_ldtk_empty.ldtk";
+    const char      *json = "{\"levels\": []}";
 
     prv_setup();
 
@@ -450,8 +446,8 @@ static void test_ldtk_no_levels_key(void)
 {
     dtr_map_level_t *level = NULL;
     bool             ok;
-    const char *     path = "_test_ldtk_nolevels.ldtk";
-    const char *     json = "{\"something\": 42}";
+    const char      *path = "_test_ldtk_nolevels.ldtk";
+    const char      *json = "{\"something\": 42}";
 
     prv_setup();
 

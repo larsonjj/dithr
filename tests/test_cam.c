@@ -96,15 +96,15 @@ static void test_cam_follow_lerp(void)
 
     /* Start at origin, follow toward (100, 200) at speed 0.5 */
     speed = 0.5;
-    cx    = 0.0 + (100.0 - 0.0) * speed;   /* 50 */
-    cy    = 0.0 + (200.0 - 0.0) * speed;   /* 100 */
+    cx    = 0.0 + (100.0 - 0.0) * speed; /* 50 */
+    cy    = 0.0 + (200.0 - 0.0) * speed; /* 100 */
     dtr_gfx_camera(gfx, (int32_t)cx, (int32_t)cy);
     DTR_ASSERT_EQ_INT(gfx->camera_x, 50);
     DTR_ASSERT_EQ_INT(gfx->camera_y, 100);
 
     /* Second follow from (50,100) toward (100,200) at speed 0.5 */
-    cx = 50.0 + (100.0 - 50.0) * speed;    /* 75 */
-    cy = 100.0 + (200.0 - 100.0) * speed;  /* 150 */
+    cx = 50.0 + (100.0 - 50.0) * speed;   /* 75 */
+    cy = 100.0 + (200.0 - 100.0) * speed; /* 150 */
     dtr_gfx_camera(gfx, (int32_t)cx, (int32_t)cy);
     DTR_ASSERT_EQ_INT(gfx->camera_x, 75);
     DTR_ASSERT_EQ_INT(gfx->camera_y, 150);

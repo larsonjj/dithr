@@ -21,7 +21,7 @@ uint8_t *dtr_import_png(const char *path, int32_t *out_w, int32_t *out_h)
 {
     SDL_Surface *surface;
     SDL_Surface *rgba;
-    uint8_t *    pixels;
+    uint8_t     *pixels;
     size_t       size;
 
     surface = IMG_Load(path);
@@ -48,7 +48,9 @@ uint8_t *dtr_import_png(const char *path, int32_t *out_w, int32_t *out_h)
 
     if (rgba->w > IMPORT_MAX_IMAGE_DIM || rgba->h > IMPORT_MAX_IMAGE_DIM) {
         SDL_Log("dtr_import_png: image too large (%dx%d, max %d)",
-                rgba->w, rgba->h, IMPORT_MAX_IMAGE_DIM);
+                rgba->w,
+                rgba->h,
+                IMPORT_MAX_IMAGE_DIM);
         SDL_DestroySurface(rgba);
         *out_w = 0;
         *out_h = 0;
@@ -86,7 +88,7 @@ bool dtr_import_aseprite(const char *json_path, dtr_cart_t *cart, JSContext *ctx
      * for future use.
      */
 
-    char *  json;
+    char   *json;
     size_t  len;
     JSValue root;
     JSValue meta;
@@ -171,7 +173,7 @@ bool dtr_import_aseprite(const char *json_path, dtr_cart_t *cart, JSContext *ctx
 
 bool dtr_import_tiled(const char *tmj_path, dtr_map_level_t **out_level, JSContext *ctx)
 {
-    char *           json;
+    char            *json;
     size_t           len;
     JSValue          root;
     JSValue          layers_arr;
@@ -236,7 +238,8 @@ bool dtr_import_tiled(const char *tmj_path, dtr_map_level_t **out_level, JSConte
 
     if (layer_count < 0 || layer_count > CONSOLE_MAX_MAP_LAYERS) {
         SDL_Log("dtr_import_tiled: layer count %d exceeds limit %d",
-                layer_count, CONSOLE_MAX_MAP_LAYERS);
+                layer_count,
+                CONSOLE_MAX_MAP_LAYERS);
         JS_FreeValue(ctx, layers_arr);
         JS_FreeValue(ctx, root);
         DTR_FREE(level);
@@ -251,7 +254,7 @@ bool dtr_import_tiled(const char *tmj_path, dtr_map_level_t **out_level, JSConte
         JSValue          type_val;
         JSValue          name_val;
         JSValue          data_arr;
-        const char *     type_str;
+        const char      *type_str;
         dtr_map_layer_t *layer;
 
         layer     = &level->layers[li];
@@ -343,7 +346,8 @@ bool dtr_import_tiled(const char *tmj_path, dtr_map_level_t **out_level, JSConte
 
                 if (obj_count < 0 || obj_count > CONSOLE_MAX_MAP_OBJECTS) {
                     SDL_Log("dtr_import_tiled: object count %d exceeds limit %d",
-                            obj_count, CONSOLE_MAX_MAP_OBJECTS);
+                            obj_count,
+                            CONSOLE_MAX_MAP_OBJECTS);
                     obj_count = CONSOLE_MAX_MAP_OBJECTS;
                 }
 
@@ -446,14 +450,14 @@ bool dtr_import_tiled(const char *tmj_path, dtr_map_level_t **out_level, JSConte
                                 JSValue     pval;
                                 const char *pname_s;
 
-                                pobj   = JS_GetPropertyUint32(ctx, parr, (uint32_t)pi);
-                                pname  = JS_GetPropertyStr(ctx, pobj, "name");
-                                pval   = JS_GetPropertyStr(ctx, pobj, "value");
+                                pobj    = JS_GetPropertyUint32(ctx, parr, (uint32_t)pi);
+                                pname   = JS_GetPropertyStr(ctx, pobj, "name");
+                                pval    = JS_GetPropertyStr(ctx, pobj, "value");
                                 pname_s = JS_ToCString(ctx, pname);
 
                                 if (pname_s != NULL) {
-                                    JS_SetPropertyStr(ctx, mobj->props, pname_s,
-                                                      JS_DupValue(ctx, pval));
+                                    JS_SetPropertyStr(
+                                        ctx, mobj->props, pname_s, JS_DupValue(ctx, pval));
                                     JS_FreeCString(ctx, pname_s);
                                 }
 
@@ -493,7 +497,7 @@ bool dtr_import_tiled(const char *tmj_path, dtr_map_level_t **out_level, JSConte
 
 bool dtr_import_ldtk(const char *ldtk_path, dtr_map_level_t **out_level, JSContext *ctx)
 {
-    char *           json;
+    char            *json;
     size_t           len;
     JSValue          root;
     JSValue          levels_arr;
@@ -578,7 +582,8 @@ bool dtr_import_ldtk(const char *ldtk_path, dtr_map_level_t **out_level, JSConte
 
             if (li_count < 0 || li_count > CONSOLE_MAX_MAP_LAYERS) {
                 SDL_Log("dtr_import_ldtk: layer count %d exceeds limit %d",
-                        li_count, CONSOLE_MAX_MAP_LAYERS);
+                        li_count,
+                        CONSOLE_MAX_MAP_LAYERS);
                 JS_FreeValue(ctx, layer_instances);
                 JS_FreeValue(ctx, first_level);
                 JS_FreeValue(ctx, levels_arr);
@@ -593,7 +598,7 @@ bool dtr_import_ldtk(const char *ldtk_path, dtr_map_level_t **out_level, JSConte
             for (int32_t idx = 0; idx < li_count; ++idx) {
                 JSValue          li_obj;
                 JSValue          type_val;
-                const char *     type_str;
+                const char      *type_str;
                 dtr_map_layer_t *layer;
 
                 layer  = &level->layers[idx];

@@ -70,7 +70,7 @@ static JSValue js_input_axis(JSContext *ctx, JSValueConst this_val, int argc, JS
 
 static JSValue js_input_map(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
-    const char *  action;
+    const char   *action;
     dtr_binding_t bindings[DTR_INPUT_MAX_BINDINGS];
     int32_t       bind_count;
 

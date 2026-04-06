@@ -59,12 +59,12 @@ float dtr_sfx_get_volume(dtr_audio_t *aud, int32_t channel);
 bool  dtr_sfx_playing(dtr_audio_t *aud, int32_t channel);
 
 /* Music */
-bool  dtr_audio_load_music(dtr_audio_t *aud, const uint8_t *data, size_t len);
-void  dtr_mus_play(dtr_audio_t *aud, int32_t idx, int32_t fade_ms, uint32_t channel_mask);
-void  dtr_mus_stop(dtr_audio_t *aud, int32_t fade_ms);
-void  dtr_mus_volume(dtr_audio_t *aud, float vol);
-float dtr_mus_get_volume(dtr_audio_t *aud);
-bool  dtr_mus_playing(dtr_audio_t *aud);
+bool    dtr_audio_load_music(dtr_audio_t *aud, const uint8_t *data, size_t len);
+void    dtr_mus_play(dtr_audio_t *aud, int32_t idx, int32_t fade_ms, uint32_t channel_mask);
+void    dtr_mus_stop(dtr_audio_t *aud, int32_t fade_ms);
+void    dtr_mus_volume(dtr_audio_t *aud, float vol);
+float   dtr_mus_get_volume(dtr_audio_t *aud);
+bool    dtr_mus_playing(dtr_audio_t *aud);
 int32_t dtr_mus_current(dtr_audio_t *aud);
 
 /* Master volume */

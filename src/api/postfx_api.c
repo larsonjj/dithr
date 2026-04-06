@@ -99,8 +99,7 @@ static JSValue js_postfx_use(JSContext *ctx, JSValueConst this_val, int argc, JS
     /* Return a chain object { _idx, set() } */
     chain = JS_NewObject(ctx);
     JS_SetPropertyStr(ctx, chain, "_idx", JS_NewInt32(ctx, index));
-    JS_SetPropertyStr(ctx, chain, "set",
-                      JS_NewCFunction(ctx, js_postfx_chain_set, "set", 2));
+    JS_SetPropertyStr(ctx, chain, "set", JS_NewCFunction(ctx, js_postfx_chain_set, "set", 2));
     return chain;
 }
 
@@ -110,9 +109,9 @@ static JSValue js_postfx_use(JSContext *ctx, JSValueConst this_val, int argc, JS
 
 static JSValue js_postfx_stack(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
-    JSValue  arr;
-    JSValue  len_val;
-    int64_t  len;
+    JSValue arr;
+    JSValue len_val;
+    int64_t len;
 
     (void)this_val;
     if (argc < 1 || !JS_IsArray(argv[0])) {
@@ -188,8 +187,7 @@ static JSValue js_postfx_save(JSContext *ctx, JSValueConst this_val, int argc, J
     pfx = PFX(ctx);
 
     s_saved_count = pfx->count;
-    SDL_memcpy(s_saved_stack, pfx->stack,
-               (size_t)pfx->count * sizeof(dtr_postfx_entry_t));
+    SDL_memcpy(s_saved_stack, pfx->stack, (size_t)pfx->count * sizeof(dtr_postfx_entry_t));
     return JS_UNDEFINED;
 }
 
@@ -204,8 +202,7 @@ js_postfx_restore(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst 
     pfx = PFX(ctx);
 
     pfx->count = s_saved_count;
-    SDL_memcpy(pfx->stack, s_saved_stack,
-               (size_t)s_saved_count * sizeof(dtr_postfx_entry_t));
+    SDL_memcpy(pfx->stack, s_saved_stack, (size_t)s_saved_count * sizeof(dtr_postfx_entry_t));
     return JS_UNDEFINED;
 }
 
@@ -213,8 +210,7 @@ js_postfx_restore(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst 
 /*  Stubs for Phase 2                                                  */
 /* ------------------------------------------------------------------ */
 
-static JSValue
-js_postfx_define(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+static JSValue js_postfx_define(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
     (void)ctx;
     (void)this_val;

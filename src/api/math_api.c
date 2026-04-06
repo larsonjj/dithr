@@ -72,8 +72,8 @@ static JSValue js_math_seed(JSContext *ctx, JSValueConst this_val, int argc, JSV
     dtr_console_t *con;
 
     (void)this_val;
-    seed = dtr_api_opt_int(ctx, argc, argv, 0, 1);
-    con  = dtr_api_get_console(ctx);
+    seed           = dtr_api_opt_int(ctx, argc, argv, 0, 1);
+    con            = dtr_api_get_console(ctx);
     con->rng_state = (uint64_t)seed;
     if (con->rng_state == 0) {
         con->rng_state = 1;
@@ -361,8 +361,7 @@ js_math_smoothstep(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst
     return JS_NewFloat64(ctx, x * x * (3.0 - 2.0 * x));
 }
 
-static JSValue
-js_math_pingpong(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+static JSValue js_math_pingpong(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
     double t;
     double len;

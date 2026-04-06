@@ -25,5 +25,5 @@
   "input": {
     "default_mappings": {}
   },
-  "code": "dist/main.js"
+  "code": "src/main.js"
 }

@@ -135,15 +135,15 @@ static void prv_apply_crt(uint32_t *pixels, int32_t w, int32_t h, float strength
     float inv_max_dist_sq;
     float half_strength;
 
-    cx               = (float)w * 0.5f;
-    cy               = (float)h * 0.5f;
-    inv_max_dist_sq  = 1.0f / (cx * cx + cy * cy);
-    half_strength    = strength * 0.5f;
+    cx              = (float)w * 0.5f;
+    cy              = (float)h * 0.5f;
+    inv_max_dist_sq = 1.0f / (cx * cx + cy * cy);
+    half_strength   = strength * 0.5f;
 
     for (int32_t y = 0; y < h; ++y) {
-        float    dy;
-        float    dy_sq;
-        int32_t  row_off;
+        float   dy;
+        float   dy_sq;
+        int32_t row_off;
 
         dy      = (float)y - cy;
         dy_sq   = dy * dy;
@@ -196,8 +196,8 @@ static void prv_apply_crt(uint32_t *pixels, int32_t w, int32_t h, float strength
                 prev    = pixels[row_off + x - 1];
                 bleed_r = PX_R(prev);
 
-                cur                    = (cur & 0x00FFFFFFu) | (bleed_r << 24);
-                pixels[row_off + x]    = cur;
+                cur                 = (cur & 0x00FFFFFFu) | (bleed_r << 24);
+                pixels[row_off + x] = cur;
             }
         }
     }
@@ -260,8 +260,8 @@ static void prv_apply_bloom(uint32_t *pixels, int32_t w, int32_t h, float streng
  *
  * Reuses pfx->scratch instead of allocating every frame.
  */
-static void prv_apply_aberration(dtr_postfx_t *pfx, uint32_t *pixels, int32_t w, int32_t h,
-                                 float strength)
+static void
+prv_apply_aberration(dtr_postfx_t *pfx, uint32_t *pixels, int32_t w, int32_t h, float strength)
 {
     int32_t   offset;
     uint32_t *temp;
@@ -363,7 +363,6 @@ void dtr_postfx_apply(dtr_postfx_t *pfx, uint32_t *pixels, int32_t w, int32_t h)
                 break;
         }
     }
-
 }
 
 /* ------------------------------------------------------------------ */

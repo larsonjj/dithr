@@ -3,8 +3,6 @@
  * \brief           Unit tests for the audio subsystem
  */
 
-
-
 #include "audio.h"
 #include "test_harness.h"
 
@@ -129,7 +127,7 @@ static void test_sfx_playing_out_of_bounds(void)
 /*  cycles.                                                            */
 /* ------------------------------------------------------------------ */
 
-static dtr_audio_t *live_aud;    /* set in main() */
+static dtr_audio_t *live_aud; /* set in main() */
 
 static void test_audio_create_destroy(void)
 {
@@ -152,8 +150,7 @@ static void test_audio_channel_volume(void)
 
     /* Out-of-range channel returns 0 */
     DTR_ASSERT_NEAR(dtr_sfx_get_volume(live_aud, -1), 0.0f, 0.001);
-    DTR_ASSERT_NEAR(dtr_sfx_get_volume(live_aud, CONSOLE_MAX_CHANNELS),
-                    0.0f, 0.001);
+    DTR_ASSERT_NEAR(dtr_sfx_get_volume(live_aud, CONSOLE_MAX_CHANNELS), 0.0f, 0.001);
 
     /* Restore default */
     dtr_sfx_volume(live_aud, 1.0f, 0);

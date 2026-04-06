@@ -3,8 +3,8 @@
  * \brief           JS bindings for tween engine (Promise-based)
  */
 
-#include "api_common.h"
 #include "../tween.h"
+#include "api_common.h"
 
 #define TWN(ctx) (&dtr_api_get_console(ctx)->tween)
 
@@ -21,8 +21,7 @@ static JSValue prv_reject[CONSOLE_MAX_TWEENS];
 static bool    prv_has_promise[CONSOLE_MAX_TWEENS];
 static bool    prv_inited = false;
 
-static void
-prv_init_promises(void)
+static void prv_init_promises(void)
 {
     int32_t idx;
 
@@ -37,8 +36,7 @@ prv_init_promises(void)
     prv_inited = true;
 }
 
-static void
-prv_clear_promise(JSContext *ctx, int32_t idx)
+static void prv_clear_promise(JSContext *ctx, int32_t idx)
 {
     if (idx >= 0 && idx < CONSOLE_MAX_TWEENS && prv_has_promise[idx]) {
         JS_FreeValue(ctx, prv_resolve[idx]);
@@ -51,8 +49,7 @@ prv_clear_promise(JSContext *ctx, int32_t idx)
 
 /* ---- Helper: parse easing arg ------------------------------------------ */
 
-static dtr_ease_t
-prv_get_ease(JSContext *ctx, int argc, JSValueConst *argv, int idx)
+static dtr_ease_t prv_get_ease(JSContext *ctx, int argc, JSValueConst *argv, int idx)
 {
     const char *name;
     dtr_ease_t  ease;
@@ -70,8 +67,7 @@ prv_get_ease(JSContext *ctx, int argc, JSValueConst *argv, int idx)
 
 /* ---- Helper: extract id from number or {id, done} object --------------- */
 
-static int32_t
-prv_get_id(JSContext *ctx, int argc, JSValueConst *argv, int idx)
+static int32_t prv_get_id(JSContext *ctx, int argc, JSValueConst *argv, int idx)
 {
     int32_t val;
     JSValue prop;
@@ -105,8 +101,7 @@ prv_get_id(JSContext *ctx, int argc, JSValueConst *argv, int idx)
 /*  tween.ease(t, name) → eased value 0..1                             */
 /* ------------------------------------------------------------------ */
 
-static JSValue
-js_tween_ease(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+static JSValue js_tween_ease(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
     double time;
 
@@ -119,8 +114,7 @@ js_tween_ease(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *arg
 /*  tween.start(from, to, dur, ease?, delay?) → {id, done: Promise}     */
 /* ------------------------------------------------------------------ */
 
-static JSValue
-js_tween_start(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+static JSValue js_tween_start(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
     double     from;
     double     too;
@@ -147,7 +141,7 @@ js_tween_start(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *ar
     }
 
     /* Create a Promise that resolves when the tween finishes */
-    promise = JS_NewPromiseCapability(ctx, resolve_funcs);
+    promise              = JS_NewPromiseCapability(ctx, resolve_funcs);
     prv_resolve[idx]     = JS_DupValue(ctx, resolve_funcs[0]);
     prv_reject[idx]      = JS_DupValue(ctx, resolve_funcs[1]);
     prv_has_promise[idx] = true;
@@ -166,8 +160,7 @@ js_tween_start(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *ar
 /*  tween.tick(dt) — advance all tweens, resolve finished Promises      */
 /* ------------------------------------------------------------------ */
 
-static JSValue
-js_tween_tick(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+static JSValue js_tween_tick(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
     dtr_tween_t *twn;
     int32_t      idx;
@@ -191,7 +184,7 @@ js_tween_tick(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *arg
                 JSValue ret;
 
                 id_val = JS_NewInt32(ctx, idx);
-                ret = JS_Call(ctx, prv_resolve[idx], JS_UNDEFINED, 1, &id_val);
+                ret    = JS_Call(ctx, prv_resolve[idx], JS_UNDEFINED, 1, &id_val);
                 JS_FreeValue(ctx, ret);
                 JS_FreeValue(ctx, id_val);
                 prv_clear_promise(ctx, idx);
@@ -205,8 +198,7 @@ js_tween_tick(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *arg
 /*  tween.val(handle_or_id, default?) → current interpolated value      */
 /* ------------------------------------------------------------------ */
 
-static JSValue
-js_tween_val(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+static JSValue js_tween_val(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
     int32_t idx;
     double  dflt;
@@ -225,8 +217,7 @@ js_tween_val(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv
 /*  tween.done(handle_or_id) → bool                                     */
 /* ------------------------------------------------------------------ */
 
-static JSValue
-js_tween_done(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+static JSValue js_tween_done(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
     (void)this_val;
     return JS_NewBool(ctx, dtr_tween_done(TWN(ctx), prv_get_id(ctx, argc, argv, 0)));
@@ -236,8 +227,7 @@ js_tween_done(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *arg
 /*  tween.cancel(handle_or_id)                                          */
 /* ------------------------------------------------------------------ */
 
-static JSValue
-js_tween_cancel(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+static JSValue js_tween_cancel(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
     int32_t idx;
 
@@ -264,8 +254,7 @@ js_tween_cancel(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *a
 /* ------------------------------------------------------------------ */
 
 static JSValue
-js_tween_cancel_all(JSContext *ctx, JSValueConst this_val,
-                    int argc, JSValueConst *argv)
+js_tween_cancel_all(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
     dtr_tween_t *twn;
     int32_t      idx;
@@ -295,17 +284,16 @@ js_tween_cancel_all(JSContext *ctx, JSValueConst this_val,
 /* ---- Function list ---------------------------------------------------- */
 
 static const JSCFunctionListEntry js_tween_funcs[] = {
-    JS_CFUNC_DEF("ease",      2, js_tween_ease),
-    JS_CFUNC_DEF("start",     5, js_tween_start),
-    JS_CFUNC_DEF("tick",      1, js_tween_tick),
-    JS_CFUNC_DEF("val",       2, js_tween_val),
-    JS_CFUNC_DEF("done",      1, js_tween_done),
-    JS_CFUNC_DEF("cancel",    1, js_tween_cancel),
+    JS_CFUNC_DEF("ease", 2, js_tween_ease),
+    JS_CFUNC_DEF("start", 5, js_tween_start),
+    JS_CFUNC_DEF("tick", 1, js_tween_tick),
+    JS_CFUNC_DEF("val", 2, js_tween_val),
+    JS_CFUNC_DEF("done", 1, js_tween_done),
+    JS_CFUNC_DEF("cancel", 1, js_tween_cancel),
     JS_CFUNC_DEF("cancelAll", 0, js_tween_cancel_all),
 };
 
-void
-dtr_tween_api_register(JSContext *ctx, JSValue global)
+void dtr_tween_api_register(JSContext *ctx, JSValue global)
 {
     JSValue ns;
 

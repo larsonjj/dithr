@@ -1,109 +1,117 @@
 // ─── Mutable state ───────────────────────────────────────────────────────────
+//
+// All editor state lives on this single exported object so that every module
+// can freely read *and* write it via `st.cx`, `st.buf`, etc.
 
-let buf = [""]; // line buffer
-let cx = 0,
-    cy = 0; // cursor col / row in buffer
-let ox = 0,
-    oy = 0; // scroll offset col / row
-let anchor = null; // selection anchor {x,y} or null
+import { TAB_CODE } from "./config.js";
 
-let blink = 0,
-    curOn = true; // cursor blink state
-let fname = ""; // current filename
-let dirty = false;
-let msg = "",
-    msgT = 0; // status message + timer
-let restored = false; // set by _restore to skip default open in _init
+export const st = {
+    buf: [""], // line buffer
+    cx: 0,
+    cy: 0, // cursor col / row in buffer
+    ox: 0,
+    oy: 0, // scroll offset col / row
+    anchor: null, // selection anchor {x,y} or null
 
-// undo / redo
-const MAXUNDO = 200;
-let undoStack = [];
-let redoStack = [];
+    blink: 0,
+    curOn: true, // cursor blink state
+    fname: "", // current filename
+    dirty: false,
+    openFiles: [], // [{path,buf,cx,cy,ox,oy,targetOy,anchor,undoStack,redoStack,dirty,savedBuf}]
+    fileIdx: -1, // active file index (-1 = no files open)
+    msg: "",
+    msgT: 0, // status message + timer
+    restored: false, // set by _restore to skip default open in _init
 
-// file browser
-let brMode = false;
-let brEntries = []; // {name, isDir}
-let brIdx = 0;
-let brScroll = 0;
-let brDir = ""; // current directory relative to cart root ("" = root, "src/" etc.)
+    // undo / redo
+    MAXUNDO: 200,
+    undoStack: [],
+    redoStack: [],
 
-// find & replace
-let findMode = false;
-let findText = "";
-let replaceText = "";
-let findReplace = false; // true = show replace field
-let findField = 0; // 0 = find, 1 = replace
+    // file browser
+    brMode: false,
+    brEntries: [], // {name, isDir}
+    brIdx: 0,
+    brScroll: 0,
+    brDir: "", // current directory relative to cart root
 
-// go to line
-let gotoMode = false;
-let gotoText = "";
+    // find & replace
+    findMode: false,
+    findText: "",
+    replaceText: "",
+    findReplace: false, // true = show replace field
+    findField: 0, // 0 = find, 1 = replace
 
-// vim mode
-let vimEnabled = false;
-let vim = "normal"; // "normal", "insert", "visual", "vline", "command"
-let vimCount = "";
-let vimPending = "";
-let vimOpCount = 1;
-let vimCmd = "";
-let vimReg = "";
-let vimLinewise = false;
-let vimSearch = "";
-let vimVlineStart = 0;
+    // go to line
+    gotoMode: false,
+    gotoText: "",
 
-// double-click state
-let lastClickTime = 0;
-let lastClickX = 0;
-let lastClickY = 0;
-let clickCount = 0;
+    // vim mode
+    vimEnabled: false,
+    vim: "normal", // "normal", "insert", "visual", "vline", "command"
+    vimCount: "",
+    vimPending: "",
+    vimOpCount: 1,
+    vimCmd: "",
+    vimReg: "",
+    vimLinewise: false,
+    vimSearch: "",
+    vimVlineStart: 0,
 
-// smooth scrolling
-let targetOy = 0;
-let smoothOy = 0;
+    // double-click state
+    lastClickTime: 0,
+    lastClickX: 0,
+    lastClickY: 0,
+    clickCount: 0,
 
-// modified line tracking (since last save)
-let savedBuf = []; // snapshot at last save/open
+    // smooth scrolling
+    targetOy: 0,
+    smoothOy: 0,
 
-// persistent find highlighting
-let lastFindText = "";
+    // modified line tracking (since last save)
+    savedBuf: [], // snapshot at last save/open
 
-// ─── Tab state ───────────────────────────────────────────────────────────────
-let activeTab = TAB_CODE;
+    // persistent find highlighting
+    lastFindText: "",
 
-// ─── Sprite editor state ─────────────────────────────────────────────────────
-let sprSel = 0; // selected sprite index
-let sprCol = 7; // selected palette colour for painting
-let sprZoom = 8; // pixel zoom level
-let sprTool = 0; // 0=pencil, 1=eraser
-let sprScrollY = 0; // sheet grid scroll offset (pixels)
-let sprUndoStack = []; // [{x, y, prev}]
-let sprUndoPending = []; // current stroke
-const SPR_MAX_UNDO = 100;
+    // tab state
+    activeTab: TAB_CODE,
 
-// ─── Map editor state ────────────────────────────────────────────────────────
-let mapCamX = 0; // camera tile offset
-let mapCamY = 0;
-let mapLayer = 0; // active layer
-let mapTile = 0; // selected tile for painting
-let mapTool = 0; // 0=pencil, 1=eraser
-let mapGridOn = true; // show grid overlay
-let mapUndoStack = []; // [{x, y, layer, prev}]
-let mapUndoPending = []; // current stroke
-const MAP_MAX_UNDO = 100;
+    // sprite editor state
+    sprSel: 0,
+    sprCol: 7,
+    sprZoom: 8,
+    sprTool: 0, // 0=pencil, 1=eraser
+    sprScrollY: 0,
+    sprUndoStack: [],
+    sprUndoPending: [],
+    SPR_MAX_UNDO: 100,
 
-// ─── Caches (invalidated on edit) ────────────────────────────────────────────
+    // map editor state
+    mapCamX: 0,
+    mapCamY: 0,
+    mapLayer: 0,
+    mapTile: 0,
+    mapTool: 0, // 0=pencil, 1=eraser
+    mapGridOn: true,
+    mapUndoStack: [],
+    mapUndoPending: [],
+    MAP_MAX_UNDO: 100,
 
-let _blockStateCache = []; // inBlock state at start of each line
-let _blockStateDirty = true;
-let _bracketMatchCache = null; // { cy, cx, result }
-let _bracketDepthCache = []; // cumulative bracket depth at start of each line
-let _bracketDepthDirty = true;
-let _bufVersion = 0; // incremented on every edit
-let _lastCacheVersion = -1; // version at which caches were last valid
+    // caches (invalidated on edit)
+    _blockStateCache: [],
+    _blockStateDirty: true,
+    _bracketMatchCache: null,
+    _bracketDepthCache: [],
+    _bracketDepthDirty: true,
+    _bufVersion: 0,
+    _lastCacheVersion: -1,
 
-// minimap cache
-let _mmCacheVersion = -1;
-let _mmLineLens = []; // precomputed line lengths for minimap
+    // minimap cache
+    _mmCacheVersion: -1,
+    _mmLineLens: [],
 
-function invalidateCaches() {
-    _bufVersion++;
-}
+    invalidateCaches() {
+        this._bufVersion++;
+    },
+};

@@ -3,12 +3,11 @@
  * \brief           Unit tests for mouse and gamepad state subsystems
  */
 
-
-#include <stdio.h>
-
-#include "test_harness.h"
 #include "gamepad.h"
 #include "mouse.h"
+#include "test_harness.h"
+
+#include <stdio.h>
 
 /* ================================================================== */
 /*  Mouse state tests                                                  */
@@ -242,7 +241,7 @@ static void test_gamepad_btn_set_and_query(void)
 
     /* Simulate a connected pad (without SDL handle) */
     gp->pads[0].connected = true;
-    gp->count              = 1;
+    gp->count             = 1;
 
     /* Press button A */
     gp->pads[0].btn_current[DTR_PAD_A] = true;
@@ -261,9 +260,9 @@ static void test_gamepad_btnp(void)
 {
     dtr_gamepad_state_t *gp;
 
-    gp = dtr_gamepad_create();
+    gp                    = dtr_gamepad_create();
     gp->pads[0].connected = true;
-    gp->count              = 1;
+    gp->count             = 1;
 
     /* Frame 1: press A */
     gp->pads[0].btn_pressed[DTR_PAD_A] = true;
@@ -291,7 +290,7 @@ static void test_gamepad_btn_out_of_range(void)
 
     /* Button out of range */
     gp->pads[0].connected = true;
-    gp->count              = 1;
+    gp->count             = 1;
     DTR_ASSERT(!dtr_gamepad_btn(gp, DTR_PAD_BTN_COUNT, 0));
     DTR_ASSERT(!dtr_gamepad_btnp(gp, DTR_PAD_BTN_COUNT, 0));
 
@@ -303,9 +302,9 @@ static void test_gamepad_axis_set_and_query(void)
 {
     dtr_gamepad_state_t *gp;
 
-    gp = dtr_gamepad_create();
+    gp                    = dtr_gamepad_create();
     gp->pads[0].connected = true;
-    gp->count              = 1;
+    gp->count             = 1;
 
     gp->pads[0].axes[DTR_PAD_AXIS_LX] = 0.75f;
     DTR_ASSERT_NEAR(dtr_gamepad_axis(gp, DTR_PAD_AXIS_LX, 0), 0.75f, 0.001f);
@@ -335,7 +334,7 @@ static void test_gamepad_connected_index_out_of_range(void)
 static void test_gamepad_name_default(void)
 {
     dtr_gamepad_state_t *gp;
-    const char         *name;
+    const char          *name;
 
     gp = dtr_gamepad_create();
 
@@ -360,10 +359,10 @@ static void test_gamepad_update_deadzone(void)
 {
     dtr_gamepad_state_t *gp;
 
-    gp = dtr_gamepad_create();
+    gp                    = dtr_gamepad_create();
     gp->pads[0].connected = true;
     gp->pads[0].handle    = NULL; /* update skips pads without handle */
-    gp->count              = 1;
+    gp->count             = 1;
 
     /* Axis below deadzone should be zeroed — but update skips NULL handle */
     gp->pads[0].axes[DTR_PAD_AXIS_LX] = 0.1f;

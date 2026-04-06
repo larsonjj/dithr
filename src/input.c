@@ -14,14 +14,14 @@
 /* ------------------------------------------------------------------ */
 
 static const char *KEY_NAMES[DTR_KEY_COUNT] = {
-    "NONE",  "UP",     "DOWN",   "LEFT",   "RIGHT", "Z",   "X",   "C",   "V",  "SPACE",
-    "ENTER", "ESCAPE", "LSHIFT", "RSHIFT", "A",     "B",   "D",   "E",   "F",  "G",
-    "H",     "I",      "J",      "K",      "L",     "M",   "N",   "O",   "P",  "Q",
-    "R",     "S",      "T",      "U",      "W",     "Y",   "0",   "1",   "2",  "3",
-    "4",     "5",      "6",      "7",      "8",     "9",   "F1",  "F2",  "F3", "F4",
-    "F5",    "F6",     "F7",     "F8",     "F9",    "F10", "F11", "F12",
-    "BACKSPACE", "DELETE", "TAB", "HOME", "END", "PAGEUP", "PAGEDOWN",
-    "LCTRL", "RCTRL", "LALT", "RALT", "GRAVE", "SLASH",
+    "NONE",   "UP",       "DOWN",   "LEFT",   "RIGHT",     "Z",      "X",     "C",     "V",
+    "SPACE",  "ENTER",    "ESCAPE", "LSHIFT", "RSHIFT",    "A",      "B",     "D",     "E",
+    "F",      "G",        "H",      "I",      "J",         "K",      "L",     "M",     "N",
+    "O",      "P",        "Q",      "R",      "S",         "T",      "U",     "W",     "Y",
+    "0",      "1",        "2",      "3",      "4",         "5",      "6",     "7",     "8",
+    "9",      "F1",       "F2",     "F3",     "F4",        "F5",     "F6",    "F7",    "F8",
+    "F9",     "F10",      "F11",    "F12",    "BACKSPACE", "DELETE", "TAB",   "HOME",  "END",
+    "PAGEUP", "PAGEDOWN", "LCTRL",  "RCTRL",  "LALT",      "RALT",   "GRAVE", "SLASH",
 };
 
 /* ------------------------------------------------------------------ */
@@ -213,8 +213,8 @@ void dtr_key_update(dtr_key_state_t *keys, float delta)
                 prev_rep = prev_time - DTR_KEY_REPEAT_DELAY;
                 curr_rep = keys->hold_time[idx] - DTR_KEY_REPEAT_DELAY;
 
-                if ((int)(curr_rep / DTR_KEY_REPEAT_INTERVAL)
-                    > (int)(prev_rep / DTR_KEY_REPEAT_INTERVAL)) {
+                if ((int)(curr_rep / DTR_KEY_REPEAT_INTERVAL) >
+                    (int)(prev_rep / DTR_KEY_REPEAT_INTERVAL)) {
                     keys->repeat_fired[idx] = true;
                 }
             } else if (keys->hold_time[idx] >= DTR_KEY_REPEAT_DELAY) {
@@ -299,8 +299,8 @@ static dtr_input_action_t *prv_find_action(dtr_input_state_t *inp, const char *a
     return NULL;
 }
 
-void dtr_input_map(dtr_input_state_t *  inp,
-                   const char *         action,
+void dtr_input_map(dtr_input_state_t   *inp,
+                   const char          *action,
                    const dtr_binding_t *bindings,
                    int32_t              count)
 {
@@ -320,8 +320,8 @@ void dtr_input_map(dtr_input_state_t *  inp,
     SDL_memcpy(act->bindings, bindings, (size_t)act->bind_count * sizeof(dtr_binding_t));
 }
 
-void dtr_input_remap(dtr_input_state_t *  inp,
-                     const char *         action,
+void dtr_input_remap(dtr_input_state_t   *inp,
+                     const char          *action,
                      const dtr_binding_t *bindings,
                      int32_t              count)
 {
@@ -367,8 +367,7 @@ void dtr_input_update(dtr_input_state_t *inp, dtr_key_state_t *keys, dtr_gamepad
                     break;
 
                 case DTR_BIND_PAD_BTN:
-                    if (pads != NULL &&
-                        dtr_gamepad_btn(pads, (dtr_pad_btn_t)bind->code, 0)) {
+                    if (pads != NULL && dtr_gamepad_btn(pads, (dtr_pad_btn_t)bind->code, 0)) {
                         pressed = true;
                     }
                     break;
@@ -376,7 +375,8 @@ void dtr_input_update(dtr_input_state_t *inp, dtr_key_state_t *keys, dtr_gamepad
                 case DTR_BIND_PAD_AXIS: {
                     float val;
 
-                    if (pads == NULL) break;
+                    if (pads == NULL)
+                        break;
                     val = dtr_gamepad_axis(pads, (dtr_pad_axis_t)bind->code, 0);
                     if (fabsf(val) > bind->threshold) {
                         axis_val = val;

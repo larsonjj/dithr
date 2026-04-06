@@ -1,9 +1,12 @@
 // ─── Selection helpers ───────────────────────────────────────────────────────
 
-function selOrdered() {
-    if (!anchor) return null;
-    let a = { x: anchor.x, y: anchor.y };
-    let b = { x: cx, y: cy };
+import { st } from "./state.js";
+import { ensureVisible, resetBlink, status } from "./helpers.js";
+
+export function selOrdered() {
+    if (!st.anchor) return null;
+    let a = { x: st.anchor.x, y: st.anchor.y };
+    let b = { x: st.cx, y: st.cy };
     if (a.y > b.y || (a.y === b.y && a.x > b.x)) {
         let t = a;
         a = b;
@@ -12,143 +15,235 @@ function selOrdered() {
     return { a, b };
 }
 
-function selText() {
+export function selText() {
     let s = selOrdered();
     if (!s) return "";
-    if (s.a.y === s.b.y) return buf[s.a.y].slice(s.a.x, s.b.x);
-    let parts = [buf[s.a.y].slice(s.a.x)];
-    for (let i = s.a.y + 1; i < s.b.y; i++) parts.push(buf[i]);
-    parts.push(buf[s.b.y].slice(0, s.b.x));
+    if (s.a.y === s.b.y) return st.buf[s.a.y].slice(s.a.x, s.b.x);
+    let parts = [st.buf[s.a.y].slice(s.a.x)];
+    for (let i = s.a.y + 1; i < s.b.y; i++) parts.push(st.buf[i]);
+    parts.push(st.buf[s.b.y].slice(0, s.b.x));
     return parts.join("\n");
 }
 
-function deleteSel() {
+export function deleteSel() {
     let s = selOrdered();
     if (!s) return false;
     pushUndo();
     if (s.a.y === s.b.y) {
-        buf[s.a.y] = buf[s.a.y].slice(0, s.a.x) + buf[s.a.y].slice(s.b.x);
+        st.buf[s.a.y] = st.buf[s.a.y].slice(0, s.a.x) + st.buf[s.a.y].slice(s.b.x);
     } else {
-        buf[s.a.y] = buf[s.a.y].slice(0, s.a.x) + buf[s.b.y].slice(s.b.x);
-        buf.splice(s.a.y + 1, s.b.y - s.a.y);
+        st.buf[s.a.y] = st.buf[s.a.y].slice(0, s.a.x) + st.buf[s.b.y].slice(s.b.x);
+        st.buf.splice(s.a.y + 1, s.b.y - s.a.y);
     }
-    cx = s.a.x;
-    cy = s.a.y;
-    anchor = null;
-    dirty = true;
+    st.cx = s.a.x;
+    st.cy = s.a.y;
+    st.anchor = null;
+    st.dirty = true;
     return true;
 }
 
 // ─── Undo ────────────────────────────────────────────────────────────────────
 
 function snapshot() {
-    return { buf: buf.map((l) => l), cx, cy };
+    return { buf: st.buf.map((l) => l), cx: st.cx, cy: st.cy };
 }
 
-function pushUndo() {
-    undoStack.push(snapshot());
-    if (undoStack.length > MAXUNDO) undoStack.shift();
-    redoStack = [];
-    invalidateCaches();
+export function pushUndo() {
+    st.undoStack.push(snapshot());
+    if (st.undoStack.length > st.MAXUNDO) st.undoStack.shift();
+    st.redoStack = [];
+    st.invalidateCaches();
 }
 
-function doUndo() {
-    if (!undoStack.length) {
+export function doUndo() {
+    if (!st.undoStack.length) {
         status("Nothing to undo");
         return;
     }
-    redoStack.push(snapshot());
-    let s = undoStack.pop();
-    buf = s.buf;
-    cx = s.cx;
-    cy = s.cy;
-    anchor = null;
-    dirty = true;
-    invalidateCaches();
+    st.redoStack.push(snapshot());
+    let s = st.undoStack.pop();
+    st.buf = s.buf;
+    st.cx = s.cx;
+    st.cy = s.cy;
+    st.anchor = null;
+    st.dirty = true;
+    st.invalidateCaches();
     ensureVisible();
     resetBlink();
 }
 
-function doRedo() {
-    if (!redoStack.length) {
+export function doRedo() {
+    if (!st.redoStack.length) {
         status("Nothing to redo");
         return;
     }
-    invalidateCaches();
-    undoStack.push(snapshot());
-    let s = redoStack.pop();
-    buf = s.buf;
-    cx = s.cx;
-    cy = s.cy;
-    anchor = null;
-    dirty = true;
+    st.invalidateCaches();
+    st.undoStack.push(snapshot());
+    let s = st.redoStack.pop();
+    st.buf = s.buf;
+    st.cx = s.cx;
+    st.cy = s.cy;
+    st.anchor = null;
+    st.dirty = true;
     ensureVisible();
     resetBlink();
 }
 
 // ─── File I/O ────────────────────────────────────────────────────────────────
 
-function openFile(path) {
+export function openFile(path) {
+    // If already open, just switch to it
+    for (let i = 0; i < st.openFiles.length; i++) {
+        if (st.openFiles[i].path === path) {
+            switchToFile(i);
+            status("Switched to " + path);
+            return;
+        }
+    }
     let data = sys.readFile(path);
     if (data === undefined) {
         status("Cannot read: " + path);
         return;
     }
-    buf = data.replace(/\r\n/g, "\n").split("\n");
+    storeFileState();
+    let buf = data.replace(/\r\n/g, "\n").split("\n");
     if (!buf.length) buf = [""];
-    fname = path;
-    cx = cy = ox = oy = 0;
-    anchor = null;
-    dirty = false;
-    undoStack = [];
-    redoStack = [];
-    savedBuf = buf.map(function (l) {
+    let saved = buf.map(function (l) {
         return l;
     });
-    invalidateCaches();
+    st.openFiles.push({
+        path: path,
+        buf: buf,
+        cx: 0,
+        cy: 0,
+        ox: 0,
+        oy: 0,
+        targetOy: 0,
+        anchor: null,
+        undoStack: [],
+        redoStack: [],
+        dirty: false,
+        savedBuf: saved,
+    });
+    st.fileIdx = st.openFiles.length - 1;
+    loadFileState(st.fileIdx);
     status("Opened " + path);
 }
 
-function saveFile() {
-    if (!fname) {
+export function saveFile() {
+    if (!st.fname) {
         status("No file — open one first (Ctrl+O)");
         return;
     }
-    let ok = sys.writeFile(fname, buf.join("\n"));
+    let ok = sys.writeFile(st.fname, st.buf.join("\n"));
     if (ok) {
-        dirty = false;
-        savedBuf = buf.map(function (l) {
+        st.dirty = false;
+        st.savedBuf = st.buf.map(function (l) {
             return l;
         });
-        status("Saved " + fname);
+        if (st.fileIdx >= 0 && st.fileIdx < st.openFiles.length) {
+            st.openFiles[st.fileIdx].dirty = false;
+            st.openFiles[st.fileIdx].savedBuf = st.savedBuf;
+        }
+        status("Saved " + st.fname);
     } else {
-        status("Write failed: " + fname);
+        status("Write failed: " + st.fname);
     }
 }
 
-function openBrowser() {
-    brDir = "";
+export function openBrowser() {
+    st.brDir = "";
     refreshBrowser();
-    brMode = true;
+    st.brMode = true;
 }
 
-function refreshBrowser() {
-    let dirs = sys.listDirs(brDir);
-    let files = sys.listFiles(brDir);
-    brEntries = [];
-    if (brDir) {
-        brEntries.push({ name: "..", isDir: true });
+export function refreshBrowser() {
+    let dirs = sys.listDirs(st.brDir);
+    let files = sys.listFiles(st.brDir);
+    st.brEntries = [];
+    if (st.brDir) {
+        st.brEntries.push({ name: "..", isDir: true });
     }
     if (dirs) {
         for (let i = 0; i < dirs.length; i++) {
-            brEntries.push({ name: dirs[i], isDir: true });
+            st.brEntries.push({ name: dirs[i], isDir: true });
         }
     }
     if (files) {
         for (let i = 0; i < files.length; i++) {
-            brEntries.push({ name: files[i], isDir: false });
+            st.brEntries.push({ name: files[i], isDir: false });
         }
     }
-    brIdx = 0;
-    brScroll = 0;
+    st.brIdx = 0;
+    st.brScroll = 0;
+}
+
+// ─── Multi-file helpers ──────────────────────────────────────────────────────
+
+export function storeFileState() {
+    if (st.fileIdx < 0 || st.fileIdx >= st.openFiles.length) return;
+    let f = st.openFiles[st.fileIdx];
+    f.buf = st.buf;
+    f.cx = st.cx;
+    f.cy = st.cy;
+    f.ox = st.ox;
+    f.oy = st.oy;
+    f.targetOy = st.targetOy;
+    f.anchor = st.anchor;
+    f.undoStack = st.undoStack;
+    f.redoStack = st.redoStack;
+    f.dirty = st.dirty;
+    f.savedBuf = st.savedBuf;
+}
+
+export function loadFileState(idx) {
+    let f = st.openFiles[idx];
+    st.buf = f.buf;
+    st.cx = f.cx;
+    st.cy = f.cy;
+    st.ox = f.ox;
+    st.oy = f.oy;
+    st.targetOy = f.targetOy;
+    st.anchor = f.anchor;
+    st.undoStack = f.undoStack;
+    st.redoStack = f.redoStack;
+    st.dirty = f.dirty;
+    st.savedBuf = f.savedBuf;
+    st.fname = f.path;
+    st.fileIdx = idx;
+    st.invalidateCaches();
+}
+
+export function switchToFile(idx) {
+    if (idx === st.fileIdx) return;
+    if (idx < 0 || idx >= st.openFiles.length) return;
+    storeFileState();
+    loadFileState(idx);
+}
+
+export function closeFile(idx) {
+    if (idx < 0 || idx >= st.openFiles.length) return;
+    if (st.openFiles.length === 1) {
+        st.openFiles = [];
+        st.fileIdx = -1;
+        st.buf = [""];
+        st.fname = "";
+        st.cx = st.cy = st.ox = st.oy = 0;
+        st.targetOy = 0;
+        st.anchor = null;
+        st.undoStack = [];
+        st.redoStack = [];
+        st.dirty = false;
+        st.savedBuf = [];
+        st.invalidateCaches();
+        return;
+    }
+    if (idx === st.fileIdx) {
+        st.openFiles.splice(idx, 1);
+        st.fileIdx = Math.min(idx, st.openFiles.length - 1);
+        loadFileState(st.fileIdx);
+    } else {
+        st.openFiles.splice(idx, 1);
+        if (idx < st.fileIdx) st.fileIdx--;
+    }
 }

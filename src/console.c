@@ -78,9 +78,9 @@ typedef struct {
     int64_t     max_mtime;
 } prv_dir_scan_t;
 
-static SDL_EnumerationResult SDLCALL prv_scan_js_cb(void *userdata,
-                                                     const char *dirname,
-                                                     const char *fname)
+static SDL_EnumerationResult SDLCALL prv_scan_js_cb(void       *userdata,
+                                                    const char *dirname,
+                                                    const char *fname)
 {
     prv_dir_scan_t *scan;
     const char     *ext;
@@ -149,14 +149,14 @@ static void prv_poll_file_changes(dtr_console_t *con)
         return;
     }
 
-    ticks      = SDL_GetPerformanceCounter();
-    elapsed_ms = (double)(ticks - con->watch_last_poll)
-                 / (double)SDL_GetPerformanceFrequency() * 1000.0;
+    ticks = SDL_GetPerformanceCounter();
+    elapsed_ms =
+        (double)(ticks - con->watch_last_poll) / (double)SDL_GetPerformanceFrequency() * 1000.0;
 
     if (elapsed_ms >= 200.0) {
         bool changed;
 
-        changed = false;
+        changed              = false;
         con->watch_last_poll = ticks;
 
         if (con->watch_dir[0] != '\0') {
@@ -184,8 +184,8 @@ static void prv_poll_file_changes(dtr_console_t *con)
     if (con->reload_pending) {
         double debounce_ms;
 
-        debounce_ms = (double)(SDL_GetPerformanceCounter() - con->reload_detect_time)
-                      / (double)SDL_GetPerformanceFrequency() * 1000.0;
+        debounce_ms = (double)(SDL_GetPerformanceCounter() - con->reload_detect_time) /
+                      (double)SDL_GetPerformanceFrequency() * 1000.0;
         if (debounce_ms >= 300.0) {
             SDL_Log("hot-reload: change detected, reloading");
             con->reload         = true;
@@ -203,7 +203,7 @@ static void prv_poll_file_changes(dtr_console_t *con)
 dtr_console_t *dtr_console_create(const char *cart_path)
 {
     dtr_console_t *con;
-    char *         json_data;
+    char          *json_data;
     size_t         json_len;
 
     con = DTR_CALLOC(1, sizeof(dtr_console_t));
@@ -302,13 +302,20 @@ dtr_console_t *dtr_console_create(const char *cart_path)
     {
         SDL_RendererLogicalPresentation lp;
         switch (con->cart->display.scale_mode) {
-        case 1:  lp = SDL_LOGICAL_PRESENTATION_LETTERBOX;     break;
-        case 2:  lp = SDL_LOGICAL_PRESENTATION_STRETCH;       break;
-        case 3:  lp = SDL_LOGICAL_PRESENTATION_OVERSCAN;      break;
-        default: lp = SDL_LOGICAL_PRESENTATION_INTEGER_SCALE; break;
+            case 1:
+                lp = SDL_LOGICAL_PRESENTATION_LETTERBOX;
+                break;
+            case 2:
+                lp = SDL_LOGICAL_PRESENTATION_STRETCH;
+                break;
+            case 3:
+                lp = SDL_LOGICAL_PRESENTATION_OVERSCAN;
+                break;
+            default:
+                lp = SDL_LOGICAL_PRESENTATION_INTEGER_SCALE;
+                break;
         }
-        SDL_SetRenderLogicalPresentation(
-            con->renderer, con->fb_width, con->fb_height, lp);
+        SDL_SetRenderLogicalPresentation(con->renderer, con->fb_width, con->fb_height, lp);
     }
 
     /* Screen texture: streaming, nearest-neighbor for pixel-perfect */
@@ -341,8 +348,8 @@ dtr_console_t *dtr_console_create(const char *cart_path)
     }
 
     /* --- Input subsystems --- */
-    con->keys     = dtr_key_create();
-    con->mouse    = dtr_mouse_create();
+    con->keys  = dtr_key_create();
+    con->mouse = dtr_mouse_create();
 
     /* Ensure gamepad subsystem is initialised (SDL callbacks only auto-init EVENTS) */
     if (!SDL_WasInit(SDL_INIT_GAMEPAD)) {
@@ -403,7 +410,7 @@ dtr_console_t *dtr_console_create(const char *cart_path)
 
     /* --- Evaluate cart JS source --- */
     if (con->cart->code != NULL && con->cart->code_len > 0) {
-        dtr_runtime_eval(con->runtime, con->cart->code, con->cart->code_len, "main.js");
+        dtr_runtime_eval(con->runtime, con->cart->code, con->cart->code_len, con->cart->code_path);
     }
 
     /* --- Fire sys:cart_load --- */
@@ -424,22 +431,25 @@ dtr_console_t *dtr_console_create(const char *cart_path)
 
 #if DEV_BUILD
     /* Set up file watcher for the JS source directory */
-    con->watch_dir[0]     = '\0';
-    con->watch_path[0]    = '\0';
-    con->watch_mtime     = 0;
-    con->watch_last_poll = SDL_GetPerformanceCounter();
-    con->reload_toast    = 0.0f;
+    con->watch_dir[0]        = '\0';
+    con->watch_path[0]       = '\0';
+    con->watch_mtime         = 0;
+    con->watch_last_poll     = SDL_GetPerformanceCounter();
+    con->reload_toast        = 0.0f;
     con->reload_toast_failed = false;
-    con->reload_pending  = false;
-    con->reload_detect_time = 0;
-    con->reload_count    = 0;
-    con->prev_code       = NULL;
-    con->prev_code_len   = 0;
+    con->reload_pending      = false;
+    con->reload_detect_time  = 0;
+    con->reload_count        = 0;
+    con->prev_code           = NULL;
+    con->prev_code_len       = 0;
     if (con->cart->code_path[0] != '\0') {
         SDL_PathInfo info;
 
-        SDL_snprintf(con->watch_path, sizeof(con->watch_path),
-                     "%s%s", con->cart->base_path, con->cart->code_path);
+        SDL_snprintf(con->watch_path,
+                     sizeof(con->watch_path),
+                     "%s%s",
+                     con->cart->base_path,
+                     con->cart->code_path);
         if (SDL_GetPathInfo(con->watch_path, &info)) {
             con->watch_mtime = info.modify_time;
 
@@ -501,12 +511,13 @@ void dtr_console_event(dtr_console_t *con, SDL_Event *event)
             dtr_key_t key;
 
             /* Copy error to clipboard: Ctrl+C while error overlay is shown */
-            if (con->runtime->error_active
-                && event->key.scancode == SDL_SCANCODE_C
-                && (event->key.mod & SDL_KMOD_CTRL)) {
+            if (con->runtime->error_active && event->key.scancode == SDL_SCANCODE_C &&
+                (event->key.mod & SDL_KMOD_CTRL)) {
                 char clip_buf[2048];
                 if (con->runtime->error_line > 0) {
-                    SDL_snprintf(clip_buf, sizeof(clip_buf), "line %d: %s",
+                    SDL_snprintf(clip_buf,
+                                 sizeof(clip_buf),
+                                 "line %d: %s",
                                  con->runtime->error_line,
                                  con->runtime->error_msg);
                 } else {
@@ -542,8 +553,8 @@ void dtr_console_event(dtr_console_t *con, SDL_Event *event)
             if (event->key.scancode == SDL_SCANCODE_F4) {
                 if (con->prev_code != NULL) {
                     /* Swap current and previous code, then force a reload */
-                    char   *tmp_code;
-                    size_t  tmp_len;
+                    char  *tmp_code;
+                    size_t tmp_len;
 
                     tmp_code = con->cart->code;
                     tmp_len  = con->cart->code_len;
@@ -558,11 +569,11 @@ void dtr_console_event(dtr_console_t *con, SDL_Event *event)
                     {
                         char full[1024];
 
-                        SDL_snprintf(full, sizeof(full), "%s%s",
-                                     con->cart->base_path, con->cart->code_path);
+                        SDL_snprintf(
+                            full, sizeof(full), "%s%s", con->cart->base_path, con->cart->code_path);
                         if (!SDL_SaveFile(full, con->cart->code, con->cart->code_len)) {
-                            SDL_Log("hot-reload: undo — failed to write %s: %s",
-                                    full, SDL_GetError());
+                            SDL_Log(
+                                "hot-reload: undo — failed to write %s: %s", full, SDL_GetError());
                         }
                     }
 
@@ -608,7 +619,7 @@ void dtr_console_event(dtr_console_t *con, SDL_Event *event)
 
         case SDL_EVENT_MOUSE_BUTTON_DOWN:
             if (event->button.button >= 1 && event->button.button <= DTR_MOUSE_BTN_COUNT) {
-                int idx = event->button.button - 1;
+                int idx                      = event->button.button - 1;
                 con->mouse->btn_current[idx] = true;
                 con->mouse->btn_pressed[idx] = true;
             }
@@ -634,18 +645,17 @@ void dtr_console_event(dtr_console_t *con, SDL_Event *event)
             break;
 
         case SDL_EVENT_GAMEPAD_BUTTON_DOWN:
-            dtr_gamepad_on_button(con->gamepads, event->gbutton.which,
-                                  event->gbutton.button, true);
+            dtr_gamepad_on_button(con->gamepads, event->gbutton.which, event->gbutton.button, true);
             break;
 
         case SDL_EVENT_GAMEPAD_BUTTON_UP:
-            dtr_gamepad_on_button(con->gamepads, event->gbutton.which,
-                                  event->gbutton.button, false);
+            dtr_gamepad_on_button(
+                con->gamepads, event->gbutton.which, event->gbutton.button, false);
             break;
 
         case SDL_EVENT_GAMEPAD_AXIS_MOTION:
-            dtr_gamepad_on_axis(con->gamepads, event->gaxis.which,
-                                event->gaxis.axis, event->gaxis.value);
+            dtr_gamepad_on_axis(
+                con->gamepads, event->gaxis.which, event->gaxis.axis, event->gaxis.value);
             break;
 
         case SDL_EVENT_WINDOW_FOCUS_LOST:
@@ -742,14 +752,14 @@ void dtr_console_iterate(dtr_console_t *con)
             int32_t         save_cx;
             int32_t         save_cy;
 
-            gfx     = con->graphics;
-            save_cx = gfx->camera_x;
-            save_cy = gfx->camera_y;
+            gfx           = con->graphics;
+            save_cx       = gfx->camera_x;
+            save_cy       = gfx->camera_y;
             gfx->camera_x = 0;
             gfx->camera_y = 0;
 
             {
-                char toast_buf[32];
+                char    toast_buf[32];
                 int32_t toast_w;
                 uint8_t toast_bg;
 
@@ -757,8 +767,8 @@ void dtr_console_iterate(dtr_console_t *con)
                     SDL_snprintf(toast_buf, sizeof(toast_buf), "RELOAD FAILED");
                     toast_bg = 8; /* red */
                 } else {
-                    SDL_snprintf(toast_buf, sizeof(toast_buf),
-                                 "RELOADED (%d)", (int)con->reload_count);
+                    SDL_snprintf(
+                        toast_buf, sizeof(toast_buf), "RELOADED (%d)", (int)con->reload_count);
                     toast_bg = 11; /* green */
                 }
                 toast_w = (int32_t)SDL_strlen(toast_buf) * 4 + 4;
@@ -783,13 +793,11 @@ void dtr_console_iterate(dtr_console_t *con)
         if (pitch == row_bytes) {
             dtr_gfx_flip_to(con->graphics, (uint32_t *)locked);
             dtr_gfx_transition_update_buf(con->graphics, (uint32_t *)locked);
-            dtr_postfx_apply(con->postfx, (uint32_t *)locked,
-                             con->fb_width, con->fb_height);
+            dtr_postfx_apply(con->postfx, (uint32_t *)locked, con->fb_width, con->fb_height);
         } else {
             dtr_gfx_flip(con->graphics);
             dtr_gfx_transition_update(con->graphics);
-            dtr_postfx_apply(con->postfx, con->graphics->pixels,
-                             con->fb_width, con->fb_height);
+            dtr_postfx_apply(con->postfx, con->graphics->pixels, con->fb_width, con->fb_height);
             for (int32_t y = 0; y < con->fb_height; ++y) {
                 SDL_memcpy((uint8_t *)locked + y * pitch,
                            con->graphics->pixels + y * con->fb_width,
@@ -834,28 +842,28 @@ void dtr_console_iterate(dtr_console_t *con)
 
 bool dtr_console_reload(dtr_console_t *con)
 {
-    char           *saved_json  = NULL;
-    char           *new_code    = NULL;
-    size_t          new_len     = 0;
-    char            code_full[1024];
-    dtr_runtime_t  *new_rt      = NULL;
-    uint64_t        t_start;
+    char          *saved_json = NULL;
+    char          *new_code   = NULL;
+    size_t         new_len    = 0;
+    char           code_full[1024];
+    dtr_runtime_t *new_rt = NULL;
+    uint64_t       t_start;
 
     /* PostFX snapshot for auto-preservation */
     dtr_postfx_entry_t saved_pfx[DTR_POSTFX_MAX_STACK];
     int32_t            saved_pfx_count = 0;
 
     /* Camera / draw state snapshot */
-    int32_t  saved_cam_x     = 0;
-    int32_t  saved_cam_y     = 0;
-    uint8_t  saved_color     = 0;
-    int32_t  saved_clip_x    = 0;
-    int32_t  saved_clip_y    = 0;
-    int32_t  saved_clip_w    = 0;
-    int32_t  saved_clip_h    = 0;
-    int32_t  saved_cursor_x  = 0;
-    int32_t  saved_cursor_y  = 0;
-    uint16_t saved_fill_pat  = 0;
+    int32_t  saved_cam_x    = 0;
+    int32_t  saved_cam_y    = 0;
+    uint8_t  saved_color    = 0;
+    int32_t  saved_clip_x   = 0;
+    int32_t  saved_clip_y   = 0;
+    int32_t  saved_clip_w   = 0;
+    int32_t  saved_clip_h   = 0;
+    int32_t  saved_cursor_x = 0;
+    int32_t  saved_cursor_y = 0;
+    uint16_t saved_fill_pat = 0;
 
     /* Palette state snapshot */
     uint8_t saved_draw_pal[CONSOLE_PALETTE_SIZE];
@@ -872,8 +880,7 @@ bool dtr_console_reload(dtr_console_t *con)
     t_start = SDL_GetPerformanceCounter();
 
     /* ---- 1. Read new JS source from disk (before destroying anything) ---- */
-    SDL_snprintf(code_full, sizeof(code_full),
-                 "%s%s", con->cart->base_path, con->cart->code_path);
+    SDL_snprintf(code_full, sizeof(code_full), "%s%s", con->cart->base_path, con->cart->code_path);
     new_code = (char *)SDL_LoadFile(code_full, &new_len);
     if (new_code == NULL) {
         SDL_Log("hot-reload: failed to read %s", code_full);
@@ -899,9 +906,9 @@ bool dtr_console_reload(dtr_console_t *con)
             if (JS_IsException(result)) {
                 SDL_Log("hot-reload: _save() threw an exception, state not preserved");
             } else if (!JS_IsUndefined(result)) {
-                JSValue  json_val;
-                JSValue  stringify;
-                JSValue  json_obj;
+                JSValue json_val;
+                JSValue stringify;
+                JSValue json_obj;
 
                 json_obj  = JS_GetPropertyStr(con->runtime->ctx, global, "JSON");
                 stringify = JS_GetPropertyStr(con->runtime->ctx, json_obj, "stringify");
@@ -948,15 +955,14 @@ bool dtr_console_reload(dtr_console_t *con)
     /* ---- 2c. Snapshot postfx stack ---- */
     if (con->postfx != NULL && con->postfx->count > 0) {
         saved_pfx_count = con->postfx->count;
-        SDL_memcpy(saved_pfx, con->postfx->stack,
-                   (size_t)saved_pfx_count * sizeof(dtr_postfx_entry_t));
+        SDL_memcpy(
+            saved_pfx, con->postfx->stack, (size_t)saved_pfx_count * sizeof(dtr_postfx_entry_t));
     }
 
     /* ---- 3. Create new runtime in temporary ---- */
-    new_rt = dtr_runtime_create(
-        con,
-        (int32_t)(con->cart->runtime.mem_limit / (1024u * 1024u)),
-        (int32_t)(con->cart->runtime.stack_limit / 1024u));
+    new_rt = dtr_runtime_create(con,
+                                (int32_t)(con->cart->runtime.mem_limit / (1024u * 1024u)),
+                                (int32_t)(con->cart->runtime.stack_limit / 1024u));
     if (new_rt == NULL) {
         SDL_Log("hot-reload: failed to create runtime");
         SDL_free(new_code);
@@ -971,7 +977,7 @@ bool dtr_console_reload(dtr_console_t *con)
     /* ---- 4. Register APIs and evaluate new code on temp runtime ---- */
     dtr_api_register_all(new_rt);
 
-    if (!dtr_runtime_eval(new_rt, new_code, new_len, "main.js")) {
+    if (!dtr_runtime_eval(new_rt, new_code, new_len, con->cart->code_path)) {
         SDL_Log("hot-reload: eval failed — keeping old code");
         dtr_runtime_destroy(new_rt);
         SDL_free(new_code);
@@ -996,7 +1002,7 @@ bool dtr_console_reload(dtr_console_t *con)
     /* Stash previous code for undo */
 #if DEV_BUILD
     SDL_free(con->prev_code);
-    con->prev_code     = con->cart->code;   /* transfer ownership */
+    con->prev_code     = con->cart->code; /* transfer ownership */
     con->prev_code_len = con->cart->code_len;
 #else
     SDL_free(con->cart->code);
@@ -1056,21 +1062,21 @@ bool dtr_console_reload(dtr_console_t *con)
     /* ---- 6b. Restore postfx stack ---- */
     if (saved_pfx_count > 0 && con->postfx != NULL) {
         con->postfx->count = saved_pfx_count;
-        SDL_memcpy(con->postfx->stack, saved_pfx,
-                   (size_t)saved_pfx_count * sizeof(dtr_postfx_entry_t));
+        SDL_memcpy(
+            con->postfx->stack, saved_pfx, (size_t)saved_pfx_count * sizeof(dtr_postfx_entry_t));
     }
 
     /* ---- 6c. Restore camera / draw state ---- */
     if (con->graphics != NULL) {
-        con->graphics->camera_x    = saved_cam_x;
-        con->graphics->camera_y    = saved_cam_y;
-        con->graphics->color       = saved_color;
-        con->graphics->clip_x      = saved_clip_x;
-        con->graphics->clip_y      = saved_clip_y;
-        con->graphics->clip_w      = saved_clip_w;
-        con->graphics->clip_h      = saved_clip_h;
-        con->graphics->cursor_x    = saved_cursor_x;
-        con->graphics->cursor_y    = saved_cursor_y;
+        con->graphics->camera_x     = saved_cam_x;
+        con->graphics->camera_y     = saved_cam_y;
+        con->graphics->color        = saved_color;
+        con->graphics->clip_x       = saved_clip_x;
+        con->graphics->clip_y       = saved_clip_y;
+        con->graphics->clip_w       = saved_clip_w;
+        con->graphics->clip_h       = saved_clip_h;
+        con->graphics->cursor_x     = saved_cursor_x;
+        con->graphics->cursor_y     = saved_cursor_y;
         con->graphics->fill_pattern = saved_fill_pat;
         SDL_memcpy(con->graphics->draw_pal, saved_draw_pal, sizeof(saved_draw_pal));
         SDL_memcpy(con->graphics->screen_pal, saved_screen_pal, sizeof(saved_screen_pal));
@@ -1179,8 +1185,7 @@ static bool prv_load_cart_assets(dtr_console_t *con)
         DTR_FREE(cart->sprite_rgba);
         cart->sprite_rgba = NULL;
 
-        SDL_snprintf(path_buf, sizeof(path_buf), "%s%s",
-                     cart->base_path, cart->sprite_sheet_path);
+        SDL_snprintf(path_buf, sizeof(path_buf), "%s%s", cart->base_path, cart->sprite_sheet_path);
         cart->sprite_rgba   = dtr_import_png(path_buf, &w, &h);
         cart->sprite_rgba_w = w;
         cart->sprite_rgba_h = h;
@@ -1222,8 +1227,7 @@ static bool prv_load_cart_assets(dtr_console_t *con)
             size_t   len;
             uint8_t *data;
 
-            SDL_snprintf(path_buf, sizeof(path_buf), "%s%s",
-                         cart->base_path, cart->sfx_paths[idx]);
+            SDL_snprintf(path_buf, sizeof(path_buf), "%s%s", cart->base_path, cart->sfx_paths[idx]);
             data = (uint8_t *)SDL_LoadFile(path_buf, &len);
             if (data != NULL) {
                 dtr_audio_load_sfx(con->audio, data, len);
@@ -1240,8 +1244,8 @@ static bool prv_load_cart_assets(dtr_console_t *con)
             size_t   len;
             uint8_t *data;
 
-            SDL_snprintf(path_buf, sizeof(path_buf), "%s%s",
-                         cart->base_path, cart->music_paths[idx]);
+            SDL_snprintf(
+                path_buf, sizeof(path_buf), "%s%s", cart->base_path, cart->music_paths[idx]);
             data = (uint8_t *)SDL_LoadFile(path_buf, &len);
             if (data != NULL) {
                 dtr_audio_load_music(con->audio, data, len);

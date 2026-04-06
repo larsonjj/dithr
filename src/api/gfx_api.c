@@ -269,7 +269,7 @@ static JSValue js_gfx_poly(JSContext *ctx, JSValueConst this_val, int argc, JSVa
         return JS_UNDEFINED;
     }
 
-    n = prv_read_int_array(ctx, argv[0], pts, PRV_MAX_POLY_PTS * 2);
+    n          = prv_read_int_array(ctx, argv[0], pts, PRV_MAX_POLY_PTS * 2);
     vert_count = n / 2;
 
     if (vert_count >= 2) {
@@ -289,7 +289,7 @@ static JSValue js_gfx_polyfill(JSContext *ctx, JSValueConst this_val, int argc, 
         return JS_UNDEFINED;
     }
 
-    n = prv_read_int_array(ctx, argv[0], pts, PRV_MAX_POLY_PTS * 2);
+    n          = prv_read_int_array(ctx, argv[0], pts, PRV_MAX_POLY_PTS * 2);
     vert_count = n / 2;
 
     if (vert_count >= 3) {
@@ -451,9 +451,9 @@ static JSValue js_gfx_fset(JSContext *ctx, JSValueConst this_val, int argc, JSVa
 {
     (void)this_val;
     dtr_gfx_fset_bit(GFX(ctx),
-                 dtr_api_opt_int(ctx, argc, argv, 0, 0),
-                 dtr_api_opt_int(ctx, argc, argv, 1, 0),
-                 dtr_api_opt_int(ctx, argc, argv, 2, 1) != 0);
+                     dtr_api_opt_int(ctx, argc, argv, 0, 0),
+                     dtr_api_opt_int(ctx, argc, argv, 1, 0),
+                     dtr_api_opt_int(ctx, argc, argv, 2, 1) != 0);
     return JS_UNDEFINED;
 }
 
@@ -714,25 +714,38 @@ static JSValue js_gfx_sheet_h(JSContext *ctx, JSValueConst this_val, int argc, J
 /* ---- Function list ---------------------------------------------------- */
 
 static const JSCFunctionListEntry js_gfx_funcs[] = {
-    JS_CFUNC_DEF("cls", 1, js_gfx_cls),     JS_CFUNC_DEF("pset", 3, js_gfx_pset),
-    JS_CFUNC_DEF("pget", 2, js_gfx_pget),   JS_CFUNC_DEF("line", 5, js_gfx_line),
-    JS_CFUNC_DEF("rect", 5, js_gfx_rect),   JS_CFUNC_DEF("rectfill", 5, js_gfx_rectfill),
+    JS_CFUNC_DEF("cls", 1, js_gfx_cls),
+    JS_CFUNC_DEF("pset", 3, js_gfx_pset),
+    JS_CFUNC_DEF("pget", 2, js_gfx_pget),
+    JS_CFUNC_DEF("line", 5, js_gfx_line),
+    JS_CFUNC_DEF("rect", 5, js_gfx_rect),
+    JS_CFUNC_DEF("rectfill", 5, js_gfx_rectfill),
     JS_CFUNC_DEF("tilemap", 4, js_gfx_tilemap),
-    JS_CFUNC_DEF("circ", 4, js_gfx_circ),   JS_CFUNC_DEF("circfill", 4, js_gfx_circfill),
-    JS_CFUNC_DEF("tri", 7, js_gfx_tri),     JS_CFUNC_DEF("trifill", 7, js_gfx_trifill),
-    JS_CFUNC_DEF("poly", 2, js_gfx_poly),   JS_CFUNC_DEF("polyfill", 2, js_gfx_polyfill),
-    JS_CFUNC_DEF("print", 4, js_gfx_print), JS_CFUNC_DEF("textWidth", 1, js_gfx_text_width),
+    JS_CFUNC_DEF("circ", 4, js_gfx_circ),
+    JS_CFUNC_DEF("circfill", 4, js_gfx_circfill),
+    JS_CFUNC_DEF("tri", 7, js_gfx_tri),
+    JS_CFUNC_DEF("trifill", 7, js_gfx_trifill),
+    JS_CFUNC_DEF("poly", 2, js_gfx_poly),
+    JS_CFUNC_DEF("polyfill", 2, js_gfx_polyfill),
+    JS_CFUNC_DEF("print", 4, js_gfx_print),
+    JS_CFUNC_DEF("textWidth", 1, js_gfx_text_width),
     JS_CFUNC_DEF("textHeight", 1, js_gfx_text_height),
     JS_CFUNC_DEF("spr", 7, js_gfx_spr),
-    JS_CFUNC_DEF("sspr", 10, js_gfx_sspr),  JS_CFUNC_DEF("spr_rot", 6, js_gfx_spr_rot),
+    JS_CFUNC_DEF("sspr", 10, js_gfx_sspr),
+    JS_CFUNC_DEF("spr_rot", 6, js_gfx_spr_rot),
     JS_CFUNC_DEF("spr_affine", 7, js_gfx_spr_affine),
     JS_CFUNC_DEF("fget", 2, js_gfx_fget),
-    JS_CFUNC_DEF("fset", 3, js_gfx_fset),   JS_CFUNC_DEF("pal", 3, js_gfx_pal),
-    JS_CFUNC_DEF("palt", 2, js_gfx_palt),   JS_CFUNC_DEF("camera", 2, js_gfx_camera),
-    JS_CFUNC_DEF("clip", 4, js_gfx_clip),   JS_CFUNC_DEF("fillp", 1, js_gfx_fillp),
-    JS_CFUNC_DEF("color", 1, js_gfx_color), JS_CFUNC_DEF("cursor", 2, js_gfx_cursor),
+    JS_CFUNC_DEF("fset", 3, js_gfx_fset),
+    JS_CFUNC_DEF("pal", 3, js_gfx_pal),
+    JS_CFUNC_DEF("palt", 2, js_gfx_palt),
+    JS_CFUNC_DEF("camera", 2, js_gfx_camera),
+    JS_CFUNC_DEF("clip", 4, js_gfx_clip),
+    JS_CFUNC_DEF("fillp", 1, js_gfx_fillp),
+    JS_CFUNC_DEF("color", 1, js_gfx_color),
+    JS_CFUNC_DEF("cursor", 2, js_gfx_cursor),
     JS_CFUNC_DEF("font", 6, js_gfx_font),
-    JS_CFUNC_DEF("sget", 2, js_gfx_sget),   JS_CFUNC_DEF("sset", 3, js_gfx_sset),
+    JS_CFUNC_DEF("sget", 2, js_gfx_sget),
+    JS_CFUNC_DEF("sset", 3, js_gfx_sset),
     JS_CFUNC_DEF("sheetW", 0, js_gfx_sheet_w),
     JS_CFUNC_DEF("sheetH", 0, js_gfx_sheet_h),
     JS_CFUNC_DEF("fade", 2, js_gfx_fade),

@@ -44,7 +44,7 @@ struct dtr_event_bus {
     dtr_queued_event_t  queue[DTR_EVENT_MAX_QUEUED];
     int32_t             queue_count;
     int32_t             next_handle;
-    JSContext *         ctx;
+    JSContext          *ctx;
 };
 
 dtr_event_bus_t *dtr_event_create(JSContext *ctx);

@@ -7,6 +7,13 @@
 //   Bottom strip : palette picker, flags, tool selector
 //
 
+import { st } from './state.js';
+import {
+    FB_W, FB_H, CW, CH, TAB_H, TAB_CODE, TAB_SPRITES, TAB_MAP,
+    FG, GUTBG, GUTFG, FOOTBG, FOOTFG, GRIDC
+} from './config.js';
+import { clamp } from './helpers.js';
+
 // ─── Constants ───────────────────────────────────────────────────────────────
 
 const SPR_GRID_X = 0;
@@ -32,21 +39,21 @@ const SPR_TOOLS = ["PEN", "ERA"];
 
 // ─── Update ──────────────────────────────────────────────────────────────────
 
-function updateSpriteEditor() {
+export function updateSpriteEditor() {
     let ctrl = key.btn(key.LCTRL) || key.btn(key.RCTRL);
 
     // Tab switching
     if (ctrl) {
         if (key.btnp(key.NUM1)) {
-            activeTab = TAB_CODE;
+            st.activeTab = TAB_CODE;
             return;
         }
         if (key.btnp(key.NUM2)) {
-            activeTab = TAB_SPRITES;
+            st.activeTab = TAB_SPRITES;
             return;
         }
         if (key.btnp(key.NUM3)) {
-            activeTab = TAB_MAP;
+            st.activeTab = TAB_MAP;
             return;
         }
     }
@@ -76,9 +83,9 @@ function updateSpriteEditor() {
         my < SPR_GRID_Y + SPR_GRID_H
     ) {
         let gx = Math.floor((mx - SPR_GRID_X) / SPR_GRID_CELL);
-        let gy = Math.floor((my - SPR_GRID_Y) / SPR_GRID_CELL) + sprScrollY;
+        let gy = Math.floor((my - SPR_GRID_Y) / SPR_GRID_CELL) + st.sprScrollY;
         let idx = gy * SPR_GRID_COLS + gx;
-        if (idx >= 0 && idx < sprCount) sprSel = idx;
+        if (idx >= 0 && idx < sprCount) st.sprSel = idx;
     }
 
     // Scroll sheet grid
@@ -88,8 +95,8 @@ function updateSpriteEditor() {
         my >= SPR_GRID_Y &&
         my < SPR_GRID_Y + SPR_GRID_H
     ) {
-        sprScrollY = clamp(
-            sprScrollY - wheel,
+        st.sprScrollY = clamp(
+            st.sprScrollY - wheel,
             0,
             Math.max(
                 0,
@@ -115,28 +122,28 @@ function updateSpriteEditor() {
     ) {
         let px = Math.floor((mx - canvasOx) / zoom);
         let py = Math.floor((my - canvasOy) / zoom);
-        let selRow = Math.floor(sprSel / sheetCols);
-        let selCol = sprSel % sheetCols;
+        let selRow = Math.floor(st.sprSel / sheetCols);
+        let selCol = st.sprSel % sheetCols;
         let sx = selCol * tileW + px;
         let sy = selRow * tileH + py;
-        let newCol = sprTool === 0 ? sprCol : 0;
+        let newCol = st.sprTool === 0 ? st.sprCol : 0;
         let prev = gfx.sget(sx, sy);
         if (prev !== newCol) {
-            sprUndoPending.push({ x: sx, y: sy, prev: prev });
+            st.sprUndoPending.push({ x: sx, y: sy, prev: prev });
             gfx.sset(sx, sy, newCol);
         }
     }
 
     // Commit stroke on mouse release
-    if (!mBtn && sprUndoPending.length > 0) {
-        sprUndoStack.push(sprUndoPending);
-        sprUndoPending = [];
-        if (sprUndoStack.length > SPR_MAX_UNDO) sprUndoStack.shift();
+    if (!mBtn && st.sprUndoPending.length > 0) {
+        st.sprUndoStack.push(st.sprUndoPending);
+        st.sprUndoPending = [];
+        if (st.sprUndoStack.length > st.SPR_MAX_UNDO) st.sprUndoStack.shift();
     }
 
     // Undo (Ctrl+Z)
-    if (ctrl && key.btnp(key.Z) && sprUndoStack.length > 0) {
-        let stroke = sprUndoStack.pop();
+    if (ctrl && key.btnp(key.Z) && st.sprUndoStack.length > 0) {
+        let stroke = st.sprUndoStack.pop();
         for (let i = stroke.length - 1; i >= 0; i--) {
             gfx.sset(stroke[i].x, stroke[i].y, stroke[i].prev);
         }
@@ -153,7 +160,7 @@ function updateSpriteEditor() {
         let pc = Math.floor((mx - SPR_PAL_X) / SPR_PAL_CELL);
         let pr = Math.floor((my - SPR_PAL_Y) / SPR_PAL_CELL);
         let idx = pr * SPR_PAL_COLS + pc;
-        if (idx >= 0 && idx < 32) sprCol = idx;
+        if (idx >= 0 && idx < 32) st.sprCol = idx;
     }
 
     // ── Flags toggle (8 bits below palette) ──
@@ -167,14 +174,14 @@ function updateSpriteEditor() {
     ) {
         let bit = Math.floor((mx - SPR_PAL_X) / (CW + 2));
         if (bit >= 0 && bit < 8) {
-            let f = gfx.fget(sprSel);
-            gfx.fset(sprSel, f ^ (1 << bit));
+            let f = gfx.fget(st.sprSel);
+            gfx.fset(st.sprSel, f ^ (1 << bit));
         }
     }
 
     // ── Tool switch (keyboard) ──
-    if (key.btnp(key.E)) sprTool = 1;
-    if (key.btnp(key.B)) sprTool = 0;
+    if (key.btnp(key.E)) st.sprTool = 1;
+    if (key.btnp(key.B)) st.sprTool = 0;
 
     // Pick colour from canvas (right-click)
     if (
@@ -186,18 +193,18 @@ function updateSpriteEditor() {
     ) {
         let px = Math.floor((mx - canvasOx) / zoom);
         let py = Math.floor((my - canvasOy) / zoom);
-        let selRow = Math.floor(sprSel / sheetCols);
-        let selCol = sprSel % sheetCols;
+        let selRow = Math.floor(st.sprSel / sheetCols);
+        let selCol = st.sprSel % sheetCols;
         let sx = selCol * tileW + px;
         let sy = selRow * tileH + py;
-        sprCol = gfx.sget(sx, sy);
-        sprTool = 0;
+        st.sprCol = gfx.sget(sx, sy);
+        st.sprTool = 0;
     }
 }
 
 // ─── Draw ────────────────────────────────────────────────────────────────────
 
-function drawSpriteEditor() {
+export function drawSpriteEditor() {
     let sw = gfx.sheetW();
     let sh = gfx.sheetH();
     if (sw === 0 || sh === 0) {
@@ -224,7 +231,7 @@ function drawSpriteEditor() {
     let visRows = Math.floor(SPR_GRID_H / SPR_GRID_CELL);
     for (let r = 0; r < visRows; r++) {
         for (let c = 0; c < SPR_GRID_COLS; c++) {
-            let idx = (r + sprScrollY) * SPR_GRID_COLS + c;
+            let idx = (r + st.sprScrollY) * SPR_GRID_COLS + c;
             if (idx >= sprCount) break;
             let dx = SPR_GRID_X + c * SPR_GRID_CELL;
             let dy = SPR_GRID_Y + r * SPR_GRID_CELL;
@@ -233,7 +240,7 @@ function drawSpriteEditor() {
             let srcY = Math.floor(idx / sheetCols) * tileH;
             gfx.sspr(srcX, srcY, tileW, tileH, dx, dy, SPR_GRID_CELL, SPR_GRID_CELL);
             // Highlight selected
-            if (idx === sprSel) {
+            if (idx === st.sprSel) {
                 gfx.rect(dx, dy, dx + SPR_GRID_CELL - 1, dy + SPR_GRID_CELL - 1, FG);
             }
         }
@@ -250,8 +257,8 @@ function drawSpriteEditor() {
     // Background checkerboard
     gfx.rectfill(canvasOx - 1, canvasOy - 1, canvasOx + canvasPixW, canvasOy + canvasPixH, GRIDC);
 
-    let selRow = Math.floor(sprSel / sheetCols);
-    let selCol = sprSel % sheetCols;
+    let selRow = Math.floor(st.sprSel / sheetCols);
+    let selCol = st.sprSel % sheetCols;
     for (let py = 0; py < tileH; py++) {
         for (let px = 0; px < tileW; px++) {
             let sx = selCol * tileW + px;
@@ -284,14 +291,14 @@ function drawSpriteEditor() {
         let px = SPR_PAL_X + pc * SPR_PAL_CELL;
         let py = SPR_PAL_Y + pr * SPR_PAL_CELL;
         gfx.rectfill(px, py, px + SPR_PAL_CELL - 1, py + SPR_PAL_CELL - 1, i);
-        if (i === sprCol) {
+        if (i === st.sprCol) {
             gfx.rect(px, py, px + SPR_PAL_CELL - 1, py + SPR_PAL_CELL - 1, FG);
         }
     }
 
     // ── Flags display ──
     let flagsY = SPR_PAL_Y + SPR_PAL_CELL * 2 + 2;
-    let flags = gfx.fget(sprSel);
+    let flags = gfx.fget(st.sprSel);
     gfx.print("FLAGS:", SPR_PAL_X, flagsY, GUTFG);
     for (let b = 0; b < 8; b++) {
         let bx = SPR_PAL_X + 7 * CW + b * (CW + 2);
@@ -302,9 +309,9 @@ function drawSpriteEditor() {
 
     // ── Tool / info ──
     let infoY = flagsY + CH + 4;
-    gfx.print("TOOL:" + SPR_TOOLS[sprTool], SPR_PAL_X, infoY, GUTFG);
-    gfx.print("COL:" + sprCol, SPR_PAL_X + 14 * CW, infoY, sprCol);
-    gfx.print("#" + sprSel, SPR_PAL_X + 22 * CW, infoY, FG);
+    gfx.print("TOOL:" + SPR_TOOLS[st.sprTool], SPR_PAL_X, infoY, GUTFG);
+    gfx.print("COL:" + st.sprCol, SPR_PAL_X + 14 * CW, infoY, st.sprCol);
+    gfx.print("#" + st.sprSel, SPR_PAL_X + 22 * CW, infoY, FG);
 
     // ── Footer ──
     let footY = FB_H - CH;

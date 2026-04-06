@@ -4,13 +4,13 @@
  */
 
 #include "tween.h"
+
 #include <math.h>
 #include <string.h>
 
 /* ---- Easing functions -------------------------------------------------- */
 
-double
-dtr_ease_apply(dtr_ease_t ease, double time)
+double dtr_ease_apply(dtr_ease_t ease, double time)
 {
     double tmp;
 
@@ -56,9 +56,8 @@ dtr_ease_apply(dtr_ease_t ease, double time)
             return tmp * tmp * (2.70158 * tmp + 1.70158) + 1.0;
 
         case DTR_EASE_OUT_ELASTIC:
-            return pow(2.0, -10.0 * time)
-                   * sin((time - 0.075) * (2.0 * 3.14159265358979) / 0.3)
-                   + 1.0;
+            return pow(2.0, -10.0 * time) * sin((time - 0.075) * (2.0 * 3.14159265358979) / 0.3) +
+                   1.0;
 
         case DTR_EASE_OUT_BOUNCE:
             if (time < 1.0 / 2.75) {
@@ -78,32 +77,56 @@ dtr_ease_apply(dtr_ease_t ease, double time)
     }
 }
 
-dtr_ease_t
-dtr_ease_from_name(const char *name)
+dtr_ease_t dtr_ease_from_name(const char *name)
 {
     if (name == NULL) {
         return DTR_EASE_LINEAR;
     }
-    if (strcmp(name, "linear") == 0)          { return DTR_EASE_LINEAR; }
-    if (strcmp(name, "easeIn") == 0)          { return DTR_EASE_IN_QUAD; }
-    if (strcmp(name, "easeOut") == 0)         { return DTR_EASE_OUT_QUAD; }
-    if (strcmp(name, "easeInOut") == 0)       { return DTR_EASE_IN_OUT_QUAD; }
-    if (strcmp(name, "easeInQuad") == 0)      { return DTR_EASE_IN_QUAD; }
-    if (strcmp(name, "easeOutQuad") == 0)     { return DTR_EASE_OUT_QUAD; }
-    if (strcmp(name, "easeInOutQuad") == 0)   { return DTR_EASE_IN_OUT_QUAD; }
-    if (strcmp(name, "easeInCubic") == 0)     { return DTR_EASE_IN_CUBIC; }
-    if (strcmp(name, "easeOutCubic") == 0)    { return DTR_EASE_OUT_CUBIC; }
-    if (strcmp(name, "easeInOutCubic") == 0)  { return DTR_EASE_IN_OUT_CUBIC; }
-    if (strcmp(name, "easeOutBack") == 0)     { return DTR_EASE_OUT_BACK; }
-    if (strcmp(name, "easeOutElastic") == 0)  { return DTR_EASE_OUT_ELASTIC; }
-    if (strcmp(name, "easeOutBounce") == 0)   { return DTR_EASE_OUT_BOUNCE; }
+    if (strcmp(name, "linear") == 0) {
+        return DTR_EASE_LINEAR;
+    }
+    if (strcmp(name, "easeIn") == 0) {
+        return DTR_EASE_IN_QUAD;
+    }
+    if (strcmp(name, "easeOut") == 0) {
+        return DTR_EASE_OUT_QUAD;
+    }
+    if (strcmp(name, "easeInOut") == 0) {
+        return DTR_EASE_IN_OUT_QUAD;
+    }
+    if (strcmp(name, "easeInQuad") == 0) {
+        return DTR_EASE_IN_QUAD;
+    }
+    if (strcmp(name, "easeOutQuad") == 0) {
+        return DTR_EASE_OUT_QUAD;
+    }
+    if (strcmp(name, "easeInOutQuad") == 0) {
+        return DTR_EASE_IN_OUT_QUAD;
+    }
+    if (strcmp(name, "easeInCubic") == 0) {
+        return DTR_EASE_IN_CUBIC;
+    }
+    if (strcmp(name, "easeOutCubic") == 0) {
+        return DTR_EASE_OUT_CUBIC;
+    }
+    if (strcmp(name, "easeInOutCubic") == 0) {
+        return DTR_EASE_IN_OUT_CUBIC;
+    }
+    if (strcmp(name, "easeOutBack") == 0) {
+        return DTR_EASE_OUT_BACK;
+    }
+    if (strcmp(name, "easeOutElastic") == 0) {
+        return DTR_EASE_OUT_ELASTIC;
+    }
+    if (strcmp(name, "easeOutBounce") == 0) {
+        return DTR_EASE_OUT_BOUNCE;
+    }
     return DTR_EASE_LINEAR;
 }
 
 /* ---- Managed tween pool ------------------------------------------------ */
 
-void
-dtr_tween_init(dtr_tween_t *twn)
+void dtr_tween_init(dtr_tween_t *twn)
 {
     int32_t idx;
 
@@ -114,9 +137,12 @@ dtr_tween_init(dtr_tween_t *twn)
     twn->count = 0;
 }
 
-int32_t
-dtr_tween_add(dtr_tween_t *twn, double from, double too,
-              double duration, dtr_ease_t ease, double delay)
+int32_t dtr_tween_add(dtr_tween_t *twn,
+                      double       from,
+                      double       too,
+                      double       duration,
+                      dtr_ease_t   ease,
+                      double       delay)
 {
     int32_t idx;
 
@@ -137,11 +163,10 @@ dtr_tween_add(dtr_tween_t *twn, double from, double too,
             return idx;
         }
     }
-    return -1;    /* Pool full */
+    return -1; /* Pool full */
 }
 
-void
-dtr_tween_tick(dtr_tween_t *twn, double delta)
+void dtr_tween_tick(dtr_tween_t *twn, double delta)
 {
     int32_t idx;
 
@@ -173,8 +198,7 @@ dtr_tween_tick(dtr_tween_t *twn, double delta)
     }
 }
 
-double
-dtr_tween_val(dtr_tween_t *twn, int32_t idx)
+double dtr_tween_val(dtr_tween_t *twn, int32_t idx)
 {
     dtr_tween_entry_t *ent;
     double             time;
@@ -191,8 +215,7 @@ dtr_tween_val(dtr_tween_t *twn, int32_t idx)
     return ent->from + (ent->too - ent->from) * dtr_ease_apply(ent->ease, time);
 }
 
-bool
-dtr_tween_done(dtr_tween_t *twn, int32_t idx)
+bool dtr_tween_done(dtr_tween_t *twn, int32_t idx)
 {
     if (idx < 0 || idx >= CONSOLE_MAX_TWEENS || !twn->pool[idx].active) {
         return true;
@@ -200,16 +223,14 @@ dtr_tween_done(dtr_tween_t *twn, int32_t idx)
     return twn->pool[idx].elapsed >= twn->pool[idx].duration;
 }
 
-void
-dtr_tween_cancel(dtr_tween_t *twn, int32_t idx)
+void dtr_tween_cancel(dtr_tween_t *twn, int32_t idx)
 {
     if (idx >= 0 && idx < CONSOLE_MAX_TWEENS) {
         twn->pool[idx].active = false;
     }
 }
 
-void
-dtr_tween_cancel_all(dtr_tween_t *twn)
+void dtr_tween_cancel_all(dtr_tween_t *twn)
 {
     int32_t idx;
 

@@ -12,11 +12,9 @@
 /*  Rect vs rect (AABB)                                                */
 /* ------------------------------------------------------------------ */
 
-static int col_rect(int x1, int y1, int w1, int h1,
-                    int x2, int y2, int w2, int h2)
+static int col_rect(int x1, int y1, int w1, int h1, int x2, int y2, int w2, int h2)
 {
-    return x1 < x2 + w2 && x1 + w1 > x2 &&
-           y1 < y2 + h2 && y1 + h1 > y2;
+    return x1 < x2 + w2 && x1 + w1 > x2 && y1 < y2 + h2 && y1 + h1 > y2;
 }
 
 static void test_col_rect_overlap(void)
@@ -62,8 +60,7 @@ static void test_col_rect_negative_coords(void)
 /*  Circle vs circle                                                   */
 /* ------------------------------------------------------------------ */
 
-static int col_circ(double x1, double y1, double r1,
-                    double x2, double y2, double r2)
+static int col_circ(double x1, double y1, double r1, double x2, double y2, double r2)
 {
     double dx      = x2 - x1;
     double dy      = y2 - y1;
@@ -184,8 +181,8 @@ static void test_col_point_circ_center(void)
 /*  Circle vs rect                                                     */
 /* ------------------------------------------------------------------ */
 
-static int col_circ_rect(double cx, double cy, double cr,
-                         double rx, double ry, double rw, double rh)
+static int
+col_circ_rect(double cx, double cy, double cr, double rx, double ry, double rw, double rh)
 {
     double nearest_x = cx;
     double nearest_y = cy;

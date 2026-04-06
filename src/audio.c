@@ -11,7 +11,7 @@
 
 dtr_audio_t *dtr_audio_create(int32_t channels, int32_t freq, int32_t buffer)
 {
-    dtr_audio_t * aud;
+    dtr_audio_t  *aud;
     SDL_AudioSpec spec;
 
     (void)buffer;
@@ -21,11 +21,11 @@ dtr_audio_t *dtr_audio_create(int32_t channels, int32_t freq, int32_t buffer)
         return NULL;
     }
 
-    aud->num_channels  = channels;
-    aud->frequency     = freq;
-    aud->buffer_size   = buffer;
-    aud->master_volume = 1.0f;
-    aud->music_volume  = 1.0f;
+    aud->num_channels      = channels;
+    aud->frequency         = freq;
+    aud->buffer_size       = buffer;
+    aud->master_volume     = 1.0f;
+    aud->music_volume      = 1.0f;
     aud->current_music_idx = -1;
 
     for (int32_t idx = 0; idx < CONSOLE_MAX_CHANNELS; ++idx) {
@@ -143,7 +143,7 @@ void dtr_audio_clear_music(dtr_audio_t *aud)
 bool dtr_audio_load_sfx(dtr_audio_t *aud, const uint8_t *data, size_t len)
 {
     SDL_IOStream *io;
-    MIX_Audio *   audio;
+    MIX_Audio    *audio;
 
     if (aud == NULL || aud->sfx_count >= DTR_MAX_SFX) {
         return false;
@@ -170,7 +170,7 @@ bool dtr_audio_load_sfx(dtr_audio_t *aud, const uint8_t *data, size_t len)
 
 void dtr_sfx_play(dtr_audio_t *aud, int32_t idx, int32_t channel, int32_t length)
 {
-    MIX_Track *     track;
+    MIX_Track       *track;
     SDL_PropertiesID props;
 
     if (aud == NULL || idx < 0 || idx >= aud->sfx_count) {
@@ -263,7 +263,7 @@ bool dtr_sfx_playing(dtr_audio_t *aud, int32_t channel)
 bool dtr_audio_load_music(dtr_audio_t *aud, const uint8_t *data, size_t len)
 {
     SDL_IOStream *io;
-    MIX_Audio *   audio;
+    MIX_Audio    *audio;
 
     if (aud == NULL || aud->music_count >= DTR_MAX_MUSIC) {
         return false;
@@ -309,8 +309,7 @@ void dtr_mus_play(dtr_audio_t *aud, int32_t idx, int32_t fade_ms, uint32_t chann
         return;
     }
     if (fade_ms > 0) {
-        SDL_SetNumberProperty(props, MIX_PROP_PLAY_FADE_IN_MILLISECONDS_NUMBER,
-                              fade_ms);
+        SDL_SetNumberProperty(props, MIX_PROP_PLAY_FADE_IN_MILLISECONDS_NUMBER, fade_ms);
     }
     MIX_PlayTrack(aud->music_track, props);
     SDL_DestroyProperties(props);

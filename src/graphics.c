@@ -289,8 +289,7 @@ prv_hline(dtr_graphics_t *gfx, int32_t raw_x0, int32_t raw_x1, int32_t raw_y, ui
 
     if (gfx->fill_pattern == 0) {
         /* Solid fill — memset the span */
-        memset(&gfx->framebuffer[scr_y * gfx->width + left], col,
-               (size_t)(right - left + 1));
+        memset(&gfx->framebuffer[scr_y * gfx->width + left], col, (size_t)(right - left + 1));
     } else {
         /* Patterned fill */
         int32_t pat_y_bits;
@@ -711,10 +710,7 @@ void dtr_gfx_poly(dtr_graphics_t *gfx, const int32_t *pts, int32_t count, uint8_
         int32_t next;
 
         next = (idx + 1) % count;
-        dtr_gfx_line(gfx,
-                     pts[idx * 2], pts[idx * 2 + 1],
-                     pts[next * 2], pts[next * 2 + 1],
-                     col);
+        dtr_gfx_line(gfx, pts[idx * 2], pts[idx * 2 + 1], pts[next * 2], pts[next * 2 + 1], col);
     }
 }
 
@@ -730,9 +726,12 @@ void dtr_gfx_polyfill(dtr_graphics_t *gfx, const int32_t *pts, int32_t count, ui
     /* Fan-of-triangles from vertex 0 */
     for (int32_t idx = 1; idx < count - 1; ++idx) {
         dtr_gfx_trifill(gfx,
-                        pts[0], pts[1],
-                        pts[idx * 2], pts[idx * 2 + 1],
-                        pts[(idx + 1) * 2], pts[(idx + 1) * 2 + 1],
+                        pts[0],
+                        pts[1],
+                        pts[idx * 2],
+                        pts[idx * 2 + 1],
+                        pts[(idx + 1) * 2],
+                        pts[(idx + 1) * 2 + 1],
                         col);
     }
 }
@@ -747,11 +746,11 @@ void dtr_gfx_polyfill(dtr_graphics_t *gfx, const int32_t *pts, int32_t count, ui
 static void
 prv_print_custom_char(dtr_graphics_t *gfx, uint8_t chr, int32_t x, int32_t y, uint8_t col)
 {
-    dtr_custom_font_t *  font;
-    dtr_sprite_sheet_t * sht;
-    int32_t              glyph_idx;
-    int32_t              gx;
-    int32_t              gy;
+    dtr_custom_font_t  *font;
+    dtr_sprite_sheet_t *sht;
+    int32_t             glyph_idx;
+    int32_t             gx;
+    int32_t             gy;
 
     font = &gfx->custom_font;
     sht  = &gfx->sheet;
@@ -1010,8 +1009,7 @@ void dtr_gfx_spr(dtr_graphics_t *gfx,
     clip_b = clip_t + gfx->clip_h - 1;
 
     /* Early reject: sprite entirely outside clip rect */
-    if (dst_x1 < clip_l || dst_x0 > clip_r
-        || dst_y1 < clip_t || dst_y0 > clip_b) {
+    if (dst_x1 < clip_l || dst_x0 > clip_r || dst_y1 < clip_t || dst_y0 > clip_b) {
         return;
     }
 
@@ -1044,17 +1042,14 @@ void dtr_gfx_spr(dtr_graphics_t *gfx,
             row_off = src_y * sht_w;
             dst_row = &gfx->framebuffer[scr_y * fb_w];
 
-            for (int32_t scr_x = vis_x0; scr_x <= vis_x1;
-                 ++scr_x) {
+            for (int32_t scr_x = vis_x0; scr_x <= vis_x1; ++scr_x) {
                 int32_t col_idx;
                 int32_t src_x;
                 uint8_t col;
 
                 col_idx = scr_x - dst_x0;
-                src_x   = flip_x
-                              ? (px_w - 1 - col_idx)
-                              : col_idx;
-                src_x  += sx0;
+                src_x   = flip_x ? (px_w - 1 - col_idx) : col_idx;
+                src_x += sx0;
                 if (src_x < 0 || src_x >= sht_w) {
                     continue;
                 }
@@ -1116,7 +1111,7 @@ void dtr_gfx_sspr(dtr_graphics_t *gfx,
             }
 
             {
-                int32_t  x_acc = 0;
+                int32_t  x_acc   = 0;
                 uint8_t *src_row = sht->pixels + src_y * sht->width;
 
                 for (int32_t px = 0; px < dw; ++px) {
@@ -1304,7 +1299,7 @@ void dtr_gfx_fset_bit(dtr_graphics_t *gfx, int32_t idx, int32_t flag, bool val)
     if (val) {
         gfx->sheet.flags[idx] |= (uint8_t)(1 << flag);
     } else {
-        gfx->sheet.flags[idx] &= (uint8_t) ~(1 << flag);
+        gfx->sheet.flags[idx] &= (uint8_t)~(1 << flag);
     }
 }
 
@@ -1635,10 +1630,10 @@ void dtr_gfx_dl_spr(dtr_graphics_t *gfx,
     if (gfx->draw_list.count >= CONSOLE_MAX_DRAW_CMDS) {
         return;
     }
-    cmd        = &gfx->draw_list.cmds[gfx->draw_list.count];
-    cmd->type  = DTR_DRAW_SPR;
-    cmd->layer = layer;
-    cmd->order = gfx->draw_list.count;
+    cmd            = &gfx->draw_list.cmds[gfx->draw_list.count];
+    cmd->type      = DTR_DRAW_SPR;
+    cmd->layer     = layer;
+    cmd->order     = gfx->draw_list.count;
     cmd->u.spr.idx = idx;
     cmd->u.spr.x   = x;
     cmd->u.spr.y   = y;
@@ -1665,10 +1660,10 @@ void dtr_gfx_dl_sspr(dtr_graphics_t *gfx,
     if (gfx->draw_list.count >= CONSOLE_MAX_DRAW_CMDS) {
         return;
     }
-    cmd         = &gfx->draw_list.cmds[gfx->draw_list.count];
-    cmd->type   = DTR_DRAW_SSPR;
-    cmd->layer  = layer;
-    cmd->order  = gfx->draw_list.count;
+    cmd            = &gfx->draw_list.cmds[gfx->draw_list.count];
+    cmd->type      = DTR_DRAW_SSPR;
+    cmd->layer     = layer;
+    cmd->order     = gfx->draw_list.count;
     cmd->u.sspr.sx = sx;
     cmd->u.sspr.sy = sy;
     cmd->u.sspr.sw = sw;
@@ -1694,10 +1689,10 @@ void dtr_gfx_dl_spr_rot(dtr_graphics_t *gfx,
     if (gfx->draw_list.count >= CONSOLE_MAX_DRAW_CMDS) {
         return;
     }
-    cmd             = &gfx->draw_list.cmds[gfx->draw_list.count];
-    cmd->type       = DTR_DRAW_SPR_ROT;
-    cmd->layer      = layer;
-    cmd->order      = gfx->draw_list.count;
+    cmd                  = &gfx->draw_list.cmds[gfx->draw_list.count];
+    cmd->type            = DTR_DRAW_SPR_ROT;
+    cmd->layer           = layer;
+    cmd->order           = gfx->draw_list.count;
     cmd->u.spr_rot.idx   = idx;
     cmd->u.spr_rot.x     = x;
     cmd->u.spr_rot.y     = y;
@@ -1722,10 +1717,10 @@ void dtr_gfx_dl_spr_affine(dtr_graphics_t *gfx,
     if (gfx->draw_list.count >= CONSOLE_MAX_DRAW_CMDS) {
         return;
     }
-    cmd                = &gfx->draw_list.cmds[gfx->draw_list.count];
-    cmd->type          = DTR_DRAW_SPR_AFFINE;
-    cmd->layer         = layer;
-    cmd->order         = gfx->draw_list.count;
+    cmd                   = &gfx->draw_list.cmds[gfx->draw_list.count];
+    cmd->type             = DTR_DRAW_SPR_AFFINE;
+    cmd->layer            = layer;
+    cmd->order            = gfx->draw_list.count;
     cmd->u.spr_affine.idx = idx;
     cmd->u.spr_affine.x   = x;
     cmd->u.spr_affine.y   = y;
@@ -1830,7 +1825,7 @@ void dtr_gfx_flip(dtr_graphics_t *gfx)
 /* ------------------------------------------------------------------ */
 
 bool dtr_gfx_load_sheet(dtr_graphics_t *gfx,
-                        const uint8_t * rgba,
+                        const uint8_t  *rgba,
                         int32_t         width,
                         int32_t         height,
                         int32_t         tile_w,
@@ -1843,9 +1838,9 @@ bool dtr_gfx_load_sheet(dtr_graphics_t *gfx,
 
     sht = &gfx->sheet;
 
-    total       = width * height;
-    alloc_sz    = (size_t)total;
-    new_pixels  = DTR_MALLOC(alloc_sz);
+    total      = width * height;
+    alloc_sz   = (size_t)total;
+    new_pixels = DTR_MALLOC(alloc_sz);
     if (new_pixels == NULL) {
         return false;
     }

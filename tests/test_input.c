@@ -3,14 +3,13 @@
  * \brief           Unit tests for keyboard state and virtual input mapping
  */
 
+#include "gamepad.h"
+#include "input.h"
+#include "test_harness.h"
 
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>
-
-#include "gamepad.h"
-#include "input.h"
-#include "test_harness.h"
 
 /* ------------------------------------------------------------------ */
 /*  Keyboard state tests                                               */
@@ -54,7 +53,7 @@ static void test_key_btnp(void)
     assert(dtr_key_btnp(keys, DTR_KEY_Z)); /* first frame pressed → true */
 
     /* Frame 2: still held */
-    dtr_key_update(keys, 0.016f); /* copies current→previous */
+    dtr_key_update(keys, 0.016f);           /* copies current→previous */
     assert(!dtr_key_btnp(keys, DTR_KEY_Z)); /* held, not newly pressed */
 
     /* Frame 3: release */
@@ -162,7 +161,7 @@ static void test_parse_invalid_prefix(void)
 static void test_input_map_and_query(void)
 {
     dtr_input_state_t *inp;
-    dtr_key_state_t *  keys;
+    dtr_key_state_t   *keys;
     dtr_binding_t      binds[1];
 
     inp  = dtr_input_create();
@@ -212,7 +211,7 @@ static void test_input_clear(void)
     dtr_input_state_t *inp;
     dtr_binding_t      binds[1];
 
-    inp = dtr_input_create();
+    inp                = dtr_input_create();
     binds[0].type      = DTR_BIND_KEY;
     binds[0].code      = DTR_KEY_A;
     binds[0].threshold = 0.0f;
@@ -332,7 +331,7 @@ static void test_input_axis_with_gamepad(void)
 
     /* Simulate connected pad */
     pads->pads[0].connected = true;
-    pads->count              = 1;
+    pads->count             = 1;
 
     /* Map "horizontal" → PAD_AXIS_LX */
     binds[0].type      = DTR_BIND_PAD_AXIS;
@@ -380,7 +379,7 @@ static void test_input_pad_button_binding(void)
     pads = dtr_gamepad_create();
 
     pads->pads[0].connected = true;
-    pads->count              = 1;
+    pads->count             = 1;
 
     /* Map "jump" → PAD_A */
     binds[0].type      = DTR_BIND_PAD_BTN;

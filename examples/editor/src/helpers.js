@@ -1,33 +1,36 @@
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-function clamp(v, lo, hi) {
+import { st } from "./state.js";
+import { EROWS, ECOLS, SCROLL_MARGIN, BRACKET_PAIRS, TAB } from "./config.js";
+
+export function clamp(v, lo, hi) {
     return v < lo ? lo : v > hi ? hi : v;
 }
 
-function status(text, sec) {
-    msg = text;
-    msgT = sec || 3;
+export function status(text, sec) {
+    st.msg = text;
+    st.msgT = sec || 3;
 }
 
-function resetBlink() {
-    blink = 0;
-    curOn = true;
+export function resetBlink() {
+    st.blink = 0;
+    st.curOn = true;
 }
 
-function ensureVisible() {
-    let newOy = oy;
-    if (cy < newOy + SCROLL_MARGIN) newOy = Math.max(0, cy - SCROLL_MARGIN);
-    if (cy > newOy + EROWS - 1 - SCROLL_MARGIN) newOy = cy - EROWS + 1 + SCROLL_MARGIN;
-    newOy = clamp(newOy, 0, Math.max(0, buf.length - EROWS));
-    oy = newOy;
-    targetOy = newOy;
-    if (cx < ox) ox = cx;
-    if (cx >= ox + ECOLS) ox = cx - ECOLS + 1;
+export function ensureVisible() {
+    let newOy = st.oy;
+    if (st.cy < newOy + SCROLL_MARGIN) newOy = Math.max(0, st.cy - SCROLL_MARGIN);
+    if (st.cy > newOy + EROWS - 1 - SCROLL_MARGIN) newOy = st.cy - EROWS + 1 + SCROLL_MARGIN;
+    newOy = clamp(newOy, 0, Math.max(0, st.buf.length - 1));
+    st.oy = newOy;
+    st.targetOy = newOy;
+    if (st.cx < st.ox) st.ox = st.cx;
+    if (st.cx >= st.ox + ECOLS) st.ox = st.cx - ECOLS + 1;
 }
 
 // ─── Word helpers ────────────────────────────────────────────────────────────
 
-function isWordChar(c) {
+export function isWordChar(c) {
     return (
         (c >= "a" && c <= "z") ||
         (c >= "A" && c <= "Z") ||
@@ -37,7 +40,7 @@ function isWordChar(c) {
     );
 }
 
-function wordBoundaryLeft(line, col) {
+export function wordBoundaryLeft(line, col) {
     let c = col;
     if (c <= 0) return 0;
     c--;
@@ -50,7 +53,7 @@ function wordBoundaryLeft(line, col) {
     return c;
 }
 
-function wordBoundaryRight(line, col) {
+export function wordBoundaryRight(line, col) {
     let c = col;
     if (c >= line.length) return line.length;
     if (isWordChar(line[c])) {
@@ -64,8 +67,8 @@ function wordBoundaryRight(line, col) {
 
 // ─── Bracket matching ───────────────────────────────────────────────────────
 
-function findMatchingBracket(row, col) {
-    let ch = buf[row] ? buf[row][col] : undefined;
+export function findMatchingBracket(row, col) {
+    let ch = st.buf[row] ? st.buf[row][col] : undefined;
     if (!ch || !BRACKET_PAIRS[ch]) return null;
     let open = "([{";
     let isOpen = open.indexOf(ch) >= 0;
@@ -74,10 +77,9 @@ function findMatchingBracket(row, col) {
     let depth = 0;
     let r = row,
         c = col;
-    // Limit search to 5000 characters to avoid freezing on large files
     let steps = 0;
-    while (r >= 0 && r < buf.length && steps < 5000) {
-        let line = buf[r];
+    while (r >= 0 && r < st.buf.length && steps < 5000) {
+        let line = st.buf[r];
         while (c >= 0 && c < line.length) {
             let cur = line[c];
             if (cur === ch) depth++;
@@ -87,27 +89,29 @@ function findMatchingBracket(row, col) {
             steps++;
         }
         r += dir;
-        if (r >= 0 && r < buf.length) {
-            c = dir > 0 ? 0 : buf[r].length - 1;
+        if (r >= 0 && r < st.buf.length) {
+            c = dir > 0 ? 0 : st.buf[r].length - 1;
         }
     }
     return null;
 }
 
-function getCachedBracketMatch() {
-    if (_bracketMatchCache && _bracketMatchCache.cy === cy && _bracketMatchCache.cx === cx) {
-        return _bracketMatchCache.result;
+export function getCachedBracketMatch() {
+    if (
+        st._bracketMatchCache &&
+        st._bracketMatchCache.cy === st.cy &&
+        st._bracketMatchCache.cx === st.cx
+    ) {
+        return st._bracketMatchCache.result;
     }
-    let result = findMatchingBracket(cy, cx);
-    _bracketMatchCache = { cy, cx, result };
+    let result = findMatchingBracket(st.cy, st.cx);
+    st._bracketMatchCache = { cy: st.cy, cx: st.cx, result };
     return result;
 }
 
 // ─── Block comment state tracking ────────────────────────────────────────────
 
-// Lightweight block-comment state tracker — no object allocation.
-// Returns true if the line ends inside a block comment.
-function trackBlockState(line, inBlock) {
+export function trackBlockState(line, inBlock) {
     let i = 0,
         n = line.length;
     if (inBlock) {
@@ -146,11 +150,11 @@ function trackBlockState(line, inBlock) {
 // ─── Cache rebuilders ────────────────────────────────────────────────────────
 
 function rebuildBracketDepthCache(upTo) {
-    _bracketDepthCache = new Array(upTo);
+    st._bracketDepthCache = new Array(upTo);
     let depth = 0;
     for (let r = 0; r < upTo; r++) {
-        _bracketDepthCache[r] = depth;
-        let line = buf[r];
+        st._bracketDepthCache[r] = depth;
+        let line = st.buf[r];
         for (let c = 0; c < line.length; c++) {
             let ch = line[c];
             if (ch === "(" || ch === "[" || ch === "{") depth++;
@@ -160,101 +164,101 @@ function rebuildBracketDepthCache(upTo) {
 }
 
 function rebuildBlockStateCache(upTo) {
-    _blockStateCache = new Array(upTo);
+    st._blockStateCache = new Array(upTo);
     let inBlock = false;
     for (let i = 0; i < upTo; i++) {
-        _blockStateCache[i] = inBlock;
-        inBlock = trackBlockState(buf[i], inBlock);
+        st._blockStateCache[i] = inBlock;
+        inBlock = trackBlockState(st.buf[i], inBlock);
     }
 }
 
-function ensureCaches() {
-    // Only rebuild up to the last visible line
-    let needed = Math.min(oy + EROWS + 1, buf.length);
-    if (_lastCacheVersion !== _bufVersion || needed > _blockStateCache.length) {
+export function ensureCaches() {
+    let needed = Math.min(st.oy + EROWS + 1, st.buf.length);
+    if (st._lastCacheVersion !== st._bufVersion || needed > st._blockStateCache.length) {
         rebuildBlockStateCache(needed);
         rebuildBracketDepthCache(needed);
-        _bracketMatchCache = null;
-        _lastCacheVersion = _bufVersion;
+        st._bracketMatchCache = null;
+        st._lastCacheVersion = st._bufVersion;
     }
 }
 
 // ─── Indent / line helpers ───────────────────────────────────────────────────
 
-function firstNonBlank(line) {
-    let s = buf[line];
+export function firstNonBlank(line) {
+    let s = st.buf[line];
     let i = 0;
     while (i < s.length && (s[i] === " " || s[i] === "\t")) i++;
     return i;
 }
 
-function getIndent(line) {
-    let m = buf[line].match(/^(\s*)/);
+export function getIndent(line) {
+    let m = st.buf[line].match(/^(\s*)/);
     return m ? m[1] : "";
 }
 
 // ─── Vim word motions ────────────────────────────────────────────────────────
 
-function vimWordForward() {
-    let line = buf[cy];
-    if (cx >= line.length) {
-        if (cy < buf.length - 1) {
-            cy++;
-            cx = 0;
-            line = buf[cy];
+export function vimWordForward() {
+    let line = st.buf[st.cy];
+    if (st.cx >= line.length) {
+        if (st.cy < st.buf.length - 1) {
+            st.cy++;
+            st.cx = 0;
+            line = st.buf[st.cy];
         }
-        while (cx < line.length && line[cx] === " ") cx++;
+        while (st.cx < line.length && line[st.cx] === " ") st.cx++;
         return;
     }
-    if (isWordChar(line[cx])) {
-        while (cx < line.length && isWordChar(line[cx])) cx++;
-    } else if (line[cx] !== " ") {
-        while (cx < line.length && !isWordChar(line[cx]) && line[cx] !== " ") cx++;
+    if (isWordChar(line[st.cx])) {
+        while (st.cx < line.length && isWordChar(line[st.cx])) st.cx++;
+    } else if (line[st.cx] !== " ") {
+        while (st.cx < line.length && !isWordChar(line[st.cx]) && line[st.cx] !== " ") st.cx++;
     }
-    while (cx < line.length && line[cx] === " ") cx++;
-    if (cx >= line.length && cy < buf.length - 1) {
-        cy++;
-        cx = 0;
-        line = buf[cy];
-        while (cx < line.length && line[cx] === " ") cx++;
+    while (st.cx < line.length && line[st.cx] === " ") st.cx++;
+    if (st.cx >= line.length && st.cy < st.buf.length - 1) {
+        st.cy++;
+        st.cx = 0;
+        line = st.buf[st.cy];
+        while (st.cx < line.length && line[st.cx] === " ") st.cx++;
     }
 }
 
-function vimWordBack() {
-    if (cx === 0) {
-        if (cy > 0) {
-            cy--;
-            cx = buf[cy].length;
+export function vimWordBack() {
+    if (st.cx === 0) {
+        if (st.cy > 0) {
+            st.cy--;
+            st.cx = st.buf[st.cy].length;
         }
         return;
     }
-    let line = buf[cy];
-    cx--;
-    while (cx > 0 && line[cx] === " ") cx--;
-    if (isWordChar(line[cx])) {
-        while (cx > 0 && isWordChar(line[cx - 1])) cx--;
+    let line = st.buf[st.cy];
+    st.cx--;
+    while (st.cx > 0 && line[st.cx] === " ") st.cx--;
+    if (isWordChar(line[st.cx])) {
+        while (st.cx > 0 && isWordChar(line[st.cx - 1])) st.cx--;
     } else {
-        while (cx > 0 && !isWordChar(line[cx - 1]) && line[cx - 1] !== " ") cx--;
+        while (st.cx > 0 && !isWordChar(line[st.cx - 1]) && line[st.cx - 1] !== " ") st.cx--;
     }
 }
 
-function vimWordEnd() {
-    let line = buf[cy];
-    if (cx >= line.length - 1) {
-        if (cy < buf.length - 1) {
-            cy++;
-            cx = 0;
-            line = buf[cy];
-            while (cx < line.length && line[cx] === " ") cx++;
+export function vimWordEnd() {
+    let line = st.buf[st.cy];
+    if (st.cx >= line.length - 1) {
+        if (st.cy < st.buf.length - 1) {
+            st.cy++;
+            st.cx = 0;
+            line = st.buf[st.cy];
+            while (st.cx < line.length && line[st.cx] === " ") st.cx++;
         }
     } else {
-        cx++;
+        st.cx++;
     }
-    line = buf[cy];
-    while (cx < line.length && line[cx] === " ") cx++;
-    if (isWordChar(line[cx])) {
-        while (cx < line.length - 1 && isWordChar(line[cx + 1])) cx++;
+    line = st.buf[st.cy];
+    while (st.cx < line.length && line[st.cx] === " ") st.cx++;
+    if (isWordChar(line[st.cx])) {
+        while (st.cx < line.length - 1 && isWordChar(line[st.cx + 1])) st.cx++;
     } else {
-        while (cx < line.length - 1 && !isWordChar(line[cx + 1]) && line[cx + 1] !== " ") cx++;
+        while (st.cx < line.length - 1 && !isWordChar(line[st.cx + 1]) && line[st.cx + 1] !== " ")
+            st.cx++;
     }
 }

@@ -3,12 +3,11 @@
  * \brief           Unit tests for the QuickJS-NG runtime wrapper
  */
 
+#include "runtime.h"
+#include "test_harness.h"
 
 #include <stdio.h>
 #include <string.h>
-
-#include "test_harness.h"
-#include "runtime.h"
 
 /* ------------------------------------------------------------------ */
 /*  Helpers                                                            */
@@ -252,9 +251,8 @@ static void test_drain_jobs(void)
 {
     dtr_runtime_t *rt;
     bool           ok;
-    const char    *code =
-        "globalThis.__resolved = 0;\n"
-        "Promise.resolve().then(() => { globalThis.__resolved = 1; });\n";
+    const char    *code = "globalThis.__resolved = 0;\n"
+                          "Promise.resolve().then(() => { globalThis.__resolved = 1; });\n";
 
     rt = prv_make_rt();
     ok = dtr_runtime_eval(rt, code, strlen(code), "<test>");
@@ -289,17 +287,16 @@ static void test_call_argv_existing(void)
 {
     dtr_runtime_t *rt;
     bool           ok;
-    const char    *code =
-        "globalThis.__sum = 0;\n"
-        "function _init(a) { globalThis.__sum = a; }\n";
-    JSValue argv[1];
+    const char    *code = "globalThis.__sum = 0;\n"
+                          "function _init(a) { globalThis.__sum = a; }\n";
+    JSValue        argv[1];
 
     rt = prv_make_rt();
     ok = dtr_runtime_eval(rt, code, strlen(code), "<test>");
     DTR_ASSERT(ok);
 
     argv[0] = JS_NewInt32(rt->ctx, 99);
-    ok = dtr_runtime_call_argv(rt, rt->atom_init, 1, argv);
+    ok      = dtr_runtime_call_argv(rt, rt->atom_init, 1, argv);
     JS_FreeValue(rt->ctx, argv[0]);
     DTR_ASSERT(ok);
 
@@ -340,14 +337,14 @@ static void test_call_argv_throwing(void)
     dtr_runtime_t *rt;
     bool           ok;
     const char    *code = "function _init(x) { throw new Error('arg_fail'); }";
-    JSValue argv[1];
+    JSValue        argv[1];
 
     rt = prv_make_rt();
     ok = dtr_runtime_eval(rt, code, strlen(code), "<test>");
     DTR_ASSERT(ok);
 
     argv[0] = JS_NewInt32(rt->ctx, 1);
-    ok = dtr_runtime_call_argv(rt, rt->atom_init, 1, argv);
+    ok      = dtr_runtime_call_argv(rt, rt->atom_init, 1, argv);
     JS_FreeValue(rt->ctx, argv[0]);
 
     DTR_ASSERT(!ok);

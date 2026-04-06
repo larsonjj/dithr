@@ -48,7 +48,7 @@ typedef struct dtr_map_layer {
     bool              is_tile_layer;
     int32_t           width;
     int32_t           height;
-    int32_t *         tiles; /**< Tile indices, width*height (tile layers) */
+    int32_t          *tiles; /**< Tile indices, width*height (tile layers) */
     dtr_map_object_t *objects;
     int32_t           object_count;
 } dtr_map_layer_t;
@@ -128,7 +128,7 @@ typedef struct dtr_cart_audio {
 
 #define DTR_CART_MAX_INPUT_ACTIONS  16
 #define DTR_CART_MAX_INPUT_BINDINGS 8
-#define DTR_CART_BIND_NAME_LEN     32
+#define DTR_CART_BIND_NAME_LEN      32
 
 typedef struct dtr_cart_input_mapping {
     char    action[32];
@@ -169,16 +169,16 @@ struct dtr_cart {
     dtr_cart_input_t   input;
 
     /* JS source code (owned) */
-    char * code;
+    char  *code;
     size_t code_len;
 
     /* Asset paths from cart.json */
-    char sprite_sheet_path[512];
-    char code_path[512];
-    char map_paths[DTR_CART_MAX_MAPS][512];
-    char sfx_paths[DTR_CART_MAX_SFX][512];
+    char    sprite_sheet_path[512];
+    char    code_path[512];
+    char    map_paths[DTR_CART_MAX_MAPS][512];
+    char    sfx_paths[DTR_CART_MAX_SFX][512];
     int32_t sfx_count;
-    char music_paths[DTR_CART_MAX_MUSIC][512];
+    char    music_paths[DTR_CART_MAX_MUSIC][512];
     int32_t music_count;
 
     /* Map levels */
