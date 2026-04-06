@@ -278,9 +278,6 @@ dtr_console_t *dtr_console_create(const char *cart_path)
     con->target_fps = con->cart->timing.fps;
 
     /* --- Window + renderer --- */
-#ifdef __APPLE__
-    SDL_SetHint(SDL_HINT_VIDEO_HIGHDPI_DISABLED, "0");
-#endif
     con->window = SDL_CreateWindow(con->cart->display.window_title[0] != '\0' ?
                                        con->cart->display.window_title :
                                        con->cart->meta.title,
