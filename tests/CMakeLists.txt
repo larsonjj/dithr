@@ -74,6 +74,9 @@ dtr_add_test(test_mouse_gamepad test_mouse_gamepad.c)
 # --- Runtime tests ---
 dtr_add_test(test_runtime test_runtime.c)
 
+# --- Module normalize tests ---
+dtr_add_test(test_module_normalize test_module_normalize.c)
+
 # --- Audio tests ---
 dtr_add_test(test_audio test_audio.c)
 
@@ -98,7 +101,7 @@ dtr_add_test(test_tween test_tween.c LINK_LIB dithr_core_test)
 # --- CTest properties ---
 set_tests_properties(
     test_input test_cart test_graphics test_graphics_ext test_event
-    test_mouse_gamepad test_runtime test_audio test_postfx
+    test_mouse_gamepad test_runtime test_module_normalize test_audio test_postfx
     test_cart_import test_col test_cam test_ui test_tween
     PROPERTIES
         TIMEOUT 120

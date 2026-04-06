@@ -375,6 +375,169 @@ static void test_call_argv_blocked_after_error(void)
 }
 
 /* ================================================================== */
+/*  Module detection — prv_code_is_module (via eval path)              */
+/* ================================================================== */
+
+/** Helper: read a globalThis property as int32. */
+static int32_t prv_read_global_int(dtr_runtime_t *rt, const char *name)
+{
+    JSValue global;
+    JSValue val;
+    int32_t result;
+
+    global = JS_GetGlobalObject(rt->ctx);
+    val    = JS_GetPropertyStr(rt->ctx, global, name);
+    JS_ToInt32(rt->ctx, &result, val);
+    JS_FreeValue(rt->ctx, val);
+    JS_FreeValue(rt->ctx, global);
+    return result;
+}
+
+static void test_eval_export_detected_as_module(void)
+{
+    dtr_runtime_t *rt;
+    bool           ok;
+    /* export triggers the module path; promoted _init should be callable */
+    const char *code = "export function _init() { globalThis.__mod = 1; }";
+
+    rt = prv_make_rt();
+    ok = dtr_runtime_eval(rt, code, strlen(code), "<test>");
+    DTR_ASSERT(ok);
+    DTR_ASSERT(!rt->error_active);
+
+    /* _init should have been promoted to global */
+    ok = dtr_runtime_call(rt, rt->atom_init);
+    DTR_ASSERT(ok);
+    DTR_ASSERT_EQ_INT(prv_read_global_int(rt, "__mod"), 1);
+
+    dtr_runtime_destroy(rt);
+    DTR_PASS();
+}
+
+static void test_eval_import_keyword_not_module(void)
+{
+    dtr_runtime_t *rt;
+    bool           ok;
+    /* "import" appears mid-line inside a string literal — script path */
+    const char *code = "var s = 'import something';";
+
+    rt = prv_make_rt();
+    ok = dtr_runtime_eval(rt, code, strlen(code), "<test>");
+    DTR_ASSERT(ok);
+    DTR_ASSERT(!rt->error_active);
+    dtr_runtime_destroy(rt);
+    DTR_PASS();
+}
+
+static void test_eval_no_module_keywords(void)
+{
+    dtr_runtime_t *rt;
+    bool           ok;
+    const char    *code = "globalThis.__plain = 99;";
+
+    rt = prv_make_rt();
+    ok = dtr_runtime_eval(rt, code, strlen(code), "<test>");
+    DTR_ASSERT(ok);
+    DTR_ASSERT_EQ_INT(prv_read_global_int(rt, "__plain"), 99);
+    dtr_runtime_destroy(rt);
+    DTR_PASS();
+}
+
+static void test_eval_comment_then_export(void)
+{
+    dtr_runtime_t *rt;
+    bool           ok;
+    /* Single-line comment before export keyword — still a module */
+    const char *code = "// header comment\n"
+                       "export function _init() { globalThis.__commented = 7; }";
+
+    rt = prv_make_rt();
+    ok = dtr_runtime_eval(rt, code, strlen(code), "<test>");
+    DTR_ASSERT(ok);
+
+    ok = dtr_runtime_call(rt, rt->atom_init);
+    DTR_ASSERT(ok);
+    DTR_ASSERT_EQ_INT(prv_read_global_int(rt, "__commented"), 7);
+    dtr_runtime_destroy(rt);
+    DTR_PASS();
+}
+
+static void test_eval_block_comment_then_export(void)
+{
+    dtr_runtime_t *rt;
+    bool           ok;
+    /* Block comment before export */
+    const char *code = "/* block */\n"
+                       "export function _draw() { globalThis.__blk = 3; }";
+
+    rt = prv_make_rt();
+    ok = dtr_runtime_eval(rt, code, strlen(code), "<test>");
+    DTR_ASSERT(ok);
+
+    ok = dtr_runtime_call(rt, rt->atom_draw);
+    DTR_ASSERT(ok);
+    DTR_ASSERT_EQ_INT(prv_read_global_int(rt, "__blk"), 3);
+    dtr_runtime_destroy(rt);
+    DTR_PASS();
+}
+
+static void test_eval_module_multiple_exports(void)
+{
+    dtr_runtime_t *rt;
+    bool           ok;
+    const char    *code = "export function _init()   { globalThis.__mi = 10; }\n"
+                          "export function _update() { globalThis.__mu = 20; }\n"
+                          "export function _draw()   { globalThis.__md = 30; }\n";
+
+    rt = prv_make_rt();
+    ok = dtr_runtime_eval(rt, code, strlen(code), "<test>");
+    DTR_ASSERT(ok);
+
+    dtr_runtime_call(rt, rt->atom_init);
+    dtr_runtime_call(rt, rt->atom_update);
+    dtr_runtime_call(rt, rt->atom_draw);
+
+    DTR_ASSERT_EQ_INT(prv_read_global_int(rt, "__mi"), 10);
+    DTR_ASSERT_EQ_INT(prv_read_global_int(rt, "__mu"), 20);
+    DTR_ASSERT_EQ_INT(prv_read_global_int(rt, "__md"), 30);
+    dtr_runtime_destroy(rt);
+    DTR_PASS();
+}
+
+static void test_eval_module_syntax_error(void)
+{
+    dtr_runtime_t *rt;
+    bool           ok;
+    /* Malformed export — should trigger module compilation error */
+    const char *code = "export {";
+
+    rt = prv_make_rt();
+    ok = dtr_runtime_eval(rt, code, strlen(code), "<test>");
+    DTR_ASSERT(!ok);
+    DTR_ASSERT(rt->error_active);
+    dtr_runtime_destroy(rt);
+    DTR_PASS();
+}
+
+static void test_eval_module_runtime_error(void)
+{
+    dtr_runtime_t *rt;
+    bool           ok;
+    const char    *code = "export function _init() { throw new Error('mod_boom'); }";
+
+    rt = prv_make_rt();
+    ok = dtr_runtime_eval(rt, code, strlen(code), "<test>");
+    DTR_ASSERT(ok);
+
+    ok = dtr_runtime_call(rt, rt->atom_init);
+    DTR_ASSERT(!ok);
+    DTR_ASSERT(rt->error_active);
+    DTR_ASSERT(strstr(rt->error_msg, "mod_boom") != NULL);
+    dtr_runtime_destroy(rt);
+    DTR_PASS();
+}
+
+/* ================================================================== */
 /*  Main                                                               */
 /* ================================================================== */
 
@@ -415,6 +578,16 @@ int main(int argc, char *argv[])
     DTR_RUN_TEST(test_call_argv_missing);
     DTR_RUN_TEST(test_call_argv_throwing);
     DTR_RUN_TEST(test_call_argv_blocked_after_error);
+
+    /* Module detection + eval */
+    DTR_RUN_TEST(test_eval_export_detected_as_module);
+    DTR_RUN_TEST(test_eval_import_keyword_not_module);
+    DTR_RUN_TEST(test_eval_no_module_keywords);
+    DTR_RUN_TEST(test_eval_comment_then_export);
+    DTR_RUN_TEST(test_eval_block_comment_then_export);
+    DTR_RUN_TEST(test_eval_module_multiple_exports);
+    DTR_RUN_TEST(test_eval_module_syntax_error);
+    DTR_RUN_TEST(test_eval_module_runtime_error);
 
     DTR_TEST_END();
 }
