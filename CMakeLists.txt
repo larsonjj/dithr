@@ -215,6 +215,9 @@ set(DITHR_COMPILE_DEFS
     CONSOLE_JS_STACK_KB=${DTR_JS_STACK_KB}
     CONSOLE_VERSION="${DTR_VERSION_STR}"
 )
+if (NOT MSVC)
+    list(APPEND DITHR_COMPILE_DEFS _DEFAULT_SOURCE)
+endif()
 
 # --- Engine static library (everything except main.c) ---
 add_library(dithr_core STATIC ${DITHR_CORE_SOURCES})

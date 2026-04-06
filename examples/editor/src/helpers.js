@@ -1,10 +1,45 @@
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 import { st } from "./state.js";
-import { EROWS, ECOLS, SCROLL_MARGIN, BRACKET_PAIRS, TAB } from "./config.js";
+import {
+    EROWS,
+    ECOLS,
+    SCROLL_MARGIN,
+    BRACKET_PAIRS,
+    TAB_CODE,
+    TAB_SPRITES,
+    TAB_MAP,
+} from "./config.js";
+
+const IS_MAC = sys.platform() === "macos";
+export const MOD_NAME = IS_MAC ? "Cmd" : "Ctrl";
+
+export function modKey() {
+    if (IS_MAC)
+        return key.btn(key.LGUI) || key.btn(key.RGUI) || key.btn(key.LCTRL) || key.btn(key.RCTRL);
+    return key.btn(key.LCTRL) || key.btn(key.RCTRL);
+}
 
 export function clamp(v, lo, hi) {
     return v < lo ? lo : v > hi ? hi : v;
+}
+
+/** Check mod+1/2/3 tab switching. Returns true if a switch happened. */
+export function handleTabSwitch() {
+    if (!modKey()) return false;
+    if (key.btnp(key.NUM1)) {
+        st.activeTab = TAB_CODE;
+        return true;
+    }
+    if (key.btnp(key.NUM2)) {
+        st.activeTab = TAB_SPRITES;
+        return true;
+    }
+    if (key.btnp(key.NUM3)) {
+        st.activeTab = TAB_MAP;
+        return true;
+    }
+    return false;
 }
 
 export function status(text, sec) {

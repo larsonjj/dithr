@@ -58,6 +58,10 @@ typedef struct dtr_console {
     bool fullscreen;
     bool restart;
     bool reload;        /**< Hot-reload: re-eval JS without tearing down subsystems */
+
+#ifdef __APPLE__
+    int mac_cmd_close_frames; /**< >0 while suppressing Cmd+W menu-close key-up */
+#endif
     bool reload_assets; /**< Deferred asset-only reload (set from WASM SSE handler) */
     bool new_frame;     /**< Set true at start of each iterate, cleared after resets */
 

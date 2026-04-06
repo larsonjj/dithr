@@ -265,6 +265,10 @@ static void test_key_from_scancode(void)
     DTR_ASSERT_EQ_INT(dtr_key_from_scancode(SDL_SCANCODE_RCTRL), DTR_KEY_RCTRL);
     DTR_ASSERT_EQ_INT(dtr_key_from_scancode(SDL_SCANCODE_LALT), DTR_KEY_LALT);
     DTR_ASSERT_EQ_INT(dtr_key_from_scancode(SDL_SCANCODE_RALT), DTR_KEY_RALT);
+    DTR_ASSERT_EQ_INT(dtr_key_from_scancode(SDL_SCANCODE_LGUI), DTR_KEY_LGUI);
+    DTR_ASSERT_EQ_INT(dtr_key_from_scancode(SDL_SCANCODE_RGUI), DTR_KEY_RGUI);
+    DTR_ASSERT_EQ_INT(dtr_key_from_scancode(SDL_SCANCODE_LEFTBRACKET), DTR_KEY_LBRACKET);
+    DTR_ASSERT_EQ_INT(dtr_key_from_scancode(SDL_SCANCODE_RIGHTBRACKET), DTR_KEY_RBRACKET);
 
     /* Unmapped scancode returns NONE */
     DTR_ASSERT_EQ_INT(dtr_key_from_scancode(SDL_SCANCODE_CAPSLOCK), DTR_KEY_NONE);

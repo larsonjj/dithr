@@ -130,6 +130,9 @@ export function drawEditor() {
     ensureCaches();
     let inBlock = st.oy < st._blockStateCache.length ? st._blockStateCache[st.oy] : false;
 
+    // Pre-compute selection bounds once for the entire frame
+    let sel = selOrdered();
+
     // ── Text area ──
     for (let r = 0; r < EROWS; r++) {
         let li = st.oy + r;
@@ -142,7 +145,7 @@ export function drawEditor() {
         }
 
         // Selection highlight
-        drawSelection(li, py);
+        drawSelection(li, py, sel);
 
         // Find match highlighting (persistent: use lastFindText when not in findMode)
         let highlightText = st.findMode ? st.findText : st.lastFindText;
@@ -183,7 +186,7 @@ export function drawEditor() {
         let line = st.buf[li];
         while (indentLevel < line.length && line[indentLevel] === " ") indentLevel++;
         let tabW = TAB.length;
-        for (let g = tabW; g < Math.max(indentLevel, li === st.cy ? 0 : indentLevel); g += tabW) {
+        for (let g = tabW; g < indentLevel; g += tabW) {
             let gx = gutterPx + (g - st.ox) * CW - 1;
             if (gx > gutterPx && gx < FB_W - MINIMAP_W) {
                 for (let dy = 0; dy < CH; dy += 2) {
@@ -217,37 +220,56 @@ export function drawEditor() {
         let col = 0;
         // Running bracket depth from cached line-start value
         let bDepth = li < st._bracketDepthCache.length ? st._bracketDepthCache[li] : 0;
+
+        // Batched printing: accumulate same-color runs and flush as one gfx.print() call
+        let runStr = "";
+        let runCol = -1;
+        let runX = 0;
+
         for (let t = 0; t < tokens.length; t++) {
             let tok = tokens[t];
             let tokCol = tok.col;
             for (let c = 0; c < tok.text.length; c++) {
                 let ch = tok.text[c];
-                // Track bracket depth inline
+                let vc = col - st.ox;
+                let charCol = tokCol;
                 let isBracket = false;
+
+                // Track bracket depth inline
                 if (tokCol === FG && BRACKET_PAIRS[ch]) {
                     isBracket = true;
                     let isOpen = ch === "(" || ch === "[" || ch === "{";
                     if (!isOpen) bDepth--;
-                    let vc = col - st.ox;
-                    if (vc >= 0 && vc < ECOLS) {
-                        let bCol = BRACKET_COLORS[Math.abs(bDepth) % BRACKET_COLORS.length];
-                        gfx.print(ch, gutterPx + vc * CW, py, bCol);
-                    }
+                    charCol = BRACKET_COLORS[Math.abs(bDepth) % BRACKET_COLORS.length];
                     if (isOpen) bDepth++;
                 }
-                if (!isBracket) {
-                    let vc = col - st.ox;
-                    if (vc >= 0 && vc < ECOLS) {
-                        if (ch === "\t") {
-                            gfx.print("\x1a", gutterPx + vc * CW, py, GUIDECOL);
-                        } else {
-                            gfx.print(ch, gutterPx + vc * CW, py, tokCol);
-                        }
+
+                if (ch === "\t") {
+                    charCol = GUIDECOL;
+                    ch = "\x1a";
+                }
+
+                if (vc >= 0 && vc < ECOLS) {
+                    if (charCol !== runCol || isBracket) {
+                        // Flush previous run
+                        if (runStr) gfx.print(runStr, runX, py, runCol);
+                        runStr = ch;
+                        runCol = charCol;
+                        runX = gutterPx + vc * CW;
+                    } else {
+                        runStr += ch;
                     }
+                } else if (runStr) {
+                    // Off-screen: flush any pending run
+                    gfx.print(runStr, runX, py, runCol);
+                    runStr = "";
+                    runCol = -1;
                 }
                 col++;
             }
         }
+        // Flush final run
+        if (runStr) gfx.print(runStr, runX, py, runCol);
     }
 
     // ── Matching bracket highlight ──
@@ -360,8 +382,7 @@ export function drawEditor() {
 
 // ─── Selection drawing ───────────────────────────────────────────────────────
 
-export function drawSelection(lineIdx, py) {
-    let s = selOrdered();
+export function drawSelection(lineIdx, py, s) {
     if (!s) return;
     if (lineIdx < s.a.y || lineIdx > s.b.y) return;
 

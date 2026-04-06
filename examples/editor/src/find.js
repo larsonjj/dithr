@@ -1,12 +1,12 @@
 // ─── Find & Replace ──────────────────────────────────────────────────────────
 
-import { st } from './state.js';
-import { FB_W, CH, GUTTER, CW, ROWS, FOOT, FG, GUTFG, HEADBG } from './config.js';
-import { clamp, ensureVisible, resetBlink, status } from './helpers.js';
-import { selOrdered, pushUndo } from './buffer.js';
+import { st } from "./state.js";
+import { FB_W, CH, GUTTER, CW, ROWS, FOOT, FG, GUTFG, HEADBG } from "./config.js";
+import { clamp, ensureVisible, resetBlink, status, modKey, MOD_NAME } from "./helpers.js";
+import { selOrdered, pushUndo } from "./buffer.js";
 
 export function updateFind() {
-    let ctrl = key.btn(key.LCTRL) || key.btn(key.RCTRL);
+    let ctrl = modKey();
     let shift = key.btn(key.LSHIFT) || key.btn(key.RSHIFT);
 
     if (key.btnp(key.ESCAPE)) {
@@ -17,7 +17,8 @@ export function updateFind() {
 
     if (key.btnr(key.BACKSPACE)) {
         if (st.findField === 0 && st.findText.length) st.findText = st.findText.slice(0, -1);
-        if (st.findField === 1 && st.replaceText.length) st.replaceText = st.replaceText.slice(0, -1);
+        if (st.findField === 1 && st.replaceText.length)
+            st.replaceText = st.replaceText.slice(0, -1);
         return;
     }
 
@@ -80,7 +81,8 @@ export function replaceCurrent() {
         let sel = st.buf[s.a.y].slice(s.a.x, s.b.x);
         if (sel === st.findText) {
             pushUndo();
-            st.buf[s.a.y] = st.buf[s.a.y].slice(0, s.a.x) + st.replaceText + st.buf[s.a.y].slice(s.b.x);
+            st.buf[s.a.y] =
+                st.buf[s.a.y].slice(0, s.a.x) + st.replaceText + st.buf[s.a.y].slice(s.b.x);
             st.cx = s.a.x + st.replaceText.length;
             st.cy = s.a.y;
             st.anchor = null;
@@ -120,7 +122,9 @@ export function drawFind() {
     gfx.print(st.findText + (st.findField === 0 ? "_" : ""), gutterPx + fl.length * CW, footY, FG);
 
     // Hint on right
-    let hint = st.findReplace ? "Tab:switch  Ctrl+Ent:all" : "Enter:next  Shift+Ent:prev";
+    let hint = st.findReplace
+        ? "Tab:switch  " + MOD_NAME + "+Ent:all"
+        : "Enter:next  Shift+Ent:prev";
     let hw = gfx.textWidth(hint);
     gfx.print(hint, FB_W - hw - CW, footY, GUTFG);
 
@@ -130,7 +134,12 @@ export function drawFind() {
         gfx.rectfill(0, replY, FB_W - 1, replY + CH - 1, HEADBG);
         let rl = "Repl: ";
         gfx.print(rl, gutterPx, replY, st.findField === 1 ? FG : GUTFG);
-        gfx.print(st.replaceText + (st.findField === 1 ? "_" : ""), gutterPx + rl.length * CW, replY, FG);
+        gfx.print(
+            st.replaceText + (st.findField === 1 ? "_" : ""),
+            gutterPx + rl.length * CW,
+            replY,
+            FG,
+        );
     }
 }
 

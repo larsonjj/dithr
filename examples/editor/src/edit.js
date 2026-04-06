@@ -1,19 +1,7 @@
 // ─── Edit-mode update ────────────────────────────────────────────────────────
 
 import { st } from "./state.js";
-import {
-    TAB_CODE,
-    TAB_SPRITES,
-    TAB_MAP,
-    HEAD,
-    CH,
-    FOOT,
-    ROWS,
-    GUTTER,
-    CW,
-    EROWS,
-    TAB,
-} from "./config.js";
+import { HEAD, CH, FOOT, ROWS, GUTTER, CW, EROWS, TAB } from "./config.js";
 import {
     clamp,
     ensureVisible,
@@ -24,6 +12,7 @@ import {
     wordBoundaryRight,
     getIndent,
     firstNonBlank,
+    modKey,
 } from "./helpers.js";
 import {
     selOrdered,
@@ -37,26 +26,14 @@ import {
     switchToFile,
     closeFile,
 } from "./buffer.js";
-import { updateVimKeys, vimNormal } from "./vim.js";
+import { updateVimKeys } from "./vim.js";
 
 export function updateEdit() {
-    let ctrl = key.btn(key.LCTRL) || key.btn(key.RCTRL);
+    let ctrl = modKey();
     let shift = key.btn(key.LSHIFT) || key.btn(key.RSHIFT);
 
     // ── Ctrl shortcuts ──
     if (ctrl) {
-        if (key.btnp(key.NUM1)) {
-            st.activeTab = TAB_CODE;
-            return;
-        }
-        if (key.btnp(key.NUM2)) {
-            st.activeTab = TAB_SPRITES;
-            return;
-        }
-        if (key.btnp(key.NUM3)) {
-            st.activeTab = TAB_MAP;
-            return;
-        }
         if (key.btnp(key.TAB)) {
             if (st.openFiles.length > 1) {
                 let next = shift

@@ -66,7 +66,6 @@ export const st = {
 
     // smooth scrolling
     targetOy: 0,
-    smoothOy: 0,
 
     // modified line tracking (since last save)
     savedBuf: [], // snapshot at last save/open
@@ -80,7 +79,6 @@ export const st = {
     // sprite editor state
     sprSel: 0,
     sprCol: 7,
-    sprZoom: 8,
     sprTool: 0, // 0=pencil, 1=eraser
     sprScrollY: 0,
     sprUndoStack: [],

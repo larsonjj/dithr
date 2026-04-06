@@ -14,13 +14,13 @@ import {
     vimWordEnd,
 } from "./helpers.js";
 import {
-    selOrdered,
     selText,
     deleteSel,
     pushUndo,
     doUndo,
     saveFile,
     openBrowser,
+    closeFile,
 } from "./buffer.js";
 
 export function updateVimKeys() {
@@ -629,22 +629,10 @@ export function vimExecCmd(cmd) {
     if (cmd === "w") {
         saveFile();
     } else if (cmd === "q") {
-        st.buf = [""];
-        st.cx = st.cy = st.ox = st.oy = 0;
-        st.fname = "";
-        st.dirty = false;
-        st.undoStack = [];
-        st.anchor = null;
-        status("Buffer closed");
+        closeFile(st.fileIdx);
     } else if (cmd === "wq") {
         saveFile();
-        st.buf = [""];
-        st.cx = st.cy = st.ox = st.oy = 0;
-        st.fname = "";
-        st.dirty = false;
-        st.undoStack = [];
-        st.anchor = null;
-        status("Saved & closed");
+        closeFile(st.fileIdx);
     } else if (cmd === "e" || cmd === "e ") {
         openBrowser();
     } else if (/^[0-9]+$/.test(cmd)) {

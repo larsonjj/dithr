@@ -1,7 +1,7 @@
 // ─── Selection helpers ───────────────────────────────────────────────────────
 
 import { st } from "./state.js";
-import { ensureVisible, resetBlink, status } from "./helpers.js";
+import { ensureVisible, resetBlink, status, MOD_NAME } from "./helpers.js";
 
 export function selOrdered() {
     if (!st.anchor) return null;
@@ -132,7 +132,7 @@ export function openFile(path) {
 
 export function saveFile() {
     if (!st.fname) {
-        status("No file — open one first (Ctrl+O)");
+        status("No file — open one first (" + MOD_NAME + "+O)");
         return;
     }
     let ok = sys.writeFile(st.fname, st.buf.join("\n"));

@@ -7,12 +7,9 @@
 //   Bottom strip  : layer selector, info, grid toggle
 //
 
-import { st } from './state.js';
-import {
-    FB_W, FB_H, CW, CH, TAB_H, TAB_CODE, TAB_SPRITES, TAB_MAP,
-    FG, GUTBG, FOOTBG, FOOTFG, GRIDC
-} from './config.js';
-import { clamp } from './helpers.js';
+import { st } from "./state.js";
+import { FB_W, FB_H, CW, CH, TAB_H, FG, GUTBG, FOOTBG, FOOTFG, GRIDC } from "./config.js";
+import { clamp, modKey } from "./helpers.js";
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -30,23 +27,7 @@ const MAP_PICK_COLS = Math.floor(MAP_PICKER_W / MAP_PICK_CELL);
 // ─── Update ──────────────────────────────────────────────────────────────────
 
 export function updateMapEditor() {
-    let ctrl = key.btn(key.LCTRL) || key.btn(key.RCTRL);
-
-    // Tab switching
-    if (ctrl) {
-        if (key.btnp(key.NUM1)) {
-            st.activeTab = TAB_CODE;
-            return;
-        }
-        if (key.btnp(key.NUM2)) {
-            st.activeTab = TAB_SPRITES;
-            return;
-        }
-        if (key.btnp(key.NUM3)) {
-            st.activeTab = TAB_MAP;
-            return;
-        }
-    }
+    let ctrl = modKey();
 
     let mx = mouse.x();
     let my = mouse.y();
@@ -125,10 +106,10 @@ export function updateMapEditor() {
     }
 
     // ── Layer switching (keyboard) ──
-    let layers = map.layers();
+    let layers = map.layers().length;
     if (st.mapLayer >= layers) st.mapLayer = Math.max(0, layers - 1);
-    if (key.btnp(key.LEFTBRACKET) && st.mapLayer > 0) st.mapLayer--;
-    if (key.btnp(key.RIGHTBRACKET) && st.mapLayer < layers - 1) st.mapLayer++;
+    if (key.btnp(key.LBRACKET) && st.mapLayer > 0) st.mapLayer--;
+    if (key.btnp(key.RBRACKET) && st.mapLayer < layers - 1) st.mapLayer++;
 
     // Commit stroke on mouse release
     if (!mBtn && st.mapUndoPending.length > 0) {
@@ -236,7 +217,7 @@ export function drawMapEditor() {
     // ── Footer ──
     let footY = FB_H - CH;
     gfx.rectfill(0, footY, FB_W - 1, FB_H - 1, FOOTBG);
-    let layers = map.layers();
+    let layers = map.layers().length;
     let info =
         "L:" +
         st.mapLayer +

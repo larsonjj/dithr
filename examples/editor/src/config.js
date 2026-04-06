@@ -3,21 +3,21 @@
 // A minimal text editor built on the dithr fantasy console engine.
 // Framebuffer: 640×360, built-in 4×6 font (5×7 advance with spacing).
 //
-// Shortcuts:
-//   Ctrl+O   Open file browser       Ctrl+S   Save file
-//   Ctrl+Z   Undo                    Ctrl+Y / Ctrl+Shift+Z   Redo
-//   Ctrl+X   Cut (selection/line)    Ctrl+C   Copy (selection/line)
-//   Ctrl+V   Paste                   Ctrl+A   Select all
-//   Ctrl+D   Duplicate line          Ctrl+Shift+D  Duplicate selection
-//   Ctrl+Shift+K  Delete line        Ctrl+/   Toggle line comment
-//   Ctrl+F   Find                    Ctrl+H   Find & replace
-//   Ctrl+G   Go to line              Ctrl+`   Toggle vim mode
-//   Ctrl+Left/Right  Word navigation
-//   Ctrl+Shift+Up/Down  Move line    Ctrl+Shift+Enter  Insert line above
-//   Ctrl+Backspace  Delete word left Ctrl+Delete  Delete word right
+// Shortcuts (Cmd on macOS, Ctrl elsewhere):
+//   Mod+O   Open file browser       Mod+S   Save file
+//   Mod+Z   Undo                    Mod+Y / Mod+Shift+Z   Redo
+//   Mod+X   Cut (selection/line)    Mod+C   Copy (selection/line)
+//   Mod+V   Paste                   Mod+A   Select all
+//   Mod+D   Duplicate line          Mod+Shift+D  Duplicate selection
+//   Mod+Shift+K  Delete line        Mod+/   Toggle line comment
+//   Mod+F   Find                    Mod+H   Find & replace
+//   Mod+G   Go to line              Mod+`   Toggle vim mode
+//   Mod+Left/Right  Word navigation
+//   Mod+Shift+Up/Down  Move line    Mod+Shift+Enter  Insert line above
+//   Mod+Backspace  Delete word left Mod+Delete  Delete word right
 //   Tab   Indent selection   Shift+Tab  Dedent selection   Esc  Clear sel
-//   Ctrl+Tab / Ctrl+Shift+Tab  Cycle open files
-//   Ctrl+W   Close current file tab
+//   Mod+Tab / Mod+Shift+Tab  Cycle open files
+//   Mod+W   Close current file tab
 //   Home  Smart home (toggle col 0 / first non-blank)
 //   Double-click  Select word        Triple-click  Select line
 //
@@ -25,7 +25,7 @@
 //   minimap, scrollbar, modified line indicators, smooth scrolling,
 //   persistent find highlights, smart auto-indent after {, tab rendering
 //
-// Vim mode (toggle with Ctrl+`):
+// Vim mode (toggle with Mod+`):
 //   Normal:  h/j/k/l  w/b/e  0/$/^  gg/G  x  dd/yy/cc  d/c/y+motion
 //            i/I/a/A/o/O  p/P  u  J  D/C  v/V  :  /pattern  n/N  r
 //   Visual:  motions extend selection, d/c/y/x operate
@@ -80,7 +80,6 @@ export const SCROLLFG = 6; // scrollbar thumb
 export const ADDCOL = 11; // green — added line indicator
 export const MODCOL = 12; // cyan — modified line indicator
 export const TABBG = 1; // tab bar background
-export const TABACT = 0; // active tab background
 export const TABFG = 7; // active tab text
 export const TABINACT = 5; // inactive tab text
 export const TABHOV = 17; // tab hover background

@@ -2,7 +2,7 @@
 
 import { st } from "./state.js";
 import { TAB_CODE, TAB_SPRITES, TAB_MAP, BG, AUTO_CLOSE } from "./config.js";
-import { ensureVisible, resetBlink, status } from "./helpers.js";
+import { ensureVisible, resetBlink, status, handleTabSwitch, modKey } from "./helpers.js";
 import { deleteSel, pushUndo, openFile, storeFileState, loadFileState } from "./buffer.js";
 import { vimNormal } from "./vim.js";
 import { updateEdit } from "./edit.js";
@@ -17,7 +17,7 @@ import { updateMapEditor, drawMapEditor } from "./map_editor.js";
 function onTextInput(ch) {
     if (st.activeTab !== TAB_CODE) return;
     if (st.brMode) return;
-    if (key.btn(key.LCTRL) || key.btn(key.RCTRL)) return;
+    if (modKey()) return;
 
     if (st.findMode) {
         if (st.findField === 0) st.findText += ch;
@@ -182,6 +182,9 @@ export function _update(dt) {
             st.oy = Math.round(st.oy);
         }
     }
+
+    // Tab switching (Ctrl+1/2/3) — handled once here for all tabs
+    if (handleTabSwitch()) return;
 
     if (st.activeTab === TAB_SPRITES) {
         updateSpriteEditor();

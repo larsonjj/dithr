@@ -221,6 +221,7 @@ games).
 `key.F1` … `key.F12`
 `key.BACKSPACE` `key.DELETE` `key.TAB` `key.HOME` `key.END`
 `key.PAGEUP` `key.PAGEDOWN` `key.LCTRL` `key.RCTRL` `key.LALT` `key.RALT`
+`key.LGUI` `key.RGUI` `key.LBRACKET` `key.RBRACKET`
 
 ---
 
