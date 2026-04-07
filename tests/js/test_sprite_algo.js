@@ -282,3 +282,142 @@ function plotRectLogic(x0, y0, x1, y1, filled) {
     assertEq(pixelCount(px), 16, "inverted coords same result");
     assert(hasPixel(px, 3, 3), "inverted interior");
 })();
+
+// ─── Pen dedup tests ─────────────────────────────────────────────────────────
+// Mirrors the dedup logic in sprite_editor.js: given a pending stroke (array of
+// {x,y,prev,next} ops recorded in draw order), dedup keeps the *last* record
+// per pixel, replaces its prev with the *earliest* original prev for that pixel,
+// and removes no-ops where prev === next.
+
+function dedupPending(pending) {
+    var seen = {};
+    var deduped = [];
+    for (var i = pending.length - 1; i >= 0; i--) {
+        var op = pending[i];
+        var k = op.x + "," + op.y;
+        if (seen[k] === undefined) {
+            seen[k] = deduped.length;
+            deduped.push({ x: op.x, y: op.y, prev: op.prev, next: op.next });
+        } else {
+            deduped[seen[k]].prev = op.prev;
+        }
+    }
+    deduped.reverse();
+    var result = [];
+    for (var j = 0; j < deduped.length; j++) {
+        if (deduped[j].prev !== deduped[j].next) result.push(deduped[j]);
+    }
+    return result;
+}
+
+// Basic: single pixel touched once → kept as-is
+(function () {
+    var ops = [{ x: 1, y: 2, prev: 0, next: 5 }];
+    var res = dedupPending(ops);
+    assertEq(res.length, 1, "dedup single op kept");
+    assertEq(res[0].prev, 0, "dedup single prev");
+    assertEq(res[0].next, 5, "dedup single next");
+})();
+
+// Same pixel overwritten twice → one record, prev from first, next from last
+(function () {
+    var ops = [
+        { x: 3, y: 3, prev: 0, next: 5 },
+        { x: 3, y: 3, prev: 5, next: 7 },
+    ];
+    var res = dedupPending(ops);
+    assertEq(res.length, 1, "dedup two same pixel → one");
+    assertEq(res[0].prev, 0, "dedup keeps original prev");
+    assertEq(res[0].next, 7, "dedup keeps final next");
+})();
+
+// No-op removal: pixel returns to original color
+(function () {
+    var ops = [
+        { x: 1, y: 1, prev: 3, next: 5 },
+        { x: 1, y: 1, prev: 5, next: 3 },
+    ];
+    var res = dedupPending(ops);
+    assertEq(res.length, 0, "dedup removes no-op (prev===next after merge)");
+})();
+
+// Symmetry: two different pixels in same stroke (e.g., mirror X)
+(function () {
+    var ops = [
+        { x: 1, y: 0, prev: 0, next: 5 },
+        { x: 6, y: 0, prev: 0, next: 5 },
+    ];
+    var res = dedupPending(ops);
+    assertEq(res.length, 2, "dedup keeps both mirror pixels");
+    assertEq(res[0].x, 1, "dedup order preserved: first pixel");
+    assertEq(res[1].x, 6, "dedup order preserved: mirror pixel");
+})();
+
+// Symmetry bug regression: with mirror, pixel A is recorded, then pixel B
+// (mirror), then pixel A again. The prev update must target A's entry, not B's.
+(function () {
+    var ops = [
+        { x: 1, y: 0, prev: 0, next: 5 }, // pen on pixel A
+        { x: 6, y: 0, prev: 0, next: 5 }, // mirror of A
+        { x: 1, y: 0, prev: 5, next: 7 }, // pen revisits A (new color)
+        { x: 6, y: 0, prev: 5, next: 7 }, // mirror revisits
+    ];
+    var res = dedupPending(ops);
+    assertEq(res.length, 2, "sym dedup → 2 pixels");
+    // Pixel A (x=1): first prev was 0, last next is 7
+    var a = null,
+        b = null;
+    for (var i = 0; i < res.length; i++) {
+        if (res[i].x === 1) a = res[i];
+        if (res[i].x === 6) b = res[i];
+    }
+    assert(a !== null, "pixel A found");
+    assert(b !== null, "pixel B found");
+    assertEq(a.prev, 0, "sym dedup A.prev = original (0)");
+    assertEq(a.next, 7, "sym dedup A.next = final (7)");
+    assertEq(b.prev, 0, "sym dedup B.prev = original (0)");
+    assertEq(b.next, 7, "sym dedup B.next = final (7)");
+})();
+
+// Three overwrites of same pixel
+(function () {
+    var ops = [
+        { x: 2, y: 2, prev: 0, next: 1 },
+        { x: 2, y: 2, prev: 1, next: 2 },
+        { x: 2, y: 2, prev: 2, next: 3 },
+    ];
+    var res = dedupPending(ops);
+    assertEq(res.length, 1, "triple overwrite → 1");
+    assertEq(res[0].prev, 0, "triple keeps earliest prev");
+    assertEq(res[0].next, 3, "triple keeps latest next");
+})();
+
+// Mixed: multiple pixels, some deduped, some not
+(function () {
+    var ops = [
+        { x: 0, y: 0, prev: 0, next: 1 },
+        { x: 1, y: 0, prev: 0, next: 2 },
+        { x: 0, y: 0, prev: 1, next: 3 },
+        { x: 2, y: 0, prev: 0, next: 4 },
+    ];
+    var res = dedupPending(ops);
+    assertEq(res.length, 3, "mixed: 3 distinct pixels");
+    // Find each pixel by coordinate (order depends on last-occurrence position)
+    var p0 = null,
+        p1 = null,
+        p2 = null;
+    for (var i = 0; i < res.length; i++) {
+        if (res[i].x === 0) p0 = res[i];
+        if (res[i].x === 1) p1 = res[i];
+        if (res[i].x === 2) p2 = res[i];
+    }
+    assert(p0 !== null, "mixed: pixel (0,0) found");
+    assert(p1 !== null, "mixed: pixel (1,0) found");
+    assert(p2 !== null, "mixed: pixel (2,0) found");
+    assertEq(p0.prev, 0, "mixed (0,0) prev");
+    assertEq(p0.next, 3, "mixed (0,0) next");
+    assertEq(p1.prev, 0, "mixed (1,0) prev");
+    assertEq(p1.next, 2, "mixed (1,0) next");
+    assertEq(p2.prev, 0, "mixed (2,0) prev");
+    assertEq(p2.next, 4, "mixed (2,0) next");
+})();

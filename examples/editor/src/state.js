@@ -86,6 +86,8 @@ export const st = {
     sprRectAnchor: null, // {x,y} for rectangle drag start
     sprLineAnchor: null, // {x,y} for line tool start
     sprCircAnchor: null, // {x,y} for circle tool center
+    sprSelAnchor: null, // {x,y} for selection marquee drag start
+    sprDirty: false, // sprite sheet has unsaved changes
     sprSizeW: 1, // multi-tile width in tiles
     sprSizeH: 1, // multi-tile height in tiles
     sprZoom: 0, // canvas zoom override (0 = auto-fit)

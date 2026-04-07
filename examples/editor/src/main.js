@@ -391,6 +391,8 @@ function drawHelpOverlay() {
             MOD + "+V      Paste",
             MOD + "+Z      Undo",
             MOD + "+Y      Redo",
+            MOD + "+S      Save sprites",
+            "Escape      Cancel shape",
             "",
             "── Navigation ──",
             "Arrows      Select sprite",
