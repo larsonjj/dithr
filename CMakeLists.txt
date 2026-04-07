@@ -74,7 +74,7 @@ set(SDL_LOCALE  ON)
 FetchContent_Declare(
     SDL3
     GIT_REPOSITORY https://github.com/libsdl-org/SDL.git
-    GIT_TAG release-3.4.2
+    GIT_TAG release-3.4.4
     GIT_SHALLOW TRUE
 )
 FetchContent_MakeAvailable(SDL3)
@@ -117,7 +117,7 @@ set(SDLIMAGE_XV   OFF)
 FetchContent_Declare(
     SDL3_image
     GIT_REPOSITORY https://github.com/libsdl-org/SDL_image.git
-    GIT_TAG release-3.4.0
+    GIT_TAG release-3.4.2
     GIT_SHALLOW TRUE
     EXCLUDE_FROM_ALL YES
 )
