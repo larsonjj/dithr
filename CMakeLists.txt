@@ -105,6 +105,7 @@ set(SDLIMAGE_JXL  OFF)
 set(SDLIMAGE_LBM  OFF)
 set(SDLIMAGE_PCX  OFF)
 set(SDLIMAGE_PNG  ON)
+set(SDLIMAGE_PNG_LIBPNG OFF)
 set(SDLIMAGE_PNM  OFF)
 set(SDLIMAGE_QOI  OFF)
 set(SDLIMAGE_SVG  OFF)
@@ -114,12 +115,11 @@ set(SDLIMAGE_WEBP OFF)
 set(SDLIMAGE_XCF  OFF)
 set(SDLIMAGE_XPM  OFF)
 set(SDLIMAGE_XV   OFF)
+set(SDLIMAGE_VENDORED OFF)
 FetchContent_Declare(
     SDL3_image
-    GIT_REPOSITORY https://github.com/libsdl-org/SDL_image.git
-    GIT_TAG release-3.4.2
-    GIT_SHALLOW TRUE
-    EXCLUDE_FROM_ALL YES
+    URL https://github.com/libsdl-org/SDL_image/releases/download/release-3.4.2/SDL3_image-3.4.2.tar.gz
+    DOWNLOAD_EXTRACT_TIMESTAMP TRUE
 )
 FetchContent_MakeAvailable(SDL3_image)
 
@@ -127,7 +127,7 @@ FetchContent_MakeAvailable(SDL3_image)
 FetchContent_Declare(
     quickjs
     GIT_REPOSITORY https://github.com/quickjs-ng/quickjs.git
-    GIT_TAG v0.12.1
+    GIT_TAG v0.13.0
     GIT_SHALLOW TRUE
 )
 FetchContent_GetProperties(quickjs)
