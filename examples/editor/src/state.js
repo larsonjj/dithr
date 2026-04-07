@@ -115,13 +115,44 @@ export const st = {
     helpOverlay: false, // show keyboard shortcut help
 
     // map editor state
-    mapCamX: 0,
+    mapCamX: 0, // viewport offset in tiles
     mapCamY: 0,
     mapLayer: 0,
     mapTile: 0,
-    mapTool: 0, // 0=pencil, 1=eraser
+    mapTool: 0, // 0=pen, 1=eraser, 2=fill, 3=rect
     mapGridOn: true,
     mapPickScrollY: 0,
+    mapZoom: 1, // zoom level (1,2,3,4)
+    mapHoverX: -1, // tile coord under cursor (-1 = none)
+    mapHoverY: -1,
+    mapDirty: false, // unsaved map changes
+    mapRectAnchor: null, // {x,y} for rect tool drag start
+    mapLastPenX: -1, // last pen tile X for interpolation
+    mapLastPenY: -1,
+    mapGhostLayers: true, // show ghost of other layers
+    mapSelAnchor: null, // {x,y} for selection marquee start
+    mapSelRect: null, // {x0,y0,x1,y1} selected tile region
+    mapSelFloat: null, // {x,y,w,h,tiles[]} floating selection
+    mapSelDrag: null, // {ox,oy} drag offset when moving float
+    mapClipboard: null, // {w,h,tiles[]} for copy/paste
+    mapStampAnchor: null, // picker-grid start for stamp selection
+    mapStampRect: null, // {x0,y0,x1,y1} in sheet grid coords
+    mapLayerVis: [], // bool per layer (true=visible)
+    mapResizeMode: false,
+    mapResizeW: "",
+    mapResizeH: "",
+    mapResizeField: 0, // 0=width, 1=height
+    mapLevelMode: false, // level picker active
+    mapLevelIdx: 0, // selected index in level picker
+    mapMinimap: true, // show minimap overlay
+    mapAutoTile: false, // auto-tile mode active
+    mapAutoGroups: [], // array of base sprite indices (each group = 16 tiles)
+    mapObjSel: -1, // selected object index (-1 = none)
+    mapObjDrag: null, // {ox,oy} drag offset when moving object
+    mapObjCounter: 0, // incrementing counter for default object names
+    mapRenameMode: false, // layer rename dialog active
+    mapRenameTxt: "", // layer rename input text
+    mapSpacePan: false, // spacebar+drag panning active
 
     // caches (invalidated on edit)
     _blockStateCache: [],

@@ -174,7 +174,7 @@ games).
 ## `map` — Tilemaps
 
 | Function        | Parameters                                | Returns                 | Description                                                 |
-| --------------- | ----------------------------------------- | ----------------------- | ----------------------------------------------------------- |
+| --------------- | ----------------------------------------- | ----------------------- | ----------------------------------------------------------- | --- | -------- | ------------- | ------ | -------------------------------------- |
 | `get`           | `cx, cy, layer?, slot?`                   | `int`                   | Tile ID at cell position                                    |
 | `set`           | `cx, cy, tile, layer?, slot?`             | —                       | Set a tile ID                                               |
 | `flag`          | `cx, cy, f, slot?`                        | `bool`                  | Test sprite flag `f` on tile at (cx, cy)                    |
@@ -188,7 +188,11 @@ games).
 | `objects`       | `name?, slot?`                            | `object[]`              | Get map objects, optionally filtered by name                |
 | `object`        | `name, slot?`                             | `object` or `undefined` | First object matching name                                  |
 | `objects_in`    | `x, y, w, h, slot?`                       | `object[]`              | AABB query for objects overlapping a rectangle              |
-| `objects_with`  | `prop, value?, slot?`                     | `object[]`              | Filter objects by type or custom property                   |
+| `objects_with`  | `prop, value?, slot?`                     | `object[]`              | Filter objects by type or custom property                   |     | `create` | `w, h, name?` | `bool` | Create a blank map with one tile layer |
+| `resize`        | `w, h, slot?`                             | `bool`                  | Resize all tile layers (preserves existing data)            |
+| `add_layer`     | `name?, slot?`                            | `int`                   | Add a tile layer, returns index (-1 on error)               |
+| `remove_layer`  | `idx, slot?`                              | `bool`                  | Remove a layer (must keep at least one)                     |
+| `data`          | `slot?`                                   | `object` or `null`      | Full map data for serialization (name, layers, tiles)       |
 
 **Map object shape:**
 

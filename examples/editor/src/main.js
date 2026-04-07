@@ -22,11 +22,15 @@ import { drawTabBar, drawFileTabs, drawEditor } from "./draw.js";
 import { updateFind, drawFind, updateGoto, drawGoto } from "./find.js";
 import { updateBrowser, drawBrowser } from "./browser.js";
 import { updateSpriteEditor, drawSpriteEditor } from "./sprite_editor.js";
-import { updateMapEditor, drawMapEditor } from "./map_editor.js";
+import { updateMapEditor, drawMapEditor, mapTextInput } from "./map_editor.js";
 
 // ─── Text input event handler ────────────────────────────────────────────────
 
 function onTextInput(ch) {
+    if (st.activeTab === TAB_MAP && (st.mapResizeMode || st.mapRenameMode)) {
+        mapTextInput(ch);
+        return;
+    }
     if (st.activeTab !== TAB_CODE) return;
     if (st.brMode) return;
     if (modKey()) return;
@@ -127,6 +131,13 @@ export function _save() {
         mapTile: st.mapTile,
         mapTool: st.mapTool,
         mapGridOn: st.mapGridOn,
+        mapZoom: st.mapZoom,
+        mapGhostLayers: st.mapGhostLayers,
+        mapLayerVis: st.mapLayerVis,
+        mapMinimap: st.mapMinimap,
+        mapAutoTile: st.mapAutoTile,
+        mapAutoGroups: st.mapAutoGroups,
+        mapObjCounter: st.mapObjCounter,
         sheetHex: gfx.sheetData(),
         flagsHex: gfx.flagsData(),
     };
@@ -198,6 +209,13 @@ export function _restore(s) {
     st.mapTile = s.mapTile || 0;
     st.mapTool = s.mapTool || 0;
     st.mapGridOn = s.mapGridOn !== undefined ? s.mapGridOn : true;
+    st.mapZoom = s.mapZoom || 1;
+    st.mapGhostLayers = s.mapGhostLayers !== undefined ? s.mapGhostLayers : true;
+    st.mapLayerVis = s.mapLayerVis || [];
+    st.mapMinimap = s.mapMinimap !== undefined ? s.mapMinimap : true;
+    st.mapAutoTile = s.mapAutoTile || false;
+    st.mapAutoGroups = s.mapAutoGroups || [];
+    st.mapObjCounter = s.mapObjCounter || 0;
     if (s.sheetHex) gfx.sheetLoad(s.sheetHex);
     if (s.flagsHex) gfx.flagsLoad(s.flagsHex);
     // Clamp sprite editor values to valid range for current sheet
@@ -410,21 +428,74 @@ function drawHelpOverlay() {
                 gfx.print(right[i], col2X, y + i * lh, right[i][0] === "\u2500" ? FG : GUTFG);
         }
     } else {
-        let lines = [
-            "── Map Editor ──",
-            "Left-click  Paint tile",
-            "Right-click Erase tile",
-            "WASD        Pan camera",
-            "T           Open tile picker",
+        let left = [
+            "── Tools ──",
+            "B           Pen",
+            "E           Eraser",
+            "F           Flood fill",
+            "R           Rectangle",
+            "V           Selection",
+            "O           Object tool",
+            "Right-click Pick tile",
+            "Shift+click Stamp pick",
+            "",
+            "── Selection ──",
+            MOD + "+C      Copy",
+            MOD + "+V      Paste",
+            "Delete      Clear",
+            "Escape      Deselect",
+            "",
+            "── View ──",
+            "WASD/Arrows Pan camera",
+            "Shift+Move  Fast pan",
+            "Mid-click   Drag pan",
+            "Space+drag  Pan camera",
+            "Scroll      Pan vertical",
+            "Sh+Scroll   Pan horizontal",
+            "-/=         Zoom out/in",
+            MOD + "+Wheel  Zoom",
+            "Home        Reset view",
+            "M           Toggle minimap",
+        ];
+        let right = [
+            "── Editing ──",
+            "[/]         Prev/next layer",
             "G           Toggle grid",
+            "H           Toggle ghost layers",
+            "Escape      Cancel shape",
             MOD + "+Z      Undo",
             MOD + "+Y      Redo",
+            MOD + "+S      Save map",
+            "",
+            "── Auto-tile ──",
+            MOD + "+A      Toggle auto-tile",
+            MOD + "+Sh+A   Define/remove group",
+            "",
+            "── Objects ──",
+            MOD + "+Sh+O   Add object layer",
+            "Sh+click    Place object",
+            "Delete      Remove selected",
+            "",
+            "── Dialogs ──",
+            MOD + "+Sh+R   Resize map",
+            MOD + "+L      Level picker",
+            MOD + "+Sh+E   Export .tmj",
+            "",
+            "── Layers ──",
+            "Click eye   Toggle visibility",
+            "Click name  Switch layer",
+            "Click active Rename layer",
+            "F2          Rename layer",
+            "[+] / [-]   Add/remove layer",
             "",
             "── Tabs ──",
             MOD + "+1/2/3  Code/Spr/Map",
         ];
-        for (let i = 0; i < lines.length; i++) {
-            gfx.print(lines[i], col1X, y + i * lh, lines[i][0] === "\u2500" ? FG : GUTFG);
+        for (let i = 0; i < Math.max(left.length, right.length); i++) {
+            if (i < left.length)
+                gfx.print(left[i], col1X, y + i * lh, left[i][0] === "\u2500" ? FG : GUTFG);
+            if (i < right.length)
+                gfx.print(right[i], col2X, y + i * lh, right[i][0] === "\u2500" ? FG : GUTFG);
         }
     }
 }

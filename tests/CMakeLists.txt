@@ -95,6 +95,9 @@ dtr_add_test(test_cam test_cam.c LINK_LIB dithr_core_test)
 # --- UI layout tests ---
 dtr_add_test(test_ui test_ui.c LINK_LIB dithr_core_test)
 
+# --- Map tests ---
+dtr_add_test(test_map test_map.c)
+
 # --- Tween tests ---
 dtr_add_test(test_tween test_tween.c LINK_LIB dithr_core_test)
 

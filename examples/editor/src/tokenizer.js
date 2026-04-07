@@ -1,6 +1,6 @@
 // ─── Syntax highlighting ─────────────────────────────────────────────────────
 
-import { COMCOL, STRCOL, NUMCOL, FG, KWCOL, KEYWORDS } from './config.js';
+import { COMCOL, STRCOL, NUMCOL, FG, KWCOL, KEYWORDS } from "./config.js";
 
 export function tokenize(line, inBlock) {
     let toks = [];

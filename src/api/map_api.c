@@ -601,6 +601,776 @@ js_map_objects_with(JSContext *ctx, JSValueConst this_val, int argc, JSValueCons
     return arr;
 }
 
+/* ------------------------------------------------------------------ */
+/*  map.create(w, h, name?)                                            */
+/* ------------------------------------------------------------------ */
+
+static JSValue js_map_create(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+{
+    dtr_console_t   *con;
+    int32_t          wid;
+    int32_t          hgt;
+    const char      *name;
+    dtr_map_level_t *level;
+    dtr_map_layer_t *layer;
+    int32_t          slot;
+
+    (void)this_val;
+    if (argc < 2) {
+        return JS_FALSE;
+    }
+
+    con = dtr_api_get_console(ctx);
+    wid = dtr_api_opt_int(ctx, argc, argv, 0, 0);
+    hgt = dtr_api_opt_int(ctx, argc, argv, 1, 0);
+
+    if (wid <= 0 || hgt <= 0 || wid > 4096 || hgt > 4096) {
+        return JS_FALSE;
+    }
+
+    if (con->cart->map_count >= CONSOLE_MAP_SLOTS) {
+        return JS_FALSE;
+    }
+
+    name = NULL;
+    if (argc >= 3 && JS_IsString(argv[2])) {
+        name = JS_ToCString(ctx, argv[2]);
+    }
+
+    level = DTR_CALLOC(1, sizeof(dtr_map_level_t));
+    if (level == NULL) {
+        if (name != NULL) {
+            JS_FreeCString(ctx, name);
+        }
+        return JS_FALSE;
+    }
+
+    level->width       = wid;
+    level->height      = hgt;
+    level->tile_w      = con->cart->sprites.tile_w;
+    level->tile_h      = con->cart->sprites.tile_h;
+    level->layer_count = 1;
+    level->layers      = DTR_CALLOC(1, sizeof(dtr_map_layer_t));
+    if (level->layers == NULL) {
+        DTR_FREE(level);
+        if (name != NULL) {
+            JS_FreeCString(ctx, name);
+        }
+        return JS_FALSE;
+    }
+
+    if (name != NULL) {
+        SDL_strlcpy(level->name, name, sizeof(level->name));
+        JS_FreeCString(ctx, name);
+    } else {
+        SDL_snprintf(level->name, sizeof(level->name), "map_%d", con->cart->map_count);
+    }
+
+    layer                = &level->layers[0];
+    layer->is_tile_layer = true;
+    layer->width         = wid;
+    layer->height        = hgt;
+    SDL_strlcpy(layer->name, "Layer 1", sizeof(layer->name));
+    layer->tiles = DTR_CALLOC((size_t)(wid * hgt), sizeof(int32_t));
+    if (layer->tiles == NULL) {
+        DTR_FREE(level->layers);
+        DTR_FREE(level);
+        return JS_FALSE;
+    }
+
+    slot                   = con->cart->map_count;
+    con->cart->maps[slot]  = level;
+    con->cart->map_count   = slot + 1;
+    con->cart->current_map = slot;
+
+    return JS_TRUE;
+}
+
+/* ------------------------------------------------------------------ */
+/*  map.resize(w, h, slot?)                                            */
+/* ------------------------------------------------------------------ */
+
+static JSValue js_map_resize(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+{
+    dtr_map_level_t *level;
+    int32_t          new_w;
+    int32_t          new_h;
+    int32_t          old_w;
+    int32_t          old_h;
+
+    (void)this_val;
+    if (argc < 2) {
+        return JS_FALSE;
+    }
+
+    level = prv_get_level(ctx, argc, argv, 2);
+    if (level == NULL) {
+        return JS_FALSE;
+    }
+
+    new_w = dtr_api_opt_int(ctx, argc, argv, 0, 0);
+    new_h = dtr_api_opt_int(ctx, argc, argv, 1, 0);
+
+    if (new_w <= 0 || new_h <= 0 || new_w > 4096 || new_h > 4096) {
+        return JS_FALSE;
+    }
+
+    old_w = level->width;
+    old_h = level->height;
+    if (new_w == old_w && new_h == old_h) {
+        return JS_TRUE;
+    }
+
+    for (int32_t li = 0; li < level->layer_count; ++li) {
+        dtr_map_layer_t *layer;
+        int32_t         *new_tiles;
+        int32_t          copy_w;
+        int32_t          copy_h;
+
+        layer = &level->layers[li];
+        if (!layer->is_tile_layer || layer->tiles == NULL) {
+            continue;
+        }
+
+        new_tiles = DTR_CALLOC((size_t)(new_w * new_h), sizeof(int32_t));
+        if (new_tiles == NULL) {
+            return JS_FALSE;
+        }
+
+        copy_w = (old_w < new_w) ? old_w : new_w;
+        copy_h = (old_h < new_h) ? old_h : new_h;
+        for (int32_t row = 0; row < copy_h; ++row) {
+            SDL_memcpy(&new_tiles[row * new_w],
+                       &layer->tiles[row * old_w],
+                       (size_t)copy_w * sizeof(int32_t));
+        }
+
+        DTR_FREE(layer->tiles);
+        layer->tiles  = new_tiles;
+        layer->width  = new_w;
+        layer->height = new_h;
+    }
+
+    level->width  = new_w;
+    level->height = new_h;
+
+    return JS_TRUE;
+}
+
+/* ------------------------------------------------------------------ */
+/*  map.add_layer(name?, slot?)                                        */
+/* ------------------------------------------------------------------ */
+
+static JSValue js_map_add_layer(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+{
+    dtr_console_t   *con;
+    dtr_map_level_t *level;
+    dtr_map_layer_t *new_layers;
+    dtr_map_layer_t *layer;
+    const char      *name;
+
+    (void)this_val;
+    con   = dtr_api_get_console(ctx);
+    level = prv_get_level(ctx, argc, argv, 1);
+    if (level == NULL) {
+        return JS_NewInt32(ctx, -1);
+    }
+
+    if (level->layer_count >= CONSOLE_MAX_MAP_LAYERS) {
+        return JS_NewInt32(ctx, -1);
+    }
+
+    new_layers =
+        DTR_REALLOC(level->layers, (size_t)(level->layer_count + 1) * sizeof(dtr_map_layer_t));
+    if (new_layers == NULL) {
+        return JS_NewInt32(ctx, -1);
+    }
+    level->layers = new_layers;
+
+    layer = &level->layers[level->layer_count];
+    SDL_memset(layer, 0, sizeof(dtr_map_layer_t));
+    layer->is_tile_layer = true;
+    layer->width         = level->width;
+    layer->height        = level->height;
+    layer->tiles         = DTR_CALLOC((size_t)(level->width * level->height), sizeof(int32_t));
+    if (layer->tiles == NULL) {
+        return JS_NewInt32(ctx, -1);
+    }
+
+    name = NULL;
+    if (argc >= 1 && JS_IsString(argv[0])) {
+        name = JS_ToCString(ctx, argv[0]);
+    }
+    if (name != NULL) {
+        SDL_strlcpy(layer->name, name, sizeof(layer->name));
+        JS_FreeCString(ctx, name);
+    } else {
+        SDL_snprintf(layer->name, sizeof(layer->name), "Layer %d", level->layer_count + 1);
+    }
+
+    (void)con;
+    level->layer_count += 1;
+    return JS_NewInt32(ctx, level->layer_count - 1);
+}
+
+/* ------------------------------------------------------------------ */
+/*  map.remove_layer(idx, slot?)                                       */
+/* ------------------------------------------------------------------ */
+
+static JSValue
+js_map_remove_layer(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+{
+    dtr_console_t   *con;
+    dtr_map_level_t *level;
+    int32_t          idx;
+
+    (void)this_val;
+    if (argc < 1) {
+        return JS_FALSE;
+    }
+
+    con   = dtr_api_get_console(ctx);
+    level = prv_get_level(ctx, argc, argv, 1);
+    if (level == NULL) {
+        return JS_FALSE;
+    }
+
+    idx = dtr_api_opt_int(ctx, argc, argv, 0, -1);
+    if (idx < 0 || idx >= level->layer_count) {
+        return JS_FALSE;
+    }
+
+    /* Must keep at least one layer */
+    if (level->layer_count <= 1) {
+        return JS_FALSE;
+    }
+
+    /* Free the layer's data */
+    DTR_FREE(level->layers[idx].tiles);
+    for (int32_t oi = 0; oi < level->layers[idx].object_count; ++oi) {
+        dtr_map_object_t *obj;
+
+        obj = &level->layers[idx].objects[oi];
+        if (con->cart->ctx != NULL && !JS_IsUndefined(obj->props)) {
+            JS_FreeValue(con->cart->ctx, obj->props);
+        }
+    }
+    DTR_FREE(level->layers[idx].objects);
+
+    /* Shift remaining layers down */
+    for (int32_t shi = idx; shi < level->layer_count - 1; ++shi) {
+        level->layers[shi] = level->layers[shi + 1];
+    }
+    level->layer_count -= 1;
+
+    return JS_TRUE;
+}
+
+/* ------------------------------------------------------------------ */
+/*  map.rename_layer(idx, name, slot?)                                 */
+/* ------------------------------------------------------------------ */
+
+static JSValue
+js_map_rename_layer(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+{
+    dtr_map_level_t *level;
+    int32_t          idx;
+    const char      *name;
+
+    (void)this_val;
+    if (argc < 2) {
+        return JS_FALSE;
+    }
+
+    level = prv_get_level(ctx, argc, argv, 2);
+    if (level == NULL) {
+        return JS_FALSE;
+    }
+
+    idx = dtr_api_opt_int(ctx, argc, argv, 0, -1);
+    if (idx < 0 || idx >= level->layer_count) {
+        return JS_FALSE;
+    }
+
+    if (!JS_IsString(argv[1])) {
+        return JS_FALSE;
+    }
+
+    name = JS_ToCString(ctx, argv[1]);
+    if (name == NULL) {
+        return JS_FALSE;
+    }
+    SDL_strlcpy(level->layers[idx].name, name, sizeof(level->layers[idx].name));
+    JS_FreeCString(ctx, name);
+
+    return JS_TRUE;
+}
+
+/* ------------------------------------------------------------------ */
+/*  map.data(slot?) — return tile data as flat array for serialization  */
+/* ------------------------------------------------------------------ */
+
+static JSValue js_map_data(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+{
+    dtr_map_level_t *level;
+    JSValue          result;
+    JSValue          layer_arr;
+
+    (void)this_val;
+    level = prv_get_level(ctx, argc, argv, 0);
+    if (level == NULL) {
+        return JS_NULL;
+    }
+
+    result = JS_NewObject(ctx);
+    JS_SetPropertyStr(ctx, result, "name", JS_NewString(ctx, level->name));
+    JS_SetPropertyStr(ctx, result, "width", JS_NewInt32(ctx, level->width));
+    JS_SetPropertyStr(ctx, result, "height", JS_NewInt32(ctx, level->height));
+    JS_SetPropertyStr(ctx, result, "tileW", JS_NewInt32(ctx, level->tile_w));
+    JS_SetPropertyStr(ctx, result, "tileH", JS_NewInt32(ctx, level->tile_h));
+
+    layer_arr = JS_NewArray(ctx);
+    for (int32_t li = 0; li < level->layer_count; ++li) {
+        dtr_map_layer_t *layer;
+        JSValue          lobj;
+
+        layer = &level->layers[li];
+        lobj  = JS_NewObject(ctx);
+        JS_SetPropertyStr(ctx, lobj, "name", JS_NewString(ctx, layer->name));
+        JS_SetPropertyStr(ctx,
+                          lobj,
+                          "type",
+                          JS_NewString(ctx, layer->is_tile_layer ? "tilelayer" : "objectgroup"));
+
+        if (layer->is_tile_layer && layer->tiles != NULL) {
+            JSValue tiles;
+            int32_t cnt;
+
+            cnt   = layer->width * layer->height;
+            tiles = JS_NewArray(ctx);
+            for (int32_t idx = 0; idx < cnt; ++idx) {
+                JS_SetPropertyUint32(
+                    ctx, tiles, (uint32_t)idx, JS_NewInt32(ctx, layer->tiles[idx]));
+            }
+            JS_SetPropertyStr(ctx, lobj, "data", tiles);
+            JS_SetPropertyStr(ctx, lobj, "width", JS_NewInt32(ctx, layer->width));
+            JS_SetPropertyStr(ctx, lobj, "height", JS_NewInt32(ctx, layer->height));
+        } else if (!layer->is_tile_layer) {
+            JSValue objs;
+
+            objs = JS_NewArray(ctx);
+            for (int32_t oidx = 0; oidx < layer->object_count; ++oidx) {
+                JS_SetPropertyUint32(
+                    ctx, objs, (uint32_t)oidx, prv_obj_to_js(ctx, &layer->objects[oidx]));
+            }
+            JS_SetPropertyStr(ctx, lobj, "objects", objs);
+        }
+
+        JS_SetPropertyUint32(ctx, layer_arr, (uint32_t)li, lobj);
+    }
+    JS_SetPropertyStr(ctx, result, "layers", layer_arr);
+
+    return result;
+}
+
+/* ------------------------------------------------------------------ */
+/*  map.add_object_layer(name?, slot?)                                 */
+/* ------------------------------------------------------------------ */
+
+static JSValue
+js_map_add_object_layer(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+{
+    dtr_map_level_t *level;
+    dtr_map_layer_t *new_layers;
+    dtr_map_layer_t *layer;
+    const char      *name;
+
+    (void)this_val;
+    level = prv_get_level(ctx, argc, argv, 1);
+    if (level == NULL) {
+        return JS_NewInt32(ctx, -1);
+    }
+
+    if (level->layer_count >= CONSOLE_MAX_MAP_LAYERS) {
+        return JS_NewInt32(ctx, -1);
+    }
+
+    new_layers =
+        DTR_REALLOC(level->layers, (size_t)(level->layer_count + 1) * sizeof(dtr_map_layer_t));
+    if (new_layers == NULL) {
+        return JS_NewInt32(ctx, -1);
+    }
+    level->layers = new_layers;
+
+    layer = &level->layers[level->layer_count];
+    SDL_memset(layer, 0, sizeof(dtr_map_layer_t));
+    layer->is_tile_layer = false;
+    layer->width         = level->width;
+    layer->height        = level->height;
+
+    name = NULL;
+    if (argc >= 1 && JS_IsString(argv[0])) {
+        name = JS_ToCString(ctx, argv[0]);
+    }
+    if (name != NULL) {
+        SDL_strlcpy(layer->name, name, sizeof(layer->name));
+        JS_FreeCString(ctx, name);
+    } else {
+        SDL_snprintf(layer->name, sizeof(layer->name), "Objects %d", level->layer_count + 1);
+    }
+
+    level->layer_count += 1;
+    return JS_NewInt32(ctx, level->layer_count - 1);
+}
+
+/* ------------------------------------------------------------------ */
+/*  map.layer_type(idx, slot?)                                         */
+/* ------------------------------------------------------------------ */
+
+static JSValue
+js_map_layer_type(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+{
+    dtr_map_level_t *level;
+    int32_t          idx;
+
+    (void)this_val;
+    level = prv_get_level(ctx, argc, argv, 1);
+    if (level == NULL) {
+        return JS_NewString(ctx, "");
+    }
+
+    idx = dtr_api_opt_int(ctx, argc, argv, 0, 0);
+    if (idx < 0 || idx >= level->layer_count) {
+        return JS_NewString(ctx, "");
+    }
+
+    if (level->layers[idx].is_tile_layer) {
+        return JS_NewString(ctx, "tilelayer");
+    }
+    return JS_NewString(ctx, "objectgroup");
+}
+
+/* ------------------------------------------------------------------ */
+/*  map.layer_objects(layerIdx, slot?)                                  */
+/* ------------------------------------------------------------------ */
+
+static JSValue
+js_map_layer_objects(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+{
+    dtr_map_level_t *level;
+    dtr_map_layer_t *layer;
+    int32_t          idx;
+    JSValue          arr;
+
+    (void)this_val;
+    level = prv_get_level(ctx, argc, argv, 1);
+    if (level == NULL) {
+        return JS_NewArray(ctx);
+    }
+
+    idx = dtr_api_opt_int(ctx, argc, argv, 0, 0);
+    if (idx < 0 || idx >= level->layer_count) {
+        return JS_NewArray(ctx);
+    }
+
+    layer = &level->layers[idx];
+    arr   = JS_NewArray(ctx);
+
+    for (int32_t oidx = 0; oidx < layer->object_count; ++oidx) {
+        JSValue jobj;
+
+        jobj = prv_obj_to_js(ctx, &layer->objects[oidx]);
+        JS_SetPropertyStr(ctx, jobj, "idx", JS_NewInt32(ctx, oidx));
+        JS_SetPropertyUint32(ctx, arr, (uint32_t)oidx, jobj);
+    }
+
+    return arr;
+}
+
+/* ------------------------------------------------------------------ */
+/*  map.add_object(layerIdx, {name,type,x,y,w,h}, slot?)              */
+/* ------------------------------------------------------------------ */
+
+static JSValue
+js_map_add_object(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+{
+    dtr_map_level_t  *level;
+    dtr_map_layer_t  *layer;
+    dtr_map_object_t *new_objs;
+    dtr_map_object_t *obj;
+    int32_t           lay_idx;
+    JSValue           jobj;
+    JSValue           val;
+
+    (void)this_val;
+    if (argc < 2) {
+        return JS_NewInt32(ctx, -1);
+    }
+
+    level = prv_get_level(ctx, argc, argv, 2);
+    if (level == NULL) {
+        return JS_NewInt32(ctx, -1);
+    }
+
+    lay_idx = dtr_api_opt_int(ctx, argc, argv, 0, -1);
+    if (lay_idx < 0 || lay_idx >= level->layer_count) {
+        return JS_NewInt32(ctx, -1);
+    }
+
+    layer = &level->layers[lay_idx];
+    if (layer->object_count >= CONSOLE_MAX_MAP_OBJECTS) {
+        return JS_NewInt32(ctx, -1);
+    }
+
+    new_objs =
+        DTR_REALLOC(layer->objects, (size_t)(layer->object_count + 1) * sizeof(dtr_map_object_t));
+    if (new_objs == NULL) {
+        return JS_NewInt32(ctx, -1);
+    }
+    layer->objects = new_objs;
+
+    obj = &layer->objects[layer->object_count];
+    SDL_memset(obj, 0, sizeof(dtr_map_object_t));
+    obj->props = JS_UNDEFINED;
+
+    jobj = argv[1];
+
+    /* Read name */
+    val = JS_GetPropertyStr(ctx, jobj, "name");
+    if (JS_IsString(val)) {
+        const char *str;
+
+        str = JS_ToCString(ctx, val);
+        if (str != NULL) {
+            SDL_strlcpy(obj->name, str, sizeof(obj->name));
+            JS_FreeCString(ctx, str);
+        }
+    }
+    JS_FreeValue(ctx, val);
+
+    /* Read type */
+    val = JS_GetPropertyStr(ctx, jobj, "type");
+    if (JS_IsString(val)) {
+        const char *str;
+
+        str = JS_ToCString(ctx, val);
+        if (str != NULL) {
+            SDL_strlcpy(obj->type, str, sizeof(obj->type));
+            JS_FreeCString(ctx, str);
+        }
+    }
+    JS_FreeValue(ctx, val);
+
+    /* Read position and size */
+    {
+        double tmp;
+
+        tmp = 0.0;
+        val = JS_GetPropertyStr(ctx, jobj, "x");
+        if (!JS_IsUndefined(val)) {
+            JS_ToFloat64(ctx, &tmp, val);
+            obj->x = (float)tmp;
+        }
+        JS_FreeValue(ctx, val);
+
+        tmp = 0.0;
+        val = JS_GetPropertyStr(ctx, jobj, "y");
+        if (!JS_IsUndefined(val)) {
+            JS_ToFloat64(ctx, &tmp, val);
+            obj->y = (float)tmp;
+        }
+        JS_FreeValue(ctx, val);
+
+        tmp = 0.0;
+        val = JS_GetPropertyStr(ctx, jobj, "w");
+        if (!JS_IsUndefined(val)) {
+            JS_ToFloat64(ctx, &tmp, val);
+            obj->w = (float)tmp;
+        }
+        JS_FreeValue(ctx, val);
+
+        tmp = 0.0;
+        val = JS_GetPropertyStr(ctx, jobj, "h");
+        if (!JS_IsUndefined(val)) {
+            JS_ToFloat64(ctx, &tmp, val);
+            obj->h = (float)tmp;
+        }
+        JS_FreeValue(ctx, val);
+    }
+
+    /* Read gid */
+    val = JS_GetPropertyStr(ctx, jobj, "gid");
+    if (!JS_IsUndefined(val)) {
+        JS_ToInt32(ctx, &obj->gid, val);
+    }
+    JS_FreeValue(ctx, val);
+
+    layer->object_count += 1;
+    return JS_NewInt32(ctx, layer->object_count - 1);
+}
+
+/* ------------------------------------------------------------------ */
+/*  map.remove_object(layerIdx, objIdx, slot?)                         */
+/* ------------------------------------------------------------------ */
+
+static JSValue
+js_map_remove_object(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+{
+    dtr_console_t   *con;
+    dtr_map_level_t *level;
+    dtr_map_layer_t *layer;
+    int32_t          lay_idx;
+    int32_t          obj_idx;
+
+    (void)this_val;
+    if (argc < 2) {
+        return JS_FALSE;
+    }
+
+    con   = dtr_api_get_console(ctx);
+    level = prv_get_level(ctx, argc, argv, 2);
+    if (level == NULL) {
+        return JS_FALSE;
+    }
+
+    lay_idx = dtr_api_opt_int(ctx, argc, argv, 0, -1);
+    if (lay_idx < 0 || lay_idx >= level->layer_count) {
+        return JS_FALSE;
+    }
+
+    layer   = &level->layers[lay_idx];
+    obj_idx = dtr_api_opt_int(ctx, argc, argv, 1, -1);
+    if (obj_idx < 0 || obj_idx >= layer->object_count) {
+        return JS_FALSE;
+    }
+
+    /* Free props if set */
+    {
+        dtr_map_object_t *obj;
+
+        obj = &layer->objects[obj_idx];
+        if (con->cart->ctx != NULL && !JS_IsUndefined(obj->props)) {
+            JS_FreeValue(con->cart->ctx, obj->props);
+        }
+    }
+
+    /* Shift remaining objects down */
+    for (int32_t shi = obj_idx; shi < layer->object_count - 1; ++shi) {
+        layer->objects[shi] = layer->objects[shi + 1];
+    }
+    layer->object_count -= 1;
+
+    return JS_TRUE;
+}
+
+/* ------------------------------------------------------------------ */
+/*  map.set_object(layerIdx, objIdx, {fields}, slot?)                  */
+/* ------------------------------------------------------------------ */
+
+static JSValue
+js_map_set_object(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+{
+    dtr_map_level_t  *level;
+    dtr_map_layer_t  *layer;
+    dtr_map_object_t *obj;
+    int32_t           lay_idx;
+    int32_t           obj_idx;
+    JSValue           jobj;
+    JSValue           val;
+
+    (void)this_val;
+    if (argc < 3) {
+        return JS_FALSE;
+    }
+
+    level = prv_get_level(ctx, argc, argv, 3);
+    if (level == NULL) {
+        return JS_FALSE;
+    }
+
+    lay_idx = dtr_api_opt_int(ctx, argc, argv, 0, -1);
+    if (lay_idx < 0 || lay_idx >= level->layer_count) {
+        return JS_FALSE;
+    }
+
+    layer   = &level->layers[lay_idx];
+    obj_idx = dtr_api_opt_int(ctx, argc, argv, 1, -1);
+    if (obj_idx < 0 || obj_idx >= layer->object_count) {
+        return JS_FALSE;
+    }
+
+    obj  = &layer->objects[obj_idx];
+    jobj = argv[2];
+
+    /* Update name if present */
+    val = JS_GetPropertyStr(ctx, jobj, "name");
+    if (JS_IsString(val)) {
+        const char *str;
+
+        str = JS_ToCString(ctx, val);
+        if (str != NULL) {
+            SDL_strlcpy(obj->name, str, sizeof(obj->name));
+            JS_FreeCString(ctx, str);
+        }
+    }
+    JS_FreeValue(ctx, val);
+
+    /* Update type if present */
+    val = JS_GetPropertyStr(ctx, jobj, "type");
+    if (JS_IsString(val)) {
+        const char *str;
+
+        str = JS_ToCString(ctx, val);
+        if (str != NULL) {
+            SDL_strlcpy(obj->type, str, sizeof(obj->type));
+            JS_FreeCString(ctx, str);
+        }
+    }
+    JS_FreeValue(ctx, val);
+
+    /* Update position and size */
+    {
+        double tmp;
+
+        val = JS_GetPropertyStr(ctx, jobj, "x");
+        if (!JS_IsUndefined(val)) {
+            JS_ToFloat64(ctx, &tmp, val);
+            obj->x = (float)tmp;
+        }
+        JS_FreeValue(ctx, val);
+
+        val = JS_GetPropertyStr(ctx, jobj, "y");
+        if (!JS_IsUndefined(val)) {
+            JS_ToFloat64(ctx, &tmp, val);
+            obj->y = (float)tmp;
+        }
+        JS_FreeValue(ctx, val);
+
+        val = JS_GetPropertyStr(ctx, jobj, "w");
+        if (!JS_IsUndefined(val)) {
+            JS_ToFloat64(ctx, &tmp, val);
+            obj->w = (float)tmp;
+        }
+        JS_FreeValue(ctx, val);
+
+        val = JS_GetPropertyStr(ctx, jobj, "h");
+        if (!JS_IsUndefined(val)) {
+            JS_ToFloat64(ctx, &tmp, val);
+            obj->h = (float)tmp;
+        }
+        JS_FreeValue(ctx, val);
+    }
+
+    /* Update gid if present */
+    val = JS_GetPropertyStr(ctx, jobj, "gid");
+    if (!JS_IsUndefined(val)) {
+        JS_ToInt32(ctx, &obj->gid, val);
+    }
+    JS_FreeValue(ctx, val);
+
+    return JS_TRUE;
+}
+
 /* ---- Function list ---------------------------------------------------- */
 
 static const JSCFunctionListEntry js_map_funcs[] = {
@@ -618,6 +1388,18 @@ static const JSCFunctionListEntry js_map_funcs[] = {
     JS_CFUNC_DEF("object", 1, js_map_object),
     JS_CFUNC_DEF("objects_in", 4, js_map_objects_in),
     JS_CFUNC_DEF("objects_with", 2, js_map_objects_with),
+    JS_CFUNC_DEF("create", 3, js_map_create),
+    JS_CFUNC_DEF("resize", 3, js_map_resize),
+    JS_CFUNC_DEF("add_layer", 2, js_map_add_layer),
+    JS_CFUNC_DEF("remove_layer", 2, js_map_remove_layer),
+    JS_CFUNC_DEF("rename_layer", 3, js_map_rename_layer),
+    JS_CFUNC_DEF("data", 1, js_map_data),
+    JS_CFUNC_DEF("add_object_layer", 2, js_map_add_object_layer),
+    JS_CFUNC_DEF("layer_type", 2, js_map_layer_type),
+    JS_CFUNC_DEF("layer_objects", 2, js_map_layer_objects),
+    JS_CFUNC_DEF("add_object", 3, js_map_add_object),
+    JS_CFUNC_DEF("remove_object", 3, js_map_remove_object),
+    JS_CFUNC_DEF("set_object", 4, js_map_set_object),
 };
 
 void dtr_map_api_register(JSContext *ctx, JSValue global)
