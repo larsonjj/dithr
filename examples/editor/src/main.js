@@ -115,6 +115,9 @@ export function _save() {
         sprMirrorX: st.sprMirrorX,
         sprMirrorY: st.sprMirrorY,
         sprPalScrollY: st.sprPalScrollY,
+        sprZoom: st.sprZoom,
+        sprPanX: st.sprPanX,
+        sprPanY: st.sprPanY,
         sprAnimFrom: st.sprAnimFrom,
         sprAnimTo: st.sprAnimTo,
         sprAnimFps: st.sprAnimFps,
@@ -183,6 +186,9 @@ export function _restore(s) {
     st.sprMirrorX = s.sprMirrorX || false;
     st.sprMirrorY = s.sprMirrorY || false;
     st.sprPalScrollY = s.sprPalScrollY || 0;
+    st.sprZoom = s.sprZoom || 0;
+    st.sprPanX = s.sprPanX || 0;
+    st.sprPanY = s.sprPanY || 0;
     st.sprAnimFrom = s.sprAnimFrom || 0;
     st.sprAnimTo = s.sprAnimTo || 0;
     st.sprAnimFps = s.sprAnimFps || 8;
@@ -369,6 +375,7 @@ function drawHelpOverlay() {
             "",
             "── Drawing ──",
             "0-9         Palette color",
+            "-/=         Prev/next color",
             "Right-click Eyedropper",
             "Sh+X        Mirror X",
             "Sh+Y        Mirror Y",
@@ -387,6 +394,8 @@ function drawHelpOverlay() {
             "",
             "── Navigation ──",
             "Arrows      Select sprite",
+            "N           Goto sprite",
+            "Home        Reset view",
             "Mouse wheel Scroll sheet",
             "",
             "── Tabs ──",

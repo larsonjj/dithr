@@ -108,6 +108,8 @@ export const st = {
     sprSelRect: null, // {x0,y0,x1,y1} marquee selection in sprite pixels
     sprSelFloat: null, // {x,y,w,h,pixels[]} floating selection being moved
     sprSelDrag: null, // {ox,oy} drag offset when moving float
+    sprLastPenX: -1, // last pen pixel X for line interpolation
+    sprLastPenY: -1, // last pen pixel Y for line interpolation
     helpOverlay: false, // show keyboard shortcut help
 
     // map editor state

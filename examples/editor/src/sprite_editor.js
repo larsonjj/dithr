@@ -295,6 +295,13 @@ export function updateSpriteEditor(dt) {
         st.sprPanning = false;
     }
 
+    // ── Reset view (HOME key) ──
+    if (key.btnp(key.HOME) && !ctrl) {
+        st.sprZoom = 0;
+        st.sprPanX = 0;
+        st.sprPanY = 0;
+    }
+
     // ── Scroll-wheel zoom (over canvas area) ──
     if (inCanvas && wheel !== 0 && !st.sprPanning) {
         let oldZoom = zoom;
@@ -353,7 +360,28 @@ export function updateSpriteEditor(dt) {
     // ── Pen / Eraser (tools 0, 1) ──
     if ((st.sprTool === 0 || st.sprTool === 1) && mBtn && st.sprHoverX >= 0) {
         let newCol = st.sprTool === 0 ? st.sprCol : 0;
-        symSet(st.sprHoverX, st.sprHoverY, newCol);
+        if (
+            st.sprLastPenX >= 0 &&
+            (st.sprLastPenX !== st.sprHoverX || st.sprLastPenY !== st.sprHoverY)
+        ) {
+            bresenhamLine(
+                st.sprLastPenX,
+                st.sprLastPenY,
+                st.sprHoverX,
+                st.sprHoverY,
+                function (px, py) {
+                    symSet(px, py, newCol);
+                },
+            );
+        } else {
+            symSet(st.sprHoverX, st.sprHoverY, newCol);
+        }
+        st.sprLastPenX = st.sprHoverX;
+        st.sprLastPenY = st.sprHoverY;
+    }
+    if (!mBtn) {
+        st.sprLastPenX = -1;
+        st.sprLastPenY = -1;
     }
     // Track last pen pixel to avoid duplicate records in same stroke
     if (!mBtn && sprHist.pending.length > 0) {
@@ -640,6 +668,24 @@ export function updateSpriteEditor(dt) {
         }
     }
 
+    // Cycle colour with -/= keys
+    if (!ctrl && !shift) {
+        if (key.btnp(key.MINUS)) {
+            st.sprCol = (st.sprCol + 255) % 256;
+            let colRow = Math.floor(st.sprCol / SPR_PAL_COLS);
+            if (colRow < st.sprPalScrollY || colRow >= st.sprPalScrollY + palVisRows) {
+                st.sprPalScrollY = clamp(colRow, 0, palMaxScroll);
+            }
+        }
+        if (key.btnp(key.EQUALS)) {
+            st.sprCol = (st.sprCol + 1) % 256;
+            let colRow = Math.floor(st.sprCol / SPR_PAL_COLS);
+            if (colRow < st.sprPalScrollY || colRow >= st.sprPalScrollY + palVisRows) {
+                st.sprPalScrollY = clamp(colRow, 0, palMaxScroll);
+            }
+        }
+    }
+
     // Pick colour from canvas (right-click)
     if (mouse.btn(2) && st.sprHoverX >= 0) {
         st.sprCol = gfx.sget(base.x + st.sprHoverX, base.y + st.sprHoverY);
@@ -669,6 +715,9 @@ export function updateSpriteEditor(dt) {
             if (next < sprCount) st.sprSel = next;
         }
         if (st.sprSel !== prevSel) {
+            if (st.sprSelFloat) stampFloat(base, cw, ch);
+            st.sprSelRect = null;
+            st.sprSelFloat = null;
             st.sprRectAnchor = null;
             st.sprLineAnchor = null;
             st.sprCircAnchor = null;
@@ -1367,12 +1416,8 @@ export function drawSpriteEditor() {
     // ── Animation preview ──
     if (st.sprAnimPlay && st.sprAnimFrom < st.sprAnimTo) {
         let animIdx = st.sprAnimFrom + st.sprAnimFrame;
-        let animBase = selBase(sheetCols);
-        // Offset from sprSel to animIdx in sheet coords
-        let animOffCol = (animIdx % sheetCols) - (st.sprSel % sheetCols);
-        let animOffRow = Math.floor(animIdx / sheetCols) - Math.floor(st.sprSel / sheetCols);
-        let animSx = animBase.x + animOffCol * tileW;
-        let animSy = animBase.y + animOffRow * tileH;
+        let animSx = (animIdx % sheetCols) * 8;
+        let animSy = Math.floor(animIdx / sheetCols) * 8;
         let animPrevY = prevY + prevH + 4;
         gfx.rectfill(prevX - 1, animPrevY - 1, prevX + prevW, animPrevY + prevH, GRIDC);
         gfx.sspr(animSx, animSy, cw, ch, prevX, animPrevY, prevW, prevH);
@@ -1441,7 +1486,7 @@ export function drawSpriteEditor() {
         GUTFG,
     );
     gfx.print(
-        "P:anim A/Sh+A:range [/]:fps  Sh+X/Y:mir  scroll:zoom  mid:pan",
+        "P:anim A/Sh+A:range [/]:fps  Sh+X/Y:mir  -/=:col  Home:reset",
         SPR_CANVAS_X,
         shortcutsY + CH + 2,
         GUTFG,

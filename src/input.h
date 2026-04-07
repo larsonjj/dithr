@@ -89,6 +89,8 @@ typedef enum dtr_key {
     DTR_KEY_RGUI,
     DTR_KEY_LBRACKET,
     DTR_KEY_RBRACKET,
+    DTR_KEY_MINUS,
+    DTR_KEY_EQUALS,
     DTR_KEY_COUNT
 } dtr_key_t;
 

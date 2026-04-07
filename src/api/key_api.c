@@ -126,6 +126,8 @@ void dtr_key_api_register(JSContext *ctx, JSValue global)
     JS_SetPropertyStr(ctx, ns, "RGUI", JS_NewInt32(ctx, DTR_KEY_RGUI));
     JS_SetPropertyStr(ctx, ns, "LBRACKET", JS_NewInt32(ctx, DTR_KEY_LBRACKET));
     JS_SetPropertyStr(ctx, ns, "RBRACKET", JS_NewInt32(ctx, DTR_KEY_RBRACKET));
+    JS_SetPropertyStr(ctx, ns, "MINUS", JS_NewInt32(ctx, DTR_KEY_MINUS));
+    JS_SetPropertyStr(ctx, ns, "EQUALS", JS_NewInt32(ctx, DTR_KEY_EQUALS));
 
     JS_SetPropertyStr(ctx, global, "key", ns);
 }
