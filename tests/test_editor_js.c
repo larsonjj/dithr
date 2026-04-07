@@ -26,7 +26,8 @@
 static char *prv_read_file(const char *path)
 {
     FILE *f = fopen(path, "rb");
-    if (!f) return NULL;
+    if (!f)
+        return NULL;
     fseek(f, 0, SEEK_END);
     long len = ftell(f);
     if (len < 0) {
@@ -40,7 +41,7 @@ static char *prv_read_file(const char *path)
         return NULL;
     }
     size_t read = fread(buf, 1, (size_t)len, f);
-    buf[read] = '\0';
+    buf[read]   = '\0';
     fclose(f);
     return buf;
 }
@@ -71,8 +72,10 @@ static void prv_run_js_test(const char *filename)
 
     int32_t fail_count = 0;
     int32_t test_count = 0;
-    if (!JS_IsUndefined(failures)) JS_ToInt32(rt->ctx, &fail_count, failures);
-    if (!JS_IsUndefined(tests)) JS_ToInt32(rt->ctx, &test_count, tests);
+    if (!JS_IsUndefined(failures))
+        JS_ToInt32(rt->ctx, &fail_count, failures);
+    if (!JS_IsUndefined(tests))
+        JS_ToInt32(rt->ctx, &test_count, tests);
 
     JS_FreeValue(rt->ctx, tests);
     JS_FreeValue(rt->ctx, failures);

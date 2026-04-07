@@ -77,6 +77,7 @@ export function drawTabBar() {
         // Click to switch tabs
         if (mouse.btnp(0) && my < TAB_H && mx >= tx && mx < tx + w) {
             st.activeTab = i;
+            mouse.show(); // restore cursor when leaving sprite editor
         }
         tx += w + 1;
     }

@@ -194,6 +194,12 @@ export function _restore(s) {
     st.mapGridOn = s.mapGridOn !== undefined ? s.mapGridOn : true;
     if (s.sheetHex) gfx.sheetLoad(s.sheetHex);
     if (s.flagsHex) gfx.flagsLoad(s.flagsHex);
+    // Clamp sprite editor values to valid range for current sheet
+    let sprMax = Math.max(0, Math.floor(gfx.sheetW() / 8) * Math.floor(gfx.sheetH() / 8) - 1);
+    st.sprSel = Math.min(st.sprSel, sprMax);
+    st.sprAnimFrom = Math.min(st.sprAnimFrom, sprMax);
+    st.sprAnimTo = Math.min(st.sprAnimTo, sprMax);
+    if (st.sprAnimFrom > st.sprAnimTo) st.sprAnimTo = st.sprAnimFrom;
     st.targetOy = st.oy;
     st.vim = "normal";
     st.vimCount = "";
