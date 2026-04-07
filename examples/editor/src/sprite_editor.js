@@ -39,15 +39,11 @@ const SPR_GRID_H = FB_H - SPR_GRID_Y - SPR_FOOT_H; // full height minus header g
 
 const SPR_CANVAS_X = SPR_GRID_W + 2;
 const SPR_CANVAS_Y = TAB_H + 1;
-const SPR_PAL_H = 44; // palette strip height (palette + flags + shortcuts)
-const SPR_CANVAS_H = FB_H - SPR_CANVAS_Y - SPR_PAL_H - SPR_FOOT_H; // canvas area height
+const SPR_CANVAS_H = FB_H - SPR_CANVAS_Y - SPR_FOOT_H; // full canvas area height
 const SPR_CANVAS_W = FB_W - SPR_GRID_W - 2; // canvas area width
 
-const SPR_PAL_Y = FB_H - SPR_PAL_H - SPR_FOOT_H; // palette Y
-const SPR_PAL_X = SPR_CANVAS_X;
-
 const SPR_PAL_CELL = 10; // palette swatch size
-const SPR_PAL_COLS = 16;
+const SPR_PAL_COLS = 16; // colors per row
 
 const SPR_TOOLS = ["PEN", "ERA", "FIL", "REC", "LIN", "CIR", "SEL"];
 
@@ -57,6 +53,14 @@ const SIZE_PRESETS = [
     [2, 1],
     [1, 2],
     [2, 2],
+    [3, 1],
+    [1, 3],
+    [3, 3],
+    [4, 1],
+    [1, 4],
+    [4, 2],
+    [2, 4],
+    [4, 4],
 ];
 
 let sprHist = createHistory(100);
@@ -174,6 +178,55 @@ export function updateSpriteEditor(dt) {
     let sheetRows = Math.floor(sh / tileH);
     let sprCount = sheetCols * sheetRows;
 
+    // ── Sprite goto input (N to open, Enter to confirm, Escape to cancel) ──
+    if (st.sprGoto) {
+        let numKeys = [
+            key.NUM0,
+            key.NUM1,
+            key.NUM2,
+            key.NUM3,
+            key.NUM4,
+            key.NUM5,
+            key.NUM6,
+            key.NUM7,
+            key.NUM8,
+            key.NUM9,
+        ];
+        for (let i = 0; i < 10; i++) {
+            if (key.btnp(numKeys[i])) st.sprGotoTxt += "" + i;
+        }
+        if (key.btnp(key.BACKSPACE)) {
+            st.sprGotoTxt = st.sprGotoTxt.slice(0, -1);
+        }
+        if (key.btnp(key.ENTER)) {
+            let n = parseInt(st.sprGotoTxt, 10);
+            if (n >= 0 && n < sprCount) {
+                st.sprSel = n;
+                // Scroll grid to show selected sprite
+                let row = Math.floor(n / SPR_GRID_COLS);
+                let maxVis = Math.floor(SPR_GRID_H / SPR_GRID_CELL);
+                if (row < st.sprScrollY || row >= st.sprScrollY + maxVis) {
+                    st.sprScrollY = clamp(
+                        row,
+                        0,
+                        Math.max(0, Math.ceil(sprCount / SPR_GRID_COLS) - maxVis),
+                    );
+                }
+            }
+            st.sprGoto = false;
+            st.sprGotoTxt = "";
+        }
+        if (key.btnp(key.ESCAPE)) {
+            st.sprGoto = false;
+            st.sprGotoTxt = "";
+        }
+        return; // block all other sprite editor input while goto is active
+    }
+    if (key.btnp(key.N) && !ctrl && !shift) {
+        st.sprGoto = true;
+        st.sprGotoTxt = "";
+    }
+
     // Effective canvas size in pixels (multi-tile aware)
     let { tw: cw, th: ch } = canvasTileSize();
 
@@ -216,14 +269,46 @@ export function updateSpriteEditor(dt) {
     }
 
     // ── Zoomed canvas interaction (paint pixels) ──
-    let canvasSize = Math.min(SPR_CANVAS_W, SPR_CANVAS_H);
-    let zoom = Math.floor(canvasSize / Math.max(cw, ch));
+    let autoZoom = Math.floor(Math.min(SPR_CANVAS_W, SPR_CANVAS_H) / Math.max(cw, ch));
+    let zoom = st.sprZoom > 0 ? st.sprZoom : autoZoom;
     let canvasPixW = zoom * cw;
     let canvasPixH = zoom * ch;
-    let canvasOx = SPR_CANVAS_X + Math.floor((SPR_CANVAS_W - canvasPixW) / 2);
-    let canvasOy = SPR_CANVAS_Y + Math.floor((SPR_CANVAS_H - canvasPixH) / 2);
+    let canvasOx = SPR_CANVAS_X + Math.floor((SPR_CANVAS_W - canvasPixW) / 2) + st.sprPanX;
+    let canvasOy = SPR_CANVAS_Y + Math.floor((SPR_CANVAS_H - canvasPixH) / 2) + st.sprPanY;
 
     let base = selBase(sheetCols);
+
+    // ── Middle-click pan ──
+    let midBtn = mouse.btn(1);
+    let inCanvas =
+        mx >= SPR_CANVAS_X &&
+        mx < SPR_CANVAS_X + SPR_CANVAS_W &&
+        my >= SPR_CANVAS_Y &&
+        my < SPR_CANVAS_Y + SPR_CANVAS_H;
+    if (midBtn && inCanvas) {
+        if (!st.sprPanning) st.sprPanning = true;
+        st.sprPanX += mouse.dx();
+        st.sprPanY += mouse.dy();
+    } else {
+        st.sprPanning = false;
+    }
+
+    // ── Scroll-wheel zoom (over canvas area) ──
+    if (inCanvas && wheel !== 0 && !st.sprPanning) {
+        let oldZoom = zoom;
+        let minZoom = Math.max(1, Math.floor(autoZoom / 4));
+        let maxZoom = autoZoom * 4;
+        let newZoom = clamp(zoom + wheel, minZoom, maxZoom);
+        if (newZoom !== oldZoom) {
+            // Zoom toward mouse pointer
+            let pivotX = mx - canvasOx;
+            let pivotY = my - canvasOy;
+            st.sprPanX = Math.round(st.sprPanX + pivotX - (pivotX * newZoom) / oldZoom);
+            st.sprPanY = Math.round(st.sprPanY + pivotY - (pivotY * newZoom) / oldZoom);
+            st.sprZoom = newZoom;
+            zoom = newZoom;
+        }
+    }
 
     // Track hover pixel and toggle system cursor
     let wasHovering = st.sprHoverX >= 0;
@@ -463,35 +548,44 @@ export function updateSpriteEditor(dt) {
         status(ok1 && ok2 ? "Sprites saved" : "Sprite save failed");
     }
 
-    // ── Palette click ──
-    let palBase = st.sprPalPage * 32;
+    // ── Palette (below sprite grid, left panel) ──
+    let palX = SPR_GRID_X;
+    let palY = SPR_GRID_Y + gridContentH + 2;
+    let palTotalRows = Math.ceil(256 / SPR_PAL_COLS); // 16 rows for 256 colors
+    let palAvailH = FB_H - SPR_FOOT_H - palY;
+    let palVisRows = Math.min(palTotalRows, Math.floor(palAvailH / SPR_PAL_CELL));
+    let palMaxScroll = Math.max(0, palTotalRows - palVisRows);
+    st.sprPalScrollY = clamp(st.sprPalScrollY, 0, palMaxScroll);
+    let palH = palVisRows * SPR_PAL_CELL;
+
+    // Palette click
     if (
         mPress &&
-        my >= SPR_PAL_Y &&
-        my < SPR_PAL_Y + SPR_PAL_CELL * 2 &&
-        mx >= SPR_PAL_X &&
-        mx < SPR_PAL_X + SPR_PAL_COLS * SPR_PAL_CELL
+        my >= palY &&
+        my < palY + palH &&
+        mx >= palX &&
+        mx < palX + SPR_PAL_COLS * SPR_PAL_CELL
     ) {
-        let pc = Math.floor((mx - SPR_PAL_X) / SPR_PAL_CELL);
-        let pr = Math.floor((my - SPR_PAL_Y) / SPR_PAL_CELL);
-        let idx = palBase + pr * SPR_PAL_COLS + pc;
+        let pc = Math.floor((mx - palX) / SPR_PAL_CELL);
+        let pr = Math.floor((my - palY) / SPR_PAL_CELL) + st.sprPalScrollY;
+        let idx = pr * SPR_PAL_COLS + pc;
         if (idx >= 0 && idx < 256) st.sprCol = idx;
     }
 
-    // Scroll palette pages with wheel when hovering over the palette
+    // Scroll palette with wheel when hovering over it
     if (
         wheel !== 0 &&
-        my >= SPR_PAL_Y &&
-        my < SPR_PAL_Y + SPR_PAL_CELL * 2 &&
-        mx >= SPR_PAL_X &&
-        mx < SPR_PAL_X + SPR_PAL_COLS * SPR_PAL_CELL
+        my >= palY &&
+        my < palY + palH &&
+        mx >= palX &&
+        mx < palX + SPR_PAL_COLS * SPR_PAL_CELL
     ) {
-        st.sprPalPage = clamp(st.sprPalPage - wheel, 0, 7);
+        st.sprPalScrollY = clamp(st.sprPalScrollY - wheel, 0, palMaxScroll);
     }
 
-    // ── Flags toggle (8 bits below palette) ──
-    let flagsY = SPR_PAL_Y + SPR_PAL_CELL * 2 + 2;
-    let flagsX = SPR_PAL_X + 7 * CW; // after "FLAGS:" label
+    // ── Flags toggle (below palette, left panel) ──
+    let flagsY = palY + palH + 2;
+    let flagsX = palX + 7 * CW; // after "FLAGS:" label
     if (mPress && my >= flagsY && my < flagsY + CH && mx >= flagsX && mx < flagsX + 8 * (CW + 2)) {
         let bit = Math.floor((mx - flagsX) / (CW + 2));
         if (bit >= 0 && bit < 8) {
@@ -539,9 +633,13 @@ export function updateSpriteEditor(dt) {
     }
 
     // Pick colour from canvas (right-click)
-    if (mouse.btn(1) && st.sprHoverX >= 0) {
+    if (mouse.btn(2) && st.sprHoverX >= 0) {
         st.sprCol = gfx.sget(base.x + st.sprHoverX, base.y + st.sprHoverY);
-        st.sprPalPage = Math.floor(st.sprCol / 32);
+        // Scroll palette to show selected color
+        let colRow = Math.floor(st.sprCol / SPR_PAL_COLS);
+        if (colRow < st.sprPalScrollY || colRow >= st.sprPalScrollY + palVisRows) {
+            st.sprPalScrollY = clamp(colRow, 0, palMaxScroll);
+        }
         st.sprTool = 0;
     }
 
@@ -581,6 +679,10 @@ export function updateSpriteEditor(dt) {
         sc = sc - (sc % st.sprSizeW);
         sr = sr - (sr % st.sprSizeH);
         st.sprSel = sr * sheetCols + sc;
+        // Reset zoom/pan for new tile size
+        st.sprZoom = 0;
+        st.sprPanX = 0;
+        st.sprPanY = 0;
     }
 
     // ── Transforms (Shift+H: flip H, Shift+V: flip V, Shift+R: rotate 90°) ──
@@ -1061,12 +1163,15 @@ export function drawSpriteEditor() {
     }
 
     // ── Zoomed canvas ──
-    let canvasSize = Math.min(SPR_CANVAS_W, SPR_CANVAS_H);
-    let zoom = Math.floor(canvasSize / Math.max(cw, ch));
+    let autoZoom = Math.floor(Math.min(SPR_CANVAS_W, SPR_CANVAS_H) / Math.max(cw, ch));
+    let zoom = st.sprZoom > 0 ? st.sprZoom : autoZoom;
     let canvasPixW = zoom * cw;
     let canvasPixH = zoom * ch;
-    let canvasOx = SPR_CANVAS_X + Math.floor((SPR_CANVAS_W - canvasPixW) / 2);
-    let canvasOy = SPR_CANVAS_Y + Math.floor((SPR_CANVAS_H - canvasPixH) / 2);
+    let canvasOx = SPR_CANVAS_X + Math.floor((SPR_CANVAS_W - canvasPixW) / 2) + st.sprPanX;
+    let canvasOy = SPR_CANVAS_Y + Math.floor((SPR_CANVAS_H - canvasPixH) / 2) + st.sprPanY;
+
+    // Clip canvas drawing to the canvas panel area
+    gfx.clip(SPR_CANVAS_X, SPR_CANVAS_Y, SPR_CANVAS_W, SPR_CANVAS_H);
 
     // Background
     gfx.rectfill(canvasOx - 1, canvasOy - 1, canvasOx + canvasPixW, canvasOy + canvasPixH, GRIDC);
@@ -1221,6 +1326,9 @@ export function drawSpriteEditor() {
         gfx.line(canvasOx, my2, canvasOx + canvasPixW - 1, my2, 8);
     }
 
+    // Reset clip after canvas drawing
+    gfx.clip();
+
     // 2× sprite preview (top-right of canvas area)
     let prevScale = 2;
     let prevW = cw * prevScale;
@@ -1251,55 +1359,79 @@ export function drawSpriteEditor() {
         );
     }
 
-    // ── Palette strip ──
-    let palBase = st.sprPalPage * 32;
-    for (let i = 0; i < 32; i++) {
-        let colIdx = palBase + i;
-        if (colIdx >= 256) break;
-        let pc = i % SPR_PAL_COLS;
-        let pr = Math.floor(i / SPR_PAL_COLS);
-        let px = SPR_PAL_X + pc * SPR_PAL_CELL;
-        let py = SPR_PAL_Y + pr * SPR_PAL_CELL;
-        gfx.rectfill(px, py, px + SPR_PAL_CELL - 1, py + SPR_PAL_CELL - 1, colIdx);
-        if (colIdx === st.sprCol) {
-            gfx.rect(px, py, px + SPR_PAL_CELL - 1, py + SPR_PAL_CELL - 1, FG);
+    // ── Palette grid (below sprite grid, left panel) ──
+    let palX = SPR_GRID_X;
+    let palY = SPR_GRID_Y + gridContentH + 2;
+    let palTotalRows = Math.ceil(256 / SPR_PAL_COLS);
+    let palAvailH = FB_H - SPR_FOOT_H - palY;
+    let palVisRows = Math.min(palTotalRows, Math.floor(palAvailH / SPR_PAL_CELL));
+    let palH = palVisRows * SPR_PAL_CELL;
+
+    // Separator line between grid and palette
+    gfx.line(SPR_GRID_X, palY - 1, SPR_GRID_X + SPR_GRID_W - 1, palY - 1, SEPC);
+
+    // Clip palette drawing to its area
+    gfx.clip(palX, palY, SPR_GRID_W, palH);
+    for (let r = 0; r < palVisRows; r++) {
+        let row = r + st.sprPalScrollY;
+        for (let c = 0; c < SPR_PAL_COLS; c++) {
+            let colIdx = row * SPR_PAL_COLS + c;
+            if (colIdx >= 256) break;
+            let px = palX + c * SPR_PAL_CELL;
+            let py = palY + r * SPR_PAL_CELL;
+            gfx.rectfill(px, py, px + SPR_PAL_CELL - 1, py + SPR_PAL_CELL - 1, colIdx);
+            if (colIdx === st.sprCol) {
+                gfx.rect(px, py, px + SPR_PAL_CELL - 1, py + SPR_PAL_CELL - 1, FG);
+            }
         }
     }
-    // Page indicator
-    let pageIndX = SPR_PAL_X + SPR_PAL_COLS * SPR_PAL_CELL + 2;
-    let pageIndY = SPR_PAL_Y + 2;
-    gfx.print(palBase + "-" + (palBase + 31), pageIndX, pageIndY, GUTFG);
-    for (let pg = 0; pg < 8; pg++) {
-        let dotX = pageIndX + pg * 4;
-        let dotY = pageIndY + CH + 2;
-        gfx.rectfill(dotX, dotY, dotX + 2, dotY + 2, pg === st.sprPalPage ? FG : GUTFG);
+    gfx.clip();
+
+    // Scroll indicator (if not all rows visible)
+    if (palVisRows < palTotalRows) {
+        let sbH = Math.max(4, Math.floor((palH * palVisRows) / palTotalRows));
+        let sbY =
+            palY +
+            Math.floor(((palH - sbH) * st.sprPalScrollY) / Math.max(1, palTotalRows - palVisRows));
+        gfx.rectfill(palX + SPR_GRID_W - 3, sbY, palX + SPR_GRID_W - 1, sbY + sbH - 1, GUTFG);
     }
 
-    // ── Flags display ──
-    let flagsY = SPR_PAL_Y + SPR_PAL_CELL * 2 + 2;
+    // ── Flags display (below palette, left panel) ──
+    let flagsY = palY + palH + 2;
     let flags = gfx.fget(st.sprSel);
-    gfx.print("FLAGS:", SPR_PAL_X, flagsY, GUTFG);
+    gfx.print("FLAGS:", palX, flagsY, GUTFG);
     for (let b = 0; b < 8; b++) {
-        let bx = SPR_PAL_X + 7 * CW + b * (CW + 2);
+        let bx = palX + 7 * CW + b * (CW + 2);
         let on = (flags >> b) & 1;
         gfx.print("" + b, bx, flagsY, on ? FG : GUTFG);
         if (on) gfx.rectfill(bx, flagsY + CH, bx + CW - 1, flagsY + CH + 1, FG);
     }
 
-    // ── Shortcuts (panel area, above footer) ──
-    let shortcutsY = flagsY + CH + 4;
+    // ── Shortcuts (right panel, below canvas) ──
+    let shortcutsY = FB_H - SPR_FOOT_H - (CH + 2) * 2 - 2;
     gfx.print(
-        "B:pen E:era F:fill R:rect L:lin O:cir S:sel  G:fill M:size  F1:help",
-        SPR_PAL_X,
+        "B:pen E:era F:fill R:rect L:lin O:cir S:sel  G:fill M:size N:goto",
+        SPR_CANVAS_X,
         shortcutsY,
         GUTFG,
     );
     gfx.print(
-        "P:anim A/Sh+A:range [/]:fps  Sh+X/Y:mirror  " + MOD_NAME + "+Z/Y:undo",
-        SPR_PAL_X,
+        "P:anim A/Sh+A:range [/]:fps  Sh+X/Y:mir  scroll:zoom  mid:pan",
+        SPR_CANVAS_X,
         shortcutsY + CH + 2,
         GUTFG,
     );
+
+    // ── Goto sprite overlay ──
+    if (st.sprGoto) {
+        let goTxt = "Go to sprite #: " + st.sprGotoTxt + "_";
+        let goW = gfx.textWidth(goTxt) + CW * 2;
+        let goX = SPR_CANVAS_X + Math.floor((SPR_CANVAS_W - goW) / 2);
+        let goY = SPR_CANVAS_Y + Math.floor(SPR_CANVAS_H / 2) - CH;
+        gfx.rectfill(goX - 2, goY - 2, goX + goW + 1, goY + CH + 3, FOOTBG);
+        gfx.rect(goX - 2, goY - 2, goX + goW + 1, goY + CH + 3, FG);
+        gfx.print(goTxt, goX + CW, goY + 1, FG);
+    }
 
     // ── Footer (status bar) ──
     let footY = FB_H - SPR_FOOT_H;
@@ -1314,8 +1446,11 @@ export function drawSpriteEditor() {
     gfx.print("COL:" + st.sprCol, 14 * CW, footTextY, st.sprCol);
     gfx.print("#" + st.sprSel, 22 * CW, footTextY, FG);
     gfx.print(st.sprSizeW + "x" + st.sprSizeH, 28 * CW, footTextY, FOOTFG);
+    if (st.sprZoom > 0) {
+        gfx.print(zoom + "x", 32 * CW, footTextY, GUTFG);
+    }
     // Status indicators
-    let statusX = 34;
+    let statusX = 36;
     if (st.sprMirrorX || st.sprMirrorY) {
         let mirTxt = "MIR:" + (st.sprMirrorX ? "X" : "") + (st.sprMirrorY ? "Y" : "");
         gfx.print(mirTxt, statusX * CW, footTextY, 8);

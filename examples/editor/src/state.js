@@ -86,13 +86,19 @@ export const st = {
     sprRectAnchor: null, // {x,y} for rectangle drag start
     sprLineAnchor: null, // {x,y} for line tool start
     sprCircAnchor: null, // {x,y} for circle tool center
-    sprSizeW: 1, // multi-tile width (1 or 2)
-    sprSizeH: 1, // multi-tile height (1 or 2)
+    sprSizeW: 1, // multi-tile width in tiles
+    sprSizeH: 1, // multi-tile height in tiles
+    sprZoom: 0, // canvas zoom override (0 = auto-fit)
+    sprPanX: 0, // canvas pan offset X (pixels)
+    sprPanY: 0, // canvas pan offset Y (pixels)
+    sprPanning: false, // middle-click pan in progress
+    sprGoto: false, // sprite goto input active
+    sprGotoTxt: "", // sprite goto input text
     sprClipboard: null, // {w,h,pixels[]} for copy/paste
     sprFilled: false, // filled shape mode for rect/circle
     sprMirrorX: false, // horizontal symmetry
     sprMirrorY: false, // vertical symmetry
-    sprPalPage: 0, // palette page (0-7, each = 32 colors)
+    sprPalScrollY: 0, // palette vertical scroll (in rows)
     sprAnimPlay: false, // animation preview playing
     sprAnimFrom: 0, // animation range start sprite
     sprAnimTo: 0, // animation range end sprite

@@ -114,7 +114,7 @@ export function _save() {
         sprFilled: st.sprFilled,
         sprMirrorX: st.sprMirrorX,
         sprMirrorY: st.sprMirrorY,
-        sprPalPage: st.sprPalPage,
+        sprPalScrollY: st.sprPalScrollY,
         sprAnimFrom: st.sprAnimFrom,
         sprAnimTo: st.sprAnimTo,
         sprAnimFps: st.sprAnimFps,
@@ -182,7 +182,7 @@ export function _restore(s) {
     st.sprFilled = s.sprFilled || false;
     st.sprMirrorX = s.sprMirrorX || false;
     st.sprMirrorY = s.sprMirrorY || false;
-    st.sprPalPage = s.sprPalPage || 0;
+    st.sprPalScrollY = s.sprPalScrollY || 0;
     st.sprAnimFrom = s.sprAnimFrom || 0;
     st.sprAnimTo = s.sprAnimTo || 0;
     st.sprAnimFps = s.sprAnimFps || 8;
