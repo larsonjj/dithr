@@ -57,7 +57,7 @@ typedef struct dtr_console {
     bool paused;
     bool fullscreen;
     bool restart;
-    bool reload;        /**< Hot-reload: re-eval JS without tearing down subsystems */
+    bool reload; /**< Hot-reload: re-eval JS without tearing down subsystems */
 
 #ifdef __APPLE__
     int mac_cmd_close_frames; /**< >0 while suppressing Cmd+W menu-close key-up */

@@ -352,6 +352,7 @@ uint8_t dtr_gfx_fget(dtr_graphics_t *gfx, int32_t idx);
 bool    dtr_gfx_fget_bit(dtr_graphics_t *gfx, int32_t idx, int32_t flag);
 void    dtr_gfx_fset(dtr_graphics_t *gfx, int32_t idx, uint8_t mask);
 void    dtr_gfx_fset_bit(dtr_graphics_t *gfx, int32_t idx, int32_t flag, bool val);
+bool    dtr_gfx_load_flags_hex(dtr_graphics_t *gfx, const char *hex, size_t hex_len);
 
 /* ------------------------------------------------------------------------ */
 /*  Spritesheet pixel access                                                 */
@@ -466,6 +467,25 @@ bool dtr_gfx_load_sheet(dtr_graphics_t *gfx,
                         int32_t         height,
                         int32_t         tile_w,
                         int32_t         tile_h);
+
+/**
+ * \brief           Load sprite sheet from hex-encoded palette-indexed data
+ * \param[in]       gfx: Graphics state
+ * \param[in]       hex: Hex string (2 chars per pixel)
+ * \param[in]       hex_len: Length of the hex string
+ * \param[in]       width: Sheet width in pixels
+ * \param[in]       height: Sheet height in pixels
+ * \param[in]       tile_w: Tile width
+ * \param[in]       tile_h: Tile height
+ * \return          true on success, false on bad input or allocation failure
+ */
+bool dtr_gfx_load_sheet_hex(dtr_graphics_t *gfx,
+                            const char     *hex,
+                            size_t          hex_len,
+                            int32_t         width,
+                            int32_t         height,
+                            int32_t         tile_w,
+                            int32_t         tile_h);
 
 /**
  * \brief           Create an empty (zeroed) sprite sheet at runtime

@@ -17,7 +17,11 @@
   },
   "sprites": {
     "tileW": 8,
-    "tileH": 8
+    "tileH": 8,
+    "sheetW": 128,
+    "sheetH": 128,
+    "sheet": "sprites.hex",
+    "flags": "flags.hex"
   },
   "audio": {
     "channels": 0

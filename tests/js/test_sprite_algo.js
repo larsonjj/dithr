@@ -1,0 +1,284 @@
+// ─── Sprite algorithm tests ──────────────────────────────────────────────────
+//
+// Self-contained: pure rasterisation algorithms inlined from sprite_editor.js.
+// Tests midpointCircle, midpointCircleFill, plotRect geometry.
+
+var __failures = 0;
+var __tests = 0;
+
+function assert(cond, msg) {
+    __tests++;
+    if (!cond) {
+        __failures++;
+        throw new Error("ASSERT: " + (msg || "assertion failed"));
+    }
+}
+
+function assertEq(a, b, msg) {
+    __tests++;
+    if (a !== b) {
+        __failures++;
+        throw new Error(
+            "ASSERT_EQ: " +
+                JSON.stringify(a) +
+                " !== " +
+                JSON.stringify(b) +
+                (msg ? " — " + msg : ""),
+        );
+    }
+}
+
+// ─── Functions under test (inlined from sprite_editor.js) ────────────────────
+
+function midpointCircle(cx, cy, r, plot) {
+    if (r <= 0) {
+        plot(cx, cy);
+        return;
+    }
+    var x = r,
+        y = 0,
+        d = 1 - r;
+    while (x >= y) {
+        plot(cx + x, cy + y);
+        plot(cx - x, cy + y);
+        plot(cx + x, cy - y);
+        plot(cx - x, cy - y);
+        plot(cx + y, cy + x);
+        plot(cx - y, cy + x);
+        plot(cx + y, cy - x);
+        plot(cx - y, cy - x);
+        y++;
+        if (d <= 0) {
+            d += 2 * y + 1;
+        } else {
+            x--;
+            d += 2 * (y - x) + 1;
+        }
+    }
+}
+
+function midpointCircleFill(cx, cy, r, plot) {
+    if (r <= 0) {
+        plot(cx, cy);
+        return;
+    }
+    var x = r,
+        y = 0,
+        d = 1 - r;
+    function hline(x0, x1, yy) {
+        for (var i = x0; i <= x1; i++) plot(i, yy);
+    }
+    while (x >= y) {
+        hline(cx - x, cx + x, cy + y);
+        hline(cx - x, cx + x, cy - y);
+        hline(cx - y, cx + y, cy + x);
+        hline(cx - y, cx + y, cy - x);
+        y++;
+        if (d <= 0) {
+            d += 2 * y + 1;
+        } else {
+            x--;
+            d += 2 * (y - x) + 1;
+        }
+    }
+}
+
+// Helper: collect plotted pixels as a Set of "x,y" strings
+function collectPixels(fn) {
+    var pixels = {};
+    fn(function (x, y) {
+        pixels[x + "," + y] = true;
+    });
+    return pixels;
+}
+
+function pixelCount(pixels) {
+    return Object.keys(pixels).length;
+}
+
+function hasPixel(pixels, x, y) {
+    return pixels[x + "," + y] === true;
+}
+
+// ─── midpointCircle tests ────────────────────────────────────────────────────
+
+// Radius 0: single pixel
+(function () {
+    var px = collectPixels(function (plot) {
+        midpointCircle(5, 5, 0, plot);
+    });
+    assertEq(pixelCount(px), 1, "r=0 single pixel");
+    assert(hasPixel(px, 5, 5), "r=0 center");
+})();
+
+// Radius 1: should produce a small ring (no duplicate pixels ideally)
+(function () {
+    var px = collectPixels(function (plot) {
+        midpointCircle(5, 5, 1, plot);
+    });
+    // Should include cardinal and diagonal points
+    assert(hasPixel(px, 6, 5), "r=1 east");
+    assert(hasPixel(px, 4, 5), "r=1 west");
+    assert(hasPixel(px, 5, 6), "r=1 south");
+    assert(hasPixel(px, 5, 4), "r=1 north");
+})();
+
+// Circle is symmetric: all 8 octants reflected
+(function () {
+    var px = collectPixels(function (plot) {
+        midpointCircle(10, 10, 5, plot);
+    });
+    // Check symmetry: if (10+dx, 10+dy) exists, so should all reflections
+    var keys = Object.keys(px);
+    for (var i = 0; i < keys.length; i++) {
+        var parts = keys[i].split(",");
+        var dx = parseInt(parts[0]) - 10;
+        var dy = parseInt(parts[1]) - 10;
+        assert(hasPixel(px, 10 + dx, 10 + dy), "sym check +" + dx + ",+" + dy);
+        assert(hasPixel(px, 10 - dx, 10 + dy), "sym check -" + dx + ",+" + dy);
+        assert(hasPixel(px, 10 + dx, 10 - dy), "sym check +" + dx + ",-" + dy);
+        assert(hasPixel(px, 10 - dx, 10 - dy), "sym check -" + dx + ",-" + dy);
+    }
+})();
+
+// ─── midpointCircleFill tests ────────────────────────────────────────────────
+
+// Radius 0: single pixel
+(function () {
+    var px = collectPixels(function (plot) {
+        midpointCircleFill(5, 5, 0, plot);
+    });
+    assertEq(pixelCount(px), 1, "fill r=0 single pixel");
+    assert(hasPixel(px, 5, 5), "fill r=0 center");
+})();
+
+// Filled circle should contain all outline pixels
+(function () {
+    var outline = collectPixels(function (plot) {
+        midpointCircle(10, 10, 5, plot);
+    });
+    var filled = collectPixels(function (plot) {
+        midpointCircleFill(10, 10, 5, plot);
+    });
+    var outlineKeys = Object.keys(outline);
+    for (var i = 0; i < outlineKeys.length; i++) {
+        assert(filled[outlineKeys[i]], "filled contains outline pixel " + outlineKeys[i]);
+    }
+})();
+
+// Filled circle should have MORE pixels than outline (for r >= 2)
+(function () {
+    var outline = collectPixels(function (plot) {
+        midpointCircle(10, 10, 4, plot);
+    });
+    var filled = collectPixels(function (plot) {
+        midpointCircleFill(10, 10, 4, plot);
+    });
+    assert(pixelCount(filled) > pixelCount(outline), "filled has more pixels than outline for r=4");
+})();
+
+// Filled circle center is included
+(function () {
+    var px = collectPixels(function (plot) {
+        midpointCircleFill(10, 10, 3, plot);
+    });
+    assert(hasPixel(px, 10, 10), "fill center pixel exists");
+})();
+
+// Filled circle has no holes — check all points within bounding box
+// that are within manhattan-like distance
+(function () {
+    var r = 5;
+    var cx = 10,
+        cy = 10;
+    var px = collectPixels(function (plot) {
+        midpointCircleFill(cx, cy, r, plot);
+    });
+    // Every pixel on horizontal scanline between leftmost and rightmost plotted
+    // should be filled (i.e., no horizontal gaps)
+    for (var y = cy - r; y <= cy + r; y++) {
+        var minX = null,
+            maxX = null;
+        for (var x = cx - r - 1; x <= cx + r + 1; x++) {
+            if (hasPixel(px, x, y)) {
+                if (minX === null) minX = x;
+                maxX = x;
+            }
+        }
+        if (minX !== null) {
+            for (var x2 = minX; x2 <= maxX; x2++) {
+                assert(hasPixel(px, x2, y), "no horizontal gap at (" + x2 + "," + y + ")");
+            }
+        }
+    }
+})();
+
+// ─── plotRect logic tests (outline vs filled) ────────────────────────────────
+
+function plotRectLogic(x0, y0, x1, y1, filled) {
+    var pixels = {};
+    // Normalize
+    if (x0 > x1) {
+        var t = x0;
+        x0 = x1;
+        x1 = t;
+    }
+    if (y0 > y1) {
+        var t2 = y0;
+        y0 = y1;
+        y1 = t2;
+    }
+    if (filled) {
+        for (var yy = y0; yy <= y1; yy++)
+            for (var xx = x0; xx <= x1; xx++) pixels[xx + "," + yy] = true;
+    } else {
+        for (var xx2 = x0; xx2 <= x1; xx2++) {
+            pixels[xx2 + "," + y0] = true;
+            pixels[xx2 + "," + y1] = true;
+        }
+        for (var yy2 = y0; yy2 <= y1; yy2++) {
+            pixels[x0 + "," + yy2] = true;
+            pixels[x1 + "," + yy2] = true;
+        }
+    }
+    return pixels;
+}
+
+// Outline rect
+(function () {
+    var px = plotRectLogic(2, 2, 5, 5, false);
+    // Should have perimeter pixels
+    assert(hasPixel(px, 2, 2), "outline top-left");
+    assert(hasPixel(px, 5, 5), "outline bottom-right");
+    assert(hasPixel(px, 3, 2), "outline top edge");
+    assert(hasPixel(px, 2, 4), "outline left edge");
+    // Interior should be empty
+    assert(!hasPixel(px, 3, 3), "outline interior empty");
+    assert(!hasPixel(px, 4, 4), "outline interior empty 2");
+    // Perimeter count: 4 sides of 4, minus 4 corners counted twice = 12
+    assertEq(pixelCount(px), 12, "outline pixel count");
+})();
+
+// Filled rect
+(function () {
+    var px = plotRectLogic(2, 2, 5, 5, true);
+    // All interior filled
+    assert(hasPixel(px, 3, 3), "filled interior");
+    assert(hasPixel(px, 4, 4), "filled interior 2");
+    // Total: 4x4 = 16
+    assertEq(pixelCount(px), 16, "filled pixel count");
+})();
+
+// 1x1 rect
+(function () {
+    var px = plotRectLogic(3, 3, 3, 3, false);
+    assertEq(pixelCount(px), 1, "1x1 outline");
+    assert(hasPixel(px, 3, 3), "1x1 pixel");
+})();
+
+// Inverted coordinates (x0 > x1)
+(function () {
+    var px = plotRectLogic(5, 5, 2, 2, true);
+    assertEq(pixelCount(px), 16, "inverted coords same result");
+    assert(hasPixel(px, 3, 3), "inverted interior");
+})();

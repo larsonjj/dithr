@@ -207,8 +207,10 @@ bool dtr_cart_parse(dtr_cart_t *cart, JSContext *ctx, const char *json, size_t l
     if (JS_IsObject(sub)) {
         JSValue sheet;
 
-        cart->sprites.tile_w = prv_json_int(ctx, sub, "tileW", CONSOLE_TILE_W);
-        cart->sprites.tile_h = prv_json_int(ctx, sub, "tileH", CONSOLE_TILE_H);
+        cart->sprites.tile_w  = prv_json_int(ctx, sub, "tileW", CONSOLE_TILE_W);
+        cart->sprites.tile_h  = prv_json_int(ctx, sub, "tileH", CONSOLE_TILE_H);
+        cart->sprites.sheet_w = prv_json_int(ctx, sub, "sheetW", 128);
+        cart->sprites.sheet_h = prv_json_int(ctx, sub, "sheetH", 128);
 
         sheet = JS_GetPropertyStr(ctx, sub, "sheet");
         if (JS_IsString(sheet)) {
@@ -221,6 +223,22 @@ bool dtr_cart_parse(dtr_cart_t *cart, JSContext *ctx, const char *json, size_t l
             }
         }
         JS_FreeValue(ctx, sheet);
+
+        {
+            JSValue flags_val;
+
+            flags_val = JS_GetPropertyStr(ctx, sub, "flags");
+            if (JS_IsString(flags_val)) {
+                const char *path;
+
+                path = JS_ToCString(ctx, flags_val);
+                if (path != NULL) {
+                    SDL_strlcpy(cart->sprite_flags_path, path, sizeof(cart->sprite_flags_path));
+                    JS_FreeCString(ctx, path);
+                }
+            }
+            JS_FreeValue(ctx, flags_val);
+        }
     }
     JS_FreeValue(ctx, sub);
 

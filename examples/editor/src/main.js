@@ -1,8 +1,20 @@
 // ─── Editor entry point (ES module) ──────────────────────────────────────────
 
 import { st } from "./state.js";
-import { TAB_CODE, TAB_SPRITES, TAB_MAP, BG, AUTO_CLOSE } from "./config.js";
-import { ensureVisible, resetBlink, status, handleTabSwitch, modKey } from "./helpers.js";
+import {
+    TAB_CODE,
+    TAB_SPRITES,
+    TAB_MAP,
+    BG,
+    AUTO_CLOSE,
+    FB_W,
+    FB_H,
+    CW,
+    CH,
+    FG,
+    GUTFG,
+} from "./config.js";
+import { ensureVisible, resetBlink, status, handleTabSwitch, modKey, MOD_NAME } from "./helpers.js";
 import { deleteSel, pushUndo, openFile, storeFileState, loadFileState } from "./buffer.js";
 import { vimNormal } from "./vim.js";
 import { updateEdit } from "./edit.js";
@@ -73,7 +85,12 @@ export function _init() {
         gfx.sheetCreate(128, 128, 8, 8);
     }
 
+    // Load saved sprite sheet from disk (between-run persistence)
     if (!st.restored) {
+        let hex = sys.readFile("sprites.hex");
+        if (hex) gfx.sheetLoad(hex);
+        let flags = sys.readFile("flags.hex");
+        if (flags) gfx.flagsLoad(flags);
         openFile("src/main.js");
     }
     st.restored = false;
@@ -94,12 +111,21 @@ export function _save() {
         sprScrollY: st.sprScrollY,
         sprSizeW: st.sprSizeW,
         sprSizeH: st.sprSizeH,
+        sprFilled: st.sprFilled,
+        sprMirrorX: st.sprMirrorX,
+        sprMirrorY: st.sprMirrorY,
+        sprPalPage: st.sprPalPage,
+        sprAnimFrom: st.sprAnimFrom,
+        sprAnimTo: st.sprAnimTo,
+        sprAnimFps: st.sprAnimFps,
         mapCamX: st.mapCamX,
         mapCamY: st.mapCamY,
         mapLayer: st.mapLayer,
         mapTile: st.mapTile,
         mapTool: st.mapTool,
         mapGridOn: st.mapGridOn,
+        sheetHex: gfx.sheetData(),
+        flagsHex: gfx.flagsData(),
     };
 }
 
@@ -153,12 +179,21 @@ export function _restore(s) {
     st.sprScrollY = s.sprScrollY || 0;
     st.sprSizeW = s.sprSizeW || 1;
     st.sprSizeH = s.sprSizeH || 1;
+    st.sprFilled = s.sprFilled || false;
+    st.sprMirrorX = s.sprMirrorX || false;
+    st.sprMirrorY = s.sprMirrorY || false;
+    st.sprPalPage = s.sprPalPage || 0;
+    st.sprAnimFrom = s.sprAnimFrom || 0;
+    st.sprAnimTo = s.sprAnimTo || 0;
+    st.sprAnimFps = s.sprAnimFps || 8;
     st.mapCamX = s.mapCamX || 0;
     st.mapCamY = s.mapCamY || 0;
     st.mapLayer = s.mapLayer || 0;
     st.mapTile = s.mapTile || 0;
     st.mapTool = s.mapTool || 0;
     st.mapGridOn = s.mapGridOn !== undefined ? s.mapGridOn : true;
+    if (s.sheetHex) gfx.sheetLoad(s.sheetHex);
+    if (s.flagsHex) gfx.flagsLoad(s.flagsHex);
     st.targetOy = st.oy;
     st.vim = "normal";
     st.vimCount = "";
@@ -205,8 +240,15 @@ export function _update(dt) {
         return;
     }
 
+    // Help overlay toggle (F1)
+    if (key.btnp(key.F1)) {
+        st.helpOverlay = !st.helpOverlay;
+        return;
+    }
+    if (st.helpOverlay) return; // block all input while help is shown
+
     if (st.activeTab === TAB_SPRITES) {
-        updateSpriteEditor();
+        updateSpriteEditor(dt);
         return;
     }
     if (st.activeTab === TAB_MAP) {
@@ -225,19 +267,147 @@ export function _draw() {
     drawTabBar();
     if (st.activeTab === TAB_SPRITES) {
         drawSpriteEditor();
-        return;
-    }
-    if (st.activeTab === TAB_MAP) {
+    } else if (st.activeTab === TAB_MAP) {
         drawMapEditor();
-        return;
+    } else {
+        drawFileTabs();
+        if (st.brMode) drawBrowser();
+        else {
+            drawEditor();
+            if (st.findMode) drawFind();
+            if (st.gotoMode) drawGoto();
+        }
     }
+    if (st.helpOverlay) drawHelpOverlay();
+}
 
-    drawFileTabs();
+// ─── Help overlay ────────────────────────────────────────────────────────────
 
-    if (st.brMode) drawBrowser();
-    else {
-        drawEditor();
-        if (st.findMode) drawFind();
-        if (st.gotoMode) drawGoto();
+function drawHelpOverlay() {
+    let MOD = MOD_NAME;
+    let pad = 4;
+    let col1X = pad;
+    let col2X = FB_W / 2 + pad;
+    let lh = CH + 2;
+
+    // Semi-transparent background
+    gfx.rectfill(0, 0, FB_W - 1, FB_H - 1, 0);
+
+    let y = pad;
+    gfx.print("KEYBOARD SHORTCUTS  (F1 to close)", pad, y, FG);
+    y += lh + 4;
+
+    if (st.activeTab === TAB_CODE) {
+        let left = [
+            "── Editing ──",
+            MOD + "+Z      Undo",
+            MOD + "+Y      Redo",
+            MOD + "+X      Cut",
+            MOD + "+C      Copy",
+            MOD + "+V      Paste",
+            MOD + "+A      Select all",
+            MOD + "+D      Duplicate line",
+            MOD + "+Sh+D   Dup selection",
+            MOD + "+Sh+K   Delete line",
+            MOD + "+/      Toggle comment",
+            MOD + "+Sh+Up  Move line up",
+            MOD + "+Sh+Dn  Move line down",
+            MOD + "+Sh+Ent Insert line above",
+            MOD + "+Bksp   Delete word left",
+            MOD + "+Del    Delete word right",
+            "Tab         Indent",
+            "Shift+Tab   Dedent",
+        ];
+        let right = [
+            "── Navigation ──",
+            MOD + "+F      Find",
+            MOD + "+H      Find & Replace",
+            MOD + "+G      Go to line",
+            MOD + "+O      Open file",
+            MOD + "+S      Save",
+            MOD + "+W      Close file",
+            MOD + "+Tab    Next file",
+            MOD + "+Sh+Tab Prev file",
+            MOD + "+'      Toggle vim mode",
+            MOD + "+Left   Word left",
+            MOD + "+Right  Word right",
+            "Home        Smart home",
+            "DblClick    Select word",
+            "TrplClick   Select line",
+            "",
+            "── Tabs ──",
+            MOD + "+1/2/3  Code/Spr/Map",
+        ];
+        for (let i = 0; i < Math.max(left.length, right.length); i++) {
+            if (i < left.length)
+                gfx.print(left[i], col1X, y + i * lh, left[i][0] === "\u2500" ? FG : GUTFG);
+            if (i < right.length)
+                gfx.print(right[i], col2X, y + i * lh, right[i][0] === "\u2500" ? FG : GUTFG);
+        }
+    } else if (st.activeTab === TAB_SPRITES) {
+        let left = [
+            "── Tools ──",
+            "B           Pen",
+            "E           Eraser",
+            "F           Flood fill",
+            "R           Rectangle",
+            "L           Line",
+            "O           Circle",
+            "S           Selection",
+            "G           Toggle filled",
+            "M           Cycle size",
+            "P           Anim play/stop",
+            "A           Anim range start",
+            "Sh+A        Anim range end",
+            "[/]         Anim FPS -/+",
+            "",
+            "── Drawing ──",
+            "0-9         Palette color",
+            "Right-click Eyedropper",
+            "Sh+X        Mirror X",
+            "Sh+Y        Mirror Y",
+        ];
+        let right = [
+            "── Transforms ──",
+            "Sh+H        Flip horiz",
+            "Sh+V        Flip vert",
+            "Sh+R        Rotate 90\xB0",
+            "Sh+Arrows   Nudge",
+            "Delete      Clear sprite",
+            MOD + "+C      Copy",
+            MOD + "+V      Paste",
+            MOD + "+Z      Undo",
+            MOD + "+Y      Redo",
+            "",
+            "── Navigation ──",
+            "Arrows      Select sprite",
+            "Mouse wheel Scroll sheet",
+            "",
+            "── Tabs ──",
+            MOD + "+1/2/3  Code/Spr/Map",
+        ];
+        for (let i = 0; i < Math.max(left.length, right.length); i++) {
+            if (i < left.length)
+                gfx.print(left[i], col1X, y + i * lh, left[i][0] === "\u2500" ? FG : GUTFG);
+            if (i < right.length)
+                gfx.print(right[i], col2X, y + i * lh, right[i][0] === "\u2500" ? FG : GUTFG);
+        }
+    } else {
+        let lines = [
+            "── Map Editor ──",
+            "Left-click  Paint tile",
+            "Right-click Erase tile",
+            "WASD        Pan camera",
+            "T           Open tile picker",
+            "G           Toggle grid",
+            MOD + "+Z      Undo",
+            MOD + "+Y      Redo",
+            "",
+            "── Tabs ──",
+            MOD + "+1/2/3  Code/Spr/Map",
+        ];
+        for (let i = 0; i < lines.length; i++) {
+            gfx.print(lines[i], col1X, y + i * lh, lines[i][0] === "\u2500" ? FG : GUTFG);
+        }
     }
 }

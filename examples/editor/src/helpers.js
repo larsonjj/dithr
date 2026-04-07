@@ -102,6 +102,61 @@ export function wordBoundaryRight(line, col) {
 
 // ─── Bracket matching ───────────────────────────────────────────────────────
 
+// ─── Bracket context helper ─────────────────────────────────────────────────
+// Returns a boolean array: true at positions inside a string or comment.
+function buildContextMask(line, inBlock) {
+    let mask = new Uint8Array(line.length);
+    let i = 0,
+        n = line.length;
+    if (inBlock) {
+        let end = line.indexOf("*/");
+        if (end >= 0) {
+            for (let j = 0; j <= end + 1; j++) mask[j] = 1;
+            i = end + 2;
+        } else {
+            mask.fill(1);
+            return mask;
+        }
+    }
+    while (i < n) {
+        if (line[i] === "/" && i + 1 < n) {
+            if (line[i + 1] === "*") {
+                let end = line.indexOf("*/", i + 2);
+                if (end >= 0) {
+                    for (let j = i; j <= end + 1; j++) mask[j] = 1;
+                    i = end + 2;
+                    continue;
+                } else {
+                    for (let j = i; j < n; j++) mask[j] = 1;
+                    return mask;
+                }
+            }
+            if (line[i + 1] === "/") {
+                for (let j = i; j < n; j++) mask[j] = 1;
+                return mask;
+            }
+        }
+        if (line[i] === '"' || line[i] === "'" || line[i] === "`") {
+            let q = line[i];
+            mask[i] = 1;
+            let j = i + 1;
+            while (j < n && line[j] !== q) {
+                if (line[j] === "\\") {
+                    mask[j] = 1;
+                    j++;
+                }
+                mask[j] = 1;
+                j++;
+            }
+            if (j < n) mask[j] = 1;
+            i = j < n ? j + 1 : j;
+            continue;
+        }
+        i++;
+    }
+    return mask;
+}
+
 export function findMatchingBracket(row, col) {
     let ch = st.buf[row] ? st.buf[row][col] : undefined;
     if (!ch || !BRACKET_PAIRS[ch]) return null;
@@ -113,19 +168,26 @@ export function findMatchingBracket(row, col) {
     let r = row,
         c = col;
     let steps = 0;
+    // Get block state for this row from cache
+    let inBlock = r < st._blockStateCache.length ? st._blockStateCache[r] : false;
+    let mask = buildContextMask(st.buf[r], inBlock);
     while (r >= 0 && r < st.buf.length && steps < 5000) {
         let line = st.buf[r];
         while (c >= 0 && c < line.length) {
-            let cur = line[c];
-            if (cur === ch) depth++;
-            else if (cur === target) depth--;
-            if (depth === 0) return { y: r, x: c };
+            if (!mask[c]) {
+                let cur = line[c];
+                if (cur === ch) depth++;
+                else if (cur === target) depth--;
+                if (depth === 0) return { y: r, x: c };
+            }
             c += dir;
             steps++;
         }
         r += dir;
         if (r >= 0 && r < st.buf.length) {
             c = dir > 0 ? 0 : st.buf[r].length - 1;
+            inBlock = r < st._blockStateCache.length ? st._blockStateCache[r] : false;
+            mask = buildContextMask(st.buf[r], inBlock);
         }
     }
     return null;
@@ -190,7 +252,10 @@ function rebuildBracketDepthCache(upTo) {
     for (let r = 0; r < upTo; r++) {
         st._bracketDepthCache[r] = depth;
         let line = st.buf[r];
+        let inBlock = r < st._blockStateCache.length ? st._blockStateCache[r] : false;
+        let mask = buildContextMask(line, inBlock);
         for (let c = 0; c < line.length; c++) {
+            if (mask[c]) continue;
             let ch = line[c];
             if (ch === "(" || ch === "[" || ch === "{") depth++;
             else if (ch === ")" || ch === "]" || ch === "}") depth--;

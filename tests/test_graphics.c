@@ -1325,6 +1325,185 @@ static void test_gfx_screen_pal(void)
 }
 
 /* ------------------------------------------------------------------ */
+/*  Hex sheet loading                                                  */
+/* ------------------------------------------------------------------ */
+
+static void test_gfx_load_sheet_hex_basic(void)
+{
+    dtr_graphics_t *gfx = dtr_gfx_create(TW, TH);
+    bool            ret;
+
+    /* 4×2 sheet, tile 2×2: "00010203 04050607" = 8 pixels, 16 hex chars */
+    ret = dtr_gfx_load_sheet_hex(gfx, "0001020304050607", 16, 4, 2, 2, 2);
+    DTR_ASSERT(ret);
+    DTR_ASSERT_EQ_INT(gfx->sheet.width, 4);
+    DTR_ASSERT_EQ_INT(gfx->sheet.height, 2);
+    DTR_ASSERT_EQ_INT(gfx->sheet.tile_w, 2);
+    DTR_ASSERT_EQ_INT(gfx->sheet.tile_h, 2);
+    DTR_ASSERT_EQ_INT(gfx->sheet.cols, 2);
+    DTR_ASSERT_EQ_INT(gfx->sheet.rows, 1);
+    DTR_ASSERT_EQ_INT(gfx->sheet.count, 2);
+    DTR_ASSERT_EQ_INT(gfx->sheet.pixels[0], 0x00);
+    DTR_ASSERT_EQ_INT(gfx->sheet.pixels[1], 0x01);
+    DTR_ASSERT_EQ_INT(gfx->sheet.pixels[7], 0x07);
+
+    dtr_gfx_destroy(gfx);
+    DTR_PASS();
+}
+
+static void test_gfx_load_sheet_hex_bad_length(void)
+{
+    dtr_graphics_t *gfx = dtr_gfx_create(TW, TH);
+    bool            ret;
+
+    /* Too short */
+    ret = dtr_gfx_load_sheet_hex(gfx, "0001", 4, 4, 2, 2, 2);
+    DTR_ASSERT(!ret);
+
+    /* Too long */
+    ret = dtr_gfx_load_sheet_hex(gfx, "000102030405060708", 18, 4, 2, 2, 2);
+    DTR_ASSERT(!ret);
+
+    /* Odd length */
+    ret = dtr_gfx_load_sheet_hex(gfx, "00010", 5, 4, 2, 2, 2);
+    DTR_ASSERT(!ret);
+
+    dtr_gfx_destroy(gfx);
+    DTR_PASS();
+}
+
+static void test_gfx_load_sheet_hex_bad_char(void)
+{
+    dtr_graphics_t *gfx = dtr_gfx_create(TW, TH);
+    bool            ret;
+
+    /* 'g' is not a valid hex char */
+    ret = dtr_gfx_load_sheet_hex(gfx, "00010203040506g7", 16, 4, 2, 2, 2);
+    DTR_ASSERT(!ret);
+
+    /* Sheet pixels should not have been modified on failure */
+    DTR_ASSERT(gfx->sheet.pixels == NULL);
+
+    dtr_gfx_destroy(gfx);
+    DTR_PASS();
+}
+
+static void test_gfx_load_sheet_hex_null(void)
+{
+    dtr_graphics_t *gfx = dtr_gfx_create(TW, TH);
+    bool            ret;
+
+    ret = dtr_gfx_load_sheet_hex(gfx, NULL, 0, 4, 2, 2, 2);
+    DTR_ASSERT(!ret);
+
+    /* Zero dimensions */
+    ret = dtr_gfx_load_sheet_hex(gfx, "0001020304050607", 16, 0, 2, 2, 2);
+    DTR_ASSERT(!ret);
+
+    ret = dtr_gfx_load_sheet_hex(gfx, "0001020304050607", 16, 4, 0, 2, 2);
+    DTR_ASSERT(!ret);
+
+    dtr_gfx_destroy(gfx);
+    DTR_PASS();
+}
+
+static void test_gfx_load_sheet_hex_uppercase(void)
+{
+    dtr_graphics_t *gfx = dtr_gfx_create(TW, TH);
+    bool            ret;
+
+    /* Mixed case: 0A0B0C0D */
+    ret = dtr_gfx_load_sheet_hex(gfx, "0A0b0C0d", 8, 2, 2, 2, 2);
+    DTR_ASSERT(ret);
+    DTR_ASSERT_EQ_INT(gfx->sheet.pixels[0], 0x0A);
+    DTR_ASSERT_EQ_INT(gfx->sheet.pixels[1], 0x0B);
+    DTR_ASSERT_EQ_INT(gfx->sheet.pixels[2], 0x0C);
+    DTR_ASSERT_EQ_INT(gfx->sheet.pixels[3], 0x0D);
+
+    dtr_gfx_destroy(gfx);
+    DTR_PASS();
+}
+
+static void test_gfx_load_sheet_hex_trailing_whitespace(void)
+{
+    dtr_graphics_t *gfx = dtr_gfx_create(TW, TH);
+    bool            ret;
+
+    /* 4×2 sheet with trailing newline — should be stripped */
+    ret = dtr_gfx_load_sheet_hex(gfx, "0001020304050607\n", 17, 4, 2, 2, 2);
+    DTR_ASSERT(ret);
+    DTR_ASSERT_EQ_INT(gfx->sheet.pixels[0], 0x00);
+    DTR_ASSERT_EQ_INT(gfx->sheet.pixels[7], 0x07);
+
+    /* Trailing \r\n */
+    ret = dtr_gfx_load_sheet_hex(gfx, "ff00ff00ff00ff00\r\n", 18, 4, 2, 2, 2);
+    DTR_ASSERT(ret);
+    DTR_ASSERT_EQ_INT(gfx->sheet.pixels[0], 0xFF);
+
+    dtr_gfx_destroy(gfx);
+    DTR_PASS();
+}
+
+/* ------------------------------------------------------------------ */
+/*  Flags hex loading                                                  */
+/* ------------------------------------------------------------------ */
+
+static void test_gfx_load_flags_hex_basic(void)
+{
+    dtr_graphics_t *gfx = dtr_gfx_create(TW, TH);
+    bool            ret;
+    char            hex[CONSOLE_MAX_SPRITES * 2 + 1];
+
+    /* Build a hex string: flag[0]=0xAB, flag[1]=0xCD, rest=00 */
+    memset(hex, '0', CONSOLE_MAX_SPRITES * 2);
+    hex[0]                       = 'a';
+    hex[1]                       = 'b';
+    hex[2]                       = 'c';
+    hex[3]                       = 'd';
+    hex[CONSOLE_MAX_SPRITES * 2] = '\0';
+
+    ret = dtr_gfx_load_flags_hex(gfx, hex, CONSOLE_MAX_SPRITES * 2);
+    DTR_ASSERT(ret);
+    DTR_ASSERT_EQ_INT(gfx->sheet.flags[0], 0xAB);
+    DTR_ASSERT_EQ_INT(gfx->sheet.flags[1], 0xCD);
+    DTR_ASSERT_EQ_INT(gfx->sheet.flags[2], 0x00);
+
+    dtr_gfx_destroy(gfx);
+    DTR_PASS();
+}
+
+static void test_gfx_load_flags_hex_bad_length(void)
+{
+    dtr_graphics_t *gfx = dtr_gfx_create(TW, TH);
+
+    DTR_ASSERT(!dtr_gfx_load_flags_hex(gfx, "00", 2));
+    DTR_ASSERT(!dtr_gfx_load_flags_hex(gfx, NULL, 0));
+
+    dtr_gfx_destroy(gfx);
+    DTR_PASS();
+}
+
+static void test_gfx_load_flags_hex_trailing_newline(void)
+{
+    dtr_graphics_t *gfx = dtr_gfx_create(TW, TH);
+    bool            ret;
+    char            hex[CONSOLE_MAX_SPRITES * 2 + 2];
+
+    memset(hex, '0', CONSOLE_MAX_SPRITES * 2);
+    hex[0]                           = 'f';
+    hex[1]                           = 'f';
+    hex[CONSOLE_MAX_SPRITES * 2]     = '\n';
+    hex[CONSOLE_MAX_SPRITES * 2 + 1] = '\0';
+
+    ret = dtr_gfx_load_flags_hex(gfx, hex, CONSOLE_MAX_SPRITES * 2 + 1);
+    DTR_ASSERT(ret);
+    DTR_ASSERT_EQ_INT(gfx->sheet.flags[0], 0xFF);
+
+    dtr_gfx_destroy(gfx);
+    DTR_PASS();
+}
+
+/* ------------------------------------------------------------------ */
 /*  Main                                                               */
 /* ------------------------------------------------------------------ */
 
@@ -1395,6 +1574,15 @@ int main(int argc, char *argv[])
     DTR_RUN_TEST(test_gfx_spr_affine_zero_det);
     DTR_RUN_TEST(test_gfx_tilemap_basic);
     DTR_RUN_TEST(test_gfx_screen_pal);
+    DTR_RUN_TEST(test_gfx_load_sheet_hex_basic);
+    DTR_RUN_TEST(test_gfx_load_sheet_hex_bad_length);
+    DTR_RUN_TEST(test_gfx_load_sheet_hex_bad_char);
+    DTR_RUN_TEST(test_gfx_load_sheet_hex_null);
+    DTR_RUN_TEST(test_gfx_load_sheet_hex_uppercase);
+    DTR_RUN_TEST(test_gfx_load_sheet_hex_trailing_whitespace);
+    DTR_RUN_TEST(test_gfx_load_flags_hex_basic);
+    DTR_RUN_TEST(test_gfx_load_flags_hex_bad_length);
+    DTR_RUN_TEST(test_gfx_load_flags_hex_trailing_newline);
 
     DTR_TEST_END();
 }

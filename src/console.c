@@ -850,7 +850,7 @@ void dtr_console_iterate(dtr_console_t *con)
     /* Clear the re-injected W press so it doesn't stick. */
     if (con->mac_cmd_close_frames == 1) {
         con->keys->current[DTR_KEY_W] = false;
-        con->mac_cmd_close_frames    = 0;
+        con->mac_cmd_close_frames     = 0;
     }
 #endif
 
@@ -1217,25 +1217,61 @@ static bool prv_load_cart_assets(dtr_console_t *con)
 
     cart = con->cart;
 
-    /* Sprites: load PNG → RGBA → quantise to palette sheet */
+    /* Sprites: load sheet from PNG or hex file */
     if (cart->sprite_sheet_path[0] != '\0') {
-        int32_t w = 0, h = 0;
-
-        DTR_FREE(cart->sprite_rgba);
-        cart->sprite_rgba = NULL;
+        size_t path_len;
 
         SDL_snprintf(path_buf, sizeof(path_buf), "%s%s", cart->base_path, cart->sprite_sheet_path);
-        cart->sprite_rgba   = dtr_import_png(path_buf, &w, &h);
-        cart->sprite_rgba_w = w;
-        cart->sprite_rgba_h = h;
+        path_len = SDL_strlen(cart->sprite_sheet_path);
+
+        if (path_len > 4 && SDL_strcmp(cart->sprite_sheet_path + path_len - 4, ".hex") == 0) {
+            /* Hex-encoded palette-indexed sheet */
+            size_t hex_len = 0;
+            char  *hex     = (char *)SDL_LoadFile(path_buf, &hex_len);
+
+            if (hex != NULL) {
+                dtr_gfx_load_sheet_hex(con->graphics,
+                                       hex,
+                                       hex_len,
+                                       cart->sprites.sheet_w,
+                                       cart->sprites.sheet_h,
+                                       cart->sprites.tile_w,
+                                       cart->sprites.tile_h);
+                SDL_free(hex);
+            }
+        } else {
+            /* PNG → RGBA → quantise to palette sheet */
+            int32_t w = 0, h = 0;
+
+            DTR_FREE(cart->sprite_rgba);
+            cart->sprite_rgba = NULL;
+
+            cart->sprite_rgba   = dtr_import_png(path_buf, &w, &h);
+            cart->sprite_rgba_w = w;
+            cart->sprite_rgba_h = h;
+
+            if (cart->sprite_rgba != NULL) {
+                dtr_gfx_load_sheet(con->graphics,
+                                   cart->sprite_rgba,
+                                   cart->sprite_rgba_w,
+                                   cart->sprite_rgba_h,
+                                   cart->sprites.tile_w,
+                                   cart->sprites.tile_h);
+            }
+        }
     }
-    if (cart->sprite_rgba != NULL) {
-        dtr_gfx_load_sheet(con->graphics,
-                           cart->sprite_rgba,
-                           cart->sprite_rgba_w,
-                           cart->sprite_rgba_h,
-                           cart->sprites.tile_w,
-                           cart->sprites.tile_h);
+
+    /* Sprite flags: load from hex if configured */
+    if (cart->sprite_flags_path[0] != '\0') {
+        size_t flags_len = 0;
+        char  *flags_hex;
+
+        SDL_snprintf(path_buf, sizeof(path_buf), "%s%s", cart->base_path, cart->sprite_flags_path);
+        flags_hex = (char *)SDL_LoadFile(path_buf, &flags_len);
+        if (flags_hex != NULL) {
+            dtr_gfx_load_flags_hex(con->graphics, flags_hex, flags_len);
+            SDL_free(flags_hex);
+        }
     }
 
     /* Maps: already parsed during cart_parse for baked carts */

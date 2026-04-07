@@ -98,6 +98,12 @@ dtr_add_test(test_ui test_ui.c LINK_LIB dithr_core_test)
 # --- Tween tests ---
 dtr_add_test(test_tween test_tween.c LINK_LIB dithr_core_test)
 
+# --- Editor JS tests (pure logic, evaluated by QuickJS) ---
+dtr_add_test(test_editor_js test_editor_js.c)
+target_compile_definitions(test_editor_js PRIVATE
+    JS_TEST_DIR="${CMAKE_CURRENT_SOURCE_DIR}/js"
+)
+
 # --- CTest properties ---
 set_tests_properties(
     test_input test_cart test_graphics test_graphics_ext test_event

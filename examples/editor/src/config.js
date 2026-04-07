@@ -40,7 +40,7 @@ export const CH = 8; // line advance (6px glyph + 2px spacing)
 export const FB_W = 640;
 export const FB_H = 360;
 export const COLS = (FB_W / CW) | 0; // 128
-export const ROWS = (FB_H / CH) | 0; // 51
+export const ROWS = (FB_H / CH) | 0; // 45
 
 export const GUTTER = 5; // chars for line numbers
 export const TAB_H = CH * 2; // tab bar height in pixels

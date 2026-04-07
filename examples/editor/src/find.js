@@ -46,6 +46,7 @@ export function findNext(dir) {
     if (!st.findText) return;
     let total = st.buf.length;
     let startCol = st.cx + (dir > 0 ? 1 : 0);
+    let startRow = st.cy;
 
     for (let i = 0; i < total; i++) {
         let li = (st.cy + i * dir + total) % total;
@@ -68,6 +69,9 @@ export function findNext(dir) {
             st.cx = col + st.findText.length;
             ensureVisible();
             resetBlink();
+            // Detect wrap-around
+            let wrapped = dir > 0 ? li < startRow : li > startRow;
+            if (wrapped) status("Search wrapped");
             return;
         }
     }

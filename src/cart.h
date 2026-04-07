@@ -100,6 +100,8 @@ typedef struct dtr_cart_timing {
 typedef struct dtr_cart_sprites {
     int32_t tile_w;
     int32_t tile_h;
+    int32_t sheet_w;
+    int32_t sheet_h;
     int32_t max_sprites;
 } dtr_cart_sprites_t;
 
@@ -174,6 +176,7 @@ struct dtr_cart {
 
     /* Asset paths from cart.json */
     char    sprite_sheet_path[512];
+    char    sprite_flags_path[512];
     char    code_path[512];
     char    map_paths[DTR_CART_MAX_MAPS][512];
     char    sfx_paths[DTR_CART_MAX_SFX][512];

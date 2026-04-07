@@ -449,11 +449,21 @@ static JSValue js_gfx_fget(JSContext *ctx, JSValueConst this_val, int argc, JSVa
 
 static JSValue js_gfx_fset(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
+    int32_t idx;
+
     (void)this_val;
-    dtr_gfx_fset_bit(GFX(ctx),
-                     dtr_api_opt_int(ctx, argc, argv, 0, 0),
-                     dtr_api_opt_int(ctx, argc, argv, 1, 0),
-                     dtr_api_opt_int(ctx, argc, argv, 2, 1) != 0);
+    idx = dtr_api_opt_int(ctx, argc, argv, 0, 0);
+
+    if (argc <= 2) {
+        /* fset(n, mask) — set the full 8-bit flag bitmask */
+        dtr_gfx_fset(GFX(ctx), idx, (uint8_t)dtr_api_opt_int(ctx, argc, argv, 1, 0));
+    } else {
+        /* fset(n, bit, val) — set a single flag bit */
+        dtr_gfx_fset_bit(GFX(ctx),
+                         idx,
+                         dtr_api_opt_int(ctx, argc, argv, 1, 0),
+                         dtr_api_opt_int(ctx, argc, argv, 2, 1) != 0);
+    }
     return JS_UNDEFINED;
 }
 
@@ -711,10 +721,8 @@ static JSValue js_gfx_sheet_h(JSContext *ctx, JSValueConst this_val, int argc, J
     return JS_NewInt32(ctx, GFX(ctx)->sheet.height);
 }
 
-static JSValue js_gfx_sheet_create(JSContext *ctx,
-                                   JSValueConst this_val,
-                                   int          argc,
-                                   JSValueConst *argv)
+static JSValue
+js_gfx_sheet_create(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
     int32_t         wid;
     int32_t         hei;
@@ -731,6 +739,200 @@ static JSValue js_gfx_sheet_create(JSContext *ctx,
     gfx   = GFX(ctx);
 
     return JS_NewBool(ctx, dtr_gfx_create_sheet(gfx, wid, hei, til_w, til_h));
+}
+
+/* ---- Sheet data export / import (hex encoding) ------------------------ */
+
+static const char prv_hex_table[] = "0123456789abcdef";
+
+/**
+ * \brief  gfx.sheetData() → hex string of the entire pixel buffer
+ *
+ * Returns a hex-encoded string where each byte (palette index 0-255) is
+ * represented as two hex characters.  Returns "" if no sheet is allocated.
+ */
+static JSValue
+js_gfx_sheet_data(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+{
+    dtr_graphics_t *gfx;
+    const uint8_t  *px;
+    int32_t         total;
+    char           *hex;
+    JSValue         result;
+
+    (void)this_val;
+    (void)argc;
+    (void)argv;
+
+    gfx = GFX(ctx);
+    if (gfx->sheet.pixels == NULL || gfx->sheet.width <= 0 || gfx->sheet.height <= 0) {
+        return JS_NewString(ctx, "");
+    }
+
+    px    = gfx->sheet.pixels;
+    total = gfx->sheet.width * gfx->sheet.height;
+
+    hex = js_malloc(ctx, (size_t)total * 2 + 1);
+    if (hex == NULL) {
+        return JS_EXCEPTION;
+    }
+
+    for (int32_t i = 0; i < total; i++) {
+        hex[i * 2]     = prv_hex_table[px[i] >> 4];
+        hex[i * 2 + 1] = prv_hex_table[px[i] & 0x0F];
+    }
+    hex[total * 2] = '\0';
+
+    result = JS_NewStringLen(ctx, hex, (size_t)total * 2);
+    js_free(ctx, hex);
+    return result;
+}
+
+/**
+ * \brief  Decode a single hex character to its 0-15 value, or -1 on error.
+ */
+static int prv_hex_val(char c)
+{
+    if (c >= '0' && c <= '9')
+        return c - '0';
+    if (c >= 'a' && c <= 'f')
+        return c - 'a' + 10;
+    if (c >= 'A' && c <= 'F')
+        return c - 'A' + 10;
+    return -1;
+}
+
+/**
+ * \brief  gfx.sheetLoad(hexStr) → boolean
+ *
+ * Decode a hex string into the current sprite sheet pixel buffer.
+ * The string length must equal width×height×2.  Returns false on error.
+ */
+static JSValue
+js_gfx_sheet_load(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+{
+    dtr_graphics_t *gfx;
+    const char     *str;
+    size_t          str_len;
+    int32_t         total;
+
+    (void)this_val;
+
+    if (argc < 1) {
+        return JS_FALSE;
+    }
+
+    gfx = GFX(ctx);
+    if (gfx->sheet.pixels == NULL) {
+        return JS_FALSE;
+    }
+
+    str = JS_ToCStringLen(ctx, &str_len, argv[0]);
+    if (str == NULL) {
+        return JS_FALSE;
+    }
+
+    total = gfx->sheet.width * gfx->sheet.height;
+    if ((int32_t)str_len != total * 2) {
+        JS_FreeCString(ctx, str);
+        return JS_FALSE;
+    }
+
+    for (int32_t i = 0; i < total; i++) {
+        int hi = prv_hex_val(str[i * 2]);
+        int lo = prv_hex_val(str[i * 2 + 1]);
+        if (hi < 0 || lo < 0) {
+            JS_FreeCString(ctx, str);
+            return JS_FALSE;
+        }
+        gfx->sheet.pixels[i] = (uint8_t)((hi << 4) | lo);
+    }
+
+    JS_FreeCString(ctx, str);
+    return JS_TRUE;
+}
+
+/**
+ * \brief  gfx.flagsData() → hex string of all sprite flags
+ *
+ * Returns a hex-encoded string of CONSOLE_MAX_SPRITES flag bytes (2 chars
+ * each).  Returns "" if no sheet is allocated.
+ */
+static JSValue
+js_gfx_flags_data(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+{
+    dtr_graphics_t *gfx;
+    char           *hex;
+    JSValue         result;
+
+    (void)this_val;
+    (void)argc;
+    (void)argv;
+
+    gfx = GFX(ctx);
+    if (gfx->sheet.pixels == NULL) {
+        return JS_NewString(ctx, "");
+    }
+
+    hex = js_malloc(ctx, CONSOLE_MAX_SPRITES * 2 + 1);
+    if (hex == NULL) {
+        return JS_EXCEPTION;
+    }
+
+    for (int32_t i = 0; i < CONSOLE_MAX_SPRITES; i++) {
+        hex[i * 2]     = prv_hex_table[gfx->sheet.flags[i] >> 4];
+        hex[i * 2 + 1] = prv_hex_table[gfx->sheet.flags[i] & 0x0F];
+    }
+    hex[CONSOLE_MAX_SPRITES * 2] = '\0';
+
+    result = JS_NewStringLen(ctx, hex, CONSOLE_MAX_SPRITES * 2);
+    js_free(ctx, hex);
+    return result;
+}
+
+/**
+ * \brief  gfx.flagsLoad(hexStr) → boolean
+ *
+ * Decode a hex string into the sprite flag array.
+ * The string length must equal CONSOLE_MAX_SPRITES * 2.
+ */
+static JSValue
+js_gfx_flags_load(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+{
+    dtr_graphics_t *gfx;
+    const char     *str;
+    size_t          str_len;
+
+    (void)this_val;
+
+    if (argc < 1) {
+        return JS_FALSE;
+    }
+
+    gfx = GFX(ctx);
+    str = JS_ToCStringLen(ctx, &str_len, argv[0]);
+    if (str == NULL) {
+        return JS_FALSE;
+    }
+
+    if ((int32_t)str_len != CONSOLE_MAX_SPRITES * 2) {
+        JS_FreeCString(ctx, str);
+        return JS_FALSE;
+    }
+
+    for (int32_t i = 0; i < CONSOLE_MAX_SPRITES; i++) {
+        int hic = prv_hex_val(str[i * 2]);
+        int loc = prv_hex_val(str[i * 2 + 1]);
+
+        if (hic < 0 || loc < 0) {
+            JS_FreeCString(ctx, str);
+            return JS_FALSE;
+        }
+        gfx->sheet.flags[i] = (uint8_t)((hic << 4) | loc);
+    }
+
+    JS_FreeCString(ctx, str);
+    return JS_TRUE;
 }
 
 /* ---- Function list ---------------------------------------------------- */
@@ -771,6 +973,10 @@ static const JSCFunctionListEntry js_gfx_funcs[] = {
     JS_CFUNC_DEF("sheetW", 0, js_gfx_sheet_w),
     JS_CFUNC_DEF("sheetH", 0, js_gfx_sheet_h),
     JS_CFUNC_DEF("sheetCreate", 4, js_gfx_sheet_create),
+    JS_CFUNC_DEF("sheetData", 0, js_gfx_sheet_data),
+    JS_CFUNC_DEF("sheetLoad", 1, js_gfx_sheet_load),
+    JS_CFUNC_DEF("flagsData", 0, js_gfx_flags_data),
+    JS_CFUNC_DEF("flagsLoad", 1, js_gfx_flags_load),
     JS_CFUNC_DEF("fade", 2, js_gfx_fade),
     JS_CFUNC_DEF("wipe", 3, js_gfx_wipe),
     JS_CFUNC_DEF("dissolve", 2, js_gfx_dissolve),

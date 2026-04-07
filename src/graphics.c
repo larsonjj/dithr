@@ -1308,6 +1308,57 @@ void dtr_gfx_fset_bit(dtr_graphics_t *gfx, int32_t idx, int32_t flag, bool val)
     }
 }
 
+bool dtr_gfx_load_flags_hex(dtr_graphics_t *gfx, const char *hex, size_t hex_len)
+{
+    if (hex == NULL) {
+        return false;
+    }
+
+    /* Strip trailing whitespace */
+    while (hex_len > 0 && (hex[hex_len - 1] == '\n' || hex[hex_len - 1] == '\r' ||
+                           hex[hex_len - 1] == ' ' || hex[hex_len - 1] == '\t')) {
+        --hex_len;
+    }
+
+    if (hex_len != CONSOLE_MAX_SPRITES * 2) {
+        return false;
+    }
+
+    for (int32_t idx = 0; idx < CONSOLE_MAX_SPRITES; ++idx) {
+        int     hic;
+        int     loc;
+        uint8_t chi;
+        uint8_t clo;
+
+        chi = (uint8_t)hex[idx * 2];
+        clo = (uint8_t)hex[idx * 2 + 1];
+
+        if (chi >= '0' && chi <= '9') {
+            hic = chi - '0';
+        } else if (chi >= 'a' && chi <= 'f') {
+            hic = chi - 'a' + 10;
+        } else if (chi >= 'A' && chi <= 'F') {
+            hic = chi - 'A' + 10;
+        } else {
+            return false;
+        }
+
+        if (clo >= '0' && clo <= '9') {
+            loc = clo - '0';
+        } else if (clo >= 'a' && clo <= 'f') {
+            loc = clo - 'a' + 10;
+        } else if (clo >= 'A' && clo <= 'F') {
+            loc = clo - 'A' + 10;
+        } else {
+            return false;
+        }
+
+        gfx->sheet.flags[idx] = (uint8_t)((hic << 4) | loc);
+    }
+
+    return true;
+}
+
 /* ------------------------------------------------------------------ */
 /*  Spritesheet pixel access                                           */
 /* ------------------------------------------------------------------ */
@@ -1908,6 +1959,100 @@ bool dtr_gfx_load_sheet(dtr_graphics_t *gfx,
         sht->pixels[idx] = (uint8_t)best;
     }
 
+    sht->width  = width;
+    sht->height = height;
+    sht->tile_w = tile_w;
+    sht->tile_h = tile_h;
+    sht->cols   = width / tile_w;
+    sht->rows   = height / tile_h;
+    sht->count  = sht->cols * sht->rows;
+
+    if (sht->count > CONSOLE_MAX_SPRITES) {
+        sht->count = CONSOLE_MAX_SPRITES;
+    }
+
+    return true;
+}
+
+bool dtr_gfx_load_sheet_hex(dtr_graphics_t *gfx,
+                            const char     *hex,
+                            size_t          hex_len,
+                            int32_t         width,
+                            int32_t         height,
+                            int32_t         tile_w,
+                            int32_t         tile_h)
+{
+    dtr_sprite_sheet_t *sht;
+    int32_t             total;
+    size_t              alloc_sz;
+    uint8_t            *new_pixels;
+
+    if (hex == NULL || width <= 0 || height <= 0 || tile_w <= 0 || tile_h <= 0) {
+        return false;
+    }
+
+    total    = width * height;
+    alloc_sz = (size_t)total;
+
+    /* Strip trailing whitespace (newlines, spaces) that text editors may add */
+    while (hex_len > 0 && (hex[hex_len - 1] == '\n' || hex[hex_len - 1] == '\r' ||
+                           hex[hex_len - 1] == ' ' || hex[hex_len - 1] == '\t')) {
+        --hex_len;
+    }
+
+    /* Hex string must have exactly 2 chars per pixel */
+    if (hex_len != alloc_sz * 2) {
+        return false;
+    }
+
+    new_pixels = DTR_MALLOC(alloc_sz);
+    if (new_pixels == NULL) {
+        return false;
+    }
+
+    /* Decode hex pairs directly to palette indices */
+    for (int32_t idx = 0; idx < total; ++idx) {
+        int     hic;
+        int     loc;
+        uint8_t chi;
+        uint8_t clo;
+
+        chi = (uint8_t)hex[idx * 2];
+        clo = (uint8_t)hex[idx * 2 + 1];
+
+        /* Convert hex char to nibble */
+        if (chi >= '0' && chi <= '9') {
+            hic = chi - '0';
+        } else if (chi >= 'a' && chi <= 'f') {
+            hic = chi - 'a' + 10;
+        } else if (chi >= 'A' && chi <= 'F') {
+            hic = chi - 'A' + 10;
+        } else {
+            DTR_FREE(new_pixels);
+            return false;
+        }
+
+        if (clo >= '0' && clo <= '9') {
+            loc = clo - '0';
+        } else if (clo >= 'a' && clo <= 'f') {
+            loc = clo - 'a' + 10;
+        } else if (clo >= 'A' && clo <= 'F') {
+            loc = clo - 'A' + 10;
+        } else {
+            DTR_FREE(new_pixels);
+            return false;
+        }
+
+        new_pixels[idx] = (uint8_t)((hic << 4) | loc);
+    }
+
+    sht = &gfx->sheet;
+
+    if (sht->pixels != NULL) {
+        DTR_FREE(sht->pixels);
+    }
+
+    sht->pixels = new_pixels;
     sht->width  = width;
     sht->height = height;
     sht->tile_w = tile_w;

@@ -89,6 +89,20 @@ export const st = {
     sprSizeW: 1, // multi-tile width (1 or 2)
     sprSizeH: 1, // multi-tile height (1 or 2)
     sprClipboard: null, // {w,h,pixels[]} for copy/paste
+    sprFilled: false, // filled shape mode for rect/circle
+    sprMirrorX: false, // horizontal symmetry
+    sprMirrorY: false, // vertical symmetry
+    sprPalPage: 0, // palette page (0-7, each = 32 colors)
+    sprAnimPlay: false, // animation preview playing
+    sprAnimFrom: 0, // animation range start sprite
+    sprAnimTo: 0, // animation range end sprite
+    sprAnimFps: 8, // animation frames per second
+    sprAnimTimer: 0, // accumulator for animation frame timing
+    sprAnimFrame: 0, // current frame index in animation
+    sprSelRect: null, // {x0,y0,x1,y1} marquee selection in sprite pixels
+    sprSelFloat: null, // {x,y,w,h,pixels[]} floating selection being moved
+    sprSelDrag: null, // {ox,oy} drag offset when moving float
+    helpOverlay: false, // show keyboard shortcut help
 
     // map editor state
     mapCamX: 0,
