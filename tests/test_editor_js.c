@@ -111,6 +111,12 @@ static void test_sprite_algo(void)
     DTR_PASS();
 }
 
+static void test_music_editor(void)
+{
+    prv_run_js_test("test_music_editor.js");
+    DTR_PASS();
+}
+
 /* ------------------------------------------------------------------ */
 /*  Main                                                               */
 /* ------------------------------------------------------------------ */
@@ -122,6 +128,7 @@ int main(void)
     DTR_RUN_TEST(test_helpers);
     DTR_RUN_TEST(test_stroke_history);
     DTR_RUN_TEST(test_sprite_algo);
+    DTR_RUN_TEST(test_music_editor);
 
     DTR_TEST_END();
 }

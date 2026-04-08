@@ -696,26 +696,28 @@ export function updateSfxEditor(dt) {
         pushSfxUndo();
         let data = curSfx();
         if (shift) {
-            if (data.loopEnd === st.sfxNote && data.loopEnd > 0) {
+            // Ctrl+Shift+L: set loop end (toggle-clear if on existing end)
+            if (data.loopEnd === st.sfxNote + 1) {
                 data.loopEnd = 0;
                 data.loopStart = 0;
                 st.sfxLoopEnd = 0;
                 st.sfxLoopStart = 0;
                 status("Loop cleared");
             } else {
-                data.loopEnd = st.sfxNote;
-                st.sfxLoopEnd = st.sfxNote;
+                data.loopEnd = st.sfxNote + 1;
+                st.sfxLoopEnd = st.sfxNote + 1;
                 // Validate: swap if start > end
-                if (data.loopStart > data.loopEnd) {
+                if (data.loopStart > 0 && data.loopStart >= data.loopEnd) {
                     let tmp = data.loopStart;
                     data.loopStart = data.loopEnd;
                     data.loopEnd = tmp;
                     st.sfxLoopStart = data.loopStart;
                     st.sfxLoopEnd = data.loopEnd;
                 }
-                status("Loop end: " + st.sfxNote);
+                status("Loop end: " + (st.sfxNote + 1));
             }
         } else {
+            // Ctrl+L: set loop start (toggle-clear if on existing start)
             if (data.loopStart === st.sfxNote && data.loopEnd > 0) {
                 data.loopEnd = 0;
                 data.loopStart = 0;

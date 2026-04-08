@@ -609,11 +609,13 @@ function drawHelpOverlay() {
             "Delete      Clear channel",
             "+/-         Increment/decrement",
             "F           Cycle flow flag",
+            "Sh+F        Clear flow flag",
             "M           Toggle mute channel",
         ];
         let right = [
             "── Playback ──",
             "Space       Play / stop",
+            "Enter       Preview SFX slot",
             "",
             "── Edit ──",
             MOD + "+Z      Undo",

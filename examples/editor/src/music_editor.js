@@ -190,6 +190,10 @@ function patternDuration(row) {
 function playPattern(row) {
     // Start playing a pattern's channels and update play state
     let pat = st.musPatterns[row];
+    if (!patternHasData(pat)) {
+        stopMusic();
+        return;
+    }
     let anyPlaying = false;
     for (let c = 0; c < NUM_CHANNELS; c++) {
         synth.stop(c);
@@ -199,7 +203,10 @@ function playPattern(row) {
         }
     }
     if (!anyPlaying) {
-        stopMusic();
+        // All channels muted — still advance time so pattern isn't stuck
+        st.musPlayRow = row;
+        st.musPlayStart = sys.time();
+        ensurePlayRowVisible();
         return;
     }
     st.musPlayRow = row;
@@ -375,10 +382,28 @@ export function updateMusicEditor(dt) {
     if (key.btnp(key.F)) {
         pushMusUndo();
         let pat = st.musPatterns[st.musSel];
-        pat.flags = (pat.flags + 1) % 4;
-        let names = ["none", "loop start", "loop back", "stop"];
-        status("Flag: " + names[pat.flags]);
+        if (ctrl || shift) {
+            // Ctrl+F or Shift+F: clear flag
+            pat.flags = FLAG_NONE;
+            status("Flag cleared");
+        } else {
+            pat.flags = (pat.flags + 1) % 4;
+            let names = ["none", "loop start", "loop back", "stop"];
+            status("Flag: " + names[pat.flags]);
+        }
         st.musDirty = true;
+        return;
+    }
+
+    // Enter: preview the SFX in the selected channel slot
+    if (key.btnp(key.ENTER)) {
+        let sfxIdx = st.musPatterns[st.musSel].ch[st.musCol];
+        if (sfxIdx >= 0) {
+            // Stop all voices, then play just this SFX on channel 0
+            for (let c = 0; c < NUM_CHANNELS; c++) synth.stop(c);
+            synth.play(sfxIdx, 0);
+            status("Preview SFX " + (sfxIdx < 10 ? "0" : "") + sfxIdx);
+        }
         return;
     }
 
@@ -485,6 +510,13 @@ export function drawMusicEditor() {
         // Row background
         if (isPlay) {
             gfx.rectfill(0, yy, FB_W - 1, yy + ROW_H - 2, 1);
+            // Progress bar: filled portion of pattern duration
+            let dur = patternDuration(st.musPlayRow);
+            if (dur > 0) {
+                let frac = Math.min((sys.time() - st.musPlayStart) / dur, 1);
+                let pw = Math.floor(frac * (FB_W - 1));
+                gfx.rectfill(0, yy + ROW_H - 2, pw, yy + ROW_H - 2, PLAY_COL);
+            }
         } else if (isSel) {
             gfx.rectfill(0, yy, FB_W - 1, yy + ROW_H - 2, 17);
         }
