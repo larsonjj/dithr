@@ -64,7 +64,7 @@ const PLAY_COL = 11; // playback cursor color
 // Waveform colors for pitch graph caps
 const WAVE_COLORS = [
     9, // triangle = orange
-    8, // tiltsaw = red
+    15, // tiltsaw = peach
     8, // saw = red
     11, // square = green
     14, // pulse = pink
