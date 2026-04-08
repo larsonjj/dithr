@@ -146,6 +146,7 @@ function startMusic() {
     let pat = st.musPatterns[st.musSel];
     let anyPlaying = false;
     for (let c = 0; c < NUM_CHANNELS; c++) {
+        synth.stop(c);
         if (pat.ch[c] >= 0 && !st.musMute[c]) {
             synth.play(pat.ch[c], c);
             anyPlaying = true;
@@ -169,48 +170,73 @@ function stopMusic() {
     status("Stopped");
 }
 
-function advancePattern() {
-    // Called when current SFX finishes — advance to next pattern
-    let next = st.musPlayRow + 1;
-    if (next >= 64) {
-        stopMusic();
-        return;
-    }
-
-    let pat = st.musPatterns[next];
-
-    // Check flags
-    if (pat.flags === FLAG_STOP) {
-        stopMusic();
-        return;
-    }
-    if (pat.flags === FLAG_LOOP_BACK) {
-        // Find the loop start
-        for (let i = next - 1; i >= 0; i--) {
-            if (st.musPatterns[i].flags === FLAG_LOOP_START) {
-                next = i;
-                pat = st.musPatterns[next];
-                break;
+function patternDuration(row) {
+    // Longest SFX duration across all channels: speed / 4 seconds
+    // (32 notes × speed × (44100/128) samples/note / 44100 Hz)
+    let pat = st.musPatterns[row];
+    let maxDur = 0;
+    for (let c = 0; c < NUM_CHANNELS; c++) {
+        if (pat.ch[c] >= 0) {
+            let data = synth.get(pat.ch[c]);
+            if (data) {
+                let dur = (data.speed || 16) / 4;
+                if (dur > maxDur) maxDur = dur;
             }
         }
     }
+    return maxDur;
+}
 
+function playPattern(row) {
+    // Start playing a pattern's channels and update play state
+    let pat = st.musPatterns[row];
     let anyPlaying = false;
     for (let c = 0; c < NUM_CHANNELS; c++) {
+        synth.stop(c);
         if (pat.ch[c] >= 0 && !st.musMute[c]) {
             synth.play(pat.ch[c], c);
             anyPlaying = true;
-        } else {
-            synth.stop(c);
         }
     }
     if (!anyPlaying) {
         stopMusic();
         return;
     }
-    st.musPlayRow = next;
+    st.musPlayRow = row;
     st.musPlayStart = sys.time();
     ensurePlayRowVisible();
+}
+
+function advancePattern() {
+    // Check the CURRENT pattern's flags (what to do after it finishes)
+    let cur = st.musPlayRow;
+    let curPat = st.musPatterns[cur];
+
+    if (curPat.flags === FLAG_STOP) {
+        stopMusic();
+        return;
+    }
+
+    let next;
+    if (curPat.flags === FLAG_LOOP_BACK) {
+        // Find the nearest loop-start above
+        next = 0; // default to top if no loop-start found
+        for (let i = cur - 1; i >= 0; i--) {
+            if (st.musPatterns[i].flags === FLAG_LOOP_START) {
+                next = i;
+                break;
+            }
+        }
+    } else {
+        next = cur + 1;
+    }
+
+    if (next >= 64) {
+        stopMusic();
+        return;
+    }
+
+    playPattern(next);
 }
 
 // ─── Update ──────────────────────────────────────────────────────────────────
@@ -220,16 +246,10 @@ export function updateMusicEditor(dt) {
     let ctrl = modKey();
     let shift = key.btn(key.LSHIFT) || key.btn(key.RSHIFT);
 
-    // Track playback advancement
+    // Track playback advancement (time-based)
     if (st.musPlaying) {
-        let anyPlaying = false;
-        for (let c = 0; c < NUM_CHANNELS; c++) {
-            if (synth.playing(c)) {
-                anyPlaying = true;
-                break;
-            }
-        }
-        if (!anyPlaying) {
+        let dur = patternDuration(st.musPlayRow);
+        if (dur > 0 && sys.time() - st.musPlayStart >= dur) {
             advancePattern();
         }
     }
