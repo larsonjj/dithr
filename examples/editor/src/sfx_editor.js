@@ -58,10 +58,8 @@ const SEL_COL = 2; // selection highlight
 const LOOP_COL = 3; // loop marker color
 const PLAY_COL = 11; // playback cursor color
 
-// Waveform short names for grid display (ASCII only, font covers 32-126)
-const WAVE_SHORT = ["/", "|", "\\", "#", "!", "@", "?", "*"];
-// Effect short names (ASCII only)
-const FX_SHORT = ["-", "^", "v", "\\", "<", ">", "3", "6"];
+// Waveform short names (unused — grid displays numeric index)
+// Effect short names (unused — grid displays numeric index)
 
 // Waveform colors for pitch graph caps
 const WAVE_COLORS = [
@@ -761,8 +759,7 @@ function drawNoteGrid(playNote) {
         // Effect row
         let fxY = contentY + ROW_H * 3 + 3;
         if (note.pitch > 0) {
-            let fStr = FX_SHORT[note.effect] || "?";
-            gfx.print(fStr, xx + 4, fxY, isSelCol && st.sfxField === 3 ? FG : FX_COL);
+            gfx.print("" + note.effect, xx + 4, fxY, isSelCol && st.sfxField === 3 ? FG : FX_COL);
         } else {
             gfx.print("-", xx + 4, fxY, REST_COL);
         }

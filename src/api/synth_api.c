@@ -40,10 +40,13 @@ typedef struct dtr_synth_voice {
     uint8_t            latch_pitch; /* latched pitch for current note */
     uint8_t            latch_wave;  /* latched waveform for current note */
     uint8_t            latch_fx;    /* latched effect for current note */
+    uint8_t            prev_key;    /* previous note pitch (for slide) */
     float              smooth_vol;  /* smoothed volume (0..1), ramped */
+    float              prev_vol;    /* previous note volume (for slide) */
     float              last_out;    /* previous output sample (S16 scale) */
     float              xfade_base;  /* output at start of crossfade */
     int32_t            xfade_rem;   /* remaining crossfade samples */
+    int32_t            xfade_len;   /* initial crossfade length */
 } dtr_synth_voice_t;
 
 /**
@@ -169,13 +172,28 @@ static int16_t prv_voice_sample(dtr_synth_voice_t *v)
         if (note->pitch == 0 &&
             (v->last_out > 1.0f || v->last_out < -1.0f)) {
             v->xfade_base = v->last_out;
+            v->xfade_len  = PARAM_XFADE;
             v->xfade_rem  = PARAM_XFADE;
         } else if (v->total_pos > 0 &&
                    note->pitch > 0 &&
                    note->waveform != v->latch_wave &&
                    (v->last_out > 1.0f || v->last_out < -1.0f)) {
             v->xfade_base = v->last_out;
+            v->xfade_len  = NOTE_XFADE;
             v->xfade_rem  = NOTE_XFADE;
+        } else if (v->total_pos > 0 &&
+                   note->pitch > 0 &&
+                   (note->effect == DTR_FX_FADE_IN ||
+                    note->effect == DTR_FX_FADE_OUT ||
+                    v->latch_fx == DTR_FX_FADE_IN ||
+                    v->latch_fx == DTR_FX_FADE_OUT)) {
+            /* Always crossfade at fade-effect boundaries.
+             * Fade curves create volume discontinuities at note
+             * edges (e.g. fade-out ends at ~0 then next note
+             * jumps to full volume). */
+            v->xfade_base = v->last_out;
+            v->xfade_len  = PARAM_XFADE;
+            v->xfade_rem  = PARAM_XFADE;
         }
         v->latch_pitch = note->pitch;
         v->latch_wave  = note->waveform;
@@ -195,6 +213,7 @@ static int16_t prv_voice_sample(dtr_synth_voice_t *v)
          note->waveform != v->latch_wave ||
          note->effect   != v->latch_fx)) {
         v->xfade_base  = v->last_out;
+        v->xfade_len   = PARAM_XFADE;
         v->xfade_rem   = PARAM_XFADE;
         v->latch_pitch = note->pitch;
         v->latch_wave  = note->waveform;
@@ -228,48 +247,65 @@ static int16_t prv_voice_sample(dtr_synth_voice_t *v)
         cur_freq   = base_freq;
         sample_vol = vol;
 
-        /* Effects (mirroring synth.c) */
+        /* Effects — PICO-8 compatible (matches zepto8 sfx.cpp) */
         switch (note->effect) {
-            case DTR_FX_SLIDE_UP:
-                cur_freq = base_freq * (1.0f + frac * 0.5f);
+            case DTR_FX_SLIDE: {
+                /* Slide from previous note's pitch/vol to current */
+                float prev_freq;
+
+                prev_freq = v->prev_key > 0
+                    ? dtr_synth_pitch_freq(v->prev_key)
+                    : base_freq;
+                cur_freq   = prev_freq + (base_freq - prev_freq) * frac;
+                sample_vol = v->prev_vol + (vol - v->prev_vol) * frac;
                 break;
-            case DTR_FX_SLIDE_DOWN:
-                cur_freq = base_freq * (1.0f - frac * 0.3f);
-                if (cur_freq < 20.0f) {
-                    cur_freq = 20.0f;
-                }
+            }
+            case DTR_FX_VIBRATO: {
+                /* Triangle-wave LFO at 7.5 Hz, ±quarter semitone */
+                float time_s;
+                float ttt;
+
+                time_s = (float)v->total_pos
+                    / (float)DTR_SYNTH_SAMPLE_RATE;
+                ttt = SDL_fabsf(
+                    SDL_fmodf(7.5f * time_s, 1.0f) - 0.5f) - 0.25f;
+                cur_freq = base_freq
+                    * (1.0f + 0.059463094359f * ttt);
                 break;
+            }
             case DTR_FX_DROP:
-                cur_freq = base_freq * (1.0f - frac * frac * 0.9f);
-                if (cur_freq < 20.0f) {
-                    cur_freq = 20.0f;
+                cur_freq = base_freq * (1.0f - frac);
+                if (cur_freq < 1.0f) {
+                    cur_freq = 1.0f;
                 }
                 break;
             case DTR_FX_FADE_IN:
-                sample_vol = vol * frac;
+                sample_vol = ((float)note->volume / 7.0f) * frac;
+                v->smooth_vol = sample_vol;
                 break;
             case DTR_FX_FADE_OUT:
-                sample_vol = vol * (1.0f - frac);
+                sample_vol = ((float)note->volume / 7.0f) * (1.0f - frac);
+                v->smooth_vol = sample_vol;
                 break;
-            case DTR_FX_ARPF: {
-                int32_t arp_step;
-
-                arp_step = ((v->note_pos * 30) / spn) % 3;
-                if (arp_step == 1) {
-                    cur_freq = base_freq * SDL_powf(2.0f, 4.0f / 12.0f);
-                } else if (arp_step == 2) {
-                    cur_freq = base_freq * SDL_powf(2.0f, 7.0f / 12.0f);
-                }
-                break;
-            }
+            case DTR_FX_ARPF:
             case DTR_FX_ARPS: {
-                int32_t arp_step;
+                /* 4-note group arpeggio (PICO-8 style).
+                 * Cycles through notes (nti & ~3) .. (nti & ~3)+3. */
+                float   time_s;
+                int32_t mrate;
+                int32_t ncyc;
+                int32_t arp_note;
 
-                arp_step = ((v->note_pos * 6) / spn) % 3;
-                if (arp_step == 1) {
-                    cur_freq = base_freq * SDL_powf(2.0f, 4.0f / 12.0f);
-                } else if (arp_step == 2) {
-                    cur_freq = base_freq * SDL_powf(2.0f, 7.0f / 12.0f);
+                time_s = (float)v->total_pos
+                    / (float)DTR_SYNTH_SAMPLE_RATE;
+                mrate  = (sfx->speed <= 8 ? 32 : 16)
+                    / (note->effect == DTR_FX_ARPF ? 4 : 8);
+                ncyc     = (int32_t)(mrate * 7.5f * time_s);
+                arp_note = (nti & ~3) | (ncyc & 3);
+                if (arp_note < DTR_SYNTH_NOTES &&
+                    sfx->notes[arp_note].pitch > 0) {
+                    cur_freq = dtr_synth_pitch_freq(
+                        sfx->notes[arp_note].pitch);
                 }
                 break;
             }
@@ -303,6 +339,14 @@ static int16_t prv_voice_sample(dtr_synth_voice_t *v)
     v->note_pos++;
     v->total_pos++;
     if (v->note_pos >= spn) {
+        /* Update previous-note tracking for slide effect (PICO-8) */
+        if (v->prev_key != note->pitch) {
+            v->prev_vol = v->prev_key > 0
+                ? (float)note->volume / 7.0f
+                : 0.0f;
+        }
+        v->prev_key = note->pitch;
+
         v->note_pos = 0;
         v->note_idx++;
 
@@ -327,7 +371,7 @@ static int16_t prv_voice_sample(dtr_synth_voice_t *v)
     if (v->xfade_rem > 0) {
         float ttt;
 
-        ttt    = (float)v->xfade_rem / (float)PARAM_XFADE;
+        ttt    = (float)v->xfade_rem / (float)v->xfade_len;
         output = v->xfade_base * ttt + output * (1.0f - ttt);
         v->xfade_rem--;
     }
@@ -628,6 +672,8 @@ static void prv_voice_start(dtr_synth_voice_t *v, const dtr_synth_sfx_t *def)
     v->latch_pitch = def->notes[start].pitch;
     v->latch_wave  = def->notes[start].waveform;
     v->latch_fx    = def->notes[start].effect;
+    v->prev_key    = 49;   /* C-4 = PICO-8 default C-2 (261.6 Hz) */
+    v->prev_vol    = 0.0f;
     v->smooth_vol  = (float)def->notes[start].volume / 7.0f;
     v->last_out    = 0.0f;
     v->xfade_base  = 0.0f;
@@ -1109,8 +1155,8 @@ js_synth_wave_names(JSContext *ctx, JSValueConst this_val, int argc, JSValueCons
 
 static const char *prv_fx_names[] = {
     "none",
-    "slide up",
-    "slide dn",
+    "slide",
+    "vibrato",
     "drop",
     "fade in",
     "fade out",

@@ -35,15 +35,15 @@ extern "C" {
 #define DTR_WAVE_PHASER    7 /**< Detuned dual triangle (PICO-8 inst 7) */
 #define DTR_WAVE_COUNT     8
 
-/** Effect types */
+/** Effect types (PICO-8 compatible) */
 #define DTR_FX_NONE       0
-#define DTR_FX_SLIDE_UP   1
-#define DTR_FX_SLIDE_DOWN 2
+#define DTR_FX_SLIDE      1 /**< Pitch glides toward next note */
+#define DTR_FX_VIBRATO    2 /**< Pitch oscillates (sine vibrato) */
 #define DTR_FX_DROP       3 /**< Pitch fall */
 #define DTR_FX_FADE_IN    4
 #define DTR_FX_FADE_OUT   5
-#define DTR_FX_ARPF       6 /**< Arpeggio fast (major) */
-#define DTR_FX_ARPS       7 /**< Arpeggio slow (major) */
+#define DTR_FX_ARPF       6 /**< Arpeggio fast (4-note groups) */
+#define DTR_FX_ARPS       7 /**< Arpeggio slow (4-note groups) */
 #define DTR_FX_COUNT      8
 
 /* ------------------------------------------------------------------ */

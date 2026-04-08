@@ -279,6 +279,21 @@ int16_t *dtr_synth_render(const dtr_synth_sfx_t *sfx, size_t *out_len)
     /* Reset noise state for deterministic output */
     prv_noise_state = 0x12345678;
 
+    {
+    uint8_t prev_key = 49;   /* C-4 = PICO-8 default C-2 (261.6 Hz) */
+    float   prev_vol = 0.0f;
+    int32_t first_nti;
+    float   smooth_vol_off;
+
+    /* Initialize volume smoother to the first note's volume so the
+     * opening of the SFX doesn't get an unintended ramp-up. */
+    first_nti = 0;
+    if (sfx->loop_end > 0 && sfx->loop_end >= sfx->loop_start &&
+        sfx->loop_start < DTR_SYNTH_NOTES) {
+        first_nti = sfx->loop_start;
+    }
+    smooth_vol_off = (float)sfx->notes[first_nti].volume / 7.0f;
+
     for (int32_t rendered = 0; rendered < note_count; ++rendered) {
         const dtr_synth_note_t *note;
         float                   vol;
@@ -308,6 +323,11 @@ int16_t *dtr_synth_render(const dtr_synth_sfx_t *sfx, size_t *out_len)
                 buf[idx++] = 0;
             }
             phase = 0.0f;
+            /* Update previous-note tracking for slide (PICO-8) */
+            if (prev_key != note->pitch) {
+                prev_vol = prev_key > 0 ? vol : 0.0f;
+            }
+            prev_key = note->pitch;
             continue;
         }
 
@@ -320,24 +340,41 @@ int16_t *dtr_synth_render(const dtr_synth_sfx_t *sfx, size_t *out_len)
 
             frac = (float)sid / (float)spn;
 
-            /* Apply effects */
+            /* Apply effects — PICO-8 compatible (matches zepto8) */
             cur_freq   = base_freq;
             sample_vol = vol;
 
             switch (note->effect) {
-                case DTR_FX_SLIDE_UP:
-                    cur_freq = base_freq * (1.0f + frac * 0.5f);
+                case DTR_FX_SLIDE: {
+                    /* Slide from previous note's pitch/vol to current */
+                    float prev_freq;
+
+                    prev_freq = prev_key > 0
+                        ? prv_pitch_freq(prev_key)
+                        : base_freq;
+                    cur_freq   = prev_freq
+                        + (base_freq - prev_freq) * frac;
+                    sample_vol = prev_vol + (vol - prev_vol) * frac;
                     break;
-                case DTR_FX_SLIDE_DOWN:
-                    cur_freq = base_freq * (1.0f - frac * 0.3f);
-                    if (cur_freq < 20.0f) {
-                        cur_freq = 20.0f;
-                    }
+                }
+                case DTR_FX_VIBRATO: {
+                    /* Triangle-wave LFO at 7.5 Hz, ±quarter semitone */
+                    float time_s;
+                    float ttt;
+
+                    time_s = (float)idx
+                        / (float)DTR_SYNTH_SAMPLE_RATE;
+                    ttt = SDL_fabsf(
+                        SDL_fmodf(7.5f * time_s, 1.0f) - 0.5f)
+                        - 0.25f;
+                    cur_freq = base_freq
+                        * (1.0f + 0.059463094359f * ttt);
                     break;
+                }
                 case DTR_FX_DROP:
-                    cur_freq = base_freq * (1.0f - frac * frac * 0.9f);
-                    if (cur_freq < 20.0f) {
-                        cur_freq = 20.0f;
+                    cur_freq = base_freq * (1.0f - frac);
+                    if (cur_freq < 1.0f) {
+                        cur_freq = 1.0f;
                     }
                     break;
                 case DTR_FX_FADE_IN:
@@ -346,32 +383,49 @@ int16_t *dtr_synth_render(const dtr_synth_sfx_t *sfx, size_t *out_len)
                 case DTR_FX_FADE_OUT:
                     sample_vol = vol * (1.0f - frac);
                     break;
-                case DTR_FX_ARPF: {
-                    /* Fast arpeggio: major chord (root, +4, +7 semitones) */
-                    int32_t arp_step;
-
-                    arp_step = ((sid * 30) / spn) % 3; /* Fast cycle */
-                    if (arp_step == 1) {
-                        cur_freq = base_freq * SDL_powf(2.0f, 4.0f / 12.0f);
-                    } else if (arp_step == 2) {
-                        cur_freq = base_freq * SDL_powf(2.0f, 7.0f / 12.0f);
-                    }
-                    break;
-                }
+                case DTR_FX_ARPF:
                 case DTR_FX_ARPS: {
-                    /* Slow arpeggio */
-                    int32_t arp_step;
+                    /* 4-note group arpeggio (PICO-8 style).
+                     * Cycles through notes (nti & ~3) .. (nti & ~3)+3. */
+                    float   time_s;
+                    int32_t mrate;
+                    int32_t ncyc;
+                    int32_t arp_note;
 
-                    arp_step = ((sid * 6) / spn) % 3;
-                    if (arp_step == 1) {
-                        cur_freq = base_freq * SDL_powf(2.0f, 4.0f / 12.0f);
-                    } else if (arp_step == 2) {
-                        cur_freq = base_freq * SDL_powf(2.0f, 7.0f / 12.0f);
+                    time_s = (float)idx
+                        / (float)DTR_SYNTH_SAMPLE_RATE;
+                    mrate  = (sfx->speed <= 8 ? 32 : 16)
+                        / (note->effect == DTR_FX_ARPF ? 4 : 8);
+                    ncyc     = (int32_t)(mrate * 7.5f * time_s);
+                    arp_note = (nti & ~3) | (ncyc & 3);
+                    if (arp_note < DTR_SYNTH_NOTES &&
+                        sfx->notes[arp_note].pitch > 0) {
+                        cur_freq = prv_pitch_freq(
+                            sfx->notes[arp_note].pitch);
                     }
                     break;
                 }
                 default:
                     break;
+            }
+
+            /* Smooth volume transitions at note boundaries (prevents
+             * pops when a fade-out note is followed by a loud note).
+             * Fade effects supply their own envelope so they bypass
+             * the slow smoother — just keep smooth_vol_off in sync. */
+            if (note->effect == DTR_FX_FADE_IN ||
+                note->effect == DTR_FX_FADE_OUT) {
+                smooth_vol_off = sample_vol;
+            } else {
+                float svd;
+
+                svd = sample_vol - smooth_vol_off;
+                if (svd > 0.0001f || svd < -0.0001f) {
+                    smooth_vol_off += svd * 0.005f;
+                } else {
+                    smooth_vol_off = sample_vol;
+                }
+                sample_vol = smooth_vol_off;
             }
 
             /* Advance phase */
@@ -396,7 +450,14 @@ int16_t *dtr_synth_render(const dtr_synth_sfx_t *sfx, size_t *out_len)
 
             buf[idx++] = (int16_t)(sample * 32767.0f);
         }
+
+        /* Update previous-note tracking for slide (PICO-8) */
+        if (prev_key != note->pitch) {
+            prev_vol = prev_key > 0 ? vol : 0.0f;
+        }
+        prev_key = note->pitch;
     }
+    } /* end prev_key/prev_vol scope */
 
     /* Fade-out ramp for non-looping SFX to prevent click at end */
     if (!(sfx->loop_end > 0 && sfx->loop_end >= sfx->loop_start &&
