@@ -499,6 +499,55 @@ export function saveMapToDisk() {
     }
 }
 
+/** Load map data from disk JSON saved by saveMapToDisk(). */
+export function loadMapFromDisk() {
+    let json = sys.readFile("map.json");
+    if (!json) return;
+    let data = JSON.parse(json);
+    if (!data || !data.width || !data.height) return;
+
+    // Create the level (includes one default tile layer)
+    map.create(data.width, data.height, data.name || "map_0");
+
+    let layers = data.layers;
+    if (!layers || !layers.length) return;
+
+    // First layer was created by map.create — rename and populate it
+    // Additional layers need to be added
+    for (let li = 0; li < layers.length; li++) {
+        let layer = layers[li];
+        if (li === 0) {
+            // Rename the default layer created by map.create
+            if (layer.name) map.rename_layer(0, layer.name);
+        } else {
+            // Add additional layers
+            if (layer.type === "objectgroup") {
+                map.add_object_layer(layer.name || "Objects " + (li + 1));
+            } else {
+                map.add_layer(layer.name || "Layer " + (li + 1));
+            }
+        }
+
+        // Populate tile data
+        if (layer.type !== "objectgroup" && layer.data) {
+            for (let idx = 0; idx < layer.data.length; idx++) {
+                if (layer.data[idx] !== 0) {
+                    let tx = idx % data.width;
+                    let ty = Math.floor(idx / data.width);
+                    map.set(tx, ty, layer.data[idx], li);
+                }
+            }
+        }
+
+        // Populate objects
+        if (layer.type === "objectgroup" && layer.objects) {
+            for (let oi = 0; oi < layer.objects.length; oi++) {
+                map.add_object(li, layer.objects[oi]);
+            }
+        }
+    }
+}
+
 // ─── Update ──────────────────────────────────────────────────────────────────
 
 export function updateMapEditor() {

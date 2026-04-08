@@ -1,5 +1,5 @@
 // ─── Editor entry point (ES module) ──────────────────────────────────────────
- 
+
 import { st } from "./state.js";
 import {
     TAB_CODE,
@@ -31,7 +31,13 @@ import { drawTabBar, drawFileTabs, drawEditor } from "./draw.js";
 import { updateFind, drawFind, updateGoto, drawGoto } from "./find.js";
 import { updateBrowser, drawBrowser } from "./browser.js";
 import { updateSpriteEditor, drawSpriteEditor, saveSpritesToDisk } from "./sprite_editor.js";
-import { updateMapEditor, drawMapEditor, mapTextInput, saveMapToDisk } from "./map_editor.js";
+import {
+    updateMapEditor,
+    drawMapEditor,
+    mapTextInput,
+    saveMapToDisk,
+    loadMapFromDisk,
+} from "./map_editor.js";
 import { updateSfxEditor, drawSfxEditor, loadSfxFromDisk, saveSfxToDisk } from "./sfx_editor.js";
 import {
     updateMusicEditor,
@@ -113,6 +119,7 @@ export function _init() {
         if (flags) gfx.flagsLoad(flags);
         loadSfxFromDisk();
         loadMusFromDisk();
+        loadMapFromDisk();
         openFile("src/main.js");
     }
     st.restored = false;

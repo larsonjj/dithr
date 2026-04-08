@@ -788,6 +788,7 @@ void dtr_console_iterate(dtr_console_t *con)
             save_cy       = gfx->camera_y;
             gfx->camera_x = 0;
             gfx->camera_y = 0;
+            dtr_gfx_clip_reset(gfx);
 
             {
                 char    toast_buf[32];
@@ -802,7 +803,7 @@ void dtr_console_iterate(dtr_console_t *con)
                         toast_buf, sizeof(toast_buf), "RELOADED (%d)", (int)con->reload_count);
                     toast_bg = 11; /* green */
                 }
-                toast_w = (int32_t)SDL_strlen(toast_buf) * 4 + 4;
+                toast_w = (int32_t)SDL_strlen(toast_buf) * 5 + 3;
                 dtr_gfx_rectfill(gfx, 0, 0, toast_w, 8, toast_bg);
                 dtr_gfx_print(gfx, toast_buf, 2, 1, 0);
             }
