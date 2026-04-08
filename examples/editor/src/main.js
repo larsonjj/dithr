@@ -5,6 +5,7 @@ import {
     TAB_CODE,
     TAB_SPRITES,
     TAB_MAP,
+    TAB_SFX,
     BG,
     AUTO_CLOSE,
     FB_W,
@@ -23,6 +24,7 @@ import { updateFind, drawFind, updateGoto, drawGoto } from "./find.js";
 import { updateBrowser, drawBrowser } from "./browser.js";
 import { updateSpriteEditor, drawSpriteEditor } from "./sprite_editor.js";
 import { updateMapEditor, drawMapEditor, mapTextInput } from "./map_editor.js";
+import { updateSfxEditor, drawSfxEditor } from "./sfx_editor.js";
 
 // ─── Text input event handler ────────────────────────────────────────────────
 
@@ -138,6 +140,15 @@ export function _save() {
         mapAutoTile: st.mapAutoTile,
         mapAutoGroups: st.mapAutoGroups,
         mapObjCounter: st.mapObjCounter,
+        sfxSel: st.sfxSel,
+        sfxNote: st.sfxNote,
+        sfxField: st.sfxField,
+        sfxSpeed: st.sfxSpeed,
+        sfxWave: st.sfxWave,
+        sfxVol: st.sfxVol,
+        sfxFx: st.sfxFx,
+        sfxListScroll: st.sfxListScroll,
+        sfxScrollX: st.sfxScrollX,
         sheetHex: gfx.sheetData(),
         flagsHex: gfx.flagsData(),
     };
@@ -216,6 +227,15 @@ export function _restore(s) {
     st.mapAutoTile = s.mapAutoTile || false;
     st.mapAutoGroups = s.mapAutoGroups || [];
     st.mapObjCounter = s.mapObjCounter || 0;
+    st.sfxSel = s.sfxSel || 0;
+    st.sfxNote = s.sfxNote || 0;
+    st.sfxField = s.sfxField || 0;
+    st.sfxSpeed = s.sfxSpeed || 8;
+    st.sfxWave = s.sfxWave || 0;
+    st.sfxVol = s.sfxVol || 5;
+    st.sfxFx = s.sfxFx || 0;
+    st.sfxListScroll = s.sfxListScroll || 0;
+    st.sfxScrollX = s.sfxScrollX || 0;
     if (s.sheetHex) gfx.sheetLoad(s.sheetHex);
     if (s.flagsHex) gfx.flagsLoad(s.flagsHex);
     // Clamp sprite editor values to valid range for current sheet
@@ -275,7 +295,10 @@ export function _update(dt) {
         st.helpOverlay = !st.helpOverlay;
         return;
     }
-    if (st.helpOverlay) return; // block all input while help is shown
+    if (st.helpOverlay) {
+        if (key.btnp(key.ESCAPE)) st.helpOverlay = false;
+        return; // block all input while help is shown
+    }
 
     if (st.activeTab === TAB_SPRITES) {
         updateSpriteEditor(dt);
@@ -283,6 +306,10 @@ export function _update(dt) {
     }
     if (st.activeTab === TAB_MAP) {
         updateMapEditor();
+        return;
+    }
+    if (st.activeTab === TAB_SFX) {
+        updateSfxEditor(dt);
         return;
     }
 
@@ -299,6 +326,8 @@ export function _draw() {
         drawSpriteEditor();
     } else if (st.activeTab === TAB_MAP) {
         drawMapEditor();
+    } else if (st.activeTab === TAB_SFX) {
+        drawSfxEditor();
     } else {
         drawFileTabs();
         if (st.brMode) drawBrowser();
@@ -366,7 +395,7 @@ function drawHelpOverlay() {
             "TrplClick   Select line",
             "",
             "── Tabs ──",
-            MOD + "+1/2/3  Code/Spr/Map",
+            MOD + "+1/2/3/4  Code/Spr/Map/SFX",
         ];
         for (let i = 0; i < Math.max(left.length, right.length); i++) {
             if (i < left.length)
@@ -419,7 +448,7 @@ function drawHelpOverlay() {
             "Mouse wheel Scroll sheet",
             "",
             "── Tabs ──",
-            MOD + "+1/2/3  Code/Spr/Map",
+            MOD + "+1/2/3/4  Code/Spr/Map/SFX",
         ];
         for (let i = 0; i < Math.max(left.length, right.length); i++) {
             if (i < left.length)
@@ -427,7 +456,7 @@ function drawHelpOverlay() {
             if (i < right.length)
                 gfx.print(right[i], col2X, y + i * lh, right[i][0] === "\u2500" ? FG : GUTFG);
         }
-    } else {
+    } else if (st.activeTab === TAB_MAP) {
         let left = [
             "── Tools ──",
             "B           Pen",
@@ -489,7 +518,54 @@ function drawHelpOverlay() {
             "[+] / [-]   Add/remove layer",
             "",
             "── Tabs ──",
-            MOD + "+1/2/3  Code/Spr/Map",
+            MOD + "+1/2/3/4  Code/Spr/Map/SFX",
+        ];
+        for (let i = 0; i < Math.max(left.length, right.length); i++) {
+            if (i < left.length)
+                gfx.print(left[i], col1X, y + i * lh, left[i][0] === "\u2500" ? FG : GUTFG);
+            if (i < right.length)
+                gfx.print(right[i], col2X, y + i * lh, right[i][0] === "\u2500" ? FG : GUTFG);
+        }
+    } else {
+        let left = [
+            "── Note Input ──",
+            "Z-M         Piano keys",
+            "             Z=C S=C# X=D ...",
+            "[/]         Octave down/up",
+            "W           Cycle waveform",
+            "E           Cycle effect",
+            "1-8         Set volume (vol row)",
+            "Delete      Clear note",
+            "Sh+Up/Down  Nudge value +/-",
+            "",
+            "── Navigation ──",
+            "Left/Right  Prev/next note",
+            "Up/Down     Prev/next field",
+            "Tab         Cycle field",
+            MOD + "+Up/Dn  Prev/next SFX",
+            "Scroll      List / grid scroll",
+        ];
+        let right = [
+            "── Playback ──",
+            "Space       Play / stop",
+            "",
+            "── Edit ──",
+            MOD + "+C      Copy SFX",
+            MOD + "+V      Paste SFX",
+            "",
+            "── Settings ──",
+            "-/=         Speed down/up",
+            MOD + "+L      Set loop start",
+            MOD + "+Sh+L   Set loop end",
+            "",
+            "── Fields ──",
+            "NOTE        Pitch (piano keys)",
+            "WAVE        Waveform (1-8)",
+            "VOL         Volume (1-8)",
+            "FX          Effect (1-8)",
+            "",
+            "── Tabs ──",
+            MOD + "+1/2/3/4  Code/Spr/Map/SFX",
         ];
         for (let i = 0; i < Math.max(left.length, right.length); i++) {
             if (i < left.length)

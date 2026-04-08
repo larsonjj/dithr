@@ -118,15 +118,15 @@ function floodFill(sx, sy, replacement) {
     if (target === replacement) return;
 
     let stack = [[sx, sy]];
-    let visited = {};
+    let visited = new Set();
     while (stack.length > 0) {
         let pt = stack.pop();
         let px = pt[0];
         let py = pt[1];
-        let kk = px + "," + py;
-        if (visited[kk]) continue;
-        visited[kk] = true;
         if (px < 0 || px >= mw || py < 0 || py >= mh) continue;
+        let kk = py * mw + px;
+        if (visited.has(kk)) continue;
+        visited.add(kk);
         if (map.get(px, py, st.mapLayer) !== target) continue;
         paintTile(px, py, replacement);
         stack.push([px - 1, py]);
@@ -480,8 +480,8 @@ function clearSel() {
 /** Handle text input forwarded from main.js for resize/rename dialog. */
 export function mapTextInput(ch) {
     if (st.mapResizeMode && ch >= "0" && ch <= "9") {
-        if (st.mapResizeField === 0) st.mapResizeW += ch;
-        else st.mapResizeH += ch;
+        if (st.mapResizeField === 0 && st.mapResizeW.length < 4) st.mapResizeW += ch;
+        else if (st.mapResizeField === 1 && st.mapResizeH.length < 4) st.mapResizeH += ch;
     }
     if (st.mapRenameMode && ch.length === 1 && ch >= " " && st.mapRenameTxt.length < 31) {
         st.mapRenameTxt += ch;
@@ -1814,12 +1814,28 @@ function drawResizeDialog() {
     gfx.rectfill(dx, dy, dx + dw - 1, dy + dh - 1, PANELBG);
     gfx.rect(dx, dy, dx + dw - 1, dy + dh - 1, FG);
     gfx.print("Resize Map", dx + 4, dy + 4, FG);
+
+    let wVal = parseInt(st.mapResizeW) || 0;
+    let hVal = parseInt(st.mapResizeH) || 0;
+    let wOk = wVal >= 1 && wVal <= 4096;
+    let hOk = hVal >= 1 && hVal <= 4096;
+
     let fy = dy + 18;
     gfx.print("W:", dx + 4, fy, st.mapResizeField === 0 ? FG : 6);
-    gfx.print(st.mapResizeW + (st.mapResizeField === 0 ? "_" : ""), dx + 4 + CW * 3, fy, FG);
+    gfx.print(
+        st.mapResizeW + (st.mapResizeField === 0 ? "_" : ""),
+        dx + 4 + CW * 3,
+        fy,
+        wOk ? FG : 8,
+    );
     fy += CH + 4;
     gfx.print("H:", dx + 4, fy, st.mapResizeField === 1 ? FG : 6);
-    gfx.print(st.mapResizeH + (st.mapResizeField === 1 ? "_" : ""), dx + 4 + CW * 3, fy, FG);
+    gfx.print(
+        st.mapResizeH + (st.mapResizeField === 1 ? "_" : ""),
+        dx + 4 + CW * 3,
+        fy,
+        hOk ? FG : 8,
+    );
     gfx.print("Tab:switch Enter:ok Esc:cancel", dx + 4, dy + dh - CH - 2, 6);
 }
 

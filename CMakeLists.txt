@@ -193,6 +193,8 @@ set(DITHR_CORE_SOURCES
     src/api/cam_api.c
     src/api/ui_api.c
     src/api/tween_api.c
+    src/api/synth_api.c
+    src/synth.c
     src/ui.c
     src/tween.c
 )

@@ -82,6 +82,7 @@ void dtr_col_api_register(JSContext *ctx, JSValue global);
 void dtr_cam_api_register(JSContext *ctx, JSValue global);
 void dtr_ui_api_register(JSContext *ctx, JSValue global);
 void dtr_tween_api_register(JSContext *ctx, JSValue global);
+void dtr_synth_api_register(JSContext *ctx, JSValue global);
 
 #ifdef __cplusplus
 }

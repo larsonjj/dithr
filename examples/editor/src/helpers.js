@@ -9,6 +9,7 @@ import {
     TAB_CODE,
     TAB_SPRITES,
     TAB_MAP,
+    TAB_SFX,
 } from "./config.js";
 
 const IS_MAC = sys.platform() === "macos";
@@ -37,6 +38,10 @@ export function handleTabSwitch() {
     }
     if (key.btnp(key.NUM3)) {
         st.activeTab = TAB_MAP;
+        return true;
+    }
+    if (key.btnp(key.NUM4)) {
+        st.activeTab = TAB_SFX;
         return true;
     }
     return false;

@@ -98,7 +98,8 @@ export const SEPC = 18; // separator / panel grid lines
 export const TAB_CODE = 0;
 export const TAB_SPRITES = 1;
 export const TAB_MAP = 2;
-export const TAB_NAMES = ["CODE", "SPRITES", "MAP"];
+export const TAB_SFX = 3;
+export const TAB_NAMES = ["CODE", "SPRITES", "MAP", "SFX"];
 
 // ─── Bracket / auto-close tables ─────────────────────────────────────────────
 

@@ -361,7 +361,8 @@ bool dtr_import_tiled(const char *tmj_path, dtr_map_level_t **out_level, JSConte
                     JS_FreeValue(ctx, layer_obj);
                     continue;
                 }
-                layer->object_count = obj_count;
+                layer->object_count    = obj_count;
+                layer->object_capacity = obj_count;
 
                 for (int32_t oi = 0; oi < obj_count; ++oi) {
                     JSValue           oobj;

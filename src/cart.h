@@ -51,6 +51,7 @@ typedef struct dtr_map_layer {
     int32_t          *tiles; /**< Tile indices, width*height (tile layers) */
     dtr_map_object_t *objects;
     int32_t           object_count;
+    int32_t           object_capacity;
 } dtr_map_layer_t;
 
 /* ------------------------------------------------------------------------ */

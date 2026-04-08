@@ -154,6 +154,25 @@ export const st = {
     mapRenameTxt: "", // layer rename input text
     mapSpacePan: false, // spacebar+drag panning active
 
+    // sfx editor state
+    sfxSel: 0, // selected SFX index (0-63)
+    sfxNote: 0, // selected note column (0-31)
+    sfxField: 0, // 0=pitch, 1=waveform, 2=volume, 3=effect
+    sfxScrollX: 0, // horizontal scroll in note columns
+    sfxSpeed: 8, // current SFX speed
+    sfxLoopStart: 0, // loop start note
+    sfxLoopEnd: 0, // loop end note (0 = no loop)
+    sfxPlaying: false, // preview playing
+    sfxDirty: false, // unsaved changes
+    sfxOctave: 1, // default octave for new notes (0-7)
+    sfxWave: 0, // current waveform for painting
+    sfxVol: 5, // current volume for painting (0-7)
+    sfxFx: 0, // current effect for painting (0-7)
+    sfxListScroll: 0, // SFX list scroll offset
+    sfxClipboard: null, // copied SFX data {notes[], speed, loopStart, loopEnd}
+    sfxPlayStart: 0, // sys.time() when playback started (for position cursor)
+    sfxSpaceHeld: false, // guard against Space key repeat toggling
+
     // caches (invalidated on edit)
     _blockStateCache: [],
     _blockStateDirty: true,

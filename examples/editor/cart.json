@@ -24,7 +24,7 @@
     "flags": "flags.hex"
   },
   "audio": {
-    "channels": 0
+    "channels": 4
   },
   "input": {
     "default_mappings": {}

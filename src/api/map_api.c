@@ -1122,12 +1122,20 @@ js_map_add_object(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst 
         return JS_NewInt32(ctx, -1);
     }
 
-    new_objs =
-        DTR_REALLOC(layer->objects, (size_t)(layer->object_count + 1) * sizeof(dtr_map_object_t));
-    if (new_objs == NULL) {
-        return JS_NewInt32(ctx, -1);
+    if (layer->object_count >= layer->object_capacity) {
+        int32_t new_cap;
+
+        new_cap = layer->object_capacity < 8 ? 8 : layer->object_capacity * 2;
+        if (new_cap > CONSOLE_MAX_MAP_OBJECTS) {
+            new_cap = CONSOLE_MAX_MAP_OBJECTS;
+        }
+        new_objs = DTR_REALLOC(layer->objects, (size_t)new_cap * sizeof(dtr_map_object_t));
+        if (new_objs == NULL) {
+            return JS_NewInt32(ctx, -1);
+        }
+        layer->objects         = new_objs;
+        layer->object_capacity = new_cap;
     }
-    layer->objects = new_objs;
 
     obj = &layer->objects[layer->object_count];
     SDL_memset(obj, 0, sizeof(dtr_map_object_t));
