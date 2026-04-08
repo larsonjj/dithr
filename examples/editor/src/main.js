@@ -25,13 +25,8 @@ import { updateFind, drawFind, updateGoto, drawGoto } from "./find.js";
 import { updateBrowser, drawBrowser } from "./browser.js";
 import { updateSpriteEditor, drawSpriteEditor } from "./sprite_editor.js";
 import { updateMapEditor, drawMapEditor, mapTextInput } from "./map_editor.js";
-import { updateSfxEditor, drawSfxEditor, loadSfxFromDisk, saveSfxToDisk } from "./sfx_editor.js";
-import {
-    updateMusicEditor,
-    drawMusicEditor,
-    loadMusFromDisk,
-    saveMusToDisk,
-} from "./music_editor.js";
+import { updateSfxEditor, drawSfxEditor, loadSfxFromDisk } from "./sfx_editor.js";
+import { updateMusicEditor, drawMusicEditor, loadMusFromDisk } from "./music_editor.js";
 
 // ─── Text input event handler ────────────────────────────────────────────────
 

@@ -7,22 +7,7 @@
 // All 4 channels play simultaneously via the C synth voice pool.
 
 import { st } from "./state.js";
-import {
-    FB_W,
-    FB_H,
-    CW,
-    CH,
-    TAB_H,
-    FG,
-    BG,
-    PANELBG,
-    SEPC,
-    SELBG,
-    GUTFG,
-    GUTBG,
-    FOOTBG,
-    FOOTFG,
-} from "./config.js";
+import { FB_W, FB_H, CW, TAB_H, FG, BG, PANELBG, SEPC, GUTFG, FOOTBG, FOOTFG } from "./config.js";
 import { clamp, modKey, status } from "./helpers.js";
 import { TAB_SFX } from "./config.js";
 

@@ -15,9 +15,7 @@ import {
     BG,
     PANELBG,
     SEPC,
-    SELBG,
     GUTFG,
-    GUTBG,
     FOOTBG,
     FOOTFG,
 } from "./config.js";
@@ -31,11 +29,9 @@ const TOOLBAR_H = 14; // SFX toolbar height (nav + play buttons)
 const GRID_X = LIST_W + 1; // note grid left edge
 const GRID_Y = TAB_H; // note grid top edge
 const GRID_W = FB_W - GRID_X; // note grid total width
-const GRID_H = FB_H - TAB_H - FOOT_H; // note grid total height
 const NOTE_W = 18; // column width per note
 const ROW_H = 14; // row height for each field
 const HEADER_H = 12; // column header height
-const FIELD_NAMES = ["pitch", "wave", "vol", "fx", "oct"];
 const FIELD_H = ROW_H * 5; // total height of the 5 field rows
 const LABEL_W = 30; // row label width
 const VISIBLE_NOTES = Math.floor((GRID_W - LABEL_W) / NOTE_W); // notes visible
@@ -1173,7 +1169,6 @@ function drawNoteGrid(playNote) {
 
     // ── Row labels ──
     let rowLabels = ["NOTE", "WAVE", "VOL", "FX", "OCT"];
-    let rowColors = [NOTE_COL, WAVE_COL, VOL_COL, FX_COL, NOTE_COL];
     for (let r = 0; r < 5; r++) {
         let yy = contentY + r * ROW_H + 3;
         gfx.print(rowLabels[r], GRID_X + 1, yy, r === st.sfxField ? FG : GUTFG);
