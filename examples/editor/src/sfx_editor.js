@@ -442,12 +442,15 @@ export function updateSfxEditor(dt) {
                 // Use the note's current octave, or default to MIN_INT_OCT for new notes
                 let data = curSfx();
                 let curNote = data.notes[st.sfxNote];
+                let isNew = curNote.pitch === 0;
                 let oct = curNote.pitch > 0 ? Math.floor((curNote.pitch - 1) / 12) : MIN_INT_OCT;
                 let pitch = makePitch(pk.note, oct);
                 data.notes[st.sfxNote].pitch = pitch;
-                data.notes[st.sfxNote].waveform = st.sfxWave;
-                data.notes[st.sfxNote].volume = st.sfxVol;
-                data.notes[st.sfxNote].effect = st.sfxFx;
+                if (isNew) {
+                    data.notes[st.sfxNote].waveform = st.sfxWave;
+                    data.notes[st.sfxNote].volume = st.sfxVol;
+                    data.notes[st.sfxNote].effect = st.sfxFx;
+                }
                 saveSfx(st.sfxSel, data);
                 st.sfxDirty = true;
                 // Auto-advance cursor
