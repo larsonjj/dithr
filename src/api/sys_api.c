@@ -464,12 +464,12 @@ static JSValue js_sys_perf(JSContext *ctx, JSValueConst this_val, int argc, JSVa
     con = dtr_api_get_console(ctx);
 
     obj = JS_NewObject(ctx);
-    JS_SetPropertyStr(ctx, obj, "cpu",
-                      JS_NewFloat64(ctx, (double)(con->delta * (float)con->target_fps)));
+    JS_SetPropertyStr(
+        ctx, obj, "cpu", JS_NewFloat64(ctx, (double)(con->delta * (float)con->target_fps)));
     JS_SetPropertyStr(ctx, obj, "update_ms", JS_NewFloat64(ctx, (double)con->update_ms));
     JS_SetPropertyStr(ctx, obj, "draw_ms", JS_NewFloat64(ctx, (double)con->draw_ms));
-    JS_SetPropertyStr(ctx, obj, "fps",
-                      JS_NewFloat64(ctx, 1.0 / (con->delta > 0.0f ? con->delta : 0.016f)));
+    JS_SetPropertyStr(
+        ctx, obj, "fps", JS_NewFloat64(ctx, 1.0 / (con->delta > 0.0f ? con->delta : 0.016f)));
     JS_SetPropertyStr(ctx, obj, "frame", JS_NewFloat64(ctx, (double)con->frame_count));
     return obj;
 }

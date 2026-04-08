@@ -3,9 +3,10 @@
  * \brief           JS gfx namespace — drawing, palette, sprites
  */
 
-#include "../graphics.h"
 #include "../cart.h"
+#include "../graphics.h"
 #include "api_common.h"
+
 #include <SDL3_image/SDL_image.h>
 
 #define GFX(ctx) (dtr_api_get_console(ctx)->graphics)
@@ -989,14 +990,14 @@ static JSValue js_gfx_peek(JSContext *ctx, JSValueConst this_val, int argc, JSVa
 static JSValue
 js_gfx_export_png(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
-    dtr_graphics_t    *gfx;
-    dtr_console_t     *con;
-    const char        *rel;
-    char               full[1024];
-    SDL_Surface       *surface;
-    uint32_t          *rgba;
-    int32_t            w, h, total;
-    bool               ok;
+    dtr_graphics_t *gfx;
+    dtr_console_t  *con;
+    const char     *rel;
+    char            full[1024];
+    SDL_Surface    *surface;
+    uint32_t       *rgba;
+    int32_t         w, h, total;
+    bool            ok;
 
     (void)this_val;
     if (argc < 1) {
@@ -1039,12 +1040,11 @@ js_gfx_export_png(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst 
         uint8_t  g = (uint8_t)(c >> 16);
         uint8_t  b = (uint8_t)(c >> 8);
         uint8_t  a = (uint8_t)(c);
-        rgba[i] = ((uint32_t)a << 24) | ((uint32_t)b << 16) |
-                  ((uint32_t)g << 8)  | (uint32_t)r;
+        rgba[i]    = ((uint32_t)a << 24) | ((uint32_t)b << 16) | ((uint32_t)g << 8) | (uint32_t)r;
     }
 
-    surface = SDL_CreateSurfaceFrom(w, h, SDL_PIXELFORMAT_ABGR8888,
-                                    rgba, w * (int32_t)sizeof(uint32_t));
+    surface =
+        SDL_CreateSurfaceFrom(w, h, SDL_PIXELFORMAT_ABGR8888, rgba, w * (int32_t)sizeof(uint32_t));
     if (surface == NULL) {
         SDL_free(rgba);
         return JS_FALSE;

@@ -1131,7 +1131,7 @@ js_synth_note_idx(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst 
     if (channel >= 0 && channel < 4) {
         dtr_synth_voice_t *v = &store->play[channel];
         SDL_LockAudioStream(v->stream);
-        bool p = v->playing;
+        bool    p   = v->playing;
         int32_t idx = v->note_idx;
         SDL_UnlockAudioStream(v->stream);
         if (p) {
