@@ -488,6 +488,17 @@ export function mapTextInput(ch) {
     }
 }
 
+/** Save map data to disk as JSON. */
+export function saveMapToDisk() {
+    let data = map.data();
+    if (data) {
+        let json = JSON.stringify(data);
+        let ok = sys.writeFile("map.json", json);
+        status(ok ? "Map saved" : "Map save failed");
+        if (ok) st.mapDirty = false;
+    }
+}
+
 // ─── Update ──────────────────────────────────────────────────────────────────
 
 export function updateMapEditor() {
@@ -983,13 +994,7 @@ export function updateMapEditor() {
     // ── Save map (Ctrl+S) ──
     if (ctrl && key.btnp(key.S) && !shift) {
         if (st.mapSelFloat) dropSelection();
-        let data = map.data();
-        if (data) {
-            let json = JSON.stringify(data);
-            let ok = sys.writeFile("map.json", json);
-            status(ok ? "Map saved" : "Map save failed");
-            if (ok) st.mapDirty = false;
-        }
+        saveMapToDisk();
     }
 }
 
@@ -1790,7 +1795,7 @@ export function drawMapEditor() {
             info += " [" + (o.name || "obj") + "]";
         }
     }
-    if (st.mapDirty) info = "\u2022 " + info;
+    if (st.mapDirty) info = "* " + info;
     gfx.print(info, CW, footTextY, FOOTFG);
     // Level name on right
     let lvl = map.current_level();

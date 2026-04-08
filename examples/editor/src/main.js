@@ -1,5 +1,5 @@
 // ─── Editor entry point (ES module) ──────────────────────────────────────────
-
+ 
 import { st } from "./state.js";
 import {
     TAB_CODE,
@@ -17,16 +17,28 @@ import {
     GUTFG,
 } from "./config.js";
 import { ensureVisible, resetBlink, status, handleTabSwitch, modKey, MOD_NAME } from "./helpers.js";
-import { deleteSel, pushUndo, openFile, storeFileState, loadFileState } from "./buffer.js";
+import {
+    deleteSel,
+    pushUndo,
+    openFile,
+    storeFileState,
+    loadFileState,
+    saveFile,
+} from "./buffer.js";
 import { vimNormal } from "./vim.js";
 import { updateEdit } from "./edit.js";
 import { drawTabBar, drawFileTabs, drawEditor } from "./draw.js";
 import { updateFind, drawFind, updateGoto, drawGoto } from "./find.js";
 import { updateBrowser, drawBrowser } from "./browser.js";
-import { updateSpriteEditor, drawSpriteEditor } from "./sprite_editor.js";
-import { updateMapEditor, drawMapEditor, mapTextInput } from "./map_editor.js";
-import { updateSfxEditor, drawSfxEditor, loadSfxFromDisk } from "./sfx_editor.js";
-import { updateMusicEditor, drawMusicEditor, loadMusFromDisk } from "./music_editor.js";
+import { updateSpriteEditor, drawSpriteEditor, saveSpritesToDisk } from "./sprite_editor.js";
+import { updateMapEditor, drawMapEditor, mapTextInput, saveMapToDisk } from "./map_editor.js";
+import { updateSfxEditor, drawSfxEditor, loadSfxFromDisk, saveSfxToDisk } from "./sfx_editor.js";
+import {
+    updateMusicEditor,
+    drawMusicEditor,
+    loadMusFromDisk,
+    saveMusToDisk,
+} from "./music_editor.js";
 
 // ─── Text input event handler ────────────────────────────────────────────────
 
@@ -302,6 +314,17 @@ export function _update(dt) {
         return;
     }
 
+    // Save All (Ctrl+Shift+S)
+    if (modKey() && (key.btn(key.LSHIFT) || key.btn(key.RSHIFT)) && key.btnp(key.S)) {
+        saveFile();
+        saveSpritesToDisk();
+        saveMapToDisk();
+        saveSfxToDisk();
+        saveMusToDisk();
+        status("All saved");
+        return;
+    }
+
     // Help overlay toggle (F1)
     if (key.btnp(key.F1)) {
         st.helpOverlay = !st.helpOverlay;
@@ -402,6 +425,7 @@ function drawHelpOverlay() {
             MOD + "+G      Go to line",
             MOD + "+O      Open file",
             MOD + "+S      Save",
+            MOD + "+Sh+S   Save all",
             MOD + "+W      Close file",
             MOD + "+Tab    Next file",
             MOD + "+Sh+Tab Prev file",
@@ -457,6 +481,7 @@ function drawHelpOverlay() {
             MOD + "+Z      Undo",
             MOD + "+Y      Redo",
             MOD + "+S      Save sprites",
+            MOD + "+Sh+S   Save all",
             "Escape      Cancel shape",
             "",
             "── Navigation ──",
@@ -513,6 +538,7 @@ function drawHelpOverlay() {
             MOD + "+Z      Undo",
             MOD + "+Y      Redo",
             MOD + "+S      Save map",
+            MOD + "+Sh+S   Save all",
             "",
             "── Auto-tile ──",
             MOD + "+A      Toggle auto-tile",
@@ -581,6 +607,7 @@ function drawHelpOverlay() {
             "",
             "── File ──",
             MOD + "+S      Save SFX to disk",
+            MOD + "+Sh+S   Save all",
             MOD + "+Sh+E   Export WAV",
             "",
             "── Settings ──",
@@ -627,6 +654,7 @@ function drawHelpOverlay() {
             "",
             "── File ──",
             MOD + "+S      Save music to disk",
+            MOD + "+Sh+S   Save all",
             "",
             "── Tabs ──",
             MOD + "+1-5    Code/Spr/Map/SFX/Mus",

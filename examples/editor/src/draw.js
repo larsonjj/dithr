@@ -62,13 +62,12 @@ export function drawTabBar() {
     for (let i = 0; i < TAB_NAMES.length; i++) {
         let dirtyFlags = [st.dirty, st.sprDirty, st.mapDirty, st.sfxDirty, st.musDirty];
         let dirty = dirtyFlags[i] || false;
-        let label = (dirty ? "\x07" : " ") + (i + 1) + ":" + TAB_NAMES[i] + " ";
+        let label = " " + (i + 1) + ":" + TAB_NAMES[i] + " ";
         let w = label.length * CW;
         let hovered = mx >= tx && mx < tx + w && my < TAB_H;
         if (i === st.activeTab) {
             gfx.rectfill(tx, 0, tx + w - 1, TAB_H - 1, BG);
             gfx.print(label, tx, textY, TABFG);
-            if (dirty) gfx.print("\x07", tx, textY, DIRTCOL);
             // underline
             gfx.line(tx, TAB_H - 1, tx + w - 1, TAB_H - 1, TABFG);
         } else {
@@ -76,7 +75,12 @@ export function drawTabBar() {
                 gfx.rectfill(tx, 0, tx + w - 1, TAB_H - 1, TABHOV);
             }
             gfx.print(label, tx, textY, hovered ? TABFG : TABINACT);
-            if (dirty) gfx.print("\x07", tx, textY, DIRTCOL);
+        }
+        // Draw dirty dot (2x2 filled rect centered in the leading space)
+        if (dirty) {
+            let dx = tx + Math.floor(CW / 2) - 1;
+            let dy = textY + Math.floor(CH / 2) - 1;
+            gfx.rectfill(dx, dy, dx + 1, dy + 1, DIRTCOL);
         }
         // Click to switch tabs
         if (mouse.btnp(0) && my < TAB_H && mx >= tx && mx < tx + w) {
@@ -103,7 +107,7 @@ export function drawFileTabs() {
         let f = st.openFiles[i];
         let base = f.path.split("/").pop();
         let dirty = i === st.fileIdx ? st.dirty : f.dirty;
-        let label = (dirty ? "\x07" : " ") + base + " ";
+        let label = " " + base + " ";
         let w = label.length * CW;
         let hovered = mx >= tx && mx < tx + w && my >= y && my < y + h;
         if (i === st.fileIdx) {
@@ -113,6 +117,12 @@ export function drawFileTabs() {
         } else {
             if (hovered) gfx.rectfill(tx, y, tx + w - 1, y + h - 1, TABHOV);
             gfx.print(label, tx, textY, hovered ? FG : TABINACT);
+        }
+        // Draw dirty dot
+        if (dirty) {
+            let dx = tx + Math.floor(CW / 2) - 1;
+            let dy = textY + Math.floor(CH / 2) - 1;
+            gfx.rectfill(dx, dy, dx + 1, dy + 1, DIRTCOL);
         }
         if (mouse.btnp(0) && hovered) {
             switchToFile(i);

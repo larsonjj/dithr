@@ -410,6 +410,14 @@ function handleSelection(mBtn, mPress, base, cw, ch) {
     if (!mBtn) st.sprSelDrag = null;
 }
 
+/** Save sprite sheet + flags to disk. */
+export function saveSpritesToDisk() {
+    let ok1 = sys.writeFile("sprites.hex", gfx.sheetData());
+    let ok2 = sys.writeFile("flags.hex", gfx.flagsData());
+    if (ok1 && ok2) st.sprDirty = false;
+    status(ok1 && ok2 ? "Sprites saved" : "Sprite save failed");
+}
+
 // ─── Update ──────────────────────────────────────────────────────────────────
 
 export function updateSpriteEditor(dt) {
@@ -666,10 +674,7 @@ export function updateSpriteEditor(dt) {
 
     // Save sprite sheet to disk (Ctrl+S)
     if (ctrl && key.btnp(key.S)) {
-        let ok1 = sys.writeFile("sprites.hex", gfx.sheetData());
-        let ok2 = sys.writeFile("flags.hex", gfx.flagsData());
-        if (ok1 && ok2) st.sprDirty = false;
-        status(ok1 && ok2 ? "Sprites saved" : "Sprite save failed");
+        saveSpritesToDisk();
     }
 
     // ── Palette (below sprite grid, left panel) ──
