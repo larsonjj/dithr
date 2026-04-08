@@ -74,6 +74,18 @@ const WAVE_COLORS = [
 
 let sfxHasData = null;
 let sfxSparkCache = null; // cached pitch arrays per SFX (null = needs rebuild)
+let cachedWaveNames = null;
+let cachedFxNames = null;
+
+function getWaveNames() {
+    if (!cachedWaveNames) cachedWaveNames = synth.waveNames();
+    return cachedWaveNames;
+}
+
+function getFxNames() {
+    if (!cachedFxNames) cachedFxNames = synth.fxNames();
+    return cachedFxNames;
+}
 
 function initHasDataCache() {
     sfxHasData = new Array(64);
@@ -451,6 +463,44 @@ export function updateSfxEditor(dt) {
         return;
     }
 
+    // ── Select all (Ctrl+A) ──
+    if (ctrl && key.btnp(key.A)) {
+        st.sfxSelStart = 0;
+        st.sfxSelEnd = 31;
+        st.sfxNote = 31;
+        status("Selected all notes");
+        return;
+    }
+
+    // ── Duplicate SFX to next empty slot (Ctrl+D) ──
+    if (ctrl && key.btnp(key.D)) {
+        let data = curSfx();
+        let target = -1;
+        for (let i = st.sfxSel + 1; i < 64; i++) {
+            if (!sfxHasData || !sfxHasData[i]) {
+                target = i;
+                break;
+            }
+        }
+        if (target < 0) {
+            for (let i = 0; i < st.sfxSel; i++) {
+                if (!sfxHasData || !sfxHasData[i]) {
+                    target = i;
+                    break;
+                }
+            }
+        }
+        if (target >= 0) {
+            saveSfx(target, cloneSfx(data));
+            markSfxHasData(target, true);
+            st.sfxDirty = true;
+            status("Duplicated SFX " + st.sfxSel + " → " + target);
+        } else {
+            status("No empty SFX slot");
+        }
+        return;
+    }
+
     // ── SFX list navigation ──
     if (ctrl && key.btnp(key.UP)) {
         st.sfxSel = clamp(st.sfxSel - 1, 0, 63);
@@ -500,6 +550,20 @@ export function updateSfxEditor(dt) {
     if (!ctrl && !shift && key.btnp(key.RIGHT)) {
         clearSelection();
         st.sfxNote = clamp(st.sfxNote + 1, 0, 31);
+        ensureNoteVisible();
+        return;
+    }
+
+    // ── Home/End keys ──
+    if (key.btnp(key.HOME)) {
+        clearSelection();
+        st.sfxNote = 0;
+        ensureNoteVisible();
+        return;
+    }
+    if (key.btnp(key.END)) {
+        clearSelection();
+        st.sfxNote = 31;
         ensureNoteVisible();
         return;
     }
@@ -581,14 +645,22 @@ export function updateSfxEditor(dt) {
         if (st.sfxField === 1) {
             pushSfxUndo();
             let data = curSfx();
-            let nw = (data.notes[st.sfxNote].waveform + 1) % 8;
-            setNoteField(st.sfxNote, "waveform", nw, data);
-            let names = synth.waveNames();
-            status("Note wave: " + names[nw]);
+            if (hasSelection()) {
+                let lo = selMin(),
+                    hi = selMax();
+                let nw = (data.notes[st.sfxNote].waveform + 1) % 8;
+                for (let i = lo; i <= hi; i++) data.notes[i].waveform = nw;
+                saveSfx(st.sfxSel, data);
+                st.sfxDirty = true;
+                status("Wave " + getWaveNames()[nw] + " (" + lo + "-" + hi + ")");
+            } else {
+                let nw = (data.notes[st.sfxNote].waveform + 1) % 8;
+                setNoteField(st.sfxNote, "waveform", nw, data);
+                status("Note wave: " + getWaveNames()[nw]);
+            }
         } else {
             st.sfxWave = (st.sfxWave + 1) % 8;
-            let names = synth.waveNames();
-            status("Brush wave: " + names[st.sfxWave]);
+            status("Brush wave: " + getWaveNames()[st.sfxWave]);
         }
         return;
     }
@@ -598,14 +670,22 @@ export function updateSfxEditor(dt) {
         if (st.sfxField === 3) {
             pushSfxUndo();
             let data = curSfx();
-            let nf = (data.notes[st.sfxNote].effect + 1) % 8;
-            setNoteField(st.sfxNote, "effect", nf, data);
-            let names = synth.fxNames();
-            status("Note fx: " + names[nf]);
+            if (hasSelection()) {
+                let lo = selMin(),
+                    hi = selMax();
+                let nf = (data.notes[st.sfxNote].effect + 1) % 8;
+                for (let i = lo; i <= hi; i++) data.notes[i].effect = nf;
+                saveSfx(st.sfxSel, data);
+                st.sfxDirty = true;
+                status("FX " + getFxNames()[nf] + " (" + lo + "-" + hi + ")");
+            } else {
+                let nf = (data.notes[st.sfxNote].effect + 1) % 8;
+                setNoteField(st.sfxNote, "effect", nf, data);
+                status("Note fx: " + getFxNames()[nf]);
+            }
         } else {
             st.sfxFx = (st.sfxFx + 1) % 8;
-            let names = synth.fxNames();
-            status("Brush fx: " + names[st.sfxFx]);
+            status("Brush fx: " + getFxNames()[st.sfxFx]);
         }
         return;
     }
@@ -615,7 +695,17 @@ export function updateSfxEditor(dt) {
         if (key.btnp(key.NUM1 + i)) {
             if (st.sfxField === 2) {
                 pushSfxUndo();
-                setNoteField(st.sfxNote, "volume", i);
+                if (hasSelection()) {
+                    let data = curSfx();
+                    let lo = selMin(),
+                        hi = selMax();
+                    for (let j = lo; j <= hi; j++) data.notes[j].volume = i;
+                    saveSfx(st.sfxSel, data);
+                    st.sfxDirty = true;
+                    status("Vol " + i + " (" + lo + "-" + hi + ")");
+                } else {
+                    setNoteField(st.sfxNote, "volume", i);
+                }
             } else if (st.sfxField === 4) {
                 let data = curSfx();
                 let note = data.notes[st.sfxNote];
@@ -790,7 +880,17 @@ export function updateSfxEditor(dt) {
         for (let i = 0; i <= 7; i++) {
             if (key.btnp(key.NUM1 + i)) {
                 pushSfxUndo();
-                setNoteField(st.sfxNote, "waveform", i);
+                if (hasSelection()) {
+                    let data = curSfx();
+                    let lo = selMin(),
+                        hi = selMax();
+                    for (let j = lo; j <= hi; j++) data.notes[j].waveform = i;
+                    saveSfx(st.sfxSel, data);
+                    st.sfxDirty = true;
+                    status("Wave " + getWaveNames()[i] + " (" + lo + "-" + hi + ")");
+                } else {
+                    setNoteField(st.sfxNote, "waveform", i);
+                }
                 return;
             }
         }
@@ -801,7 +901,17 @@ export function updateSfxEditor(dt) {
         for (let i = 0; i <= 7; i++) {
             if (key.btnp(key.NUM1 + i)) {
                 pushSfxUndo();
-                setNoteField(st.sfxNote, "effect", i);
+                if (hasSelection()) {
+                    let data = curSfx();
+                    let lo = selMin(),
+                        hi = selMax();
+                    for (let j = lo; j <= hi; j++) data.notes[j].effect = i;
+                    saveSfx(st.sfxSel, data);
+                    st.sfxDirty = true;
+                    status("FX " + getFxNames()[i] + " (" + lo + "-" + hi + ")");
+                } else {
+                    setNoteField(st.sfxNote, "effect", i);
+                }
                 return;
             }
         }
@@ -952,9 +1062,10 @@ function ensureNoteVisible() {
 
 export function drawSfxEditor() {
     let playNote = getPlaybackNote();
+    let data = curSfx();
     drawSfxList();
     drawNoteGrid(playNote);
-    drawFooter();
+    drawFooter(data);
 }
 
 function drawSfxList() {
@@ -1306,12 +1417,10 @@ function drawWavePreview(data, playNote) {
     gfx.print("OCT", GRID_X + 1, previewY + 2, GUTFG);
 }
 
-function drawFooter() {
+function drawFooter(data) {
     let fy = FB_H - FOOT_H;
     gfx.rectfill(0, fy, FB_W - 1, FB_H - 1, FOOTBG);
     gfx.line(0, fy, FB_W - 1, fy, SEPC);
-
-    let data = curSfx();
 
     let tx = 4;
     let ty = fy + 3;
@@ -1340,15 +1449,26 @@ function drawFooter() {
         tx += CW * 10;
     }
 
-    // Wave/effect name tooltip — show name when cursor is on wave or effect row
+    // Wave/effect name and frequency tooltip
     {
         let note = data.notes[st.sfxNote];
         if (st.sfxField === 1) {
-            let names = synth.waveNames();
-            gfx.print("W:" + names[note.pitch > 0 ? note.waveform : st.sfxWave], tx, ty, WAVE_COL);
+            gfx.print(
+                "W:" + getWaveNames()[note.pitch > 0 ? note.waveform : st.sfxWave],
+                tx,
+                ty,
+                WAVE_COL,
+            );
         } else if (st.sfxField === 3) {
-            let names = synth.fxNames();
-            gfx.print("FX:" + names[note.pitch > 0 ? note.effect : st.sfxFx], tx, ty, FX_COL);
+            gfx.print(
+                "FX:" + getFxNames()[note.pitch > 0 ? note.effect : st.sfxFx],
+                tx,
+                ty,
+                FX_COL,
+            );
+        } else if (note.pitch > 0 && typeof synth.pitchFreq === "function") {
+            let hz = synth.pitchFreq(note.pitch);
+            gfx.print(Math.round(hz) + "Hz", tx, ty, GUTFG);
         }
     }
 

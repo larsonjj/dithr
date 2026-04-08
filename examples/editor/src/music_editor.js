@@ -24,6 +24,7 @@ import {
     FOOTFG,
 } from "./config.js";
 import { clamp, modKey, status } from "./helpers.js";
+import { TAB_SFX } from "./config.js";
 
 // ─── Layout ──────────────────────────────────────────────────────────────────
 
@@ -422,6 +423,79 @@ export function updateMusicEditor(dt) {
         return;
     }
 
+    // S key: solo current channel (mute all others, or unsolo to unmute all)
+    if (key.btnp(key.S)) {
+        let allOthersMuted = true;
+        for (let c = 0; c < NUM_CHANNELS; c++) {
+            if (c !== st.musCol && !st.musMute[c]) {
+                allOthersMuted = false;
+                break;
+            }
+        }
+        if (allOthersMuted && !st.musMute[st.musCol]) {
+            // Unsolo: unmute all
+            for (let c = 0; c < NUM_CHANNELS; c++) {
+                st.musMute[c] = false;
+                if (st.musPlaying) {
+                    let pat = st.musPatterns[st.musPlayRow];
+                    if (pat.ch[c] >= 0) synth.play(pat.ch[c], c);
+                }
+            }
+            status("All channels unmuted");
+        } else {
+            // Solo: mute all others, unmute this
+            for (let c = 0; c < NUM_CHANNELS; c++) {
+                if (c === st.musCol) {
+                    st.musMute[c] = false;
+                    if (st.musPlaying) {
+                        let pat = st.musPatterns[st.musPlayRow];
+                        if (pat.ch[c] >= 0) synth.play(pat.ch[c], c);
+                    }
+                } else {
+                    st.musMute[c] = true;
+                    if (st.musPlaying) synth.stop(c);
+                }
+            }
+            status("Solo CH" + st.musCol);
+        }
+        return;
+    }
+
+    // Tab: jump to SFX editor for the selected channel's SFX
+    if (key.btnp(key.TAB)) {
+        let sfxIdx = st.musPatterns[st.musSel].ch[st.musCol];
+        if (sfxIdx >= 0) {
+            st.sfxSel = sfxIdx;
+            st.activeTab = TAB_SFX;
+            status("SFX " + (sfxIdx < 10 ? "0" : "") + sfxIdx);
+        }
+        return;
+    }
+
+    // Ctrl+Shift+I: insert pattern row (shift rows down)
+    if (ctrl && shift && key.btnp(key.I)) {
+        pushMusUndo();
+        for (let i = 63; i > st.musSel; i--) {
+            st.musPatterns[i] = st.musPatterns[i - 1];
+        }
+        st.musPatterns[st.musSel] = { ch: [-1, -1, -1, -1], flags: FLAG_NONE };
+        st.musDirty = true;
+        status("Inserted row at " + st.musSel);
+        return;
+    }
+
+    // Ctrl+Shift+Delete: delete pattern row (shift rows up)
+    if (ctrl && shift && (key.btnp(key.DELETE) || key.btnp(key.BACKSPACE))) {
+        pushMusUndo();
+        for (let i = st.musSel; i < 63; i++) {
+            st.musPatterns[i] = st.musPatterns[i + 1];
+        }
+        st.musPatterns[63] = { ch: [-1, -1, -1, -1], flags: FLAG_NONE };
+        st.musDirty = true;
+        status("Deleted row " + st.musSel);
+        return;
+    }
+
     // Mouse
     handleMusMouse();
 }
@@ -489,8 +563,19 @@ export function drawMusicEditor() {
         let cx = LABEL_W + c * COL_W;
         let isSelCol = c === st.musCol;
         let muted = st.musMute[c];
+        // Check if this channel is soloed (only this one unmuted)
+        let soloed = !muted;
+        if (soloed) {
+            for (let o = 0; o < NUM_CHANNELS; o++) {
+                if (o !== c && !st.musMute[o]) {
+                    soloed = false;
+                    break;
+                }
+            }
+        }
         gfx.print("CH" + c, cx + 8, GRID_Y + 2, muted ? 17 : isSelCol ? FG : CH_COLS[c]);
-        if (muted) gfx.print("M", cx + COL_W - 12, GRID_Y + 2, 8);
+        if (soloed) gfx.print("S", cx + COL_W - 12, GRID_Y + 2, 11);
+        else if (muted) gfx.print("M", cx + COL_W - 12, GRID_Y + 2, 8);
     }
     // Flag column header
     gfx.print("FLG", LABEL_W + NUM_CHANNELS * COL_W + 4, GRID_Y + 2, GUTFG);

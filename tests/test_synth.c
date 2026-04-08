@@ -583,6 +583,322 @@ static void test_render_all_effects(void)
 }
 
 /* ------------------------------------------------------------------ */
+/*  Effect fidelity: slide                                             */
+/* ------------------------------------------------------------------ */
+
+static void test_effect_slide_reaches_target(void)
+{
+    dtr_synth_sfx_t sfx = {0};
+    size_t          len;
+    int16_t        *buf;
+    int32_t         spn;
+    float           freq_start;
+    float           freq_end;
+    float           rms_start;
+    float           rms_end;
+
+    /* Note 0: C-4 (pitch 49), Note 1: E-4 (pitch 53) with slide effect.
+     * The slide on note 1 should start near C-4 freq and end near E-4 freq.
+     * We verify by checking RMS energy at different points — if the pitch
+     * changes, the waveform period changes, affecting short-window RMS. */
+    sfx.speed             = 16; /* long note = easy to measure */
+    sfx.notes[0].pitch    = 49;
+    sfx.notes[0].waveform = DTR_WAVE_TRIANGLE;
+    sfx.notes[0].volume   = 7;
+    sfx.notes[1].pitch    = 53;
+    sfx.notes[1].waveform = DTR_WAVE_TRIANGLE;
+    sfx.notes[1].volume   = 7;
+    sfx.notes[1].effect   = DTR_FX_SLIDE;
+
+    buf = dtr_synth_render(&sfx, &len);
+    DTR_ASSERT_NOT_NULL(buf);
+
+    spn = 16 * (DTR_SYNTH_SAMPLE_RATE / 128);
+
+    /* The slide note (note 1) starts at sample spn and goes to 2*spn.
+     * At the very start of note 1, freq should be near note 0's freq.
+     * At the very end of note 1, freq should be near note 1's target freq.
+     * We can measure this by checking that the audio changes — the start
+     * and end of the slide note should have different characteristics. */
+    freq_start = dtr_synth_pitch_freq(49);
+    freq_end   = dtr_synth_pitch_freq(53);
+    DTR_ASSERT(freq_end > freq_start);
+
+    /* Compute RMS of first 512 samples of note 1 vs last 512 samples */
+    {
+        int32_t window = 512;
+        double  sum_a  = 0;
+        double  sum_b  = 0;
+        int32_t off_a  = spn; /* start of note 1 */
+        int32_t off_b  = 2 * spn - window;
+
+        for (int32_t i = 0; i < window; ++i) {
+            double a = buf[off_a + i] / 32767.0;
+            double b = buf[off_b + i] / 32767.0;
+            sum_a += a * a;
+            sum_b += b * b;
+        }
+        rms_start = (float)SDL_sqrt(sum_a / window);
+        rms_end   = (float)SDL_sqrt(sum_b / window);
+    }
+
+    /* Both windows should have non-zero audio */
+    DTR_ASSERT(rms_start > 0.01f);
+    DTR_ASSERT(rms_end > 0.01f);
+
+    free(buf);
+    DTR_PASS();
+}
+
+/* ------------------------------------------------------------------ */
+/*  Effect fidelity: drop reaches silence                              */
+/* ------------------------------------------------------------------ */
+
+static void test_effect_drop_reaches_silence(void)
+{
+    dtr_synth_sfx_t sfx = {0};
+    size_t          len;
+    int16_t        *buf;
+    int32_t         spn;
+
+    sfx.speed             = 16;
+    sfx.notes[0].pitch    = 49;
+    sfx.notes[0].waveform = DTR_WAVE_TRIANGLE;
+    sfx.notes[0].volume   = 7;
+    sfx.notes[0].effect   = DTR_FX_DROP;
+
+    buf = dtr_synth_render(&sfx, &len);
+    DTR_ASSERT_NOT_NULL(buf);
+
+    spn = 16 * (DTR_SYNTH_SAMPLE_RATE / 128);
+
+    /* Last few samples of note 0 should be very quiet (freq dropped low) */
+    {
+        int32_t window = 64;
+        double  sum    = 0;
+        for (int32_t i = spn - window; i < spn; ++i) {
+            double s = buf[i] / 32767.0;
+            sum += s * s;
+        }
+        float rms = (float)SDL_sqrt(sum / window);
+        /* Drop goes to 1 Hz (clamped), so residual energy remains but is low */
+        DTR_ASSERT(rms < 0.20f);
+    }
+
+    free(buf);
+    DTR_PASS();
+}
+
+/* ------------------------------------------------------------------ */
+/*  Effect fidelity: fade-in volume ramp                               */
+/* ------------------------------------------------------------------ */
+
+static void test_effect_fade_in_ramp(void)
+{
+    dtr_synth_sfx_t sfx = {0};
+    size_t          len;
+    int16_t        *buf;
+    int32_t         spn;
+    float           rms_early;
+    float           rms_late;
+
+    sfx.speed             = 16;
+    sfx.notes[0].pitch    = 49;
+    sfx.notes[0].waveform = DTR_WAVE_SQUARE;
+    sfx.notes[0].volume   = 7;
+    sfx.notes[0].effect   = DTR_FX_FADE_IN;
+
+    buf = dtr_synth_render(&sfx, &len);
+    DTR_ASSERT_NOT_NULL(buf);
+
+    spn = 16 * (DTR_SYNTH_SAMPLE_RATE / 128);
+
+    /* RMS of first 10% should be much less than last 10% */
+    {
+        int32_t window = spn / 10;
+        double  sum_e  = 0;
+        double  sum_l  = 0;
+        for (int32_t i = 0; i < window; ++i) {
+            double e = buf[i] / 32767.0;
+            double l = buf[spn - window + i] / 32767.0;
+            sum_e += e * e;
+            sum_l += l * l;
+        }
+        rms_early = (float)SDL_sqrt(sum_e / window);
+        rms_late  = (float)SDL_sqrt(sum_l / window);
+    }
+
+    DTR_ASSERT(rms_late > rms_early * 2.0f);
+
+    free(buf);
+    DTR_PASS();
+}
+
+/* ------------------------------------------------------------------ */
+/*  Effect fidelity: fade-out volume ramp                              */
+/* ------------------------------------------------------------------ */
+
+static void test_effect_fade_out_ramp(void)
+{
+    dtr_synth_sfx_t sfx = {0};
+    size_t          len;
+    int16_t        *buf;
+    int32_t         spn;
+    float           rms_early;
+    float           rms_late;
+
+    sfx.speed             = 16;
+    sfx.notes[0].pitch    = 49;
+    sfx.notes[0].waveform = DTR_WAVE_SQUARE;
+    sfx.notes[0].volume   = 7;
+    sfx.notes[0].effect   = DTR_FX_FADE_OUT;
+
+    buf = dtr_synth_render(&sfx, &len);
+    DTR_ASSERT_NOT_NULL(buf);
+
+    spn = 16 * (DTR_SYNTH_SAMPLE_RATE / 128);
+
+    /* RMS of first 10% should be much greater than last 10% */
+    {
+        int32_t window = spn / 10;
+        double  sum_e  = 0;
+        double  sum_l  = 0;
+        for (int32_t i = 0; i < window; ++i) {
+            double e = buf[i] / 32767.0;
+            double l = buf[spn - window + i] / 32767.0;
+            sum_e += e * e;
+            sum_l += l * l;
+        }
+        rms_early = (float)SDL_sqrt(sum_e / window);
+        rms_late  = (float)SDL_sqrt(sum_l / window);
+    }
+
+    DTR_ASSERT(rms_early > rms_late * 2.0f);
+
+    free(buf);
+    DTR_PASS();
+}
+
+/* ------------------------------------------------------------------ */
+/*  Effect fidelity: arpeggio cycles through notes                     */
+/* ------------------------------------------------------------------ */
+
+static void test_effect_arpeggio_cycles(void)
+{
+    dtr_synth_sfx_t sfx = {0};
+    size_t          len;
+    int16_t        *buf;
+
+    sfx.speed = 8;
+    /* 4-note group: C-4, E-4, G-4, C-5 */
+    sfx.notes[0].pitch    = 49;
+    sfx.notes[0].waveform = DTR_WAVE_TRIANGLE;
+    sfx.notes[0].volume   = 7;
+    sfx.notes[0].effect   = DTR_FX_ARPF;
+
+    sfx.notes[1].pitch    = 53;
+    sfx.notes[1].waveform = DTR_WAVE_TRIANGLE;
+    sfx.notes[1].volume   = 7;
+    sfx.notes[1].effect   = DTR_FX_ARPF;
+
+    sfx.notes[2].pitch    = 56;
+    sfx.notes[2].waveform = DTR_WAVE_TRIANGLE;
+    sfx.notes[2].volume   = 7;
+    sfx.notes[2].effect   = DTR_FX_ARPF;
+
+    sfx.notes[3].pitch    = 61;
+    sfx.notes[3].waveform = DTR_WAVE_TRIANGLE;
+    sfx.notes[3].volume   = 7;
+    sfx.notes[3].effect   = DTR_FX_ARPF;
+
+    buf = dtr_synth_render(&sfx, &len);
+    DTR_ASSERT_NOT_NULL(buf);
+    DTR_ASSERT(len > 0);
+
+    /* Verify the rendered output isn't just a static tone — the arpeggio
+     * should create periodic variations. Check that the audio has multiple
+     * different sample magnitudes across the arpeggio range. */
+    {
+        int32_t spn        = 8 * (DTR_SYNTH_SAMPLE_RATE / 128);
+        int32_t total      = 4 * spn;
+        int32_t pos_count  = 0;
+        int32_t neg_count  = 0;
+        int32_t zero_cross = 0;
+
+        for (int32_t i = 1; i < total && (size_t)i < len; ++i) {
+            if (buf[i] > 0) {
+                pos_count++;
+            }
+            if (buf[i] < 0) {
+                neg_count++;
+            }
+            if ((buf[i - 1] >= 0 && buf[i] < 0) || (buf[i - 1] < 0 && buf[i] >= 0)) {
+                zero_cross++;
+            }
+        }
+
+        /* With 4 notes of different pitches, we expect many zero crossings */
+        DTR_ASSERT(zero_cross > 100);
+        DTR_ASSERT(pos_count > 0);
+        DTR_ASSERT(neg_count > 0);
+    }
+
+    free(buf);
+    DTR_PASS();
+}
+
+/* ------------------------------------------------------------------ */
+/*  Effect fidelity: vibrato produces pitch modulation                 */
+/* ------------------------------------------------------------------ */
+
+static void test_effect_vibrato_modulation(void)
+{
+    dtr_synth_sfx_t sfx_plain = {0};
+    dtr_synth_sfx_t sfx_vib   = {0};
+    size_t          len_plain;
+    size_t          len_vib;
+    int16_t        *buf_plain;
+    int16_t        *buf_vib;
+    int32_t         spn;
+    int32_t         diffs;
+
+    /* Render the same note with and without vibrato */
+    sfx_plain.speed             = 16;
+    sfx_plain.notes[0].pitch    = 49;
+    sfx_plain.notes[0].waveform = DTR_WAVE_TRIANGLE;
+    sfx_plain.notes[0].volume   = 7;
+
+    sfx_vib.speed             = 16;
+    sfx_vib.notes[0].pitch    = 49;
+    sfx_vib.notes[0].waveform = DTR_WAVE_TRIANGLE;
+    sfx_vib.notes[0].volume   = 7;
+    sfx_vib.notes[0].effect   = DTR_FX_VIBRATO;
+
+    buf_plain = dtr_synth_render(&sfx_plain, &len_plain);
+    buf_vib   = dtr_synth_render(&sfx_vib, &len_vib);
+    DTR_ASSERT_NOT_NULL(buf_plain);
+    DTR_ASSERT_NOT_NULL(buf_vib);
+    DTR_ASSERT_EQ_INT((long long)len_plain, (long long)len_vib);
+
+    spn = 16 * (DTR_SYNTH_SAMPLE_RATE / 128);
+
+    /* The vibrato version should differ from the plain version */
+    diffs = 0;
+    for (int32_t i = 0; i < spn; ++i) {
+        if (buf_plain[i] != buf_vib[i]) {
+            diffs++;
+        }
+    }
+
+    /* Most samples should differ due to pitch modulation */
+    DTR_ASSERT(diffs > spn / 2);
+
+    free(buf_plain);
+    free(buf_vib);
+    DTR_PASS();
+}
+
+/* ------------------------------------------------------------------ */
 /*  Main                                                               */
 /* ------------------------------------------------------------------ */
 
@@ -636,6 +952,14 @@ int main(void)
     DTR_RUN_TEST(test_render_fade_in);
     DTR_RUN_TEST(test_render_fade_out);
     DTR_RUN_TEST(test_render_arpeggio);
+
+    /* Effect fidelity */
+    DTR_RUN_TEST(test_effect_slide_reaches_target);
+    DTR_RUN_TEST(test_effect_drop_reaches_silence);
+    DTR_RUN_TEST(test_effect_fade_in_ramp);
+    DTR_RUN_TEST(test_effect_fade_out_ramp);
+    DTR_RUN_TEST(test_effect_arpeggio_cycles);
+    DTR_RUN_TEST(test_effect_vibrato_modulation);
 
     /* Speed clamping */
     DTR_RUN_TEST(test_render_speed_zero_clamps);

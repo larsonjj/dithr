@@ -566,6 +566,7 @@ function drawHelpOverlay() {
             "Sh+Left/Rt  Extend selection",
             "Up/Down     Prev/next field",
             "Tab         Cycle field",
+            "Home/End    First/last note",
             MOD + "+Up/Dn  Prev/next SFX",
             "Scroll      List / grid scroll",
         ];
@@ -576,8 +577,10 @@ function drawHelpOverlay() {
             "── Edit ──",
             MOD + "+Z      Undo",
             MOD + "+Y      Redo",
+            MOD + "+A      Select all notes",
             MOD + "+C      Copy (sel/SFX)",
             MOD + "+V      Paste (sel/SFX)",
+            MOD + "+D      Duplicate SFX",
             "Mouse drag  Paint pitch graph",
             MOD + "+Sh+\u2191/\u2193 Transpose sel",
             "",
@@ -603,6 +606,7 @@ function drawHelpOverlay() {
             "Left/Right  Prev/next channel",
             MOD + "+Up/Dn  Page up/down",
             "Scroll      Scroll list",
+            "Tab         Jump to SFX editor",
             "",
             "── Editing ──",
             "0-9         Enter SFX index",
@@ -611,6 +615,9 @@ function drawHelpOverlay() {
             "F           Cycle flow flag",
             "Sh+F        Clear flow flag",
             "M           Toggle mute channel",
+            "S           Solo / unsolo channel",
+            MOD + "+Sh+I   Insert pattern row",
+            MOD + "+Sh+Del Delete pattern row",
         ];
         let right = [
             "── Playback ──",

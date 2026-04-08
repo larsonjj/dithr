@@ -1392,6 +1392,23 @@ js_synth_export_wav(JSContext *ctx, JSValueConst this_val, int argc, JSValueCons
 }
 
 /* ------------------------------------------------------------------ */
+/*  synth.pitchFreq(pitch) → float (Hz)                                */
+/* ------------------------------------------------------------------ */
+
+static JSValue
+js_synth_pitch_freq(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+{
+    int32_t pitch;
+
+    (void)this_val;
+    pitch = dtr_api_opt_int(ctx, argc, argv, 0, 0);
+    if (pitch < 0 || pitch > 96) {
+        return JS_NewFloat64(ctx, 0.0);
+    }
+    return JS_NewFloat64(ctx, (double)dtr_synth_pitch_freq((uint8_t)pitch));
+}
+
+/* ------------------------------------------------------------------ */
 /*  Registration                                                       */
 /* ------------------------------------------------------------------ */
 
@@ -1409,6 +1426,7 @@ static const JSCFunctionListEntry js_synth_funcs[] = {
     JS_CFUNC_DEF("fxNames", 0, js_synth_fx_names),
     JS_CFUNC_DEF("render", 1, js_synth_render),
     JS_CFUNC_DEF("exportWav", 2, js_synth_export_wav),
+    JS_CFUNC_DEF("pitchFreq", 1, js_synth_pitch_freq),
 };
 
 void dtr_synth_api_register(JSContext *ctx, JSValue global)
