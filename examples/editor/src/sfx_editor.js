@@ -73,6 +73,9 @@ let sfxSparkCache = null; // cached pitch arrays per SFX (null = needs rebuild)
 let cachedWaveNames = null;
 let cachedFxNames = null;
 
+// Per-SFX names (editor-only, stored in sfx.json)
+export let sfxNames = new Array(64).fill("");
+
 function getWaveNames() {
     if (!cachedWaveNames) cachedWaveNames = synth.waveNames();
     return cachedWaveNames;
@@ -161,7 +164,9 @@ export function saveSfxToDisk() {
             let nt = data.notes[n];
             notes.push([nt.pitch, nt.waveform, nt.volume, nt.effect]);
         }
-        all.push({ i: i, n: notes, s: data.speed, ls: data.loopStart, le: data.loopEnd });
+        let entry = { i: i, n: notes, s: data.speed, ls: data.loopStart, le: data.loopEnd };
+        if (sfxNames[i]) entry.nm = sfxNames[i];
+        all.push(entry);
     }
     let json = JSON.stringify(all);
     let ok = sys.writeFile("sfx.json", json);
@@ -183,6 +188,7 @@ export function loadSfxFromDisk() {
             notes.push({ pitch: src[0], waveform: src[1], volume: src[2], effect: src[3] });
         }
         synth.set(entry.i, notes, entry.s, entry.ls, entry.le);
+        if (entry.nm) sfxNames[entry.i] = entry.nm;
     }
     sfxHasData = null; // force cache rebuild
 }
@@ -360,6 +366,26 @@ export function updateSfxEditor(dt) {
     // Init hasData cache on first frame
     if (!sfxHasData) initHasDataCache();
 
+    // ── SFX rename mode ──
+    if (st.sfxRenaming) {
+        if (key.btnp(key.ESCAPE)) {
+            st.sfxRenaming = false;
+            return;
+        }
+        if (key.btnp(key.ENTER)) {
+            sfxNames[st.sfxSel] = st.sfxRenameTxt;
+            st.sfxRenaming = false;
+            st.sfxDirty = true;
+            return;
+        }
+        if (key.btnp(key.BACKSPACE) && st.sfxRenameTxt.length > 0) {
+            st.sfxRenameTxt = st.sfxRenameTxt.slice(0, -1);
+            return;
+        }
+        // Text input handled by onTextInput in main.js
+        return;
+    }
+
     // ── Save to disk (Ctrl+S) ──
     if (ctrl && !shift && key.btnp(key.S)) {
         saveSfxToDisk();
@@ -371,6 +397,13 @@ export function updateSfxEditor(dt) {
         let name = "sfx_" + (st.sfxSel < 10 ? "0" : "") + st.sfxSel + ".wav";
         let ok = synth.exportWav(st.sfxSel, name);
         status(ok ? "Exported " + name : "Export failed");
+        return;
+    }
+
+    // ── Rename SFX (N) ──
+    if (!ctrl && key.btnp(key.N)) {
+        st.sfxRenaming = true;
+        st.sfxRenameTxt = sfxNames[st.sfxSel] || "";
         return;
     }
 
@@ -1081,6 +1114,12 @@ function drawSfxList() {
     gfx.print(label, 14, tbY + 3, FG);
     // Next arrow
     gfx.print("\u25B6", 28, tbY + 3, st.sfxSel < 63 ? FG : GUTFG);
+    // SFX name (after nav arrows)
+    if (st.sfxRenaming) {
+        gfx.print(st.sfxRenameTxt + "_", 40, tbY + 3, NOTE_COL);
+    } else if (sfxNames[st.sfxSel]) {
+        gfx.print(sfxNames[st.sfxSel], 40, tbY + 3, GUTFG);
+    }
     // Play/stop button
     if (st.sfxPlaying) {
         gfx.print("\u25A0", LIST_W - 14, tbY + 3, FX_COL);
@@ -1108,6 +1147,14 @@ function drawSfxList() {
         let hd = sfxHasData ? sfxHasData[idx] : false;
 
         gfx.print("#" + label2, 2, yy, isSelected ? FG : hd ? GUTFG : 17);
+
+        // SFX name (truncated to fit between index and sparkline)
+        if (sfxNames[idx]) {
+            let nameX = 24;
+            let maxChars = hd ? 3 : 6;
+            let nm = sfxNames[idx].slice(0, maxChars);
+            gfx.print(nm, nameX, yy, isSelected ? FG : GUTFG);
+        }
 
         // Mini pitch sparkline (32 notes compressed into ~30px)
         if (hd) {

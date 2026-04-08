@@ -766,13 +766,21 @@ void dtr_console_iterate(dtr_console_t *con)
 
     /* JS _update(dt) */
     {
-        JSValue dt_arg = JS_NewFloat64(con->runtime->ctx, (double)con->delta);
+        uint64_t t0 = SDL_GetPerformanceCounter();
+        JSValue  dt_arg = JS_NewFloat64(con->runtime->ctx, (double)con->delta);
         dtr_runtime_call_argv(con->runtime, con->runtime->atom_update, 1, &dt_arg);
         JS_FreeValue(con->runtime->ctx, dt_arg);
+        con->update_ms =
+            (float)((double)(SDL_GetPerformanceCounter() - t0) / (double)freq * 1000.0);
     }
 
     /* JS _draw */
-    dtr_runtime_call(con->runtime, con->runtime->atom_draw);
+    {
+        uint64_t t0 = SDL_GetPerformanceCounter();
+        dtr_runtime_call(con->runtime, con->runtime->atom_draw);
+        con->draw_ms =
+            (float)((double)(SDL_GetPerformanceCounter() - t0) / (double)freq * 1000.0);
+    }
 
 #if DEV_BUILD
     /* Reload toast overlay */

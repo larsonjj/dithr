@@ -152,6 +152,20 @@ export function drawEditor() {
 
     // ── Use cached block comment and bracket depth state ──
     ensureCaches();
+
+    // ── Rebuild token cache when buffer changes ──
+    if (st._tokenCacheVersion !== st._bufVersion) {
+        st._tokenCacheVersion = st._bufVersion;
+        let tc = st._tokenCache;
+        let ib = false;
+        for (let i = 0; i < st.buf.length; i++) {
+            let r = tokenize(st.buf[i], ib);
+            tc[i] = r;
+            ib = r.inBlock;
+        }
+        tc.length = st.buf.length;
+    }
+
     let inBlock = st.oy < st._blockStateCache.length ? st._blockStateCache[st.oy] : false;
 
     // Pre-compute selection bounds once for the entire frame
@@ -237,10 +251,9 @@ export function drawEditor() {
             }
         }
 
-        // Syntax-highlighted text (with block comment tracking)
-        let result = tokenize(st.buf[li], inBlock);
-        let tokens = result.toks;
-        inBlock = result.inBlock;
+        // Syntax-highlighted text (from token cache)
+        let cached = st._tokenCache[li];
+        let tokens = cached ? cached.toks : tokenize(st.buf[li], inBlock).toks;
         let col = 0;
         // Running bracket depth from cached line-start value
         let bDepth = li < st._bracketDepthCache.length ? st._bracketDepthCache[li] : 0;
@@ -401,6 +414,30 @@ export function drawEditor() {
         if (right) {
             let rw = gfx.textWidth(right);
             gfx.print(right, FB_W - rw - CW, footTextY, FOOTFG);
+        }
+    }
+
+    // ── Autocomplete popup ──
+    if (st.acActive && st.acItems.length > 0) {
+        let maxW = 0;
+        for (let i = 0; i < st.acItems.length; i++) {
+            let w = st.acItems[i].length * CW;
+            if (w > maxW) maxW = w;
+        }
+        let popW = maxW + CW * 2;
+        let popH = st.acItems.length * CH;
+        let px = st.acX;
+        let py = st.acY;
+        if (px + popW > FB_W) px = FB_W - popW;
+        if (py + popH > footY) py = st.acY - LINE_H - popH;
+        gfx.rectfill(px, py, px + popW - 1, py + popH - 1, GUTBG);
+        gfx.rect(px, py, px + popW - 1, py + popH - 1, SEPC);
+        for (let i = 0; i < st.acItems.length; i++) {
+            let iy = py + i * CH;
+            if (i === st.acIdx) {
+                gfx.rectfill(px + 1, iy, px + popW - 2, iy + CH - 1, SELBG);
+            }
+            gfx.print(st.acItems[i], px + CW, iy, i === st.acIdx ? FG : FOOTFG);
         }
     }
 }

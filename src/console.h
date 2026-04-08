@@ -71,6 +71,10 @@ typedef struct dtr_console {
     float    delta;
     int32_t  target_fps;
 
+    /* Per-frame profiling (populated by iterate) */
+    float update_ms;
+    float draw_ms;
+
     /* Window dimensions (framebuffer * scale) */
     int32_t win_width;
     int32_t win_height;

@@ -4,7 +4,9 @@
  */
 
 #include "../graphics.h"
+#include "../cart.h"
 #include "api_common.h"
+#include <SDL3_image/SDL_image.h>
 
 #define GFX(ctx) (dtr_api_get_console(ctx)->graphics)
 
@@ -935,6 +937,126 @@ js_gfx_flags_load(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst 
     return JS_TRUE;
 }
 
+/* ------------------------------------------------------------------ */
+/*  Raw framebuffer access (no camera/clip/palette remap)              */
+/* ------------------------------------------------------------------ */
+
+static JSValue js_gfx_poke(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+{
+    dtr_graphics_t *gfx;
+    int32_t         addr;
+    int32_t         col;
+    int32_t         size;
+
+    (void)this_val;
+    gfx  = dtr_api_get_console(ctx)->graphics;
+    addr = dtr_api_opt_int(ctx, argc, argv, 0, 0);
+    col  = dtr_api_opt_int(ctx, argc, argv, 1, 0);
+    size = gfx->width * gfx->height;
+
+    if (addr < 0 || addr >= size) {
+        return JS_UNDEFINED;
+    }
+    gfx->framebuffer[addr] = (uint8_t)(col & 0xFF);
+    return JS_UNDEFINED;
+}
+
+static JSValue js_gfx_peek(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+{
+    dtr_graphics_t *gfx;
+    int32_t         addr;
+    int32_t         size;
+
+    (void)this_val;
+    gfx  = dtr_api_get_console(ctx)->graphics;
+    addr = dtr_api_opt_int(ctx, argc, argv, 0, 0);
+    size = gfx->width * gfx->height;
+
+    if (addr < 0 || addr >= size) {
+        return JS_NewInt32(ctx, 0);
+    }
+    return JS_NewInt32(ctx, gfx->framebuffer[addr]);
+}
+
+/* ---- exportPNG -------------------------------------------------------- */
+
+/**
+ * \brief  gfx.exportPNG(path) — save the sprite sheet as a PNG file
+ *
+ * Converts the palette-indexed sprite sheet to RGBA using the current
+ * palette colours and writes it to the cart directory.
+ */
+static JSValue
+js_gfx_export_png(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+{
+    dtr_graphics_t    *gfx;
+    dtr_console_t     *con;
+    const char        *rel;
+    char               full[1024];
+    SDL_Surface       *surface;
+    uint32_t          *rgba;
+    int32_t            w, h, total;
+    bool               ok;
+
+    (void)this_val;
+    if (argc < 1) {
+        return JS_FALSE;
+    }
+
+    gfx = GFX(ctx);
+    con = dtr_api_get_console(ctx);
+
+    if (gfx->sheet.pixels == NULL || gfx->sheet.width <= 0 || gfx->sheet.height <= 0) {
+        return JS_FALSE;
+    }
+
+    rel = JS_ToCString(ctx, argv[0]);
+    if (rel == NULL) {
+        return JS_FALSE;
+    }
+
+    /* Reject absolute paths and traversal */
+    if (rel[0] == '/' || rel[0] == '\\' || SDL_strstr(rel, "..") != NULL) {
+        JS_FreeCString(ctx, rel);
+        return JS_FALSE;
+    }
+    SDL_snprintf(full, sizeof(full), "%s/%s", con->cart->base_path, rel);
+    JS_FreeCString(ctx, rel);
+
+    w     = gfx->sheet.width;
+    h     = gfx->sheet.height;
+    total = w * h;
+
+    rgba = (uint32_t *)SDL_calloc((size_t)total, sizeof(uint32_t));
+    if (rgba == NULL) {
+        return JS_FALSE;
+    }
+
+    /* Convert palette indices → RGBA (0xRRGGBBAA → SDL RGBA byte order) */
+    for (int32_t i = 0; i < total; i++) {
+        uint32_t c = gfx->colors[gfx->sheet.pixels[i]];
+        uint8_t  r = (uint8_t)(c >> 24);
+        uint8_t  g = (uint8_t)(c >> 16);
+        uint8_t  b = (uint8_t)(c >> 8);
+        uint8_t  a = (uint8_t)(c);
+        rgba[i] = ((uint32_t)a << 24) | ((uint32_t)b << 16) |
+                  ((uint32_t)g << 8)  | (uint32_t)r;
+    }
+
+    surface = SDL_CreateSurfaceFrom(w, h, SDL_PIXELFORMAT_ABGR8888,
+                                    rgba, w * (int32_t)sizeof(uint32_t));
+    if (surface == NULL) {
+        SDL_free(rgba);
+        return JS_FALSE;
+    }
+
+    ok = IMG_SavePNG(surface, full);
+    SDL_DestroySurface(surface);
+    SDL_free(rgba);
+
+    return ok ? JS_TRUE : JS_FALSE;
+}
+
 /* ---- Function list ---------------------------------------------------- */
 
 static const JSCFunctionListEntry js_gfx_funcs[] = {
@@ -977,6 +1099,9 @@ static const JSCFunctionListEntry js_gfx_funcs[] = {
     JS_CFUNC_DEF("sheetLoad", 1, js_gfx_sheet_load),
     JS_CFUNC_DEF("flagsData", 0, js_gfx_flags_data),
     JS_CFUNC_DEF("flagsLoad", 1, js_gfx_flags_load),
+    JS_CFUNC_DEF("poke", 2, js_gfx_poke),
+    JS_CFUNC_DEF("peek", 1, js_gfx_peek),
+    JS_CFUNC_DEF("exportPNG", 1, js_gfx_export_png),
     JS_CFUNC_DEF("fade", 2, js_gfx_fade),
     JS_CFUNC_DEF("wipe", 3, js_gfx_wipe),
     JS_CFUNC_DEF("dissolve", 2, js_gfx_dissolve),

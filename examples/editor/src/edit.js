@@ -32,6 +32,37 @@ export function updateEdit() {
     let ctrl = modKey();
     let shift = key.btn(key.LSHIFT) || key.btn(key.RSHIFT);
 
+    // ── Autocomplete popup handling ──
+    if (st.acActive) {
+        if (key.btnp(key.ESCAPE)) {
+            st.acActive = false;
+            return;
+        }
+        if (key.btnr(key.UP)) {
+            st.acIdx = (st.acIdx - 1 + st.acItems.length) % st.acItems.length;
+            return;
+        }
+        if (key.btnr(key.DOWN)) {
+            st.acIdx = (st.acIdx + 1) % st.acItems.length;
+            return;
+        }
+        if (key.btnp(key.ENTER) || key.btnp(key.TAB)) {
+            // Accept completion
+            let word = st.acItems[st.acIdx];
+            let suffix = word.slice(st.acPrefix.length);
+            pushUndo();
+            st.buf[st.cy] = st.buf[st.cy].slice(0, st.cx) + suffix + st.buf[st.cy].slice(st.cx);
+            st.cx += suffix.length;
+            st.dirty = true;
+            st.acActive = false;
+            ensureVisible();
+            resetBlink();
+            return;
+        }
+        // Any other key dismisses autocomplete
+        st.acActive = false;
+    }
+
     // ── Ctrl shortcuts ──
     if (ctrl) {
         if (key.btnp(key.TAB)) {
@@ -171,6 +202,52 @@ export function updateEdit() {
         if (key.btnp(key.G)) {
             st.gotoMode = true;
             st.gotoText = "";
+            return;
+        }
+        if (key.btnp(key.SPACE)) {
+            // Autocomplete: collect words from buffer matching prefix at cursor
+            let line = st.buf[st.cy];
+            let end = st.cx;
+            let start = end;
+            while (start > 0 && isWordChar(line[start - 1])) start--;
+            let prefix = line.slice(start, end);
+            if (prefix.length > 0) {
+                let seen = {};
+                let items = [];
+                for (let i = 0; i < st.buf.length; i++) {
+                    let ln = st.buf[i];
+                    let j = 0;
+                    while (j < ln.length) {
+                        if (isWordChar(ln[j])) {
+                            let ws = j;
+                            while (j < ln.length && isWordChar(ln[j])) j++;
+                            let w = ln.slice(ws, j);
+                            if (
+                                w.length > prefix.length &&
+                                w.slice(0, prefix.length) === prefix &&
+                                !seen[w]
+                            ) {
+                                if (!(i === st.cy && ws === start)) {
+                                    seen[w] = true;
+                                    items.push(w);
+                                }
+                            }
+                        } else {
+                            j++;
+                        }
+                    }
+                }
+                if (items.length > 0) {
+                    items.sort();
+                    if (items.length > 10) items.length = 10;
+                    st.acActive = true;
+                    st.acItems = items;
+                    st.acIdx = 0;
+                    st.acPrefix = prefix;
+                    st.acX = GUTTER * CW + (st.cx - st.ox) * CW;
+                    st.acY = EDIT_Y + (st.cy - st.oy) * LINE_H + LINE_H;
+                }
+            }
             return;
         }
         if (shift && key.btnp(key.K)) {

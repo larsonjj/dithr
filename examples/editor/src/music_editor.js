@@ -35,6 +35,9 @@ const SEL_COL = 2;
 const PLAY_COL = 11;
 const CH_COLS = [12, 14, 9, 13]; // cyan, pink, orange, lavender per channel
 
+// Per-pattern names (editor-only, stored in music.json)
+export let musNames = new Array(64).fill("");
+
 // ─── Data ────────────────────────────────────────────────────────────────────
 
 function ensurePatterns() {
@@ -101,8 +104,10 @@ export function saveMusToDisk() {
     let all = [];
     for (let i = 0; i < 64; i++) {
         let p = st.musPatterns[i];
-        if (!patternHasData(p) && p.flags === 0) continue;
-        all.push({ i: i, ch: [p.ch[0], p.ch[1], p.ch[2], p.ch[3]], f: p.flags });
+        if (!patternHasData(p) && p.flags === 0 && !musNames[i]) continue;
+        let entry = { i: i, ch: [p.ch[0], p.ch[1], p.ch[2], p.ch[3]], f: p.flags };
+        if (musNames[i]) entry.nm = musNames[i];
+        all.push(entry);
     }
     let json = JSON.stringify(all);
     let ok = sys.writeFile("music.json", json);
@@ -121,6 +126,7 @@ export function loadMusFromDisk() {
         if (e.i >= 0 && e.i < 64) {
             st.musPatterns[e.i].ch = [e.ch[0], e.ch[1], e.ch[2], e.ch[3]];
             st.musPatterns[e.i].flags = e.f || 0;
+            if (e.nm) musNames[e.i] = e.nm;
         }
     }
 }
@@ -251,6 +257,26 @@ export function updateMusicEditor(dt) {
     if (key.btnp(key.SPACE)) {
         if (st.musPlaying) stopMusic();
         else startMusic();
+        return;
+    }
+
+    // ── Pattern rename mode ──
+    if (st.musRenaming) {
+        if (key.btnp(key.ESCAPE)) {
+            st.musRenaming = false;
+            return;
+        }
+        if (key.btnp(key.ENTER)) {
+            musNames[st.musSel] = st.musRenameTxt;
+            st.musRenaming = false;
+            st.musDirty = true;
+            return;
+        }
+        if (key.btnp(key.BACKSPACE) && st.musRenameTxt.length > 0) {
+            st.musRenameTxt = st.musRenameTxt.slice(0, -1);
+            return;
+        }
+        // Text input handled by onTextInput in main.js
         return;
     }
 
@@ -481,6 +507,13 @@ export function updateMusicEditor(dt) {
         return;
     }
 
+    // N key: rename pattern
+    if (!ctrl && key.btnp(key.N)) {
+        st.musRenaming = true;
+        st.musRenameTxt = musNames[st.musSel] || "";
+        return;
+    }
+
     // Mouse
     handleMusMouse();
 }
@@ -531,7 +564,13 @@ export function drawMusicEditor() {
     let tbY = TAB_H;
     gfx.rectfill(0, tbY, FB_W - 1, tbY + TOOLBAR_H - 1, FOOTBG);
     gfx.line(0, tbY + TOOLBAR_H - 1, FB_W - 1, tbY + TOOLBAR_H - 1, SEPC);
-    gfx.print("MUSIC PATTERNS", 4, tbY + 3, FG);
+    let tbLabel = "MUSIC PATTERNS";
+    if (st.musRenaming) {
+        tbLabel = "NAME: " + st.musRenameTxt + "_";
+    } else if (musNames[st.musSel]) {
+        tbLabel = "PAT " + (st.musSel < 10 ? "0" : "") + st.musSel + ": " + musNames[st.musSel];
+    }
+    gfx.print(tbLabel, 4, tbY + 3, st.musRenaming ? 11 : FG);
     if (st.musPlaying) {
         gfx.print("\u25A0 STOP", FB_W - 40, tbY + 3, 8);
     } else {
@@ -591,10 +630,13 @@ export function drawMusicEditor() {
             gfx.rectfill(0, yy, FB_W - 1, yy + ROW_H - 2, 17);
         }
 
-        // Pattern number
+        // Pattern number + name
         let label = (row < 10 ? "0" : "") + row;
         let hasData = patternHasData(pat);
         gfx.print(label, 4, yy + 2, isSel ? FG : hasData ? GUTFG : 17);
+        if (musNames[row]) {
+            gfx.print(musNames[row].slice(0, 3), 18, yy + 2, isSel ? GUTFG : 18);
+        }
 
         // Channel slots
         for (let c = 0; c < NUM_CHANNELS; c++) {

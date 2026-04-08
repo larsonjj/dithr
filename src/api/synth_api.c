@@ -1103,7 +1103,11 @@ static JSValue js_synth_playing(JSContext *ctx, JSValueConst this_val, int argc,
     channel = dtr_api_opt_int(ctx, argc, argv, 0, 0);
 
     if (channel >= 0 && channel < 4) {
-        return JS_NewBool(ctx, store->play[channel].playing);
+        dtr_synth_voice_t *v = &store->play[channel];
+        SDL_LockAudioStream(v->stream);
+        bool p = v->playing;
+        SDL_UnlockAudioStream(v->stream);
+        return JS_NewBool(ctx, p);
     }
     return JS_NewBool(ctx, false);
 }
@@ -1124,8 +1128,15 @@ js_synth_note_idx(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst 
     store   = prv_get_store();
     channel = dtr_api_opt_int(ctx, argc, argv, 0, 0);
 
-    if (channel >= 0 && channel < 4 && store->play[channel].playing) {
-        return JS_NewInt32(ctx, store->play[channel].note_idx);
+    if (channel >= 0 && channel < 4) {
+        dtr_synth_voice_t *v = &store->play[channel];
+        SDL_LockAudioStream(v->stream);
+        bool p = v->playing;
+        int32_t idx = v->note_idx;
+        SDL_UnlockAudioStream(v->stream);
+        if (p) {
+            return JS_NewInt32(ctx, idx);
+        }
     }
     return JS_NewInt32(ctx, -1);
 }

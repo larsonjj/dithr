@@ -53,6 +53,14 @@ function onTextInput(ch) {
         mapTextInput(ch);
         return;
     }
+    if (st.activeTab === TAB_SFX && st.sfxRenaming) {
+        st.sfxRenameTxt = (st.sfxRenameTxt + ch).slice(0, 8);
+        return;
+    }
+    if (st.activeTab === TAB_MUSIC && st.musRenaming) {
+        st.musRenameTxt = (st.musRenameTxt + ch).slice(0, 8);
+        return;
+    }
     if (st.activeTab !== TAB_CODE) return;
     if (st.brMode) return;
     if (modKey()) return;
@@ -430,6 +438,7 @@ function drawHelpOverlay() {
             MOD + "+F      Find",
             MOD + "+H      Find & Replace",
             MOD + "+G      Go to line",
+            MOD + "+Space  Autocomplete",
             MOD + "+O      Open file",
             MOD + "+S      Save",
             MOD + "+Sh+S   Save all",
@@ -475,6 +484,7 @@ function drawHelpOverlay() {
             "Right-click Eyedropper",
             "Sh+X        Mirror X",
             "Sh+Y        Mirror Y",
+            "D           Cycle dither",
         ];
         let right = [
             "── Transforms ──",
@@ -489,6 +499,7 @@ function drawHelpOverlay() {
             MOD + "+Y      Redo",
             MOD + "+S      Save sprites",
             MOD + "+Sh+S   Save all",
+            MOD + "+Sh+E   Export PNG",
             "Escape      Cancel shape",
             "",
             "── Navigation ──",
@@ -621,6 +632,7 @@ function drawHelpOverlay() {
             "-/=         Speed down/up",
             MOD + "+L      Set loop start",
             MOD + "+Sh+L   Set loop end",
+            "N           Rename SFX",
         ];
         for (let i = 0; i < Math.max(left.length, right.length); i++) {
             if (i < left.length)
@@ -647,6 +659,7 @@ function drawHelpOverlay() {
             "S           Solo / unsolo channel",
             MOD + "+Sh+I   Insert pattern row",
             MOD + "+Sh+Del Delete pattern row",
+            "N           Rename pattern",
         ];
         let right = [
             "── Playback ──",

@@ -98,6 +98,7 @@ export const st = {
     sprGotoTxt: "", // sprite goto input text
     sprClipboard: null, // {w,h,pixels[]} for copy/paste
     sprFilled: false, // filled shape mode for rect/circle
+    sprDither: 0, // dither pattern index (0=off, 1-4=presets)
     sprMirrorX: false, // horizontal symmetry
     sprMirrorY: false, // vertical symmetry
     sprPalScrollY: 0, // palette vertical scroll (in rows)
@@ -177,6 +178,8 @@ export const st = {
     sfxSelEnd: -1, // multi-note selection end
     sfxNoteClip: null, // copied note range [{pitch,waveform,volume,effect},...]
     sfxDragging: false, // mouse drag painting active
+    sfxRenaming: false, // SFX rename mode active
+    sfxRenameTxt: "", // SFX rename input text
 
     // music editor state
     musPatterns: null, // lazy init: [{ch:[-1,-1,-1,-1], flags:0}] × 64
@@ -191,6 +194,8 @@ export const st = {
     musUndoStack: [], // undo snapshots
     musRedoStack: [], // redo snapshots
     musMute: [false, false, false, false], // per-channel mute
+    musRenaming: false, // pattern rename mode active
+    musRenameTxt: "", // pattern rename input text
 
     // caches (invalidated on edit)
     _blockStateCache: [],
@@ -204,6 +209,18 @@ export const st = {
     // minimap cache
     _mmCacheVersion: -1,
     _mmLineLens: [],
+
+    // token cache (per-line tokenization results)
+    _tokenCache: [], // [{toks, inBlock}] per line
+    _tokenCacheVersion: -1, // buf version when cache was last built
+
+    // autocomplete state
+    acActive: false, // completion menu visible
+    acItems: [], // completion candidates (strings)
+    acIdx: 0, // selected item index
+    acPrefix: "", // prefix being completed
+    acX: 0, // screen X of popup
+    acY: 0, // screen Y of popup
 
     invalidateCaches() {
         this._bufVersion++;

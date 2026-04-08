@@ -74,6 +74,26 @@ function sprCommit() {
     st.sprDirty = true;
 }
 
+// ─── Dither patterns (4×4 bitmasks, MSB-first row order) ─────────────────────
+// Each entry is a 16-bit mask: bit 15 = (0,0), bit 14 = (1,0), ... bit 0 = (3,3)
+// 1 = draw, 0 = skip.
+const DITHER_PATTERNS = [
+    0xffff, // 0: solid (no dither)
+    0xaaaa, // 1: 50% checkerboard
+    0x8888, // 2: 25% dots
+    0xa5a5, // 3: cross-hatch
+    0xedb7, // 4: 75% inverse checker
+];
+const DITHER_NAMES = ["OFF", "50%", "25%", "X", "75%"];
+
+// Returns true if the pixel at (px,py) should be drawn for the current dither pattern.
+function ditherCheck(px, py) {
+    if (st.sprDither === 0) return true;
+    let mask = DITHER_PATTERNS[st.sprDither];
+    let bit = (py & 3) * 4 + (px & 3);
+    return (mask >> (15 - bit)) & 1;
+}
+
 // ─── Geometry helpers ────────────────────────────────────────────────────────
 
 // Bresenham line: calls plot(x,y) for each pixel
@@ -609,6 +629,7 @@ export function updateSpriteEditor(dt) {
             let cx2 = coords[i][0],
                 cy2 = coords[i][1];
             if (cx2 >= 0 && cx2 < cw && cy2 >= 0 && cy2 < ch) {
+                if (!ditherCheck(cx2, cy2)) continue;
                 let sx = base.x + cx2,
                     sy = base.y + cy2;
                 let prev = gfx.sget(sx, sy);
@@ -677,6 +698,12 @@ export function updateSpriteEditor(dt) {
         saveSpritesToDisk();
     }
 
+    // Export sprite sheet as PNG (Ctrl+Shift+E)
+    if (ctrl && shift && key.btnp(key.E)) {
+        let ok = gfx.exportPNG("spritesheet.png");
+        status(ok ? "Exported spritesheet.png" : "Export failed");
+    }
+
     // ── Palette (below sprite grid, left panel) ──
     let palX = lay.palX;
     let palY = lay.palY;
@@ -732,6 +759,12 @@ export function updateSpriteEditor(dt) {
 
     // Toggle filled shapes (G key)
     if (key.btnp(key.G) && !ctrl && !shift) st.sprFilled = !st.sprFilled;
+
+    // Cycle dither pattern (D key)
+    if (key.btnp(key.D) && !ctrl && !shift) {
+        st.sprDither = (st.sprDither + 1) % DITHER_PATTERNS.length;
+        status("Dither: " + DITHER_NAMES[st.sprDither]);
+    }
 
     // Toggle symmetry (Shift+X: horizontal mirror, Shift+Y: vertical mirror)
     if (shift && !ctrl && key.btnp(key.X)) st.sprMirrorX = !st.sprMirrorX;
@@ -943,8 +976,11 @@ function floodFill(baseX, baseY, tileW, tileH, startX, startY, target, fill) {
         let sx = baseX + px;
         let sy = baseY + py;
         if (gfx.sget(sx, sy) !== target) continue;
-        record(sprHist, { x: sx, y: sy, prev: target, next: fill });
-        gfx.sset(sx, sy, fill);
+        // Always explore neighbours for flood extent, but only paint if dither allows
+        if (ditherCheck(px, py)) {
+            record(sprHist, { x: sx, y: sy, prev: target, next: fill });
+            gfx.sset(sx, sy, fill);
+        }
         if (px > 0) stack.push(px - 1 + py * tileW);
         if (px < tileW - 1) stack.push(px + 1 + py * tileW);
         if (py > 0) stack.push(px + (py - 1) * tileW);
@@ -1615,6 +1651,11 @@ export function drawSpriteEditor() {
         let mirTxt = "MIR:" + (st.sprMirrorX ? "X" : "") + (st.sprMirrorY ? "Y" : "");
         gfx.print(mirTxt, statusX * CW, footTextY, 8);
         statusX += mirTxt.length + 1;
+    }
+    if (st.sprDither > 0) {
+        let dTxt = "DTH:" + DITHER_NAMES[st.sprDither];
+        gfx.print(dTxt, statusX * CW, footTextY, 9);
+        statusX += dTxt.length + 1;
     }
     if (st.sprAnimPlay) {
         gfx.print("ANIM", statusX * CW, footTextY, 11);
