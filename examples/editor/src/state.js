@@ -190,6 +190,7 @@ export const st = {
     musClipboard: null, // copied pattern {ch[], flags}
     musUndoStack: [], // undo snapshots
     musRedoStack: [], // redo snapshots
+    musMute: [false, false, false, false], // per-channel mute
 
     // caches (invalidated on edit)
     _blockStateCache: [],

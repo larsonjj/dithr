@@ -609,6 +609,7 @@ function drawHelpOverlay() {
             "Delete      Clear channel",
             "+/-         Increment/decrement",
             "F           Cycle flow flag",
+            "M           Toggle mute channel",
         ];
         let right = [
             "── Playback ──",

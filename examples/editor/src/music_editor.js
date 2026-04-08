@@ -146,7 +146,7 @@ function startMusic() {
     let pat = st.musPatterns[st.musSel];
     let anyPlaying = false;
     for (let c = 0; c < NUM_CHANNELS; c++) {
-        if (pat.ch[c] >= 0) {
+        if (pat.ch[c] >= 0 && !st.musMute[c]) {
             synth.play(pat.ch[c], c);
             anyPlaying = true;
         }
@@ -197,7 +197,7 @@ function advancePattern() {
 
     let anyPlaying = false;
     for (let c = 0; c < NUM_CHANNELS; c++) {
-        if (pat.ch[c] >= 0) {
+        if (pat.ch[c] >= 0 && !st.musMute[c]) {
             synth.play(pat.ch[c], c);
             anyPlaying = true;
         } else {
@@ -210,6 +210,7 @@ function advancePattern() {
     }
     st.musPlayRow = next;
     st.musPlayStart = sys.time();
+    ensurePlayRowVisible();
 }
 
 // ─── Update ──────────────────────────────────────────────────────────────────
@@ -345,6 +346,7 @@ export function updateMusicEditor(dt) {
             if (next > 63) next = i;
             st.musPatterns[st.musSel].ch[st.musCol] = next;
             st.musDirty = true;
+            status("CH" + st.musCol + " \u2192 SFX " + (next < 10 ? "0" : "") + next);
             return;
         }
     }
@@ -357,6 +359,21 @@ export function updateMusicEditor(dt) {
         let names = ["none", "loop start", "loop back", "stop"];
         status("Flag: " + names[pat.flags]);
         st.musDirty = true;
+        return;
+    }
+
+    // M key: toggle mute on current channel
+    if (key.btnp(key.M)) {
+        st.musMute[st.musCol] = !st.musMute[st.musCol];
+        if (st.musPlaying) {
+            if (st.musMute[st.musCol]) {
+                synth.stop(st.musCol);
+            } else {
+                let pat = st.musPatterns[st.musPlayRow];
+                if (pat.ch[st.musCol] >= 0) synth.play(pat.ch[st.musCol], st.musCol);
+            }
+        }
+        status("CH" + st.musCol + (st.musMute[st.musCol] ? " muted" : " unmuted"));
         return;
     }
 
@@ -395,6 +412,12 @@ function ensureMusVisible() {
     if (st.musSel >= st.musScrollY + visRows) st.musScrollY = st.musSel - visRows + 1;
 }
 
+function ensurePlayRowVisible() {
+    let visRows = Math.floor((FB_H - GRID_Y - FOOT_H - ROW_H) / ROW_H);
+    if (st.musPlayRow < st.musScrollY) st.musScrollY = st.musPlayRow;
+    if (st.musPlayRow >= st.musScrollY + visRows) st.musScrollY = st.musPlayRow - visRows + 1;
+}
+
 // ─── Draw ────────────────────────────────────────────────────────────────────
 
 export function drawMusicEditor() {
@@ -420,7 +443,9 @@ export function drawMusicEditor() {
     for (let c = 0; c < NUM_CHANNELS; c++) {
         let cx = LABEL_W + c * COL_W;
         let isSelCol = c === st.musCol;
-        gfx.print("CH" + c, cx + 8, GRID_Y + 2, isSelCol ? FG : CH_COLS[c]);
+        let muted = st.musMute[c];
+        gfx.print("CH" + c, cx + 8, GRID_Y + 2, muted ? 17 : isSelCol ? FG : CH_COLS[c]);
+        if (muted) gfx.print("M", cx + COL_W - 12, GRID_Y + 2, 8);
     }
     // Flag column header
     gfx.print("FLG", LABEL_W + NUM_CHANNELS * COL_W + 4, GRID_Y + 2, GUTFG);
@@ -475,6 +500,34 @@ export function drawMusicEditor() {
 
         // Row separator
         gfx.line(0, yy + ROW_H - 1, FB_W - 1, yy + ROW_H - 1, 17);
+    }
+
+    // ── Loop bracket visualization ──
+    // Draw a vertical bar connecting loop-start to loop-back flags
+    let flagX = LABEL_W + NUM_CHANNELS * COL_W + 4;
+    let bracketX = flagX + CW * 3 + 2;
+    for (let i = 0; i < visRows; i++) {
+        let row = i + st.musScrollY;
+        if (row >= 64) break;
+        if (st.musPatterns[row].flags !== FLAG_LOOP_BACK) continue;
+        // Find matching loop-start above
+        let startRow = -1;
+        for (let j = row - 1; j >= 0; j--) {
+            if (st.musPatterns[j].flags === FLAG_LOOP_START) {
+                startRow = j;
+                break;
+            }
+        }
+        if (startRow < 0) continue;
+        let si = startRow - st.musScrollY;
+        let ei = row - st.musScrollY;
+        if (si < 0) si = 0;
+        if (ei >= visRows) ei = visRows - 1;
+        let y0 = dataY + si * ROW_H + 2;
+        let y1 = dataY + ei * ROW_H + ROW_H - 4;
+        gfx.line(bracketX, y0, bracketX, y1, 11);
+        gfx.line(bracketX - 2, y0, bracketX, y0, 11);
+        gfx.line(bracketX - 2, y1, bracketX, y1, 11);
     }
 
     // Column separators

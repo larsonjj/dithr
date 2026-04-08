@@ -14,6 +14,9 @@
 #define CON(ctx) dtr_api_get_console(ctx)
 #define AUD(ctx) (CON(ctx)->audio)
 
+/* Default prev_key pitch: C-4 = PICO-8 default C-2 (261.6 Hz) */
+#define DEFAULT_PREV_KEY 49
+
 /* ------------------------------------------------------------------ */
 /*  Real-time synthesis playback state                                 */
 /* ------------------------------------------------------------------ */
@@ -673,7 +676,7 @@ static void prv_voice_start(dtr_synth_voice_t *v, const dtr_synth_sfx_t *def)
     v->latch_pitch = def->notes[start].pitch;
     v->latch_wave  = def->notes[start].waveform;
     v->latch_fx    = def->notes[start].effect;
-    v->prev_key    = 49;   /* C-4 = PICO-8 default C-2 (261.6 Hz) */
+    v->prev_key    = DEFAULT_PREV_KEY;
     v->prev_vol    = 0.0f;
     v->smooth_vol  = (float)def->notes[start].volume / 7.0f;
     v->last_out    = 0.0f;
@@ -772,6 +775,8 @@ static JSValue js_synth_set(JSContext *ctx, JSValueConst this_val, int argc, JSV
             int32_t v;
 
             JS_ToInt32(ctx, &v, val);
+            if (v < 0) v = 0;
+            if (v > 96) v = 96;
             note->pitch = (uint8_t)v;
         }
         JS_FreeValue(ctx, val);
@@ -781,6 +786,8 @@ static JSValue js_synth_set(JSContext *ctx, JSValueConst this_val, int argc, JSV
             int32_t v;
 
             JS_ToInt32(ctx, &v, val);
+            if (v < 0) v = 0;
+            if (v > 7) v = 7;
             note->waveform = (uint8_t)v;
         }
         JS_FreeValue(ctx, val);
@@ -790,6 +797,8 @@ static JSValue js_synth_set(JSContext *ctx, JSValueConst this_val, int argc, JSV
             int32_t v;
 
             JS_ToInt32(ctx, &v, val);
+            if (v < 0) v = 0;
+            if (v > 7) v = 7;
             note->volume = (uint8_t)v;
         }
         JS_FreeValue(ctx, val);
@@ -799,6 +808,8 @@ static JSValue js_synth_set(JSContext *ctx, JSValueConst this_val, int argc, JSV
             int32_t v;
 
             JS_ToInt32(ctx, &v, val);
+            if (v < 0) v = 0;
+            if (v > 7) v = 7;
             note->effect = (uint8_t)v;
         }
         JS_FreeValue(ctx, val);
@@ -806,9 +817,24 @@ static JSValue js_synth_set(JSContext *ctx, JSValueConst this_val, int argc, JSV
         JS_FreeValue(ctx, elem);
     }
 
-    tmp.speed      = (uint8_t)dtr_api_opt_int(ctx, argc, argv, 2, 8);
-    tmp.loop_start = (uint8_t)dtr_api_opt_int(ctx, argc, argv, 3, 0);
-    tmp.loop_end   = (uint8_t)dtr_api_opt_int(ctx, argc, argv, 4, 0);
+    {
+        int32_t spd = dtr_api_opt_int(ctx, argc, argv, 2, 8);
+
+        if (spd < 1)   spd = 1;
+        if (spd > 255) spd = 255;
+        tmp.speed = (uint8_t)spd;
+    }
+    {
+        int32_t ls = dtr_api_opt_int(ctx, argc, argv, 3, 0);
+        int32_t le = dtr_api_opt_int(ctx, argc, argv, 4, 0);
+
+        if (ls < 0)                  ls = 0;
+        if (ls >= DTR_SYNTH_NOTES)   ls = DTR_SYNTH_NOTES - 1;
+        if (le < 0)                  le = 0;
+        if (le >= DTR_SYNTH_NOTES)   le = DTR_SYNTH_NOTES - 1;
+        tmp.loop_start = (uint8_t)ls;
+        tmp.loop_end   = (uint8_t)le;
+    }
 
     /*
      * Copy into the live def atomically under the audio stream lock.

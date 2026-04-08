@@ -58,9 +58,6 @@ const SEL_COL = 2; // selection highlight
 const LOOP_COL = 3; // loop marker color
 const PLAY_COL = 11; // playback cursor color
 
-// Waveform short names (unused — grid displays numeric index)
-// Effect short names (unused — grid displays numeric index)
-
 // Waveform colors for pitch graph caps
 const WAVE_COLORS = [
     9, // triangle = orange
@@ -76,12 +73,15 @@ const WAVE_COLORS = [
 // ─── SFX list hasData cache ──────────────────────────────────────────────────
 
 let sfxHasData = null;
+let sfxSparkCache = null; // cached pitch arrays per SFX (null = needs rebuild)
 
 function initHasDataCache() {
     sfxHasData = new Array(64);
+    sfxSparkCache = new Array(64);
     for (let i = 0; i < 64; i++) {
         let data = synth.get(i);
         sfxHasData[i] = false;
+        sfxSparkCache[i] = null;
         if (data) {
             for (let n = 0; n < 32; n++) {
                 if (data.notes[n].pitch > 0) {
@@ -93,8 +93,13 @@ function initHasDataCache() {
     }
 }
 
-function markSfxHasData(idx) {
+function markSfxHasData(idx, knownTrue) {
     if (!sfxHasData) return;
+    if (sfxSparkCache) sfxSparkCache[idx] = null; // invalidate sparkline cache
+    if (knownTrue) {
+        sfxHasData[idx] = true;
+        return;
+    }
     let data = synth.get(idx);
     sfxHasData[idx] = false;
     if (data) {
@@ -616,7 +621,7 @@ export function updateSfxEditor(dt) {
                 let note = data.notes[st.sfxNote];
                 if (note.pitch > 0) {
                     pushSfxUndo();
-                    let intOct = clamp(i + OCT_OFFSET, MIN_INT_OCT, MAX_INT_OCT);
+                    let intOct = clamp(i + 1 + OCT_OFFSET, MIN_INT_OCT, MAX_INT_OCT);
                     let noteInOct = (note.pitch - 1) % 12;
                     setNoteField(st.sfxNote, "pitch", makePitch(noteInOct, intOct), data);
                     status("Octave: " + (intOct - OCT_OFFSET));
@@ -754,7 +759,7 @@ export function updateSfxEditor(dt) {
                     data.notes[st.sfxNote].effect = st.sfxFx;
                 }
                 saveSfx(st.sfxSel, data);
-                markSfxHasData(st.sfxSel);
+                markSfxHasData(st.sfxSel, true);
                 st.sfxDirty = true;
                 // Auto-advance cursor
                 if (st.sfxNote < 31) {
@@ -905,7 +910,7 @@ function handleMouse() {
                     note.effect = st.sfxFx;
                 }
                 saveSfx(st.sfxSel, data);
-                markSfxHasData(st.sfxSel);
+                markSfxHasData(st.sfxSel, true);
                 st.sfxDirty = true;
                 st.sfxNote = col;
             }
@@ -997,14 +1002,23 @@ function drawSfxList() {
 
         // Mini pitch sparkline (32 notes compressed into ~30px)
         if (hd) {
-            let data = synth.get(idx);
-            if (data) {
+            // Build or reuse cached pitch array
+            let pitches = sfxSparkCache ? sfxSparkCache[idx] : null;
+            if (!pitches) {
+                let data = synth.get(idx);
+                if (data) {
+                    pitches = new Array(32);
+                    for (let n = 0; n < 32; n++) pitches[n] = data.notes[n].pitch;
+                    if (sfxSparkCache) sfxSparkCache[idx] = pitches;
+                }
+            }
+            if (pitches) {
                 let sparkX = 26;
                 let sparkW = LIST_W - sparkX - 16;
                 let sparkH = CH - 2;
                 let sparkY = yy + 1;
                 for (let n = 0; n < 32; n++) {
-                    let p = data.notes[n].pitch;
+                    let p = pitches[n];
                     if (p < MIN_PITCH || p > MAX_PITCH) continue;
                     let frac = (p - MIN_PITCH) / (MAX_PITCH - MIN_PITCH);
                     let px = sparkX + Math.floor((n * sparkW) / 32);
@@ -1311,6 +1325,8 @@ function drawFooter() {
     // Loop
     if (data.loopEnd > 0) {
         gfx.print("LP:" + data.loopStart + "-" + data.loopEnd, tx, ty, LOOP_COL);
+    } else if (st.sfxLoopStart > 0) {
+        gfx.print("LP:" + st.sfxLoopStart + "...", tx, ty, LOOP_COL);
     } else {
         gfx.print("LP:off", tx, ty, GUTFG);
     }
@@ -1323,7 +1339,7 @@ function drawFooter() {
     }
 
     // Wave/effect name tooltip — show name when cursor is on wave or effect row
-    if (!st.sfxPlaying) {
+    {
         let note = data.notes[st.sfxNote];
         if (st.sfxField === 1) {
             let names = synth.waveNames();
