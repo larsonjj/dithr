@@ -25,26 +25,26 @@ extern "C" {
 #define DTR_SYNTH_SAMPLE_RATE 44100
 
 /** Waveform types (matching PICO-8 instrument order) */
-#define DTR_WAVE_TRIANGLE  0 /**< Triangle wave (PICO-8 inst 0) */
-#define DTR_WAVE_TILTSAW   1 /**< Tilted / asymmetric saw (PICO-8 inst 1) */
-#define DTR_WAVE_SAW       2 /**< Sawtooth (PICO-8 inst 2) */
-#define DTR_WAVE_SQUARE    3 /**< Square 50% duty (PICO-8 inst 3) */
-#define DTR_WAVE_PULSE     4 /**< Pulse ~31.6% duty (PICO-8 inst 4) */
-#define DTR_WAVE_ORGAN     5 /**< Dual triangle / organ (PICO-8 inst 5) */
-#define DTR_WAVE_NOISE     6 /**< Filtered noise (PICO-8 inst 6) */
-#define DTR_WAVE_PHASER    7 /**< Detuned dual triangle (PICO-8 inst 7) */
-#define DTR_WAVE_COUNT     8
+#define DTR_WAVE_TRIANGLE 0 /**< Triangle wave (PICO-8 inst 0) */
+#define DTR_WAVE_TILTSAW  1 /**< Tilted / asymmetric saw (PICO-8 inst 1) */
+#define DTR_WAVE_SAW      2 /**< Sawtooth (PICO-8 inst 2) */
+#define DTR_WAVE_SQUARE   3 /**< Square 50% duty (PICO-8 inst 3) */
+#define DTR_WAVE_PULSE    4 /**< Pulse ~31.6% duty (PICO-8 inst 4) */
+#define DTR_WAVE_ORGAN    5 /**< Dual triangle / organ (PICO-8 inst 5) */
+#define DTR_WAVE_NOISE    6 /**< Filtered noise (PICO-8 inst 6) */
+#define DTR_WAVE_PHASER   7 /**< Detuned dual triangle (PICO-8 inst 7) */
+#define DTR_WAVE_COUNT    8
 
 /** Effect types (PICO-8 compatible) */
-#define DTR_FX_NONE       0
-#define DTR_FX_SLIDE      1 /**< Pitch glides toward next note */
-#define DTR_FX_VIBRATO    2 /**< Pitch oscillates (sine vibrato) */
-#define DTR_FX_DROP       3 /**< Pitch fall */
-#define DTR_FX_FADE_IN    4
-#define DTR_FX_FADE_OUT   5
-#define DTR_FX_ARPF       6 /**< Arpeggio fast (4-note groups) */
-#define DTR_FX_ARPS       7 /**< Arpeggio slow (4-note groups) */
-#define DTR_FX_COUNT      8
+#define DTR_FX_NONE     0
+#define DTR_FX_SLIDE    1 /**< Pitch glides toward next note */
+#define DTR_FX_VIBRATO  2 /**< Pitch oscillates (sine vibrato) */
+#define DTR_FX_DROP     3 /**< Pitch fall */
+#define DTR_FX_FADE_IN  4
+#define DTR_FX_FADE_OUT 5
+#define DTR_FX_ARPF     6 /**< Arpeggio fast (4-note groups) */
+#define DTR_FX_ARPS     7 /**< Arpeggio slow (4-note groups) */
+#define DTR_FX_COUNT    8
 
 /* ------------------------------------------------------------------ */
 /*  Data structures                                                    */

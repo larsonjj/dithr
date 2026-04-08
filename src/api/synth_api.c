@@ -28,29 +28,29 @@
  * the next sample naturally uses the new parameters — zero clicks.
  */
 typedef struct dtr_synth_voice {
-    SDL_AudioStream   *stream;
-    MIX_Track         *track;
-    const dtr_synth_sfx_t *def; /* live pointer into store->defs[] */
-    float              phase;       /* oscillator phase accumulator 0..1 */
-    int32_t            note_idx;    /* current note index in pattern */
-    int32_t            note_pos;    /* sample position within current note */
-    int32_t            total_pos;   /* total sample position since start */
-    bool               playing;
-    bool               looping;
-    bool               fade_out;
-    int32_t            fade_rem;
-    uint32_t           noise_state; /* per-voice noise PRNG */
+    SDL_AudioStream       *stream;
+    MIX_Track             *track;
+    const dtr_synth_sfx_t *def;       /* live pointer into store->defs[] */
+    float                  phase;     /* oscillator phase accumulator 0..1 */
+    int32_t                note_idx;  /* current note index in pattern */
+    int32_t                note_pos;  /* sample position within current note */
+    int32_t                total_pos; /* total sample position since start */
+    bool                   playing;
+    bool                   looping;
+    bool                   fade_out;
+    int32_t                fade_rem;
+    uint32_t               noise_state; /* per-voice noise PRNG */
     /* Parameter crossfade — smooths edits during playback */
-    uint8_t            latch_pitch; /* latched pitch for current note */
-    uint8_t            latch_wave;  /* latched waveform for current note */
-    uint8_t            latch_fx;    /* latched effect for current note */
-    uint8_t            prev_key;    /* previous note pitch (for slide) */
-    float              smooth_vol;  /* smoothed volume (0..1), ramped */
-    float              prev_vol;    /* previous note volume (for slide) */
-    float              last_out;    /* previous output sample (S16 scale) */
-    float              xfade_base;  /* output at start of crossfade */
-    int32_t            xfade_rem;   /* remaining crossfade samples */
-    int32_t            xfade_len;   /* initial crossfade length */
+    uint8_t latch_pitch; /* latched pitch for current note */
+    uint8_t latch_wave;  /* latched waveform for current note */
+    uint8_t latch_fx;    /* latched effect for current note */
+    uint8_t prev_key;    /* previous note pitch (for slide) */
+    float   smooth_vol;  /* smoothed volume (0..1), ramped */
+    float   prev_vol;    /* previous note volume (for slide) */
+    float   last_out;    /* previous output sample (S16 scale) */
+    float   xfade_base;  /* output at start of crossfade */
+    int32_t xfade_rem;   /* remaining crossfade samples */
+    int32_t xfade_len;   /* initial crossfade length */
 } dtr_synth_voice_t;
 
 /**
@@ -67,9 +67,9 @@ typedef struct dtr_synth_note_voice {
     bool             fade_out;
     int32_t          fade_rem;
     /* Crossfade from previous note to avoid pop on rapid entry */
-    float            last_out;    /* last output sample (S16 scale) */
-    float            xfade_base;  /* output at start of crossfade */
-    int32_t          xfade_rem;   /* remaining crossfade samples */
+    float   last_out;   /* last output sample (S16 scale) */
+    float   xfade_base; /* output at start of crossfade */
+    int32_t xfade_rem;  /* remaining crossfade samples */
 } dtr_synth_note_voice_t;
 
 /* ------------------------------------------------------------------ */
@@ -78,8 +78,8 @@ typedef struct dtr_synth_note_voice {
 
 typedef struct dtr_synth_store {
     dtr_synth_sfx_t        defs[DTR_SYNTH_MAX_SFX];
-    dtr_synth_voice_t      play[4];    /* 4 pattern playback voices */
-    dtr_synth_note_voice_t note;       /* single-note preview (pre-rendered) */
+    dtr_synth_voice_t      play[4]; /* 4 pattern playback voices */
+    dtr_synth_note_voice_t note;    /* single-note preview (pre-rendered) */
     int32_t                count;
     bool                   initialized;
 } dtr_synth_store_t;
@@ -104,11 +104,11 @@ static dtr_synth_store_t *prv_get_store(void)
 /*  Real-time synthesis callback                                       */
 /* ------------------------------------------------------------------ */
 
-#define FADE_SAMPLES       128
-#define PARAM_XFADE        128  /* crossfade length for mid-note edits */
-#define NOTE_XFADE         96   /* crossfade for rapid note preview */
-#define FADE_IN_SAMPLES    64   /* fade-in at playback start */
-#define VOL_SMOOTH_COEFF   0.005f /* exponential smoothing (~4.5ms tau) */
+#define FADE_SAMPLES     128
+#define PARAM_XFADE      128    /* crossfade length for mid-note edits */
+#define NOTE_XFADE       96     /* crossfade for rapid note preview */
+#define FADE_IN_SAMPLES  64     /* fade-in at playback start */
+#define VOL_SMOOTH_COEFF 0.005f /* exponential smoothing (~4.5ms tau) */
 
 /**
  * Compute samples-per-note from speed value (PICO-8 style: higher = slower).
@@ -163,8 +163,8 @@ static int16_t prv_voice_sample(dtr_synth_voice_t *v)
     spn = prv_spn(sfx->speed);
 
     /* Determine which note we're on */
-    nti      = v->note_idx;
-    note     = &sfx->notes[nti];
+    nti  = v->note_idx;
+    note = &sfx->notes[nti];
 
     /* Latch parameters at the start of each note.
      * When transitioning into a rest, crossfade from the previous
@@ -173,24 +173,18 @@ static int16_t prv_voice_sample(dtr_synth_voice_t *v)
      * active notes — different wave shapes at the same phase produce
      * a discontinuity click. */
     if (v->note_pos == 0) {
-        if (note->pitch == 0 &&
-            (v->last_out > 1.0f || v->last_out < -1.0f)) {
+        if (note->pitch == 0 && (v->last_out > 1.0f || v->last_out < -1.0f)) {
             v->xfade_base = v->last_out;
             v->xfade_len  = PARAM_XFADE;
             v->xfade_rem  = PARAM_XFADE;
-        } else if (v->total_pos > 0 &&
-                   note->pitch > 0 &&
-                   note->waveform != v->latch_wave &&
+        } else if (v->total_pos > 0 && note->pitch > 0 && note->waveform != v->latch_wave &&
                    (v->last_out > 1.0f || v->last_out < -1.0f)) {
             v->xfade_base = v->last_out;
             v->xfade_len  = NOTE_XFADE;
             v->xfade_rem  = NOTE_XFADE;
-        } else if (v->total_pos > 0 &&
-                   note->pitch > 0 &&
-                   (note->effect == DTR_FX_FADE_IN ||
-                    note->effect == DTR_FX_FADE_OUT ||
-                    v->latch_fx == DTR_FX_FADE_IN ||
-                    v->latch_fx == DTR_FX_FADE_OUT)) {
+        } else if (v->total_pos > 0 && note->pitch > 0 &&
+                   (note->effect == DTR_FX_FADE_IN || note->effect == DTR_FX_FADE_OUT ||
+                    v->latch_fx == DTR_FX_FADE_IN || v->latch_fx == DTR_FX_FADE_OUT)) {
             /* Always crossfade at fade-effect boundaries.
              * Fade curves create volume discontinuities at note
              * edges (e.g. fade-out ends at ~0 then next note
@@ -212,10 +206,8 @@ static int16_t prv_voice_sample(dtr_synth_voice_t *v)
      * a waveform discontinuity.  Volume is handled separately via
      * smooth_vol ramp below (output-level crossfade causes DC-offset
      * artifacts for pure amplitude changes). */
-    if (v->note_pos > 0 &&
-        (note->pitch    != v->latch_pitch ||
-         note->waveform != v->latch_wave ||
-         note->effect   != v->latch_fx)) {
+    if (v->note_pos > 0 && (note->pitch != v->latch_pitch || note->waveform != v->latch_wave ||
+                            note->effect != v->latch_fx)) {
         v->xfade_base  = v->last_out;
         v->xfade_len   = PARAM_XFADE;
         v->xfade_rem   = PARAM_XFADE;
@@ -245,7 +237,7 @@ static int16_t prv_voice_sample(dtr_synth_voice_t *v)
     frac      = (float)v->note_pos / (float)spn;
 
     if (note->pitch == 0 || vol <= 0.0f) {
-        sample = 0.0f;
+        sample   = 0.0f;
         v->phase = 0.0f;
     } else {
         cur_freq   = base_freq;
@@ -257,9 +249,7 @@ static int16_t prv_voice_sample(dtr_synth_voice_t *v)
                 /* Slide from previous note's pitch/vol to current */
                 float prev_freq;
 
-                prev_freq = v->prev_key > 0
-                    ? dtr_synth_pitch_freq(v->prev_key)
-                    : base_freq;
+                prev_freq  = v->prev_key > 0 ? dtr_synth_pitch_freq(v->prev_key) : base_freq;
                 cur_freq   = prev_freq + (base_freq - prev_freq) * frac;
                 sample_vol = v->prev_vol + (vol - v->prev_vol) * frac;
                 break;
@@ -269,12 +259,9 @@ static int16_t prv_voice_sample(dtr_synth_voice_t *v)
                 float time_s;
                 float ttt;
 
-                time_s = (float)v->total_pos
-                    / (float)DTR_SYNTH_SAMPLE_RATE;
-                ttt = SDL_fabsf(
-                    SDL_fmodf(7.5f * time_s, 1.0f) - 0.5f) - 0.25f;
-                cur_freq = base_freq
-                    * (1.0f + 0.059463094359f * ttt);
+                time_s   = (float)v->total_pos / (float)DTR_SYNTH_SAMPLE_RATE;
+                ttt      = SDL_fabsf(SDL_fmodf(7.5f * time_s, 1.0f) - 0.5f) - 0.25f;
+                cur_freq = base_freq * (1.0f + 0.059463094359f * ttt);
                 break;
             }
             case DTR_FX_DROP:
@@ -284,11 +271,11 @@ static int16_t prv_voice_sample(dtr_synth_voice_t *v)
                 }
                 break;
             case DTR_FX_FADE_IN:
-                sample_vol = ((float)note->volume / 7.0f) * frac;
+                sample_vol    = ((float)note->volume / 7.0f) * frac;
                 v->smooth_vol = sample_vol;
                 break;
             case DTR_FX_FADE_OUT:
-                sample_vol = ((float)note->volume / 7.0f) * (1.0f - frac);
+                sample_vol    = ((float)note->volume / 7.0f) * (1.0f - frac);
                 v->smooth_vol = sample_vol;
                 break;
             case DTR_FX_ARPF:
@@ -300,16 +287,12 @@ static int16_t prv_voice_sample(dtr_synth_voice_t *v)
                 int32_t ncyc;
                 int32_t arp_note;
 
-                time_s = (float)v->total_pos
-                    / (float)DTR_SYNTH_SAMPLE_RATE;
-                mrate  = (sfx->speed <= 8 ? 32 : 16)
-                    / (note->effect == DTR_FX_ARPF ? 4 : 8);
+                time_s   = (float)v->total_pos / (float)DTR_SYNTH_SAMPLE_RATE;
+                mrate    = (sfx->speed <= 8 ? 32 : 16) / (note->effect == DTR_FX_ARPF ? 4 : 8);
                 ncyc     = (int32_t)(mrate * 7.5f * time_s);
                 arp_note = (nti & ~3) | (ncyc & 3);
-                if (arp_note < DTR_SYNTH_NOTES &&
-                    sfx->notes[arp_note].pitch > 0) {
-                    cur_freq = dtr_synth_pitch_freq(
-                        sfx->notes[arp_note].pitch);
+                if (arp_note < DTR_SYNTH_NOTES && sfx->notes[arp_note].pitch > 0) {
+                    cur_freq = dtr_synth_pitch_freq(sfx->notes[arp_note].pitch);
                 }
                 break;
             }
@@ -326,8 +309,7 @@ static int16_t prv_voice_sample(dtr_synth_voice_t *v)
             sample = prv_noise(&v->noise_state);
         } else {
             sample = dtr_synth_waveform_bl(
-                note->waveform, v->phase,
-                cur_freq / (float)DTR_SYNTH_SAMPLE_RATE);
+                note->waveform, v->phase, cur_freq / (float)DTR_SYNTH_SAMPLE_RATE);
         }
 
         sample *= sample_vol;
@@ -345,9 +327,7 @@ static int16_t prv_voice_sample(dtr_synth_voice_t *v)
     if (v->note_pos >= spn) {
         /* Update previous-note tracking for slide effect (PICO-8) */
         if (v->prev_key != note->pitch) {
-            v->prev_vol = v->prev_key > 0
-                ? (float)note->volume / 7.0f
-                : 0.0f;
+            v->prev_vol = v->prev_key > 0 ? (float)note->volume / 7.0f : 0.0f;
         }
         v->prev_key = note->pitch;
 
@@ -384,7 +364,7 @@ static int16_t prv_voice_sample(dtr_synth_voice_t *v)
     if (v->total_pos <= FADE_IN_SAMPLES) {
         float fin;
 
-        fin    = (float)v->total_pos / (float)FADE_IN_SAMPLES;
+        fin = (float)v->total_pos / (float)FADE_IN_SAMPLES;
         output *= fin;
     }
 
@@ -402,8 +382,10 @@ static int16_t prv_voice_sample(dtr_synth_voice_t *v)
 /**
  * AudioStream get-callback for pattern playback (real-time synthesis).
  */
-static void SDLCALL
-prv_voice_get(void *userdata, SDL_AudioStream *stream, int additional, int total)
+static void SDLCALL prv_voice_get(void            *userdata,
+                                  SDL_AudioStream *stream,
+                                  int              additional,
+                                  int              total)
 {
     dtr_synth_voice_t *v;
     int                need;
@@ -440,13 +422,13 @@ prv_voice_get(void *userdata, SDL_AudioStream *stream, int additional, int total
             if (v->fade_out && v->fade_rem > 0) {
                 float t;
 
-                t   = (float)v->fade_rem / (float)FADE_SAMPLES;
-                s   = (int16_t)((float)s * t);
+                t = (float)v->fade_rem / (float)FADE_SAMPLES;
+                s = (int16_t)((float)s * t);
                 v->fade_rem--;
                 if (v->fade_rem <= 0) {
                     v->playing  = false;
                     v->fade_out = false;
-                    s = 0;
+                    s           = 0;
                 }
             }
 
@@ -463,8 +445,7 @@ prv_voice_get(void *userdata, SDL_AudioStream *stream, int additional, int total
  * Applies a crossfade at the start when a new buffer replaces an
  * in-progress note to avoid a pop from the amplitude discontinuity.
  */
-static void SDLCALL
-prv_note_get(void *userdata, SDL_AudioStream *stream, int additional, int total)
+static void SDLCALL prv_note_get(void *userdata, SDL_AudioStream *stream, int additional, int total)
 {
     dtr_synth_note_voice_t *nv;
     int                     need;
@@ -481,8 +462,7 @@ prv_note_get(void *userdata, SDL_AudioStream *stream, int additional, int total)
             int chunk;
 
             chunk = need > 256 ? 256 : need;
-            SDL_PutAudioStreamData(stream, silence,
-                                   chunk * (int)sizeof(int16_t));
+            SDL_PutAudioStreamData(stream, silence, chunk * (int)sizeof(int16_t));
             need -= chunk;
         }
         nv->last_out = 0.0f;
@@ -503,8 +483,7 @@ prv_note_get(void *userdata, SDL_AudioStream *stream, int additional, int total)
                     int chunk;
 
                     chunk = need > 256 ? 256 : need;
-                    SDL_PutAudioStreamData(stream, silence,
-                                           chunk * (int)sizeof(int16_t));
+                    SDL_PutAudioStreamData(stream, silence, chunk * (int)sizeof(int16_t));
                     need -= chunk;
                 }
             }
@@ -523,19 +502,17 @@ prv_note_get(void *userdata, SDL_AudioStream *stream, int additional, int total)
 
                 seg = chunk > 512 ? 512 : chunk;
                 seg = seg > nv->fade_rem ? nv->fade_rem : seg;
-                SDL_memcpy(tmp, nv->buf + nv->pos,
-                           (size_t)seg * sizeof(int16_t));
+                SDL_memcpy(tmp, nv->buf + nv->pos, (size_t)seg * sizeof(int16_t));
                 for (int ri = 0; ri < seg; ++ri) {
                     float t;
 
-                    t      = (float)(nv->fade_rem - ri) / (float)FADE_SAMPLES;
+                    t       = (float)(nv->fade_rem - ri) / (float)FADE_SAMPLES;
                     tmp[ri] = (int16_t)((float)tmp[ri] * t);
                 }
                 nv->last_out = (float)tmp[seg - 1];
-                SDL_PutAudioStreamData(stream, tmp,
-                                       seg * (int)sizeof(int16_t));
-                nv->pos      += (size_t)seg;
-                need         -= seg;
+                SDL_PutAudioStreamData(stream, tmp, seg * (int)sizeof(int16_t));
+                nv->pos += (size_t)seg;
+                need -= seg;
                 nv->fade_rem -= seg;
                 if (nv->fade_rem <= 0) {
                     nv->playing  = false;
@@ -549,8 +526,7 @@ prv_note_get(void *userdata, SDL_AudioStream *stream, int additional, int total)
                             int c2;
 
                             c2 = need > 256 ? 256 : need;
-                            SDL_PutAudioStreamData(stream, silence,
-                                                   c2 * (int)sizeof(int16_t));
+                            SDL_PutAudioStreamData(stream, silence, c2 * (int)sizeof(int16_t));
                             need -= c2;
                         }
                     }
@@ -565,15 +541,13 @@ prv_note_get(void *userdata, SDL_AudioStream *stream, int additional, int total)
                 if (seg > nv->xfade_rem) {
                     seg = nv->xfade_rem;
                 }
-                SDL_memcpy(tmp, nv->buf + nv->pos,
-                           (size_t)seg * sizeof(int16_t));
+                SDL_memcpy(tmp, nv->buf + nv->pos, (size_t)seg * sizeof(int16_t));
                 for (int ri = 0; ri < seg; ++ri) {
                     float ttt;
                     float out;
 
-                    ttt    = (float)(nv->xfade_rem - ri) / (float)NOTE_XFADE;
-                    out    = nv->xfade_base * ttt +
-                             (float)tmp[ri] * (1.0f - ttt);
+                    ttt = (float)(nv->xfade_rem - ri) / (float)NOTE_XFADE;
+                    out = nv->xfade_base * ttt + (float)tmp[ri] * (1.0f - ttt);
                     if (out > 32767.0f) {
                         out = 32767.0f;
                     }
@@ -583,17 +557,15 @@ prv_note_get(void *userdata, SDL_AudioStream *stream, int additional, int total)
                     tmp[ri] = (int16_t)out;
                 }
                 nv->last_out = (float)tmp[seg - 1];
-                SDL_PutAudioStreamData(stream, tmp,
-                                       seg * (int)sizeof(int16_t));
-                nv->pos       += (size_t)seg;
-                need          -= seg;
+                SDL_PutAudioStreamData(stream, tmp, seg * (int)sizeof(int16_t));
+                nv->pos += (size_t)seg;
+                need -= seg;
                 nv->xfade_rem -= seg;
             } else {
                 nv->last_out = (float)nv->buf[nv->pos + (size_t)chunk - 1];
-                SDL_PutAudioStreamData(stream, nv->buf + nv->pos,
-                                       chunk * (int)sizeof(int16_t));
+                SDL_PutAudioStreamData(stream, nv->buf + nv->pos, chunk * (int)sizeof(int16_t));
                 nv->pos += (size_t)chunk;
-                need    -= chunk;
+                need -= chunk;
             }
         }
     }
@@ -775,8 +747,10 @@ static JSValue js_synth_set(JSContext *ctx, JSValueConst this_val, int argc, JSV
             int32_t v;
 
             JS_ToInt32(ctx, &v, val);
-            if (v < 0) v = 0;
-            if (v > 96) v = 96;
+            if (v < 0)
+                v = 0;
+            if (v > 96)
+                v = 96;
             note->pitch = (uint8_t)v;
         }
         JS_FreeValue(ctx, val);
@@ -786,8 +760,10 @@ static JSValue js_synth_set(JSContext *ctx, JSValueConst this_val, int argc, JSV
             int32_t v;
 
             JS_ToInt32(ctx, &v, val);
-            if (v < 0) v = 0;
-            if (v > 7) v = 7;
+            if (v < 0)
+                v = 0;
+            if (v > 7)
+                v = 7;
             note->waveform = (uint8_t)v;
         }
         JS_FreeValue(ctx, val);
@@ -797,8 +773,10 @@ static JSValue js_synth_set(JSContext *ctx, JSValueConst this_val, int argc, JSV
             int32_t v;
 
             JS_ToInt32(ctx, &v, val);
-            if (v < 0) v = 0;
-            if (v > 7) v = 7;
+            if (v < 0)
+                v = 0;
+            if (v > 7)
+                v = 7;
             note->volume = (uint8_t)v;
         }
         JS_FreeValue(ctx, val);
@@ -808,8 +786,10 @@ static JSValue js_synth_set(JSContext *ctx, JSValueConst this_val, int argc, JSV
             int32_t v;
 
             JS_ToInt32(ctx, &v, val);
-            if (v < 0) v = 0;
-            if (v > 7) v = 7;
+            if (v < 0)
+                v = 0;
+            if (v > 7)
+                v = 7;
             note->effect = (uint8_t)v;
         }
         JS_FreeValue(ctx, val);
@@ -820,18 +800,24 @@ static JSValue js_synth_set(JSContext *ctx, JSValueConst this_val, int argc, JSV
     {
         int32_t spd = dtr_api_opt_int(ctx, argc, argv, 2, 8);
 
-        if (spd < 1)   spd = 1;
-        if (spd > 255) spd = 255;
+        if (spd < 1)
+            spd = 1;
+        if (spd > 255)
+            spd = 255;
         tmp.speed = (uint8_t)spd;
     }
     {
         int32_t ls = dtr_api_opt_int(ctx, argc, argv, 3, 0);
         int32_t le = dtr_api_opt_int(ctx, argc, argv, 4, 0);
 
-        if (ls < 0)                  ls = 0;
-        if (ls >= DTR_SYNTH_NOTES)   ls = DTR_SYNTH_NOTES - 1;
-        if (le < 0)                  le = 0;
-        if (le >= DTR_SYNTH_NOTES)   le = DTR_SYNTH_NOTES - 1;
+        if (ls < 0)
+            ls = 0;
+        if (ls >= DTR_SYNTH_NOTES)
+            ls = DTR_SYNTH_NOTES - 1;
+        if (le < 0)
+            le = 0;
+        if (le >= DTR_SYNTH_NOTES)
+            le = DTR_SYNTH_NOTES - 1;
         tmp.loop_start = (uint8_t)ls;
         tmp.loop_end   = (uint8_t)le;
     }
@@ -846,16 +832,14 @@ static JSValue js_synth_set(JSContext *ctx, JSValueConst this_val, int argc, JSV
         bool locked = false;
 
         for (int32_t vi = 0; vi < 4; ++vi) {
-            if (store->play[vi].stream != NULL &&
-                store->play[vi].def == &store->defs[idx]) {
+            if (store->play[vi].stream != NULL && store->play[vi].def == &store->defs[idx]) {
                 SDL_LockAudioStream(store->play[vi].stream);
                 locked = true;
             }
         }
         SDL_memcpy(&store->defs[idx], &tmp, sizeof(dtr_synth_sfx_t));
         for (int32_t vi = 0; vi < 4; ++vi) {
-            if (store->play[vi].stream != NULL &&
-                store->play[vi].def == &store->defs[idx]) {
+            if (store->play[vi].stream != NULL && store->play[vi].def == &store->defs[idx]) {
                 SDL_UnlockAudioStream(store->play[vi].stream);
             }
         }
@@ -1008,8 +992,8 @@ js_synth_play_note(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst
         int32_t ramp;
         int32_t rl;
 
-        spn = (tmp.speed < 1 ? 1 : (tmp.speed > 32 ? 32 : tmp.speed)) *
-              (DTR_SYNTH_SAMPLE_RATE / 128);
+        spn =
+            (tmp.speed < 1 ? 1 : (tmp.speed > 32 ? 32 : tmp.speed)) * (DTR_SYNTH_SAMPLE_RATE / 128);
         if ((size_t)spn < pcm_len) {
             pcm_len = (size_t)spn;
         }
@@ -1048,13 +1032,13 @@ js_synth_play_note(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst
         /* Capture previous amplitude for crossfade */
         store->note.xfade_base = store->note.last_out;
         store->note.xfade_rem  = store->note.playing ? NOTE_XFADE : 0;
-        old_buf              = store->note.buf;
-        store->note.buf      = pcm;
-        store->note.buf_len  = pcm_len;
-        store->note.pos      = 0;
-        store->note.playing  = true;
-        store->note.fade_out = false;
-        store->note.fade_rem = 0;
+        old_buf                = store->note.buf;
+        store->note.buf        = pcm;
+        store->note.buf_len    = pcm_len;
+        store->note.pos        = 0;
+        store->note.playing    = true;
+        store->note.fade_out   = false;
+        store->note.fade_rem   = 0;
         SDL_UnlockAudioStream(store->note.stream);
 
         /* Now safe to free — callback can no longer access old_buf */
@@ -1238,8 +1222,7 @@ js_synth_fx_names(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst 
 /*  synth.render(idx) → ArrayBuffer (PCM S16 mono 44100)               */
 /* ------------------------------------------------------------------ */
 
-static JSValue
-js_synth_render(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+static JSValue js_synth_render(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
     dtr_synth_store_t *store;
     int32_t            idx;
@@ -1326,24 +1309,35 @@ js_synth_export_wav(JSContext *ctx, JSValueConst this_val, int argc, JSValueCons
     pos = wav;
 
     /* RIFF chunk */
-    SDL_memcpy(pos, "RIFF", 4);     pos += 4;
+    SDL_memcpy(pos, "RIFF", 4);
+    pos += 4;
     {
         uint32_t chunk_size;
 
         chunk_size = (uint32_t)(file_size - 8);
-        pos[0] = (uint8_t)(chunk_size);
-        pos[1] = (uint8_t)(chunk_size >> 8);
-        pos[2] = (uint8_t)(chunk_size >> 16);
-        pos[3] = (uint8_t)(chunk_size >> 24);
+        pos[0]     = (uint8_t)(chunk_size);
+        pos[1]     = (uint8_t)(chunk_size >> 8);
+        pos[2]     = (uint8_t)(chunk_size >> 16);
+        pos[3]     = (uint8_t)(chunk_size >> 24);
         pos += 4;
     }
-    SDL_memcpy(pos, "WAVE", 4);     pos += 4;
+    SDL_memcpy(pos, "WAVE", 4);
+    pos += 4;
 
     /* fmt sub-chunk */
-    SDL_memcpy(pos, "fmt ", 4);     pos += 4;
-    pos[0] = 16; pos[1] = 0; pos[2] = 0; pos[3] = 0;  pos += 4; /* sub-chunk size */
-    pos[0] = 1;  pos[1] = 0;                            pos += 2; /* PCM format */
-    pos[0] = 1;  pos[1] = 0;                            pos += 2; /* mono */
+    SDL_memcpy(pos, "fmt ", 4);
+    pos += 4;
+    pos[0] = 16;
+    pos[1] = 0;
+    pos[2] = 0;
+    pos[3] = 0;
+    pos += 4; /* sub-chunk size */
+    pos[0] = 1;
+    pos[1] = 0;
+    pos += 2; /* PCM format */
+    pos[0] = 1;
+    pos[1] = 0;
+    pos += 2; /* mono */
     {
         uint32_t sr;
 
@@ -1357,18 +1351,23 @@ js_synth_export_wav(JSContext *ctx, JSValueConst this_val, int argc, JSValueCons
     {
         uint32_t byte_rate;
 
-        byte_rate = DTR_SYNTH_SAMPLE_RATE * 2;  /* mono * 16-bit */
-        pos[0] = (uint8_t)(byte_rate);
-        pos[1] = (uint8_t)(byte_rate >> 8);
-        pos[2] = (uint8_t)(byte_rate >> 16);
-        pos[3] = (uint8_t)(byte_rate >> 24);
+        byte_rate = DTR_SYNTH_SAMPLE_RATE * 2; /* mono * 16-bit */
+        pos[0]    = (uint8_t)(byte_rate);
+        pos[1]    = (uint8_t)(byte_rate >> 8);
+        pos[2]    = (uint8_t)(byte_rate >> 16);
+        pos[3]    = (uint8_t)(byte_rate >> 24);
         pos += 4; /* byte rate */
     }
-    pos[0] = 2;  pos[1] = 0;                            pos += 2; /* block align */
-    pos[0] = 16; pos[1] = 0;                            pos += 2; /* bits per sample */
+    pos[0] = 2;
+    pos[1] = 0;
+    pos += 2; /* block align */
+    pos[0] = 16;
+    pos[1] = 0;
+    pos += 2; /* bits per sample */
 
     /* data sub-chunk */
-    SDL_memcpy(pos, "data", 4);     pos += 4;
+    SDL_memcpy(pos, "data", 4);
+    pos += 4;
     {
         uint32_t ds;
 
