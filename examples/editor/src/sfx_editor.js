@@ -129,6 +129,51 @@ function saveSfx(idx, data) {
     synth.set(idx, data.notes, data.speed, data.loopStart, data.loopEnd);
 }
 
+/** Save all SFX data to disk as JSON. */
+export function saveSfxToDisk() {
+    let all = [];
+    for (let i = 0; i < 64; i++) {
+        let data = synth.get(i);
+        if (!data) continue;
+        let hasNotes = false;
+        for (let n = 0; n < 32; n++) {
+            if (data.notes[n].pitch > 0) {
+                hasNotes = true;
+                break;
+            }
+        }
+        if (!hasNotes && !data.speed && !data.loopStart && !data.loopEnd) continue;
+        let notes = [];
+        for (let n = 0; n < 32; n++) {
+            let nt = data.notes[n];
+            notes.push([nt.pitch, nt.waveform, nt.volume, nt.effect]);
+        }
+        all.push({ i: i, n: notes, s: data.speed, ls: data.loopStart, le: data.loopEnd });
+    }
+    let json = JSON.stringify(all);
+    let ok = sys.writeFile("sfx.json", json);
+    if (ok) st.sfxDirty = false;
+    status(ok ? "SFX saved" : "SFX save failed");
+}
+
+/** Load SFX data from disk. Called once during _init. */
+export function loadSfxFromDisk() {
+    let json = sys.readFile("sfx.json");
+    if (!json) return;
+    let all = JSON.parse(json);
+    if (!all || !all.length) return;
+    for (let si = 0; si < all.length; si++) {
+        let entry = all[si];
+        let notes = [];
+        for (let n = 0; n < 32; n++) {
+            let src = entry.n[n];
+            notes.push({ pitch: src[0], waveform: src[1], volume: src[2], effect: src[3] });
+        }
+        synth.set(entry.i, notes, entry.s, entry.ls, entry.le);
+    }
+    sfxHasData = null; // force cache rebuild
+}
+
 /** Get the currently loaded SFX data. */
 function curSfx() {
     return loadSfx(st.sfxSel);
@@ -301,6 +346,20 @@ export function updateSfxEditor(dt) {
 
     // Init hasData cache on first frame
     if (!sfxHasData) initHasDataCache();
+
+    // ── Save to disk (Ctrl+S) ──
+    if (ctrl && !shift && key.btnp(key.S)) {
+        saveSfxToDisk();
+        return;
+    }
+
+    // ── Export WAV (Ctrl+Shift+E) ──
+    if (ctrl && shift && key.btnp(key.E)) {
+        let name = "sfx_" + (st.sfxSel < 10 ? "0" : "") + st.sfxSel + ".wav";
+        let ok = synth.exportWav(st.sfxSel, name);
+        status(ok ? "Exported " + name : "Export failed");
+        return;
+    }
 
     // ── Undo (Ctrl+Z) ──
     if (ctrl && !shift && key.btnp(key.Z)) {
@@ -606,6 +665,27 @@ export function updateSfxEditor(dt) {
         return;
     }
 
+    // ── Transpose selection (Ctrl+Shift+Up/Down) ──
+    if (ctrl && shift && hasSelection() && (key.btnp(key.UP) || key.btnp(key.DOWN))) {
+        let dir = key.btnp(key.UP) ? 1 : -1;
+        pushSfxUndo();
+        let data = curSfx();
+        let lo = selMin(),
+            hi = selMax();
+        for (let i = lo; i <= hi; i++) {
+            let note = data.notes[i];
+            if (note.pitch > 0) {
+                let p = note.pitch + dir;
+                if (p >= MIN_PITCH && p <= MAX_PITCH) note.pitch = p;
+            }
+        }
+        saveSfx(st.sfxSel, data);
+        markSfxHasData(st.sfxSel);
+        st.sfxDirty = true;
+        status("Transpose " + (dir > 0 ? "+1" : "-1") + " (" + lo + "-" + hi + ")");
+        return;
+    }
+
     // ── Loop markers (Ctrl+L for start, Ctrl+Shift+L for end) ──
     if (ctrl && key.btnp(key.L)) {
         pushSfxUndo();
@@ -771,14 +851,21 @@ function handleMouse() {
         return;
     }
 
-    // Click in note grid
+    // Click/drag in note grid
     let gridContentX = GRID_X + LABEL_W;
     let gridContentY = GRID_Y + HEADER_H;
-    if (mouse.btnp(0) && mx >= gridContentX && mx < FB_W && my >= gridContentY) {
+    let gridContentBot = gridContentY + FIELD_H;
+    if (
+        mouse.btn(0) &&
+        mx >= gridContentX &&
+        mx < FB_W &&
+        my >= gridContentY &&
+        my < gridContentBot
+    ) {
         let col = Math.floor((mx - gridContentX) / NOTE_W) + st.sfxScrollX;
         let row = Math.floor((my - gridContentY) / ROW_H);
         if (col >= 0 && col < 32 && row >= 0 && row < 5) {
-            clearSelection();
+            if (mouse.btnp(0)) clearSelection();
             st.sfxNote = col;
             st.sfxField = row;
         }
@@ -907,6 +994,25 @@ function drawSfxList() {
         let hd = sfxHasData ? sfxHasData[idx] : false;
 
         gfx.print("#" + label2, 2, yy, isSelected ? FG : hd ? GUTFG : 17);
+
+        // Mini pitch sparkline (32 notes compressed into ~30px)
+        if (hd) {
+            let data = synth.get(idx);
+            if (data) {
+                let sparkX = 26;
+                let sparkW = LIST_W - sparkX - 16;
+                let sparkH = CH - 2;
+                let sparkY = yy + 1;
+                for (let n = 0; n < 32; n++) {
+                    let p = data.notes[n].pitch;
+                    if (p < MIN_PITCH || p > MAX_PITCH) continue;
+                    let frac = (p - MIN_PITCH) / (MAX_PITCH - MIN_PITCH);
+                    let px = sparkX + Math.floor((n * sparkW) / 32);
+                    let py = sparkY + sparkH - 1 - Math.floor(frac * (sparkH - 1));
+                    gfx.pset(px, py, isSelected ? FG : GUTFG);
+                }
+            }
+        }
 
         // Playing indicator
         if (isSelected && st.sfxPlaying) {
@@ -1213,6 +1319,19 @@ function drawFooter() {
     // Playing indicator
     if (st.sfxPlaying) {
         gfx.print("\u25B6 PLAYING", tx, ty, PLAY_COL);
+        tx += CW * 10;
+    }
+
+    // Wave/effect name tooltip — show name when cursor is on wave or effect row
+    if (!st.sfxPlaying) {
+        let note = data.notes[st.sfxNote];
+        if (st.sfxField === 1) {
+            let names = synth.waveNames();
+            gfx.print("W:" + names[note.pitch > 0 ? note.waveform : st.sfxWave], tx, ty, WAVE_COL);
+        } else if (st.sfxField === 3) {
+            let names = synth.fxNames();
+            gfx.print("FX:" + names[note.pitch > 0 ? note.effect : st.sfxFx], tx, ty, FX_COL);
+        }
     }
 
     // Status message (right-aligned)

@@ -4,9 +4,7 @@
 // that reference SFX indices (0-63). Patterns play sequentially and can
 // have flow flags: loop-start, loop-back, stop.
 //
-// NOTE: The C synth engine currently supports only one playback voice,
-// so only channel 0 plays during preview. Multi-channel playback would
-// require C-side expansion of the synth voice pool.
+// All 4 channels play simultaneously via the C synth voice pool.
 
 import { st } from "./state.js";
 import {
@@ -65,17 +63,98 @@ function patternHasData(p) {
     return p.ch[0] >= 0 || p.ch[1] >= 0 || p.ch[2] >= 0 || p.ch[3] >= 0;
 }
 
+// ─── Undo / Redo ─────────────────────────────────────────────────────────────
+
+const MAX_MUS_UNDO = 50;
+
+function clonePatterns() {
+    let out = [];
+    for (let i = 0; i < 64; i++) {
+        let p = st.musPatterns[i];
+        out.push({ ch: [p.ch[0], p.ch[1], p.ch[2], p.ch[3]], flags: p.flags });
+    }
+    return out;
+}
+
+function pushMusUndo() {
+    if (!st.musUndoStack) st.musUndoStack = [];
+    if (!st.musRedoStack) st.musRedoStack = [];
+    st.musUndoStack.push(clonePatterns());
+    if (st.musUndoStack.length > MAX_MUS_UNDO) st.musUndoStack.shift();
+    st.musRedoStack = [];
+}
+
+function musUndo() {
+    if (!st.musUndoStack || st.musUndoStack.length === 0) {
+        status("Nothing to undo");
+        return;
+    }
+    if (!st.musRedoStack) st.musRedoStack = [];
+    st.musRedoStack.push(clonePatterns());
+    st.musPatterns = st.musUndoStack.pop();
+    st.musDirty = true;
+    status("Undo");
+}
+
+function musRedo() {
+    if (!st.musRedoStack || st.musRedoStack.length === 0) {
+        status("Nothing to redo");
+        return;
+    }
+    if (!st.musUndoStack) st.musUndoStack = [];
+    st.musUndoStack.push(clonePatterns());
+    st.musPatterns = st.musRedoStack.pop();
+    st.musDirty = true;
+    status("Redo");
+}
+
+// ─── Save / Load ─────────────────────────────────────────────────────────────
+
+export function saveMusToDisk() {
+    ensurePatterns();
+    let all = [];
+    for (let i = 0; i < 64; i++) {
+        let p = st.musPatterns[i];
+        if (!patternHasData(p) && p.flags === 0) continue;
+        all.push({ i: i, ch: [p.ch[0], p.ch[1], p.ch[2], p.ch[3]], f: p.flags });
+    }
+    let json = JSON.stringify(all);
+    let ok = sys.writeFile("music.json", json);
+    if (ok) st.musDirty = false;
+    status(ok ? "Music saved" : "Music save failed");
+}
+
+export function loadMusFromDisk() {
+    let json = sys.readFile("music.json");
+    if (!json) return;
+    let all = JSON.parse(json);
+    if (!all || !all.length) return;
+    ensurePatterns();
+    for (let si = 0; si < all.length; si++) {
+        let e = all[si];
+        if (e.i >= 0 && e.i < 64) {
+            st.musPatterns[e.i].ch = [e.ch[0], e.ch[1], e.ch[2], e.ch[3]];
+            st.musPatterns[e.i].flags = e.f || 0;
+        }
+    }
+}
+
 // ─── Playback ────────────────────────────────────────────────────────────────
 
 function startMusic() {
     ensurePatterns();
     let pat = st.musPatterns[st.musSel];
-    let sfxIdx = pat.ch[0];
-    if (sfxIdx < 0) {
-        status("Channel 0 empty");
+    let anyPlaying = false;
+    for (let c = 0; c < NUM_CHANNELS; c++) {
+        if (pat.ch[c] >= 0) {
+            synth.play(pat.ch[c], c);
+            anyPlaying = true;
+        }
+    }
+    if (!anyPlaying) {
+        status("Pattern empty");
         return;
     }
-    synth.play(sfxIdx, 0);
     st.musPlaying = true;
     st.musPlayRow = st.musSel;
     st.musPlayStart = sys.time();
@@ -83,7 +162,9 @@ function startMusic() {
 }
 
 function stopMusic() {
-    synth.stop(0);
+    for (let c = 0; c < NUM_CHANNELS; c++) {
+        synth.stop(c);
+    }
     st.musPlaying = false;
     status("Stopped");
 }
@@ -114,12 +195,19 @@ function advancePattern() {
         }
     }
 
-    let sfxIdx = pat.ch[0];
-    if (sfxIdx < 0) {
+    let anyPlaying = false;
+    for (let c = 0; c < NUM_CHANNELS; c++) {
+        if (pat.ch[c] >= 0) {
+            synth.play(pat.ch[c], c);
+            anyPlaying = true;
+        } else {
+            synth.stop(c);
+        }
+    }
+    if (!anyPlaying) {
         stopMusic();
         return;
     }
-    synth.play(sfxIdx, 0);
     st.musPlayRow = next;
     st.musPlayStart = sys.time();
 }
@@ -133,7 +221,14 @@ export function updateMusicEditor(dt) {
 
     // Track playback advancement
     if (st.musPlaying) {
-        if (!synth.playing()) {
+        let anyPlaying = false;
+        for (let c = 0; c < NUM_CHANNELS; c++) {
+            if (synth.playing(c)) {
+                anyPlaying = true;
+                break;
+            }
+        }
+        if (!anyPlaying) {
             advancePattern();
         }
     }
@@ -142,6 +237,52 @@ export function updateMusicEditor(dt) {
     if (key.btnp(key.SPACE)) {
         if (st.musPlaying) stopMusic();
         else startMusic();
+        return;
+    }
+
+    // ── Save to disk (Ctrl+S) ──
+    if (ctrl && key.btnp(key.S)) {
+        saveMusToDisk();
+        return;
+    }
+
+    // ── Undo (Ctrl+Z) ──
+    if (ctrl && !shift && key.btnp(key.Z)) {
+        musUndo();
+        return;
+    }
+
+    // ── Redo (Ctrl+Y or Ctrl+Shift+Z) ──
+    if (ctrl && (key.btnp(key.Y) || (shift && key.btnp(key.Z)))) {
+        musRedo();
+        return;
+    }
+
+    // ── Copy pattern (Ctrl+C) ──
+    if (ctrl && key.btnp(key.C)) {
+        let p = st.musPatterns[st.musSel];
+        st.musClipboard = { ch: [p.ch[0], p.ch[1], p.ch[2], p.ch[3]], flags: p.flags };
+        status("Copied pattern " + st.musSel);
+        return;
+    }
+
+    // ── Paste pattern (Ctrl+V) ──
+    if (ctrl && key.btnp(key.V)) {
+        if (st.musClipboard) {
+            pushMusUndo();
+            let p = st.musPatterns[st.musSel];
+            p.ch = [
+                st.musClipboard.ch[0],
+                st.musClipboard.ch[1],
+                st.musClipboard.ch[2],
+                st.musClipboard.ch[3],
+            ];
+            p.flags = st.musClipboard.flags;
+            st.musDirty = true;
+            status("Pasted to pattern " + st.musSel);
+        } else {
+            status("Nothing to paste");
+        }
         return;
     }
 
@@ -169,20 +310,26 @@ export function updateMusicEditor(dt) {
 
     // Delete: clear channel slot
     if (key.btnp(key.DELETE) || key.btnp(key.BACKSPACE)) {
+        pushMusUndo();
         st.musPatterns[st.musSel].ch[st.musCol] = -1;
+        st.musDirty = true;
         return;
     }
 
     // +/-: increment/decrement SFX index
     if (key.btnp(key.EQUALS)) {
+        pushMusUndo();
         let cur = st.musPatterns[st.musSel].ch[st.musCol];
         st.musPatterns[st.musSel].ch[st.musCol] = clamp(cur + 1, 0, 63);
+        st.musDirty = true;
         return;
     }
     if (key.btnp(key.MINUS)) {
+        pushMusUndo();
         let cur = st.musPatterns[st.musSel].ch[st.musCol];
         if (cur < 0) cur = 0;
         st.musPatterns[st.musSel].ch[st.musCol] = clamp(cur - 1, 0, 63);
+        st.musDirty = true;
         return;
     }
 
@@ -190,22 +337,26 @@ export function updateMusicEditor(dt) {
     for (let i = 0; i <= 9; i++) {
         let k = i === 0 ? key.NUM0 : key.NUM1 + (i - 1);
         if (key.btnp(k)) {
+            pushMusUndo();
             let cur = st.musPatterns[st.musSel].ch[st.musCol];
             if (cur < 0) cur = 0;
             // Shift current value left and add digit: e.g. 1 -> 12 -> 23
             let next = (cur % 10) * 10 + i;
             if (next > 63) next = i;
             st.musPatterns[st.musSel].ch[st.musCol] = next;
+            st.musDirty = true;
             return;
         }
     }
 
     // F key: cycle flow flags
     if (key.btnp(key.F)) {
+        pushMusUndo();
         let pat = st.musPatterns[st.musSel];
         pat.flags = (pat.flags + 1) % 4;
         let names = ["none", "loop start", "loop back", "stop"];
         status("Flag: " + names[pat.flags]);
+        st.musDirty = true;
         return;
     }
 
@@ -217,8 +368,9 @@ function handleMusMouse() {
     let mx = mouse.x();
     let my = mouse.y();
 
-    if (mouse.btnp(0) && my >= GRID_Y && my < FB_H - FOOT_H) {
-        let row = Math.floor((my - GRID_Y) / ROW_H) + st.musScrollY;
+    let dataY = GRID_Y + ROW_H; // skip channel header row
+    if (mouse.btnp(0) && my >= dataY && my < FB_H - FOOT_H) {
+        let row = Math.floor((my - dataY) / ROW_H) + st.musScrollY;
         let col = Math.floor((mx - LABEL_W) / COL_W);
         if (row >= 0 && row < 64 && col >= 0 && col < NUM_CHANNELS && mx >= LABEL_W) {
             st.musSel = row;

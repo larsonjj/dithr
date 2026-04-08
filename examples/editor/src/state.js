@@ -186,6 +186,10 @@ export const st = {
     musPlaying: false, // music playback active
     musPlayRow: 0, // current playback pattern index
     musPlayStart: 0, // sys.time() when current SFX started
+    musDirty: false, // unsaved music changes
+    musClipboard: null, // copied pattern {ch[], flags}
+    musUndoStack: [], // undo snapshots
+    musRedoStack: [], // redo snapshots
 
     // caches (invalidated on edit)
     _blockStateCache: [],

@@ -25,8 +25,13 @@ import { updateFind, drawFind, updateGoto, drawGoto } from "./find.js";
 import { updateBrowser, drawBrowser } from "./browser.js";
 import { updateSpriteEditor, drawSpriteEditor } from "./sprite_editor.js";
 import { updateMapEditor, drawMapEditor, mapTextInput } from "./map_editor.js";
-import { updateSfxEditor, drawSfxEditor } from "./sfx_editor.js";
-import { updateMusicEditor, drawMusicEditor } from "./music_editor.js";
+import { updateSfxEditor, drawSfxEditor, loadSfxFromDisk, saveSfxToDisk } from "./sfx_editor.js";
+import {
+    updateMusicEditor,
+    drawMusicEditor,
+    loadMusFromDisk,
+    saveMusToDisk,
+} from "./music_editor.js";
 
 // ─── Text input event handler ────────────────────────────────────────────────
 
@@ -93,12 +98,14 @@ export function _init() {
         gfx.sheetCreate(128, 128, 8, 8);
     }
 
-    // Load saved sprite sheet from disk (between-run persistence)
+    // Load saved data from disk (between-run persistence)
     if (!st.restored) {
         let hex = sys.readFile("sprites.hex");
         if (hex) gfx.sheetLoad(hex);
         let flags = sys.readFile("flags.hex");
         if (flags) gfx.flagsLoad(flags);
+        loadSfxFromDisk();
+        loadMusFromDisk();
         openFile("src/main.js");
     }
     st.restored = false;
@@ -151,6 +158,10 @@ export function _save() {
         sfxFx: st.sfxFx,
         sfxListScroll: st.sfxListScroll,
         sfxScrollX: st.sfxScrollX,
+        musPatterns: st.musPatterns,
+        musSel: st.musSel,
+        musCol: st.musCol,
+        musScrollY: st.musScrollY,
         sheetHex: gfx.sheetData(),
         flagsHex: gfx.flagsData(),
     };
@@ -232,12 +243,16 @@ export function _restore(s) {
     st.sfxSel = s.sfxSel || 0;
     st.sfxNote = s.sfxNote || 0;
     st.sfxField = s.sfxField || 0;
-    st.sfxSpeed = s.sfxSpeed || 8;
+    st.sfxSpeed = s.sfxSpeed || 16;
     st.sfxWave = s.sfxWave || 0;
     st.sfxVol = s.sfxVol || 5;
     st.sfxFx = s.sfxFx || 0;
     st.sfxListScroll = s.sfxListScroll || 0;
     st.sfxScrollX = s.sfxScrollX || 0;
+    st.musPatterns = s.musPatterns || null;
+    st.musSel = s.musSel || 0;
+    st.musCol = s.musCol || 0;
+    st.musScrollY = s.musScrollY || 0;
     if (s.sheetHex) gfx.sheetLoad(s.sheetHex);
     if (s.flagsHex) gfx.flagsLoad(s.flagsHex);
     // Clamp sprite editor values to valid range for current sheet
@@ -564,14 +579,16 @@ function drawHelpOverlay() {
             MOD + "+C      Copy (sel/SFX)",
             MOD + "+V      Paste (sel/SFX)",
             "Mouse drag  Paint pitch graph",
+            MOD + "+Sh+\u2191/\u2193 Transpose sel",
+            "",
+            "── File ──",
+            MOD + "+S      Save SFX to disk",
+            MOD + "+Sh+E   Export WAV",
             "",
             "── Settings ──",
             "-/=         Speed down/up",
             MOD + "+L      Set loop start",
             MOD + "+Sh+L   Set loop end",
-            "",
-            "── Tabs ──",
-            MOD + "+1-5    Code/Spr/Map/SFX/Mus",
         ];
         for (let i = 0; i < Math.max(left.length, right.length); i++) {
             if (i < left.length)
@@ -590,17 +607,21 @@ function drawHelpOverlay() {
             "── Editing ──",
             "0-9         Enter SFX index",
             "Delete      Clear channel",
-            "Enter       Confirm entry",
             "+/-         Increment/decrement",
+            "F           Cycle flow flag",
         ];
         let right = [
             "── Playback ──",
             "Space       Play / stop",
             "",
-            "── Flags ──",
-            "1           Loop start",
-            "2           Loop back",
-            "3           Stop",
+            "── Edit ──",
+            MOD + "+Z      Undo",
+            MOD + "+Y      Redo",
+            MOD + "+C      Copy pattern",
+            MOD + "+V      Paste pattern",
+            "",
+            "── File ──",
+            MOD + "+S      Save music to disk",
             "",
             "── Tabs ──",
             MOD + "+1-5    Code/Spr/Map/SFX/Mus",

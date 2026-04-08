@@ -4,6 +4,7 @@
  */
 
 #include "../audio.h"
+#include "../cart.h"
 #include "../synth.h"
 #include "api_common.h"
 
@@ -73,11 +74,11 @@ typedef struct dtr_synth_note_voice {
 /* ------------------------------------------------------------------ */
 
 typedef struct dtr_synth_store {
-    dtr_synth_sfx_t       defs[DTR_SYNTH_MAX_SFX];
-    dtr_synth_voice_t     play;       /* main pattern playback (real-time) */
-    dtr_synth_note_voice_t note;      /* single-note preview (pre-rendered) */
-    int32_t               count;
-    bool                  initialized;
+    dtr_synth_sfx_t        defs[DTR_SYNTH_MAX_SFX];
+    dtr_synth_voice_t      play[4];    /* 4 pattern playback voices */
+    dtr_synth_note_voice_t note;       /* single-note preview (pre-rendered) */
+    int32_t                count;
+    bool                   initialized;
 } dtr_synth_store_t;
 
 /**
@@ -813,13 +814,26 @@ static JSValue js_synth_set(JSContext *ctx, JSValueConst this_val, int argc, JSV
      * Copy into the live def atomically under the audio stream lock.
      * Without this, the callback thread can read a half-written def
      * (e.g. after memset zeroed it but before notes were filled in).
+     * Lock any voice that is currently playing this def.
      */
-    if (store->play.stream != NULL) {
-        SDL_LockAudioStream(store->play.stream);
+    {
+        bool locked = false;
+
+        for (int32_t vi = 0; vi < 4; ++vi) {
+            if (store->play[vi].stream != NULL &&
+                store->play[vi].def == &store->defs[idx]) {
+                SDL_LockAudioStream(store->play[vi].stream);
+                locked = true;
+            }
+        }
         SDL_memcpy(&store->defs[idx], &tmp, sizeof(dtr_synth_sfx_t));
-        SDL_UnlockAudioStream(store->play.stream);
-    } else {
-        SDL_memcpy(&store->defs[idx], &tmp, sizeof(dtr_synth_sfx_t));
+        for (int32_t vi = 0; vi < 4; ++vi) {
+            if (store->play[vi].stream != NULL &&
+                store->play[vi].def == &store->defs[idx]) {
+                SDL_UnlockAudioStream(store->play[vi].stream);
+            }
+        }
+        (void)locked;
     }
 
     /* Update count */
@@ -898,22 +912,22 @@ static JSValue js_synth_play(JSContext *ctx, JSValueConst this_val, int argc, JS
     if (idx < 0 || idx >= DTR_SYNTH_MAX_SFX) {
         return JS_UNDEFINED;
     }
-    if (aud == NULL || channel < 0 || channel >= aud->num_channels) {
+    if (aud == NULL || channel < 0 || channel >= 4) {
         return JS_UNDEFINED;
     }
 
-    prv_ensure_voice(&store->play, aud);
+    prv_ensure_voice(&store->play[channel], aud);
 
     /* If already playing this def and sample_offset > 0, it's a mid-play
      * edit — the callback is already reading from the live definition,
      * so nothing to do. */
-    if (sample_offset > 0 && store->play.playing &&
-        store->play.def == &store->defs[idx]) {
+    if (sample_offset > 0 && store->play[channel].playing &&
+        store->play[channel].def == &store->defs[idx]) {
         return JS_UNDEFINED;
     }
 
     /* Fresh start */
-    prv_voice_start(&store->play, &store->defs[idx]);
+    prv_voice_start(&store->play[channel], &store->defs[idx]);
 
     return JS_UNDEFINED;
 }
@@ -1044,15 +1058,22 @@ js_synth_play_note(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst
 static JSValue js_synth_stop(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
     dtr_synth_store_t *store;
+    int32_t            channel;
 
     (void)this_val;
-    (void)ctx;
-    (void)argc;
-    (void)argv;
-    store = prv_get_store();
+    store   = prv_get_store();
+    channel = dtr_api_opt_int(ctx, argc, argv, 0, -1);
 
-    prv_voice_stop(&store->play);
-    prv_note_voice_stop(&store->note);
+    if (channel >= 0 && channel < 4) {
+        /* Stop a specific pattern voice */
+        prv_voice_stop(&store->play[channel]);
+    } else {
+        /* No channel specified: stop all pattern voices + note preview */
+        for (int32_t vi = 0; vi < 4; ++vi) {
+            prv_voice_stop(&store->play[vi]);
+        }
+        prv_note_voice_stop(&store->note);
+    }
     return JS_UNDEFINED;
 }
 
@@ -1064,11 +1085,17 @@ static JSValue js_synth_stop(JSContext *ctx, JSValueConst this_val, int argc, JS
 
 static JSValue js_synth_playing(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
+    dtr_synth_store_t *store;
+    int32_t            channel;
+
     (void)this_val;
-    (void)ctx;
-    (void)argc;
-    (void)argv;
-    return JS_NewBool(ctx, prv_get_store()->play.playing);
+    store   = prv_get_store();
+    channel = dtr_api_opt_int(ctx, argc, argv, 0, 0);
+
+    if (channel >= 0 && channel < 4) {
+        return JS_NewBool(ctx, store->play[channel].playing);
+    }
+    return JS_NewBool(ctx, false);
 }
 
 /* ------------------------------------------------------------------ */
@@ -1081,15 +1108,16 @@ static JSValue
 js_synth_note_idx(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
     dtr_synth_store_t *store;
+    int32_t            channel;
 
     (void)this_val;
-    (void)argc;
-    (void)argv;
-    store = prv_get_store();
-    if (!store->play.playing) {
-        return JS_NewInt32(ctx, -1);
+    store   = prv_get_store();
+    channel = dtr_api_opt_int(ctx, argc, argv, 0, 0);
+
+    if (channel >= 0 && channel < 4 && store->play[channel].playing) {
+        return JS_NewInt32(ctx, store->play[channel].note_idx);
     }
-    return JS_NewInt32(ctx, store->play.note_idx);
+    return JS_NewInt32(ctx, -1);
 }
 
 /* ------------------------------------------------------------------ */
@@ -1181,6 +1209,164 @@ js_synth_fx_names(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst 
 }
 
 /* ------------------------------------------------------------------ */
+/*  synth.render(idx) → ArrayBuffer (PCM S16 mono 44100)               */
+/* ------------------------------------------------------------------ */
+
+static JSValue
+js_synth_render(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+{
+    dtr_synth_store_t *store;
+    int32_t            idx;
+    int16_t           *pcm;
+    size_t             pcm_len;
+    JSValue            result;
+
+    (void)this_val;
+    store = prv_get_store();
+    idx   = dtr_api_opt_int(ctx, argc, argv, 0, -1);
+    if (idx < 0 || idx >= DTR_SYNTH_MAX_SFX) {
+        return JS_UNDEFINED;
+    }
+
+    pcm = dtr_synth_render(&store->defs[idx], &pcm_len);
+    if (pcm == NULL) {
+        return JS_UNDEFINED;
+    }
+
+    result = JS_NewArrayBufferCopy(ctx, (const uint8_t *)pcm, pcm_len * sizeof(int16_t));
+    DTR_FREE(pcm);
+    return result;
+}
+
+/* ------------------------------------------------------------------ */
+/*  synth.exportWav(idx, path) — render SFX and write WAV to disk      */
+/* ------------------------------------------------------------------ */
+
+static JSValue
+js_synth_export_wav(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+{
+    dtr_synth_store_t *store;
+    dtr_console_t     *con;
+    int32_t            idx;
+    const char        *rel;
+    char               full[1024];
+    int16_t           *pcm;
+    size_t             pcm_len;
+    size_t             data_bytes;
+    size_t             file_size;
+    uint8_t           *wav;
+    uint8_t           *pos;
+
+    (void)this_val;
+    if (argc < 2) {
+        return JS_FALSE;
+    }
+
+    store = prv_get_store();
+    con   = CON(ctx);
+    idx   = dtr_api_opt_int(ctx, argc, argv, 0, -1);
+    if (idx < 0 || idx >= DTR_SYNTH_MAX_SFX) {
+        return JS_FALSE;
+    }
+
+    rel = JS_ToCString(ctx, argv[1]);
+    if (rel == NULL) {
+        return JS_FALSE;
+    }
+
+    /* Reject absolute paths and traversal */
+    if (rel[0] == '/' || rel[0] == '\\' || SDL_strstr(rel, "..") != NULL) {
+        JS_FreeCString(ctx, rel);
+        return JS_FALSE;
+    }
+    SDL_snprintf(full, sizeof(full), "%s/%s", con->cart->base_path, rel);
+    JS_FreeCString(ctx, rel);
+
+    pcm = dtr_synth_render(&store->defs[idx], &pcm_len);
+    if (pcm == NULL) {
+        return JS_FALSE;
+    }
+
+    data_bytes = pcm_len * sizeof(int16_t);
+    file_size  = 44 + data_bytes;
+
+    wav = (uint8_t *)DTR_CALLOC(file_size, 1);
+    if (wav == NULL) {
+        DTR_FREE(pcm);
+        return JS_FALSE;
+    }
+
+    /* WAV header (44 bytes, PCM S16 mono 44100) */
+    pos = wav;
+
+    /* RIFF chunk */
+    SDL_memcpy(pos, "RIFF", 4);     pos += 4;
+    {
+        uint32_t chunk_size;
+
+        chunk_size = (uint32_t)(file_size - 8);
+        pos[0] = (uint8_t)(chunk_size);
+        pos[1] = (uint8_t)(chunk_size >> 8);
+        pos[2] = (uint8_t)(chunk_size >> 16);
+        pos[3] = (uint8_t)(chunk_size >> 24);
+        pos += 4;
+    }
+    SDL_memcpy(pos, "WAVE", 4);     pos += 4;
+
+    /* fmt sub-chunk */
+    SDL_memcpy(pos, "fmt ", 4);     pos += 4;
+    pos[0] = 16; pos[1] = 0; pos[2] = 0; pos[3] = 0;  pos += 4; /* sub-chunk size */
+    pos[0] = 1;  pos[1] = 0;                            pos += 2; /* PCM format */
+    pos[0] = 1;  pos[1] = 0;                            pos += 2; /* mono */
+    {
+        uint32_t sr;
+
+        sr     = DTR_SYNTH_SAMPLE_RATE;
+        pos[0] = (uint8_t)(sr);
+        pos[1] = (uint8_t)(sr >> 8);
+        pos[2] = (uint8_t)(sr >> 16);
+        pos[3] = (uint8_t)(sr >> 24);
+        pos += 4; /* sample rate */
+    }
+    {
+        uint32_t byte_rate;
+
+        byte_rate = DTR_SYNTH_SAMPLE_RATE * 2;  /* mono * 16-bit */
+        pos[0] = (uint8_t)(byte_rate);
+        pos[1] = (uint8_t)(byte_rate >> 8);
+        pos[2] = (uint8_t)(byte_rate >> 16);
+        pos[3] = (uint8_t)(byte_rate >> 24);
+        pos += 4; /* byte rate */
+    }
+    pos[0] = 2;  pos[1] = 0;                            pos += 2; /* block align */
+    pos[0] = 16; pos[1] = 0;                            pos += 2; /* bits per sample */
+
+    /* data sub-chunk */
+    SDL_memcpy(pos, "data", 4);     pos += 4;
+    {
+        uint32_t ds;
+
+        ds     = (uint32_t)data_bytes;
+        pos[0] = (uint8_t)(ds);
+        pos[1] = (uint8_t)(ds >> 8);
+        pos[2] = (uint8_t)(ds >> 16);
+        pos[3] = (uint8_t)(ds >> 24);
+        pos += 4;
+    }
+
+    SDL_memcpy(pos, pcm, data_bytes);
+    DTR_FREE(pcm);
+
+    if (!SDL_SaveFile(full, wav, file_size)) {
+        DTR_FREE(wav);
+        return JS_FALSE;
+    }
+
+    DTR_FREE(wav);
+    return JS_TRUE;
+}
+
+/* ------------------------------------------------------------------ */
 /*  Registration                                                       */
 /* ------------------------------------------------------------------ */
 
@@ -1190,12 +1376,14 @@ static const JSCFunctionListEntry js_synth_funcs[] = {
     JS_CFUNC_DEF("play", 3, js_synth_play),
     JS_CFUNC_DEF("playNote", 6, js_synth_play_note),
     JS_CFUNC_DEF("stop", 1, js_synth_stop),
-    JS_CFUNC_DEF("playing", 0, js_synth_playing),
-    JS_CFUNC_DEF("noteIdx", 0, js_synth_note_idx),
+    JS_CFUNC_DEF("playing", 1, js_synth_playing),
+    JS_CFUNC_DEF("noteIdx", 1, js_synth_note_idx),
     JS_CFUNC_DEF("count", 0, js_synth_count),
     JS_CFUNC_DEF("noteName", 1, js_synth_note_name),
     JS_CFUNC_DEF("waveNames", 0, js_synth_wave_names),
     JS_CFUNC_DEF("fxNames", 0, js_synth_fx_names),
+    JS_CFUNC_DEF("render", 1, js_synth_render),
+    JS_CFUNC_DEF("exportWav", 2, js_synth_export_wav),
 };
 
 void dtr_synth_api_register(JSContext *ctx, JSValue global)
