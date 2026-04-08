@@ -99,7 +99,8 @@ export const TAB_CODE = 0;
 export const TAB_SPRITES = 1;
 export const TAB_MAP = 2;
 export const TAB_SFX = 3;
-export const TAB_NAMES = ["CODE", "SPRITES", "MAP", "SFX"];
+export const TAB_MUSIC = 4;
+export const TAB_NAMES = ["CODE", "SPRITES", "MAP", "SFX", "MUSIC"];
 
 // ─── Bracket / auto-close tables ─────────────────────────────────────────────
 

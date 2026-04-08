@@ -164,7 +164,6 @@ export const st = {
     sfxLoopEnd: 0, // loop end note (0 = no loop)
     sfxPlaying: false, // preview playing
     sfxDirty: false, // unsaved changes
-    sfxOctave: 1, // default octave for new notes (0-7)
     sfxWave: 0, // current waveform for painting
     sfxVol: 7, // current volume for painting (0-7)
     sfxFx: 0, // current effect for painting (0-7)
@@ -172,6 +171,21 @@ export const st = {
     sfxClipboard: null, // copied SFX data {notes[], speed, loopStart, loopEnd}
     sfxPlayStart: 0, // sys.time() when playback started (for position cursor)
     sfxSpaceHeld: false, // guard against Space key repeat toggling
+    sfxUndoStack: [], // undo snapshots for current SFX
+    sfxRedoStack: [], // redo snapshots
+    sfxSelStart: -1, // multi-note selection start (-1 = no sel)
+    sfxSelEnd: -1, // multi-note selection end
+    sfxNoteClip: null, // copied note range [{pitch,waveform,volume,effect},...]
+    sfxDragging: false, // mouse drag painting active
+
+    // music editor state
+    musPatterns: null, // lazy init: [{ch:[-1,-1,-1,-1], flags:0}] × 64
+    musSel: 0, // selected pattern row (0-63)
+    musCol: 0, // selected channel column (0-3)
+    musScrollY: 0, // pattern list scroll offset
+    musPlaying: false, // music playback active
+    musPlayRow: 0, // current playback pattern index
+    musPlayStart: 0, // sys.time() when current SFX started
 
     // caches (invalidated on edit)
     _blockStateCache: [],

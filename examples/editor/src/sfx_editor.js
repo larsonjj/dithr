@@ -73,6 +73,40 @@ const WAVE_COLORS = [
     10, // phaser = yellow
 ];
 
+// ─── SFX list hasData cache ──────────────────────────────────────────────────
+
+let sfxHasData = null;
+
+function initHasDataCache() {
+    sfxHasData = new Array(64);
+    for (let i = 0; i < 64; i++) {
+        let data = synth.get(i);
+        sfxHasData[i] = false;
+        if (data) {
+            for (let n = 0; n < 32; n++) {
+                if (data.notes[n].pitch > 0) {
+                    sfxHasData[i] = true;
+                    break;
+                }
+            }
+        }
+    }
+}
+
+function markSfxHasData(idx) {
+    if (!sfxHasData) return;
+    let data = synth.get(idx);
+    sfxHasData[idx] = false;
+    if (data) {
+        for (let n = 0; n < 32; n++) {
+            if (data.notes[n].pitch > 0) {
+                sfxHasData[idx] = true;
+                break;
+            }
+        }
+    }
+}
+
 // ─── Data helpers ────────────────────────────────────────────────────────────
 
 /** Load SFX data from C into a JS array of note objects. */
@@ -100,12 +134,13 @@ function curSfx() {
     return loadSfx(st.sfxSel);
 }
 
-/** Modify a note field and push to C. The real-time synth callback reads
- *  the updated definition directly — no buffer swap needed. */
-function setNoteField(noteIdx, field, value) {
-    let data = curSfx();
+/** Modify a note field and push to C. Accepts optional pre-loaded data
+ *  to avoid redundant JS→C roundtrips when caller already has it. */
+function setNoteField(noteIdx, field, value, data) {
+    if (!data) data = curSfx();
     data.notes[noteIdx][field] = value;
     saveSfx(st.sfxSel, data);
+    markSfxHasData(st.sfxSel);
     st.sfxDirty = true;
 }
 
@@ -116,28 +151,27 @@ function makePitch(noteInOctave, octave) {
 
 /** Nudge the current field value up or down by `dir` (+1 or -1). */
 function nudgeField(dir) {
+    pushSfxUndo();
     let data = curSfx();
     let note = data.notes[st.sfxNote];
     if (st.sfxField === 0) {
-        // Pitch: 0 = rest, MIN_PITCH-MAX_PITCH = notes
         let p = note.pitch + dir;
         if (p < 0) p = 0;
         if (p > 0 && p < MIN_PITCH) p = dir > 0 ? MIN_PITCH : 0;
         if (p > MAX_PITCH) p = MAX_PITCH;
-        setNoteField(st.sfxNote, "pitch", p);
+        setNoteField(st.sfxNote, "pitch", p, data);
     } else if (st.sfxField === 1) {
-        setNoteField(st.sfxNote, "waveform", clamp(note.waveform + dir, 0, 7));
+        setNoteField(st.sfxNote, "waveform", clamp(note.waveform + dir, 0, 7), data);
     } else if (st.sfxField === 2) {
-        setNoteField(st.sfxNote, "volume", clamp(note.volume + dir, 0, 7));
+        setNoteField(st.sfxNote, "volume", clamp(note.volume + dir, 0, 7), data);
     } else if (st.sfxField === 3) {
-        setNoteField(st.sfxNote, "effect", clamp(note.effect + dir, 0, 7));
+        setNoteField(st.sfxNote, "effect", clamp(note.effect + dir, 0, 7), data);
     } else if (st.sfxField === 4) {
-        // Octave: shift pitch to new octave keeping note-within-octave
         if (note.pitch > 0) {
             let noteInOct = (note.pitch - 1) % 12;
             let curOct = Math.floor((note.pitch - 1) / 12);
             let newOct = clamp(curOct + dir, MIN_INT_OCT, MAX_INT_OCT);
-            setNoteField(st.sfxNote, "pitch", makePitch(noteInOct, newOct));
+            setNoteField(st.sfxNote, "pitch", makePitch(noteInOct, newOct), data);
         }
     }
 }
@@ -146,6 +180,76 @@ function nudgeField(dir) {
 function getPlaybackNote() {
     if (!st.sfxPlaying) return -1;
     return synth.noteIdx();
+}
+
+// ─── Undo / Redo ─────────────────────────────────────────────────────────────
+
+const MAX_SFX_UNDO = 50;
+
+function cloneSfx(data) {
+    let notes = [];
+    for (let i = 0; i < 32; i++) {
+        let n = data.notes[i];
+        notes.push({ pitch: n.pitch, waveform: n.waveform, volume: n.volume, effect: n.effect });
+    }
+    return { notes, speed: data.speed, loopStart: data.loopStart, loopEnd: data.loopEnd };
+}
+
+function pushSfxUndo() {
+    let snap = cloneSfx(curSfx());
+    st.sfxUndoStack.push(snap);
+    if (st.sfxUndoStack.length > MAX_SFX_UNDO) st.sfxUndoStack.shift();
+    st.sfxRedoStack = [];
+}
+
+function sfxUndo() {
+    if (st.sfxUndoStack.length === 0) {
+        status("Nothing to undo");
+        return;
+    }
+    st.sfxRedoStack.push(cloneSfx(curSfx()));
+    let prev = st.sfxUndoStack.pop();
+    saveSfx(st.sfxSel, prev);
+    st.sfxSpeed = prev.speed;
+    st.sfxLoopStart = prev.loopStart;
+    st.sfxLoopEnd = prev.loopEnd;
+    markSfxHasData(st.sfxSel);
+    st.sfxDirty = true;
+    status("Undo");
+}
+
+function sfxRedo() {
+    if (st.sfxRedoStack.length === 0) {
+        status("Nothing to redo");
+        return;
+    }
+    st.sfxUndoStack.push(cloneSfx(curSfx()));
+    let next = st.sfxRedoStack.pop();
+    saveSfx(st.sfxSel, next);
+    st.sfxSpeed = next.speed;
+    st.sfxLoopStart = next.loopStart;
+    st.sfxLoopEnd = next.loopEnd;
+    markSfxHasData(st.sfxSel);
+    st.sfxDirty = true;
+    status("Redo");
+}
+
+// ─── Selection helpers ───────────────────────────────────────────────────────
+
+function hasSelection() {
+    return st.sfxSelStart >= 0 && st.sfxSelEnd >= 0;
+}
+
+function selMin() {
+    return Math.min(st.sfxSelStart, st.sfxSelEnd);
+}
+function selMax() {
+    return Math.max(st.sfxSelStart, st.sfxSelEnd);
+}
+
+function clearSelection() {
+    st.sfxSelStart = -1;
+    st.sfxSelEnd = -1;
 }
 
 // Key-to-note mapping (piano keyboard layout)
@@ -195,36 +299,86 @@ export function updateSfxEditor(dt) {
         st.sfxPlaying = false;
     }
 
-    // ── Copy SFX (Ctrl+C) ──
-    if (ctrl && key.btnp(key.C)) {
-        let data = curSfx();
-        let notesCopy = [];
-        for (let i = 0; i < 32; i++) {
-            let n = data.notes[i];
-            notesCopy.push({
-                pitch: n.pitch,
-                waveform: n.waveform,
-                volume: n.volume,
-                effect: n.effect,
-            });
-        }
-        st.sfxClipboard = {
-            notes: notesCopy,
-            speed: data.speed,
-            loopStart: data.loopStart,
-            loopEnd: data.loopEnd,
-        };
-        status("Copied SFX " + st.sfxSel);
+    // Init hasData cache on first frame
+    if (!sfxHasData) initHasDataCache();
+
+    // ── Undo (Ctrl+Z) ──
+    if (ctrl && !shift && key.btnp(key.Z)) {
+        sfxUndo();
         return;
     }
 
-    // ── Paste SFX (Ctrl+V) ──
+    // ── Redo (Ctrl+Y or Ctrl+Shift+Z) ──
+    if (ctrl && (key.btnp(key.Y) || (shift && key.btnp(key.Z)))) {
+        sfxRedo();
+        return;
+    }
+
+    // ── Copy (Ctrl+C) — range if selection, else full SFX ──
+    if (ctrl && key.btnp(key.C)) {
+        let data = curSfx();
+        if (hasSelection()) {
+            let lo = selMin(),
+                hi = selMax();
+            let clip = [];
+            for (let i = lo; i <= hi; i++) {
+                let n = data.notes[i];
+                clip.push({
+                    pitch: n.pitch,
+                    waveform: n.waveform,
+                    volume: n.volume,
+                    effect: n.effect,
+                });
+            }
+            st.sfxNoteClip = clip;
+            status("Copied notes " + lo + "-" + hi);
+        } else {
+            let notesCopy = [];
+            for (let i = 0; i < 32; i++) {
+                let n = data.notes[i];
+                notesCopy.push({
+                    pitch: n.pitch,
+                    waveform: n.waveform,
+                    volume: n.volume,
+                    effect: n.effect,
+                });
+            }
+            st.sfxClipboard = {
+                notes: notesCopy,
+                speed: data.speed,
+                loopStart: data.loopStart,
+                loopEnd: data.loopEnd,
+            };
+            st.sfxNoteClip = null;
+            status("Copied SFX " + st.sfxSel);
+        }
+        return;
+    }
+
+    // ── Paste (Ctrl+V) — range if note clip, else full SFX ──
     if (ctrl && key.btnp(key.V)) {
-        if (st.sfxClipboard) {
+        if (st.sfxNoteClip) {
+            pushSfxUndo();
+            let data = curSfx();
+            for (let i = 0; i < st.sfxNoteClip.length && st.sfxNote + i < 32; i++) {
+                let src = st.sfxNoteClip[i];
+                let dst = data.notes[st.sfxNote + i];
+                dst.pitch = src.pitch;
+                dst.waveform = src.waveform;
+                dst.volume = src.volume;
+                dst.effect = src.effect;
+            }
+            saveSfx(st.sfxSel, data);
+            markSfxHasData(st.sfxSel);
+            st.sfxDirty = true;
+            status("Pasted " + st.sfxNoteClip.length + " notes at " + st.sfxNote);
+        } else if (st.sfxClipboard) {
+            pushSfxUndo();
             saveSfx(st.sfxSel, st.sfxClipboard);
             st.sfxSpeed = st.sfxClipboard.speed;
             st.sfxLoopStart = st.sfxClipboard.loopStart;
             st.sfxLoopEnd = st.sfxClipboard.loopEnd;
+            markSfxHasData(st.sfxSel);
             st.sfxDirty = true;
             status("Pasted to SFX " + st.sfxSel);
         } else {
@@ -236,22 +390,51 @@ export function updateSfxEditor(dt) {
     // ── SFX list navigation ──
     if (ctrl && key.btnp(key.UP)) {
         st.sfxSel = clamp(st.sfxSel - 1, 0, 63);
+        st.sfxUndoStack = [];
+        st.sfxRedoStack = [];
+        clearSelection();
         ensureSfxVisible();
         return;
     }
     if (ctrl && key.btnp(key.DOWN)) {
         st.sfxSel = clamp(st.sfxSel + 1, 0, 63);
+        st.sfxUndoStack = [];
+        st.sfxRedoStack = [];
+        clearSelection();
         ensureSfxVisible();
         return;
     }
 
     // ── Note cursor movement ──
-    if (!ctrl && key.btnp(key.LEFT)) {
+    // Shift+Left/Right: extend selection
+    if (!ctrl && shift && key.btnp(key.LEFT)) {
+        if (!hasSelection()) {
+            st.sfxSelStart = st.sfxNote;
+            st.sfxSelEnd = st.sfxNote;
+        }
+        st.sfxNote = clamp(st.sfxNote - 1, 0, 31);
+        st.sfxSelEnd = st.sfxNote;
+        ensureNoteVisible();
+        return;
+    }
+    if (!ctrl && shift && key.btnp(key.RIGHT)) {
+        if (!hasSelection()) {
+            st.sfxSelStart = st.sfxNote;
+            st.sfxSelEnd = st.sfxNote;
+        }
+        st.sfxNote = clamp(st.sfxNote + 1, 0, 31);
+        st.sfxSelEnd = st.sfxNote;
+        ensureNoteVisible();
+        return;
+    }
+    if (!ctrl && !shift && key.btnp(key.LEFT)) {
+        clearSelection();
         st.sfxNote = clamp(st.sfxNote - 1, 0, 31);
         ensureNoteVisible();
         return;
     }
-    if (!ctrl && key.btnp(key.RIGHT)) {
+    if (!ctrl && !shift && key.btnp(key.RIGHT)) {
+        clearSelection();
         st.sfxNote = clamp(st.sfxNote + 1, 0, 31);
         ensureNoteVisible();
         return;
@@ -283,6 +466,7 @@ export function updateSfxEditor(dt) {
 
     // ── Speed adjustment ──
     if (key.btnp(key.MINUS)) {
+        pushSfxUndo();
         let data = curSfx();
         data.speed = clamp(data.speed - 1, 1, 32);
         st.sfxSpeed = data.speed;
@@ -291,6 +475,7 @@ export function updateSfxEditor(dt) {
         return;
     }
     if (key.btnp(key.EQUALS)) {
+        pushSfxUndo();
         let data = curSfx();
         data.speed = clamp(data.speed + 1, 1, 32);
         st.sfxSpeed = data.speed;
@@ -304,10 +489,11 @@ export function updateSfxEditor(dt) {
         let data = curSfx();
         let note = data.notes[st.sfxNote];
         if (note.pitch > 0) {
+            pushSfxUndo();
             let noteInOct = (note.pitch - 1) % 12;
             let curOct = Math.floor((note.pitch - 1) / 12);
             let newOct = clamp(curOct - 1, MIN_INT_OCT, MAX_INT_OCT);
-            setNoteField(st.sfxNote, "pitch", makePitch(noteInOct, newOct));
+            setNoteField(st.sfxNote, "pitch", makePitch(noteInOct, newOct), data);
             status("Octave: " + (newOct - OCT_OFFSET));
         }
         return;
@@ -316,10 +502,11 @@ export function updateSfxEditor(dt) {
         let data = curSfx();
         let note = data.notes[st.sfxNote];
         if (note.pitch > 0) {
+            pushSfxUndo();
             let noteInOct = (note.pitch - 1) % 12;
             let curOct = Math.floor((note.pitch - 1) / 12);
             let newOct = clamp(curOct + 1, MIN_INT_OCT, MAX_INT_OCT);
-            setNoteField(st.sfxNote, "pitch", makePitch(noteInOct, newOct));
+            setNoteField(st.sfxNote, "pitch", makePitch(noteInOct, newOct), data);
             status("Octave: " + (newOct - OCT_OFFSET));
         }
         return;
@@ -328,10 +515,10 @@ export function updateSfxEditor(dt) {
     // ── Waveform cycle (W key) ──
     if (key.btnp(key.W)) {
         if (st.sfxField === 1) {
-            // On wave row: cycle this note's waveform
+            pushSfxUndo();
             let data = curSfx();
             let nw = (data.notes[st.sfxNote].waveform + 1) % 8;
-            setNoteField(st.sfxNote, "waveform", nw);
+            setNoteField(st.sfxNote, "waveform", nw, data);
             let names = synth.waveNames();
             status("Note wave: " + names[nw]);
         } else {
@@ -345,10 +532,10 @@ export function updateSfxEditor(dt) {
     // ── Effect cycle (E key) ──
     if (key.btnp(key.E)) {
         if (st.sfxField === 3) {
-            // On fx row: cycle this note's effect
+            pushSfxUndo();
             let data = curSfx();
             let nf = (data.notes[st.sfxNote].effect + 1) % 8;
-            setNoteField(st.sfxNote, "effect", nf);
+            setNoteField(st.sfxNote, "effect", nf, data);
             let names = synth.fxNames();
             status("Note fx: " + names[nf]);
         } else {
@@ -363,16 +550,16 @@ export function updateSfxEditor(dt) {
     for (let i = 0; i <= 7; i++) {
         if (key.btnp(key.NUM1 + i)) {
             if (st.sfxField === 2) {
-                // Direct volume set on selected note
+                pushSfxUndo();
                 setNoteField(st.sfxNote, "volume", i);
             } else if (st.sfxField === 4) {
-                // Direct octave set on selected note
                 let data = curSfx();
                 let note = data.notes[st.sfxNote];
                 if (note.pitch > 0) {
+                    pushSfxUndo();
                     let intOct = clamp(i + OCT_OFFSET, MIN_INT_OCT, MAX_INT_OCT);
                     let noteInOct = (note.pitch - 1) % 12;
-                    setNoteField(st.sfxNote, "pitch", makePitch(noteInOct, intOct));
+                    setNoteField(st.sfxNote, "pitch", makePitch(noteInOct, intOct), data);
                     status("Octave: " + (intOct - OCT_OFFSET));
                 }
             } else {
@@ -383,28 +570,48 @@ export function updateSfxEditor(dt) {
         }
     }
 
-    // ── Delete note ──
+    // ── Delete note (or selection range) ──
     if (key.btnp(key.DELETE) || key.btnp(key.BACKSPACE)) {
-        if (st.sfxField === 0) {
-            setNoteField(st.sfxNote, "pitch", 0);
-            setNoteField(st.sfxNote, "volume", 0);
-        } else if (st.sfxField === 1) {
-            setNoteField(st.sfxNote, "waveform", 0);
-        } else if (st.sfxField === 2) {
-            setNoteField(st.sfxNote, "volume", 0);
+        pushSfxUndo();
+        let data = curSfx();
+        if (hasSelection()) {
+            let lo = selMin(),
+                hi = selMax();
+            for (let i = lo; i <= hi; i++) {
+                data.notes[i].pitch = 0;
+                data.notes[i].waveform = 0;
+                data.notes[i].volume = 0;
+                data.notes[i].effect = 0;
+            }
+            saveSfx(st.sfxSel, data);
+            markSfxHasData(st.sfxSel);
+            st.sfxDirty = true;
+            clearSelection();
+            status("Cleared notes " + lo + "-" + hi);
         } else {
-            setNoteField(st.sfxNote, "effect", 0);
+            if (st.sfxField === 0) {
+                data.notes[st.sfxNote].pitch = 0;
+                data.notes[st.sfxNote].volume = 0;
+                saveSfx(st.sfxSel, data);
+                markSfxHasData(st.sfxSel);
+                st.sfxDirty = true;
+            } else if (st.sfxField === 1) {
+                setNoteField(st.sfxNote, "waveform", 0, data);
+            } else if (st.sfxField === 2) {
+                setNoteField(st.sfxNote, "volume", 0, data);
+            } else {
+                setNoteField(st.sfxNote, "effect", 0, data);
+            }
         }
         return;
     }
 
     // ── Loop markers (Ctrl+L for start, Ctrl+Shift+L for end) ──
-    // Re-pressing on the same position clears the loop.
     if (ctrl && key.btnp(key.L)) {
+        pushSfxUndo();
         let data = curSfx();
         if (shift) {
             if (data.loopEnd === st.sfxNote && data.loopEnd > 0) {
-                // Toggle off: clear loop
                 data.loopEnd = 0;
                 data.loopStart = 0;
                 st.sfxLoopEnd = 0;
@@ -413,11 +620,18 @@ export function updateSfxEditor(dt) {
             } else {
                 data.loopEnd = st.sfxNote;
                 st.sfxLoopEnd = st.sfxNote;
+                // Validate: swap if start > end
+                if (data.loopStart > data.loopEnd) {
+                    let tmp = data.loopStart;
+                    data.loopStart = data.loopEnd;
+                    data.loopEnd = tmp;
+                    st.sfxLoopStart = data.loopStart;
+                    st.sfxLoopEnd = data.loopEnd;
+                }
                 status("Loop end: " + st.sfxNote);
             }
         } else {
             if (data.loopStart === st.sfxNote && data.loopEnd > 0) {
-                // Toggle off: clear loop
                 data.loopEnd = 0;
                 data.loopStart = 0;
                 st.sfxLoopEnd = 0;
@@ -426,6 +640,14 @@ export function updateSfxEditor(dt) {
             } else {
                 data.loopStart = st.sfxNote;
                 st.sfxLoopStart = st.sfxNote;
+                // Validate: swap if start > end
+                if (data.loopEnd > 0 && data.loopStart > data.loopEnd) {
+                    let tmp = data.loopStart;
+                    data.loopStart = data.loopEnd;
+                    data.loopEnd = tmp;
+                    st.sfxLoopStart = data.loopStart;
+                    st.sfxLoopEnd = data.loopEnd;
+                }
                 status("Loop start: " + st.sfxNote);
             }
         }
@@ -439,7 +661,7 @@ export function updateSfxEditor(dt) {
         for (let i = 0; i < PIANO_KEYS.length; i++) {
             let pk = PIANO_KEYS[i];
             if (key.btnp(key[pk.key])) {
-                // Use the note's current octave, or default to MIN_INT_OCT for new notes
+                pushSfxUndo();
                 let data = curSfx();
                 let curNote = data.notes[st.sfxNote];
                 let isNew = curNote.pitch === 0;
@@ -452,6 +674,7 @@ export function updateSfxEditor(dt) {
                     data.notes[st.sfxNote].effect = st.sfxFx;
                 }
                 saveSfx(st.sfxSel, data);
+                markSfxHasData(st.sfxSel);
                 st.sfxDirty = true;
                 // Auto-advance cursor
                 if (st.sfxNote < 31) {
@@ -479,6 +702,7 @@ export function updateSfxEditor(dt) {
         }
         for (let i = 0; i <= 7; i++) {
             if (key.btnp(key.NUM1 + i)) {
+                pushSfxUndo();
                 setNoteField(st.sfxNote, "waveform", i);
                 return;
             }
@@ -489,6 +713,7 @@ export function updateSfxEditor(dt) {
     if (st.sfxField === 3) {
         for (let i = 0; i <= 7; i++) {
             if (key.btnp(key.NUM1 + i)) {
+                pushSfxUndo();
                 setNoteField(st.sfxNote, "effect", i);
                 return;
             }
@@ -535,7 +760,9 @@ function handleMouse() {
         let row = Math.floor((my - listTop) / (CH + 2)) + st.sfxListScroll;
         if (row >= 0 && row < 64) {
             st.sfxSel = row;
-            // Load speed/loop from selected SFX
+            st.sfxUndoStack = [];
+            st.sfxRedoStack = [];
+            clearSelection();
             let data = curSfx();
             st.sfxSpeed = data.speed;
             st.sfxLoopStart = data.loopStart;
@@ -551,11 +778,53 @@ function handleMouse() {
         let col = Math.floor((mx - gridContentX) / NOTE_W) + st.sfxScrollX;
         let row = Math.floor((my - gridContentY) / ROW_H);
         if (col >= 0 && col < 32 && row >= 0 && row < 5) {
+            clearSelection();
             st.sfxNote = col;
             st.sfxField = row;
         }
         return;
     }
+
+    // Mouse drag painting in pitch graph
+    let previewY = GRID_Y + HEADER_H + FIELD_H + 8;
+    let previewH = FB_H - FOOT_H - previewY - 4;
+    let previewX = GRID_X + LABEL_W;
+    let previewW = FB_W - previewX - 4;
+    if (
+        previewH >= 16 &&
+        mx >= previewX &&
+        mx < previewX + previewW &&
+        my >= previewY &&
+        my < previewY + previewH
+    ) {
+        if (mouse.btnp(0)) {
+            pushSfxUndo();
+            st.sfxDragging = true;
+        }
+        if (mouse.btn(0) && st.sfxDragging) {
+            let col = Math.floor((mx - previewX) / NOTE_W) + st.sfxScrollX;
+            if (col >= 0 && col < 32) {
+                let range = MAX_PITCH - MIN_PITCH;
+                let frac = 1.0 - (my - previewY) / (previewH - 1);
+                frac = Math.max(0, Math.min(1, frac));
+                let pitch = Math.round(MIN_PITCH + frac * range);
+                pitch = clamp(pitch, MIN_PITCH, MAX_PITCH);
+                let data = curSfx();
+                let note = data.notes[col];
+                note.pitch = pitch;
+                if (note.volume === 0) {
+                    note.waveform = st.sfxWave;
+                    note.volume = st.sfxVol;
+                    note.effect = st.sfxFx;
+                }
+                saveSfx(st.sfxSel, data);
+                markSfxHasData(st.sfxSel);
+                st.sfxDirty = true;
+                st.sfxNote = col;
+            }
+        }
+    }
+    if (!mouse.btn(0)) st.sfxDragging = false;
 
     // Scroll SFX list
     if (mx < LIST_W && my >= TAB_H) {
@@ -634,17 +903,10 @@ function drawSfxList() {
             gfx.rectfill(0, yy - 1, LIST_W - 2, yy + CH, SEL_COL);
         }
 
-        // Check if SFX has any notes
-        let hasData = false;
-        let data = loadSfx(idx);
-        for (let n = 0; n < 32; n++) {
-            if (data.notes[n].pitch > 0) {
-                hasData = true;
-                break;
-            }
-        }
+        // Check if SFX has any notes (cached)
+        let hd = sfxHasData ? sfxHasData[idx] : false;
 
-        gfx.print("#" + label2, 2, yy, isSelected ? FG : hasData ? GUTFG : 17);
+        gfx.print("#" + label2, 2, yy, isSelected ? FG : hd ? GUTFG : 17);
 
         // Playing indicator
         if (isSelected && st.sfxPlaying) {
@@ -722,7 +984,16 @@ function drawNoteGrid(playNote) {
             gfx.rectfill(xx, contentY - 1, xx + NOTE_W - 2, contentY + FIELD_H - 2, 1);
         }
 
-        // Selection highlight
+        // Multi-note selection highlight
+        if (hasSelection()) {
+            let slo = selMin(),
+                shi = selMax();
+            if (col >= slo && col <= shi) {
+                gfx.rectfill(xx, contentY - 1, xx + NOTE_W - 2, contentY + FIELD_H - 2, SEL_COL);
+            }
+        }
+
+        // Cursor cell highlight
         if (isSelCol) {
             let selY = contentY + st.sfxField * ROW_H;
             gfx.rectfill(xx, selY, xx + NOTE_W - 2, selY + ROW_H - 2, SEL_COL);
@@ -833,11 +1104,79 @@ function drawWavePreview(data, playNote) {
         let barBot = previewY + previewH - 1;
         let barCol = col === playNote ? PLAY_COL : col === st.sfxNote ? FG : NOTE_COL;
         if (note.volume === 0) continue;
+
+        // Volume bar (thin, proportional height at bottom of column)
+        let volFrac = note.volume / 7;
+        let volBarH = Math.max(1, Math.floor((barBot - barTop) * volFrac));
+        let volTop = barBot - volBarH + 1;
+        gfx.rectfill(bx, volTop, bx + NOTE_W - 2, barBot, 17);
+
+        // Pitch bar (full height)
         gfx.rectfill(bx, barTop, bx + NOTE_W - 2, barBot, barCol);
+
+        // Volume overlay (darken top portion to show volume < max)
+        if (note.volume < 7) {
+            let darkTop = barTop;
+            let darkBot = volTop - 1;
+            if (darkBot >= darkTop) {
+                gfx.rectfill(bx, darkTop, bx + NOTE_W - 2, darkBot, 1);
+            }
+        }
+
         // Draw a cap colored by waveform at the pitch position
         if (barBot - barTop > capH) {
             let capCol = WAVE_COLORS[note.waveform] || FG;
             gfx.rectfill(bx, barTop - 1, bx + NOTE_W - 2, barTop + capH - 2, capCol);
+        }
+    }
+
+    // ── Effect visualization lines ──
+    for (let i = 0; i < VISIBLE_NOTES && i + st.sfxScrollX < 32; i++) {
+        let col = i + st.sfxScrollX;
+        let note = data.notes[col];
+        if (note.pitch === 0 || note.volume === 0 || note.effect === 0) continue;
+        let bx = previewX + i * NOTE_W;
+        let midX = bx + Math.floor(NOTE_W / 2) - 1;
+        let clampedP = Math.max(minP, Math.min(maxP, note.pitch));
+        let pitchFrac = (clampedP - minP) / range;
+        let noteY =
+            previewY + capH + (previewH - 1 - capH) - Math.floor(pitchFrac * (previewH - 2 - capH));
+
+        if (note.effect === 1 && col + 1 < 32) {
+            // Slide: line to next note's pitch
+            let next = data.notes[col + 1];
+            if (next.pitch > 0) {
+                let nextP = Math.max(minP, Math.min(maxP, next.pitch));
+                let nextFrac = (nextP - minP) / range;
+                let nextY =
+                    previewY +
+                    capH +
+                    (previewH - 1 - capH) -
+                    Math.floor(nextFrac * (previewH - 2 - capH));
+                let nextX = previewX + (i + 1) * NOTE_W + Math.floor(NOTE_W / 2) - 1;
+                gfx.line(midX, noteY, nextX, nextY, 13);
+            }
+        } else if (note.effect === 2) {
+            // Vibrato: wavy dots
+            for (let dx = 0; dx < NOTE_W - 2; dx += 2) {
+                let vy = noteY + Math.round(Math.sin(dx * 1.5) * 2);
+                gfx.pset(bx + dx, vy, 13);
+            }
+        } else if (note.effect === 3) {
+            // Drop: descending diagonal
+            gfx.line(midX, noteY, midX, previewY + previewH - 3, 8);
+        } else if (note.effect === 4) {
+            // Fade in: ascending triangle
+            gfx.line(bx, previewY + previewH - 3, bx + NOTE_W - 2, noteY, 11);
+        } else if (note.effect === 5) {
+            // Fade out: descending triangle
+            gfx.line(bx, noteY, bx + NOTE_W - 2, previewY + previewH - 3, 8);
+        } else if (note.effect === 6 || note.effect === 7) {
+            // Arpeggio: horizontal ticks
+            for (let t = 0; t < 3; t++) {
+                let ty = noteY - 2 + t * 3;
+                gfx.line(bx + 1, ty, bx + NOTE_W - 3, ty, 14);
+            }
         }
     }
 

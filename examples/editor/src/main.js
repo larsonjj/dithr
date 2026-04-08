@@ -6,6 +6,7 @@ import {
     TAB_SPRITES,
     TAB_MAP,
     TAB_SFX,
+    TAB_MUSIC,
     BG,
     AUTO_CLOSE,
     FB_W,
@@ -25,6 +26,7 @@ import { updateBrowser, drawBrowser } from "./browser.js";
 import { updateSpriteEditor, drawSpriteEditor } from "./sprite_editor.js";
 import { updateMapEditor, drawMapEditor, mapTextInput } from "./map_editor.js";
 import { updateSfxEditor, drawSfxEditor } from "./sfx_editor.js";
+import { updateMusicEditor, drawMusicEditor } from "./music_editor.js";
 
 // ─── Text input event handler ────────────────────────────────────────────────
 
@@ -312,6 +314,10 @@ export function _update(dt) {
         updateSfxEditor(dt);
         return;
     }
+    if (st.activeTab === TAB_MUSIC) {
+        updateMusicEditor(dt);
+        return;
+    }
 
     if (st.brMode) updateBrowser();
     else if (st.findMode) updateFind();
@@ -328,6 +334,8 @@ export function _draw() {
         drawMapEditor();
     } else if (st.activeTab === TAB_SFX) {
         drawSfxEditor();
+    } else if (st.activeTab === TAB_MUSIC) {
+        drawMusicEditor();
     } else {
         drawFileTabs();
         if (st.brMode) drawBrowser();
@@ -395,7 +403,7 @@ function drawHelpOverlay() {
             "TrplClick   Select line",
             "",
             "── Tabs ──",
-            MOD + "+1/2/3/4  Code/Spr/Map/SFX",
+            MOD + "+1-5    Code/Spr/Map/SFX/Mus",
         ];
         for (let i = 0; i < Math.max(left.length, right.length); i++) {
             if (i < left.length)
@@ -448,7 +456,7 @@ function drawHelpOverlay() {
             "Mouse wheel Scroll sheet",
             "",
             "── Tabs ──",
-            MOD + "+1/2/3/4  Code/Spr/Map/SFX",
+            MOD + "+1-5    Code/Spr/Map/SFX/Mus",
         ];
         for (let i = 0; i < Math.max(left.length, right.length); i++) {
             if (i < left.length)
@@ -518,7 +526,7 @@ function drawHelpOverlay() {
             "[+] / [-]   Add/remove layer",
             "",
             "── Tabs ──",
-            MOD + "+1/2/3/4  Code/Spr/Map/SFX",
+            MOD + "+1-5    Code/Spr/Map/SFX/Mus",
         ];
         for (let i = 0; i < Math.max(left.length, right.length); i++) {
             if (i < left.length)
@@ -526,7 +534,7 @@ function drawHelpOverlay() {
             if (i < right.length)
                 gfx.print(right[i], col2X, y + i * lh, right[i][0] === "\u2500" ? FG : GUTFG);
         }
-    } else {
+    } else if (st.activeTab === TAB_SFX) {
         let left = [
             "── Note Input ──",
             "Z-M         Piano keys",
@@ -535,11 +543,12 @@ function drawHelpOverlay() {
             "W           Cycle waveform",
             "E           Cycle effect",
             "1-8         Set volume (vol row)",
-            "Delete      Clear note",
+            "Delete      Clear note/sel",
             "Sh+Up/Down  Nudge value +/-",
             "",
             "── Navigation ──",
             "Left/Right  Prev/next note",
+            "Sh+Left/Rt  Extend selection",
             "Up/Down     Prev/next field",
             "Tab         Cycle field",
             MOD + "+Up/Dn  Prev/next SFX",
@@ -550,22 +559,51 @@ function drawHelpOverlay() {
             "Space       Play / stop",
             "",
             "── Edit ──",
-            MOD + "+C      Copy SFX",
-            MOD + "+V      Paste SFX",
+            MOD + "+Z      Undo",
+            MOD + "+Y      Redo",
+            MOD + "+C      Copy (sel/SFX)",
+            MOD + "+V      Paste (sel/SFX)",
+            "Mouse drag  Paint pitch graph",
             "",
             "── Settings ──",
             "-/=         Speed down/up",
             MOD + "+L      Set loop start",
             MOD + "+Sh+L   Set loop end",
             "",
-            "── Fields ──",
-            "NOTE        Pitch (piano keys)",
-            "WAVE        Waveform (1-8)",
-            "VOL         Volume (1-8)",
-            "FX          Effect (1-8)",
+            "── Tabs ──",
+            MOD + "+1-5    Code/Spr/Map/SFX/Mus",
+        ];
+        for (let i = 0; i < Math.max(left.length, right.length); i++) {
+            if (i < left.length)
+                gfx.print(left[i], col1X, y + i * lh, left[i][0] === "\u2500" ? FG : GUTFG);
+            if (i < right.length)
+                gfx.print(right[i], col2X, y + i * lh, right[i][0] === "\u2500" ? FG : GUTFG);
+        }
+    } else if (st.activeTab === TAB_MUSIC) {
+        let left = [
+            "── Navigation ──",
+            "Up/Down     Prev/next pattern",
+            "Left/Right  Prev/next channel",
+            MOD + "+Up/Dn  Page up/down",
+            "Scroll      Scroll list",
+            "",
+            "── Editing ──",
+            "0-9         Enter SFX index",
+            "Delete      Clear channel",
+            "Enter       Confirm entry",
+            "+/-         Increment/decrement",
+        ];
+        let right = [
+            "── Playback ──",
+            "Space       Play / stop",
+            "",
+            "── Flags ──",
+            "1           Loop start",
+            "2           Loop back",
+            "3           Stop",
             "",
             "── Tabs ──",
-            MOD + "+1/2/3/4  Code/Spr/Map/SFX",
+            MOD + "+1-5    Code/Spr/Map/SFX/Mus",
         ];
         for (let i = 0; i < Math.max(left.length, right.length); i++) {
             if (i < left.length)
