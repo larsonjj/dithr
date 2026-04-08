@@ -24,16 +24,16 @@ extern "C" {
 #define DTR_SYNTH_MAX_SFX     64 /**< Max synth SFX slots */
 #define DTR_SYNTH_SAMPLE_RATE 44100
 
-/** Waveform types */
-#define DTR_WAVE_SINE     0
-#define DTR_WAVE_SQUARE   1
-#define DTR_WAVE_PULSE    2 /**< 25% duty cycle */
-#define DTR_WAVE_TRIANGLE 3
-#define DTR_WAVE_SAW      4
-#define DTR_WAVE_ORGAN    5 /**< Additive harmonics */
-#define DTR_WAVE_NOISE    6
-#define DTR_WAVE_PHASER   7
-#define DTR_WAVE_COUNT    8
+/** Waveform types (matching PICO-8 instrument order) */
+#define DTR_WAVE_TRIANGLE  0 /**< Triangle wave (PICO-8 inst 0) */
+#define DTR_WAVE_TILTSAW   1 /**< Tilted / asymmetric saw (PICO-8 inst 1) */
+#define DTR_WAVE_SAW       2 /**< Sawtooth (PICO-8 inst 2) */
+#define DTR_WAVE_SQUARE    3 /**< Square 50% duty (PICO-8 inst 3) */
+#define DTR_WAVE_PULSE     4 /**< Pulse ~31.6% duty (PICO-8 inst 4) */
+#define DTR_WAVE_ORGAN     5 /**< Dual triangle / organ (PICO-8 inst 5) */
+#define DTR_WAVE_NOISE     6 /**< Filtered noise (PICO-8 inst 6) */
+#define DTR_WAVE_PHASER    7 /**< Detuned dual triangle (PICO-8 inst 7) */
+#define DTR_WAVE_COUNT     8
 
 /** Effect types */
 #define DTR_FX_NONE       0
@@ -101,7 +101,7 @@ float dtr_synth_pitch_freq(uint8_t pitch);
  * \brief           Generate a waveform sample at a given phase
  * \param[in]       wave: DTR_WAVE_* (0-7)
  * \param[in]       phase: 0.0 .. 1.0
- * \return          Sample value in -1.0 .. 1.0
+ * \return          Sample value (amplitude varies per waveform, PICO-8 style)
  */
 float dtr_synth_waveform(uint8_t wave, float phase);
 
@@ -110,7 +110,7 @@ float dtr_synth_waveform(uint8_t wave, float phase);
  * \param[in]       wave: DTR_WAVE_* (0-7)
  * \param[in]       phase: 0.0 .. 1.0
  * \param[in]       dtp: Phase increment per sample (freq / sample_rate)
- * \return          Sample value in -1.0 .. 1.0
+ * \return          Sample value (amplitude varies per waveform, PICO-8 style)
  */
 float dtr_synth_waveform_bl(uint8_t wave, float phase, float dtp);
 

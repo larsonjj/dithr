@@ -159,14 +159,14 @@ export const st = {
     sfxNote: 0, // selected note column (0-31)
     sfxField: 0, // 0=pitch, 1=waveform, 2=volume, 3=effect
     sfxScrollX: 0, // horizontal scroll in note columns
-    sfxSpeed: 8, // current SFX speed
+    sfxSpeed: 16, // current SFX speed
     sfxLoopStart: 0, // loop start note
     sfxLoopEnd: 0, // loop end note (0 = no loop)
     sfxPlaying: false, // preview playing
     sfxDirty: false, // unsaved changes
     sfxOctave: 1, // default octave for new notes (0-7)
     sfxWave: 0, // current waveform for painting
-    sfxVol: 5, // current volume for painting (0-7)
+    sfxVol: 7, // current volume for painting (0-7)
     sfxFx: 0, // current effect for painting (0-7)
     sfxListScroll: 0, // SFX list scroll offset
     sfxClipboard: null, // copied SFX data {notes[], speed, loopStart, loopEnd}

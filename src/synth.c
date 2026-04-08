@@ -103,44 +103,48 @@ static float prv_polyblep(float ttt, float dtp)
 static float prv_waveform(uint8_t wave, float phase)
 {
     float val;
+    float ret;
 
     switch (wave) {
-        case DTR_WAVE_SINE:
-            return SDL_sinf(phase * 2.0f * (float)M_PI);
-
-        case DTR_WAVE_SQUARE:
-            return phase < 0.5f ? 1.0f : -1.0f;
-
-        case DTR_WAVE_PULSE:
-            return phase < 0.25f ? 1.0f : -1.0f;
-
         case DTR_WAVE_TRIANGLE:
-            if (phase < 0.25f) {
-                return phase * 4.0f;
-            }
-            if (phase < 0.75f) {
-                return 1.0f - (phase - 0.25f) * 4.0f;
-            }
-            return (phase - 0.75f) * 4.0f - 1.0f;
+            /* PICO-8: peak ±0.50 */
+            return (1.0f - SDL_fabsf(4.0f * phase - 2.0f)) * 0.5f;
+
+        case DTR_WAVE_TILTSAW:
+            /* PICO-8: asymmetric triangle, ramp 87.5% up / 12.5% down, peak ±0.50 */
+            val = 0.875f;
+            ret = phase < val
+                ? 2.0f * phase / val - 1.0f
+                : 2.0f * (1.0f - phase) / (1.0f - val) - 1.0f;
+            return ret * 0.5f;
 
         case DTR_WAVE_SAW:
-            return 2.0f * phase - 1.0f;
+            /* PICO-8: peak ±0.327 */
+            return 0.653f * (phase < 0.5f ? phase : phase - 1.0f);
+
+        case DTR_WAVE_SQUARE:
+            /* PICO-8: 50% duty, peak ±0.25 */
+            return phase < 0.5f ? 0.25f : -0.25f;
+
+        case DTR_WAVE_PULSE:
+            /* PICO-8: ~31.6% duty, peak ±0.25 */
+            return phase < 0.316f ? 0.25f : -0.25f;
 
         case DTR_WAVE_ORGAN:
-            /* Additive: fundamental + 2nd + 3rd harmonic */
-            val = SDL_sinf(phase * 2.0f * (float)M_PI);
-            val += 0.5f * SDL_sinf(phase * 4.0f * (float)M_PI);
-            val += 0.25f * SDL_sinf(phase * 6.0f * (float)M_PI);
-            return val / 1.75f; /* Normalize */
+            /* PICO-8: dual-speed triangle, peak ±0.333 */
+            ret = phase < 0.5f
+                ? 3.0f - SDL_fabsf(24.0f * phase - 6.0f)
+                : 1.0f - SDL_fabsf(16.0f * phase - 12.0f);
+            return ret / 9.0f;
 
         case DTR_WAVE_NOISE:
-            return prv_noise();
+            return prv_noise() * 0.5f;
 
         case DTR_WAVE_PHASER:
-            /* Phase-modulated sine */
-            val =
-                SDL_sinf(phase * 2.0f * (float)M_PI + SDL_sinf(phase * 8.0f * (float)M_PI) * 0.5f);
-            return val;
+            /* PICO-8: two detuned triangles, peak ±0.50 */
+            ret = 2.0f - SDL_fabsf(8.0f * phase - 4.0f);
+            ret += 1.0f - SDL_fabsf(4.0f * phase - 2.0f);
+            return ret / 6.0f;
 
         default:
             return 0.0f;
@@ -166,32 +170,35 @@ static float prv_waveform_bl(uint8_t wave, float phase, float dtp)
 
     switch (wave) {
         case DTR_WAVE_SQUARE:
-            val = phase < 0.5f ? 1.0f : -1.0f;
-            val += prv_polyblep(phase, dtp);
+            /* PICO-8 peak: ±0.25 — PolyBLEP at 50% duty */
+            val = phase < 0.5f ? 0.25f : -0.25f;
+            val += prv_polyblep(phase, dtp) * 0.25f;
             blp = phase + 0.5f;
             if (blp >= 1.0f) {
                 blp -= 1.0f;
             }
-            val -= prv_polyblep(blp, dtp);
+            val -= prv_polyblep(blp, dtp) * 0.25f;
             return val;
 
         case DTR_WAVE_PULSE:
-            val = phase < 0.25f ? 1.0f : -1.0f;
-            val += prv_polyblep(phase, dtp);
-            blp = phase + 0.75f;
+            /* PICO-8 peak: ±0.25 — PolyBLEP at ~31.6% duty */
+            val = phase < 0.316f ? 0.25f : -0.25f;
+            val += prv_polyblep(phase, dtp) * 0.25f;
+            blp = phase + (1.0f - 0.316f);
             if (blp >= 1.0f) {
                 blp -= 1.0f;
             }
-            val -= prv_polyblep(blp, dtp);
+            val -= prv_polyblep(blp, dtp) * 0.25f;
             return val;
 
         case DTR_WAVE_SAW:
-            val = 2.0f * phase - 1.0f;
-            val -= prv_polyblep(phase, dtp);
+            /* PICO-8 peak: ±0.327 — PolyBLEP on naive saw */
+            val = 0.653f * (phase < 0.5f ? phase : phase - 1.0f);
+            val -= prv_polyblep(phase, dtp) * 0.327f;
             return val;
 
         default:
-            /* Sine, triangle, organ, noise, phaser — no discontinuity */
+            /* Triangle, tilted_saw, organ, noise, phaser — no discontinuity */
             return prv_waveform(wave, phase);
     }
 }
@@ -206,10 +213,9 @@ float dtr_synth_waveform_bl(uint8_t wave, float phase, float dtp)
 /* ------------------------------------------------------------------ */
 
 /**
- * Speed value maps to samples per note (higher speed = faster playback):
- *   samples_per_note = (33 - speed) * (sample_rate / 120)
- * At speed=1 → ~9800 samples (~222ms slow), speed=32 → ~368 samples (~8ms fast).
- * UI range: 1-32, clamped internally.
+ * Speed value maps to samples per note (PICO-8 style: higher = slower):
+ *   samples_per_note = speed * (sample_rate / 128)
+ * Each speed unit = 1/128 second. UI range: 1-32, clamped internally.
  */
 static int32_t prv_samples_per_note(uint8_t speed)
 {
@@ -222,7 +228,7 @@ static int32_t prv_samples_per_note(uint8_t speed)
     if (spd > 32) {
         spd = 32;
     }
-    return (33 - spd) * (DTR_SYNTH_SAMPLE_RATE / 120);
+    return spd * (DTR_SYNTH_SAMPLE_RATE / 128);
 }
 
 int16_t *dtr_synth_render(const dtr_synth_sfx_t *sfx, size_t *out_len)
@@ -380,7 +386,7 @@ int16_t *dtr_synth_render(const dtr_synth_sfx_t *sfx, size_t *out_len)
                 freq / (float)DTR_SYNTH_SAMPLE_RATE);
 
             /* Apply volume and clamp */
-            sample *= sample_vol * 0.8f; /* 0.8 headroom */
+            sample *= sample_vol;
             if (sample > 1.0f) {
                 sample = 1.0f;
             }

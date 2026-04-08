@@ -40,6 +40,14 @@ const FIELD_H = ROW_H * 5; // total height of the 5 field rows
 const LABEL_W = 30; // row label width
 const VISIBLE_NOTES = Math.floor((GRID_W - LABEL_W) / NOTE_W); // notes visible
 
+// Octave mapping — display octave = internal octave - OCT_OFFSET
+// Display 1-4 corresponds to internal octaves 3-6
+const OCT_OFFSET = 2;
+const MIN_INT_OCT = 3; // internal octave for display octave 1
+const MAX_INT_OCT = 6; // internal octave for display octave 4
+const MIN_PITCH = MIN_INT_OCT * 12 + 1; // 37 = C at internal octave 3
+const MAX_PITCH = (MAX_INT_OCT + 1) * 12; // 84 = B at internal octave 6
+
 // Colors
 const NOTE_COL = 12; // cyan for note names
 const WAVE_COL = 11; // green for waveform
@@ -51,17 +59,17 @@ const LOOP_COL = 3; // loop marker color
 const PLAY_COL = 11; // playback cursor color
 
 // Waveform short names for grid display (ASCII only, font covers 32-126)
-const WAVE_SHORT = ["~", "#", "!", "/", "\\", "@", "?", "*"];
+const WAVE_SHORT = ["/", "|", "\\", "#", "!", "@", "?", "*"];
 // Effect short names (ASCII only)
 const FX_SHORT = ["-", "^", "v", "\\", "<", ">", "3", "6"];
 
 // Waveform colors for pitch graph caps
 const WAVE_COLORS = [
-    12, // sine = cyan
+    9, // triangle = orange
+    8, // tiltsaw = red
+    8, // saw = red
     11, // square = green
     14, // pulse = pink
-    9, // triangle = orange
-    8, // saw = red
     13, // organ = lavender
     6, // noise = light gray
     10, // phaser = yellow
@@ -73,15 +81,15 @@ const WAVE_COLORS = [
 function loadSfx(idx) {
     let data = synth.get(idx);
     if (data) {
-        // Default speed to 8 when C struct is zero-initialized, clamp to 1-32
-        if (!data.speed) data.speed = 8;
+        // Default speed to 16 (PICO-8 default) when C struct is zero-initialized
+        if (!data.speed) data.speed = 16;
         if (data.speed > 32) data.speed = 32;
         return data;
     }
     // Return default empty SFX
     let notes = [];
     for (let i = 0; i < 32; i++) notes.push({ pitch: 0, waveform: 0, volume: 0, effect: 0 });
-    return { notes: notes, speed: 8, loopStart: 0, loopEnd: 0 };
+    return { notes: notes, speed: 16, loopStart: 0, loopEnd: 0 };
 }
 
 /** Push current SFX data to the C synth engine. */
@@ -103,9 +111,9 @@ function setNoteField(noteIdx, field, value) {
     st.sfxDirty = true;
 }
 
-/** Generate a pitch value from note name index (0-11) and octave (0-7). */
+/** Generate a pitch value from note name index (0-11) and internal octave. */
 function makePitch(noteInOctave, octave) {
-    return octave * 12 + noteInOctave + 1;
+    return clamp(octave, MIN_INT_OCT, MAX_INT_OCT) * 12 + noteInOctave + 1;
 }
 
 /** Nudge the current field value up or down by `dir` (+1 or -1). */
@@ -113,10 +121,11 @@ function nudgeField(dir) {
     let data = curSfx();
     let note = data.notes[st.sfxNote];
     if (st.sfxField === 0) {
-        // Pitch: 0 = rest, 1-96 = notes; skip 0 when nudging up from rest
+        // Pitch: 0 = rest, MIN_PITCH-MAX_PITCH = notes
         let p = note.pitch + dir;
         if (p < 0) p = 0;
-        if (p > 96) p = 96;
+        if (p > 0 && p < MIN_PITCH) p = dir > 0 ? MIN_PITCH : 0;
+        if (p > MAX_PITCH) p = MAX_PITCH;
         setNoteField(st.sfxNote, "pitch", p);
     } else if (st.sfxField === 1) {
         setNoteField(st.sfxNote, "waveform", clamp(note.waveform + dir, 0, 7));
@@ -129,7 +138,7 @@ function nudgeField(dir) {
         if (note.pitch > 0) {
             let noteInOct = (note.pitch - 1) % 12;
             let curOct = Math.floor((note.pitch - 1) / 12);
-            let newOct = clamp(curOct + dir, 0, 7);
+            let newOct = clamp(curOct + dir, MIN_INT_OCT, MAX_INT_OCT);
             setNoteField(st.sfxNote, "pitch", makePitch(noteInOct, newOct));
         }
     }
@@ -138,23 +147,7 @@ function nudgeField(dir) {
 /** Get the currently playing note index, or -1 if not playing. */
 function getPlaybackNote() {
     if (!st.sfxPlaying) return -1;
-    let data = curSfx();
-    let elapsed = sys.time() - st.sfxPlayStart;
-    let spd = Math.max(1, Math.min(32, data.speed));
-    let samplesPerNote = (33 - spd) * (44100 / 120);
-    let secondsPerNote = samplesPerNote / 44100;
-    let noteIdx = Math.floor(elapsed / secondsPerNote);
-    if (noteIdx < 0) return -1;
-
-    // Wrap through loop region — loop starts directly from loopStart
-    if (data.loopEnd > 0 && data.loopEnd >= data.loopStart) {
-        let loopLen = data.loopEnd - data.loopStart + 1;
-        return data.loopStart + (noteIdx % loopLen);
-    } else if (noteIdx >= 32) {
-        return -1;
-    }
-
-    return noteIdx;
+    return synth.noteIdx();
 }
 
 // Key-to-note mapping (piano keyboard layout)
@@ -315,9 +308,9 @@ export function updateSfxEditor(dt) {
         if (note.pitch > 0) {
             let noteInOct = (note.pitch - 1) % 12;
             let curOct = Math.floor((note.pitch - 1) / 12);
-            let newOct = clamp(curOct - 1, 0, 7);
+            let newOct = clamp(curOct - 1, MIN_INT_OCT, MAX_INT_OCT);
             setNoteField(st.sfxNote, "pitch", makePitch(noteInOct, newOct));
-            status("Octave: " + newOct);
+            status("Octave: " + (newOct - OCT_OFFSET));
         }
         return;
     }
@@ -327,9 +320,9 @@ export function updateSfxEditor(dt) {
         if (note.pitch > 0) {
             let noteInOct = (note.pitch - 1) % 12;
             let curOct = Math.floor((note.pitch - 1) / 12);
-            let newOct = clamp(curOct + 1, 0, 7);
+            let newOct = clamp(curOct + 1, MIN_INT_OCT, MAX_INT_OCT);
             setNoteField(st.sfxNote, "pitch", makePitch(noteInOct, newOct));
-            status("Octave: " + newOct);
+            status("Octave: " + (newOct - OCT_OFFSET));
         }
         return;
     }
@@ -379,9 +372,10 @@ export function updateSfxEditor(dt) {
                 let data = curSfx();
                 let note = data.notes[st.sfxNote];
                 if (note.pitch > 0) {
+                    let intOct = clamp(i + OCT_OFFSET, MIN_INT_OCT, MAX_INT_OCT);
                     let noteInOct = (note.pitch - 1) % 12;
-                    setNoteField(st.sfxNote, "pitch", makePitch(noteInOct, i));
-                    status("Octave: " + i);
+                    setNoteField(st.sfxNote, "pitch", makePitch(noteInOct, intOct));
+                    status("Octave: " + (intOct - OCT_OFFSET));
                 }
             } else {
                 st.sfxVol = i;
@@ -447,10 +441,10 @@ export function updateSfxEditor(dt) {
         for (let i = 0; i < PIANO_KEYS.length; i++) {
             let pk = PIANO_KEYS[i];
             if (key.btnp(key[pk.key])) {
-                // Use the note's current octave, or default to 1 for new notes
+                // Use the note's current octave, or default to MIN_INT_OCT for new notes
                 let data = curSfx();
                 let curNote = data.notes[st.sfxNote];
-                let oct = curNote.pitch > 0 ? Math.floor((curNote.pitch - 1) / 12) : 1;
+                let oct = curNote.pitch > 0 ? Math.floor((curNote.pitch - 1) / 12) : MIN_INT_OCT;
                 let pitch = makePitch(pk.note, oct);
                 data.notes[st.sfxNote].pitch = pitch;
                 data.notes[st.sfxNote].waveform = st.sfxWave;
@@ -733,20 +727,25 @@ function drawNoteGrid(playNote) {
             gfx.rectfill(xx, selY, xx + NOTE_W - 2, selY + ROW_H - 2, SEL_COL);
         }
 
-        // Pitch row
+        // Pitch row (note letter only — octave shown in OCT row)
         let pitchY = contentY + 3;
         if (note.pitch > 0) {
-            let name = synth.noteName(note.pitch);
-            gfx.print(name, xx + 1, pitchY, isSelCol && st.sfxField === 0 ? FG : NOTE_COL);
+            let name = synth.noteName(note.pitch).substring(0, 2);
+            if (name[1] === "-") name = name[0];
+            gfx.print(name, xx + 2, pitchY, isSelCol && st.sfxField === 0 ? FG : NOTE_COL);
         } else {
-            gfx.print("---", xx + 1, pitchY, REST_COL);
+            gfx.print("--", xx + 2, pitchY, REST_COL);
         }
 
         // Waveform row
         let waveY = contentY + ROW_H + 3;
         if (note.pitch > 0) {
-            let wStr = WAVE_SHORT[note.waveform] || "?";
-            gfx.print(wStr, xx + 4, waveY, isSelCol && st.sfxField === 1 ? FG : WAVE_COL);
+            gfx.print(
+                "" + note.waveform,
+                xx + 4,
+                waveY,
+                isSelCol && st.sfxField === 1 ? FG : WAVE_COL,
+            );
         } else {
             gfx.print("-", xx + 4, waveY, REST_COL);
         }
@@ -768,10 +767,10 @@ function drawNoteGrid(playNote) {
             gfx.print("-", xx + 4, fxY, REST_COL);
         }
 
-        // Octave row
+        // Octave row (display = internal - OCT_OFFSET)
         let octY = contentY + ROW_H * 4 + 3;
         if (note.pitch > 0) {
-            let oct = Math.floor((note.pitch - 1) / 12);
+            let oct = Math.floor((note.pitch - 1) / 12) - OCT_OFFSET;
             gfx.print("" + oct, xx + 4, octY, isSelCol && st.sfxField === 4 ? FG : NOTE_COL);
         } else {
             gfx.print("-", xx + 4, octY, REST_COL);
@@ -805,17 +804,17 @@ function drawWavePreview(data, playNote) {
     // Border
     gfx.rect(previewX - 1, previewY - 1, previewX + previewW, previewY + previewH, SEPC);
 
-    // Fixed range: octaves 1-4 (pitch 13-48)
-    let minP = 13;
-    let maxP = 48;
+    // Fixed range: display octaves 1-4 (internal 3-6, pitch 37-84)
+    let minP = MIN_PITCH;
+    let maxP = MAX_PITCH;
     let range = maxP - minP;
 
     // Draw octave grid lines with labels
-    for (let oct = 1; oct <= 4; oct++) {
-        let p = oct * 12 + 1; // first note of octave
+    for (let intOct = MIN_INT_OCT; intOct <= MAX_INT_OCT; intOct++) {
+        let p = intOct * 12 + 1; // first note of octave
         let py = previewY + previewH - 1 - Math.floor(((p - minP) / range) * (previewH - 4));
         gfx.line(previewX, py, previewX + previewW - 1, py, 17);
-        gfx.print("" + oct, GRID_X + 1, py - 3, GUTFG);
+        gfx.print("" + (intOct - OCT_OFFSET), GRID_X + 1, py - 3, GUTFG);
     }
 
     // Draw pitch bars anchored at the bottom, aligned with tracker columns

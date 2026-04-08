@@ -101,11 +101,10 @@ static dtr_synth_store_t *prv_get_store(void)
 #define PARAM_XFADE        128  /* crossfade length for mid-note edits */
 #define NOTE_XFADE         96   /* crossfade for rapid note preview */
 #define FADE_IN_SAMPLES    64   /* fade-in at playback start */
-#define VOL_RAMP_SAMPLES   512  /* ~11.6ms at 44100 Hz */
-#define VOL_RAMP_STEP      (1.0f / (float)VOL_RAMP_SAMPLES)
+#define VOL_SMOOTH_COEFF   0.005f /* exponential smoothing (~4.5ms tau) */
 
 /**
- * Compute samples-per-note from speed value.
+ * Compute samples-per-note from speed value (PICO-8 style: higher = slower).
  */
 static int32_t prv_spn(uint8_t speed)
 {
@@ -118,7 +117,7 @@ static int32_t prv_spn(uint8_t speed)
     if (spd > 32) {
         spd = 32;
     }
-    return (33 - spd) * (DTR_SYNTH_SAMPLE_RATE / 120);
+    return spd * (DTR_SYNTH_SAMPLE_RATE / 128);
 }
 
 /**
@@ -160,13 +159,30 @@ static int16_t prv_voice_sample(dtr_synth_voice_t *v)
     nti      = v->note_idx;
     note     = &sfx->notes[nti];
 
-    /* Latch parameters at the start of each note (no crossfade —
-     * note boundaries are natural transitions). */
+    /* Latch parameters at the start of each note.
+     * When transitioning into a rest, crossfade from the previous
+     * output level to silence so the waveform doesn't cut abruptly.
+     * Also crossfade when the waveform changes between consecutive
+     * active notes — different wave shapes at the same phase produce
+     * a discontinuity click. */
     if (v->note_pos == 0) {
+        if (note->pitch == 0 &&
+            (v->last_out > 1.0f || v->last_out < -1.0f)) {
+            v->xfade_base = v->last_out;
+            v->xfade_rem  = PARAM_XFADE;
+        } else if (v->total_pos > 0 &&
+                   note->pitch > 0 &&
+                   note->waveform != v->latch_wave &&
+                   (v->last_out > 1.0f || v->last_out < -1.0f)) {
+            v->xfade_base = v->last_out;
+            v->xfade_rem  = NOTE_XFADE;
+        }
         v->latch_pitch = note->pitch;
         v->latch_wave  = note->waveform;
         v->latch_fx    = note->effect;
-        v->smooth_vol  = (float)note->volume / 7.0f;
+        /* Volume is NOT hard-set here — the exponential smoothing
+         * below handles note-to-note volume transitions smoothly,
+         * avoiding pops from abrupt amplitude changes. */
     }
 
     /* Detect mid-note waveform/pitch/effect change from a synth.set()
@@ -185,22 +201,19 @@ static int16_t prv_voice_sample(dtr_synth_voice_t *v)
         v->latch_fx    = note->effect;
     }
 
-    /* Smoothly ramp volume toward target — avoids pop on mid-note
-     * volume edits while keeping the waveform shape clean. */
+    /* Smoothly ramp volume toward target — exponential smoothing
+     * avoids both the pop from a step change and the subtle click
+     * from slope discontinuities in a linear ramp. */
     {
         float target_vol;
+        float diff;
 
         target_vol = (float)note->volume / 7.0f;
-        if (v->smooth_vol < target_vol) {
-            v->smooth_vol += VOL_RAMP_STEP;
-            if (v->smooth_vol > target_vol) {
-                v->smooth_vol = target_vol;
-            }
-        } else if (v->smooth_vol > target_vol) {
-            v->smooth_vol -= VOL_RAMP_STEP;
-            if (v->smooth_vol < target_vol) {
-                v->smooth_vol = target_vol;
-            }
+        diff       = target_vol - v->smooth_vol;
+        if (diff > 0.0001f || diff < -0.0001f) {
+            v->smooth_vol += diff * VOL_SMOOTH_COEFF;
+        } else {
+            v->smooth_vol = target_vol;
         }
     }
 
@@ -277,7 +290,7 @@ static int16_t prv_voice_sample(dtr_synth_voice_t *v)
                 cur_freq / (float)DTR_SYNTH_SAMPLE_RATE);
         }
 
-        sample *= sample_vol * 0.8f;
+        sample *= sample_vol;
         if (sample > 1.0f) {
             sample = 1.0f;
         }
@@ -300,7 +313,11 @@ static int16_t prv_voice_sample(dtr_synth_voice_t *v)
                 v->note_idx = sfx->loop_start;
             }
         } else if (v->note_idx >= DTR_SYNTH_NOTES) {
-            v->playing = false;
+            /* Trigger fade-out ramp instead of hard stop to prevent
+             * an audible click when the pattern ends naturally. */
+            v->note_idx = DTR_SYNTH_NOTES - 1;
+            v->fade_out = true;
+            v->fade_rem = FADE_SAMPLES;
         }
     }
 
@@ -588,11 +605,19 @@ static void prv_ensure_note_voice(dtr_synth_note_voice_t *nv, dtr_audio_t *aud)
 
 static void prv_voice_start(dtr_synth_voice_t *v, const dtr_synth_sfx_t *def)
 {
+    int32_t start;
+
+    start = 0;
+    if (def->loop_end > 0 && def->loop_end >= def->loop_start &&
+        def->loop_start < DTR_SYNTH_NOTES) {
+        start = def->loop_start;
+    }
+
     SDL_LockAudioStream(v->stream);
     SDL_ClearAudioStream(v->stream); /* flush stale data */
     v->def         = def;
     v->phase       = 0.0f;
-    v->note_idx    = 0;
+    v->note_idx    = start;
     v->note_pos    = 0;
     v->total_pos   = 0;
     v->playing     = true;
@@ -600,10 +625,10 @@ static void prv_voice_start(dtr_synth_voice_t *v, const dtr_synth_sfx_t *def)
     v->fade_out    = false;
     v->fade_rem    = 0;
     v->noise_state = 0x12345678;
-    v->latch_pitch = 0;
-    v->latch_wave  = 0;
-    v->latch_fx    = 0;
-    v->smooth_vol  = 0.0f;
+    v->latch_pitch = def->notes[start].pitch;
+    v->latch_wave  = def->notes[start].waveform;
+    v->latch_fx    = def->notes[start].effect;
+    v->smooth_vol  = (float)def->notes[start].volume / 7.0f;
     v->last_out    = 0.0f;
     v->xfade_base  = 0.0f;
     v->xfade_rem   = 0;
@@ -897,8 +922,8 @@ js_synth_play_note(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst
         int32_t ramp;
         int32_t rl;
 
-        spn = (33 - (tmp.speed < 1 ? 1 : (tmp.speed > 32 ? 32 : tmp.speed))) *
-              (DTR_SYNTH_SAMPLE_RATE / 120);
+        spn = (tmp.speed < 1 ? 1 : (tmp.speed > 32 ? 32 : tmp.speed)) *
+              (DTR_SYNTH_SAMPLE_RATE / 128);
         if ((size_t)spn < pcm_len) {
             pcm_len = (size_t)spn;
         }
@@ -1001,6 +1026,27 @@ static JSValue js_synth_playing(JSContext *ctx, JSValueConst this_val, int argc,
 }
 
 /* ------------------------------------------------------------------ */
+/*  synth.noteIdx() → int                                              */
+/*                                                                     */
+/*  Returns the current note index of the pattern voice, or -1.        */
+/* ------------------------------------------------------------------ */
+
+static JSValue
+js_synth_note_idx(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+{
+    dtr_synth_store_t *store;
+
+    (void)this_val;
+    (void)argc;
+    (void)argv;
+    store = prv_get_store();
+    if (!store->play.playing) {
+        return JS_NewInt32(ctx, -1);
+    }
+    return JS_NewInt32(ctx, store->play.note_idx);
+}
+
+/* ------------------------------------------------------------------ */
 /*  synth.count()                                                      */
 /* ------------------------------------------------------------------ */
 
@@ -1027,15 +1073,15 @@ js_synth_note_name(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst
 }
 
 /* ------------------------------------------------------------------ */
-/*  synth.waveNames() → ["sine","square","pulse",...]                  */
+/*  synth.waveNames() → ["triangle","tiltsaw","saw",...]               */
 /* ------------------------------------------------------------------ */
 
 static const char *prv_wave_names[] = {
-    "sine",
+    "triangle",
+    "tiltsaw",
+    "saw",
     "square",
     "pulse",
-    "triangle",
-    "saw",
     "organ",
     "noise",
     "phaser",
@@ -1099,6 +1145,7 @@ static const JSCFunctionListEntry js_synth_funcs[] = {
     JS_CFUNC_DEF("playNote", 6, js_synth_play_note),
     JS_CFUNC_DEF("stop", 1, js_synth_stop),
     JS_CFUNC_DEF("playing", 0, js_synth_playing),
+    JS_CFUNC_DEF("noteIdx", 0, js_synth_note_idx),
     JS_CFUNC_DEF("count", 0, js_synth_count),
     JS_CFUNC_DEF("noteName", 1, js_synth_note_name),
     JS_CFUNC_DEF("waveNames", 0, js_synth_wave_names),
