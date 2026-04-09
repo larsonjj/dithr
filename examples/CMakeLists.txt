@@ -16,6 +16,7 @@
 #   spritemark         - Bunnymark-style sprite benchmark
 #   ui_demo            - UI layout helpers & tween animations
 #   editor             - Minimal text editor (640×360 framebuffer)
+#   gauntlet_clone     - Top-down dungeon crawler (Gauntlet-style)
 
 # Install example carts alongside the executable
 install(DIRECTORY
@@ -31,6 +32,7 @@ install(DIRECTORY
     spritemark
     ui_demo
     editor
+    gauntlet_clone
     DESTINATION examples
     PATTERN "node_modules" EXCLUDE
 )

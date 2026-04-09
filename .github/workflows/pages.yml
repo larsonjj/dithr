@@ -36,6 +36,7 @@ jobs:
                     - raycaster
                     - spritemark
                     - ui_demo
+                    - gauntlet_clone
         steps:
             - uses: actions/checkout@v6
 
