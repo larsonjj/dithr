@@ -4,6 +4,7 @@
  */
 
 #include "graphics.h"
+#include "simd.h"
 
 #include "font.h"
 
@@ -1588,6 +1589,26 @@ void dtr_gfx_transition_update_buf(dtr_graphics_t *gfx, uint32_t *pixels)
             tb_val      = (int32_t)((target_rgba >> 8) & 0xFF);
 
             total = gfx->width * gfx->height;
+
+#if DTR_HAS_SIMD
+            {
+                /* SIMD: lerp RGB channels 4 pixels at a time via float math */
+                dtr_v4i target = dtr_v4i_set(tr_val, tg_val, tb_val, 0xFF);
+                dtr_v4f vt     = dtr_v4f_splat(t);
+                dtr_v4f one_mt = dtr_v4f_splat(1.0f - t);
+
+                dtr_v4f tgt_f = dtr_v4i_to_v4f(target);
+                dtr_v4f tgt_t = dtr_v4f_mul(tgt_f, vt);
+
+                for (int32_t idx = 0; idx < total; ++idx) {
+                    dtr_v4i src_i  = dtr_v4i_unpack_rgba(pixels[idx]);
+                    dtr_v4f src_f  = dtr_v4i_to_v4f(src_i);
+                    dtr_v4f result = dtr_v4f_add(dtr_v4f_mul(src_f, one_mt), tgt_t);
+                    dtr_v4i out    = dtr_v4f_to_v4i(result);
+                    pixels[idx]    = dtr_v4i_pack_rgba(out);
+                }
+            }
+#else
             for (int32_t idx = 0; idx < total; ++idx) {
                 uint32_t src;
                 int32_t  sr;
@@ -1609,6 +1630,7 @@ void dtr_gfx_transition_update_buf(dtr_graphics_t *gfx, uint32_t *pixels)
                 pixels[idx] =
                     ((uint32_t)rr << 24) | ((uint32_t)rg << 16) | ((uint32_t)rb << 8) | 0xFF;
             }
+#endif
             break;
         }
 
@@ -1901,7 +1923,6 @@ void dtr_gfx_flip_to(dtr_graphics_t *gfx, uint32_t *dst)
 {
     int32_t        total;
     int32_t        idx;
-    int32_t        tail;
     const uint8_t *src;
     uint32_t       lut[CONSOLE_PALETTE_SIZE];
 
@@ -1911,17 +1932,43 @@ void dtr_gfx_flip_to(dtr_graphics_t *gfx, uint32_t *dst)
 
     total = gfx->width * gfx->height;
     src   = gfx->framebuffer;
-    tail  = total & ~3; /* round down to multiple of 4 */
 
-    for (idx = 0; idx < tail; idx += 4) {
-        dst[idx]     = lut[src[idx]];
-        dst[idx + 1] = lut[src[idx + 1]];
-        dst[idx + 2] = lut[src[idx + 2]];
-        dst[idx + 3] = lut[src[idx + 3]];
+#if DTR_HAS_SIMD
+    {
+        /* Process 4 pixels at a time via SIMD gather from the LUT.
+         * Each lane independently looks up its palette index. */
+        int32_t tail = total & ~3;
+        for (idx = 0; idx < tail; idx += 4) {
+            dtr_v4i indices = dtr_v4i_set(
+                (int32_t)src[idx],
+                (int32_t)src[idx + 1],
+                (int32_t)src[idx + 2],
+                (int32_t)src[idx + 3]);
+            dtr_v4i colors = dtr_v4i_set(
+                (int32_t)lut[dtr_v4i_lane(indices, 0)],
+                (int32_t)lut[dtr_v4i_lane(indices, 1)],
+                (int32_t)lut[dtr_v4i_lane(indices, 2)],
+                (int32_t)lut[dtr_v4i_lane(indices, 3)]);
+            dtr_v4i_store_u32(&dst[idx], colors);
+        }
+        for (; idx < total; ++idx) {
+            dst[idx] = lut[src[idx]];
+        }
     }
-    for (; idx < total; ++idx) {
-        dst[idx] = lut[src[idx]];
+#else
+    {
+        int32_t tail = total & ~3;
+        for (idx = 0; idx < tail; idx += 4) {
+            dst[idx]     = lut[src[idx]];
+            dst[idx + 1] = lut[src[idx + 1]];
+            dst[idx + 2] = lut[src[idx + 2]];
+            dst[idx + 3] = lut[src[idx + 3]];
+        }
+        for (; idx < total; ++idx) {
+            dst[idx] = lut[src[idx]];
+        }
     }
+#endif
 }
 
 void dtr_gfx_flip(dtr_graphics_t *gfx)

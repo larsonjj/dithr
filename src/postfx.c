@@ -5,6 +5,8 @@
 
 #include "postfx.h"
 
+#include "simd.h"
+
 #include <math.h>
 #if !defined(_WIN32)
 #include <strings.h>
@@ -95,6 +97,45 @@ static void prv_apply_scanlines(uint32_t *pixels, int32_t w, int32_t h, float st
 
     factor = 1.0f - strength * 0.4f;
 
+#if DTR_HAS_SIMD
+    {
+        dtr_v4i mask = dtr_v4i_splat(0xFF);
+        dtr_v4f fv   = dtr_v4f_splat(factor);
+
+        for (int32_t y = 0; y < h; y += 2) {
+            int32_t row_off = y * w;
+            int32_t x       = 0;
+
+            /* 4 pixels at a time */
+            for (; x + 3 < w; x += 4) {
+                dtr_v4i px4 = dtr_v4i_load_u32(&pixels[row_off + x]);
+                dtr_v4i r4  = dtr_v4i_and(dtr_v4i_srl(px4, 24), mask);
+                dtr_v4i g4  = dtr_v4i_and(dtr_v4i_srl(px4, 16), mask);
+                dtr_v4i b4  = dtr_v4i_and(dtr_v4i_srl(px4, 8), mask);
+                dtr_v4i a4  = dtr_v4i_and(px4, mask);
+
+                r4 = dtr_v4f_to_v4i(dtr_v4f_mul(dtr_v4i_to_v4f(r4), fv));
+                g4 = dtr_v4f_to_v4i(dtr_v4f_mul(dtr_v4i_to_v4f(g4), fv));
+                b4 = dtr_v4f_to_v4i(dtr_v4f_mul(dtr_v4i_to_v4f(b4), fv));
+
+                dtr_v4i_store_u32(&pixels[row_off + x],
+                    dtr_v4i_or(dtr_v4i_or(dtr_v4i_sll(r4, 24), dtr_v4i_sll(g4, 16)),
+                        dtr_v4i_or(dtr_v4i_sll(b4, 8), a4)));
+            }
+
+            /* Scalar tail */
+            for (; x < w; ++x) {
+                uint32_t px = pixels[row_off + x];
+
+                pixels[row_off + x] = PX_PACK(
+                    (uint32_t)((float)PX_R(px) * factor),
+                    (uint32_t)((float)PX_G(px) * factor),
+                    (uint32_t)((float)PX_B(px) * factor),
+                    PX_A(px));
+            }
+        }
+    }
+#else
     for (int32_t y = 0; y < h; y += 2) {
         for (int32_t x = 0; x < w; ++x) {
             uint32_t px;
@@ -116,6 +157,7 @@ static void prv_apply_scanlines(uint32_t *pixels, int32_t w, int32_t h, float st
             pixels[y * w + x] = PX_PACK(r, g, b, a);
         }
     }
+#endif
 }
 
 /**
@@ -143,6 +185,64 @@ static void prv_apply_crt(uint32_t *pixels, int32_t w, int32_t h, float strength
     inv_max_dist_sq = 1.0f / (cx * cx + cy * cy);
     half_strength   = strength * 0.5f;
 
+#if DTR_HAS_SIMD
+    {
+        dtr_v4i i_mask = dtr_v4i_splat(0xFF);
+        dtr_v4f v_inv  = dtr_v4f_splat(inv_max_dist_sq);
+        dtr_v4f v_hs   = dtr_v4f_splat(half_strength);
+        dtr_v4f v_one  = dtr_v4f_splat(1.0f);
+        dtr_v4f v_zero = dtr_v4f_splat(0.0f);
+        dtr_v4f v_step = dtr_v4f_set(0.0f, 1.0f, 2.0f, 3.0f);
+
+        for (int32_t y = 0; y < h; ++y) {
+            float   dy      = (float)y - cy;
+            dtr_v4f dy_sq_v = dtr_v4f_splat(dy * dy);
+            int32_t row_off = y * w;
+            int32_t x       = 0;
+
+            for (; x + 3 < w; x += 4) {
+                /* 4 vignette factors for consecutive x */
+                dtr_v4f dx  = dtr_v4f_add(dtr_v4f_splat((float)x - cx), v_step);
+                dtr_v4f dsq = dtr_v4f_mul(dtr_v4f_add(dtr_v4f_mul(dx, dx), dy_sq_v), v_inv);
+                dtr_v4f vig = dtr_v4f_max(dtr_v4f_sub(v_one, dtr_v4f_mul(dsq, v_hs)), v_zero);
+
+                /* Unpack 4 pixels, multiply RGB by per-pixel vignette, repack */
+                dtr_v4i px4 = dtr_v4i_load_u32(&pixels[row_off + x]);
+                dtr_v4i r4  = dtr_v4i_and(dtr_v4i_srl(px4, 24), i_mask);
+                dtr_v4i g4  = dtr_v4i_and(dtr_v4i_srl(px4, 16), i_mask);
+                dtr_v4i b4  = dtr_v4i_and(dtr_v4i_srl(px4, 8), i_mask);
+                dtr_v4i a4  = dtr_v4i_and(px4, i_mask);
+
+                r4 = dtr_v4f_to_v4i(dtr_v4f_mul(dtr_v4i_to_v4f(r4), vig));
+                g4 = dtr_v4f_to_v4i(dtr_v4f_mul(dtr_v4i_to_v4f(g4), vig));
+                b4 = dtr_v4f_to_v4i(dtr_v4f_mul(dtr_v4i_to_v4f(b4), vig));
+
+                dtr_v4i_store_u32(&pixels[row_off + x],
+                    dtr_v4i_or(dtr_v4i_or(dtr_v4i_sll(r4, 24), dtr_v4i_sll(g4, 16)),
+                        dtr_v4i_or(dtr_v4i_sll(b4, 8), a4)));
+            }
+
+            /* Scalar tail */
+            for (; x < w; ++x) {
+                float    dx_s     = (float)x - cx;
+                float    dist_sq  = (dx_s * dx_s + dy * dy) * inv_max_dist_sq;
+                float    vignette = 1.0f - dist_sq * half_strength;
+                uint32_t px;
+
+                if (vignette < 0.0f) {
+                    vignette = 0.0f;
+                }
+
+                px = pixels[row_off + x];
+                pixels[row_off + x] = PX_PACK(
+                    (uint32_t)((float)PX_R(px) * vignette),
+                    (uint32_t)((float)PX_G(px) * vignette),
+                    (uint32_t)((float)PX_B(px) * vignette),
+                    PX_A(px));
+            }
+        }
+    }
+#else
     for (int32_t y = 0; y < h; ++y) {
         float   dy;
         float   dy_sq;
@@ -183,6 +283,7 @@ static void prv_apply_crt(uint32_t *pixels, int32_t w, int32_t h, float strength
             pixels[row_off + x] = PX_PACK(r, g, b, a);
         }
     }
+#endif
 
     /* Color bleeding: shift R channel one pixel right */
     if (strength > 0.3f) {
