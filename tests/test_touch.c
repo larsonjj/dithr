@@ -3,8 +3,8 @@
  * \brief           Unit tests for touch state subsystem
  */
 
-#include "touch.h"
 #include "test_harness.h"
+#include "touch.h"
 
 #include <stdio.h>
 

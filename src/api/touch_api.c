@@ -63,8 +63,8 @@ static JSValue
 js_touch_pressure(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
     (void)this_val;
-    return JS_NewFloat64(
-        ctx, dtr_touch_pressure(TOUCH(ctx), dtr_api_opt_int(ctx, argc, argv, 0, 0)));
+    return JS_NewFloat64(ctx,
+                         dtr_touch_pressure(TOUCH(ctx), dtr_api_opt_int(ctx, argc, argv, 0, 0)));
 }
 
 static const JSCFunctionListEntry js_touch_funcs[] = {

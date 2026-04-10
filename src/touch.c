@@ -4,6 +4,7 @@
  */
 
 #include "touch.h"
+
 #include "console.h"
 
 #include <string.h>
@@ -155,10 +156,10 @@ void dtr_touch_on_motion(dtr_touch_state_t *touch,
         return;
     }
 
-    fin->x        = norm_x * (float)touch->fb_width;
-    fin->y        = norm_y * (float)touch->fb_height;
-    fin->dx      += norm_dx * (float)touch->fb_width;
-    fin->dy      += norm_dy * (float)touch->fb_height;
+    fin->x = norm_x * (float)touch->fb_width;
+    fin->y = norm_y * (float)touch->fb_height;
+    fin->dx += norm_dx * (float)touch->fb_width;
+    fin->dy += norm_dy * (float)touch->fb_height;
     fin->pressure = pressure;
 }
 
