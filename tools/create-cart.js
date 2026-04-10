@@ -65,12 +65,10 @@ function main() {
 
     // cart.json
     const cart = {
-        meta: {
-            title: name,
-            author: "",
-            version: "1.0.0",
-            description: "",
-        },
+        title: name,
+        author: "",
+        version: "1.0.0",
+        description: "",
         display: {
             width: 320,
             height: 180,

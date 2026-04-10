@@ -175,6 +175,7 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char **argv)
 #endif
 
     SDL_SetLogPriorities(SDL_LOG_PRIORITY_INFO);
+    SDL_SetAppMetadata("dithr", CONSOLE_VERSION, "com.example.tbd");
 
 #ifdef __EMSCRIPTEN__
     SDL_SetLogOutputFunction(prv_emscripten_log_output, NULL);

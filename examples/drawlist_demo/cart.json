@@ -1,10 +1,8 @@
 {
-  "meta": {
-    "title": "Draw List Demo",
-    "author": "dithr",
-    "version": "1.0.0",
-    "description": "Demonstrates depth-sorted rendering with the draw list API"
-  },
+  "title": "Draw List Demo",
+  "author": "dithr",
+  "version": "1.0.0",
+  "description": "Demonstrates depth-sorted rendering with the draw list API",
   "display": {
     "width": 320,
     "height": 180,
@@ -22,10 +20,26 @@
   },
   "input": {
     "default_mappings": {
-      "left": ["KEY_LEFT", "KEY_A", "PAD_LEFT"],
-      "right": ["KEY_RIGHT", "KEY_D", "PAD_RIGHT"],
-      "up": ["KEY_UP", "KEY_W", "PAD_UP"],
-      "down": ["KEY_DOWN", "KEY_S", "PAD_DOWN"]
+      "left": [
+        "KEY_LEFT",
+        "KEY_A",
+        "PAD_LEFT"
+      ],
+      "right": [
+        "KEY_RIGHT",
+        "KEY_D",
+        "PAD_RIGHT"
+      ],
+      "up": [
+        "KEY_UP",
+        "KEY_W",
+        "PAD_UP"
+      ],
+      "down": [
+        "KEY_DOWN",
+        "KEY_S",
+        "PAD_DOWN"
+      ]
     }
   },
   "code": "src/main.js",

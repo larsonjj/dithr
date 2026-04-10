@@ -25,12 +25,11 @@ my-game/
 ```jsonc
 {
     // --- Metadata (optional) ---
-    "meta": {
-        "title": "My Game", // shown in window title
-        "author": "Your Name",
-        "version": "1.0.0",
-        "description": "A short description",
-    },
+    "title": "My Game", // shown in window title
+    "author": "Your Name",
+    "version": "1.0.0",
+    "description": "A short description",
+    "id": "com.example.my-game", // SDL app identifier (optional)
 
     // --- Display ---
     "display": {
@@ -81,10 +80,11 @@ my-game/
 
 | Field                    | Type   | Default     | Description                                              |
 | ------------------------ | ------ | ----------- | -------------------------------------------------------- |
-| `meta.title`             | string | `""`        | Window title and `cart.title()` return value             |
-| `meta.author`            | string | `""`        | `cart.author()` return value                             |
-| `meta.version`           | string | `""`        | `cart.version()` return value                            |
-| `meta.description`       | string | `""`        | Not used at runtime                                      |
+| `title`                  | string | `""`        | Window title and `cart.title()` return value             |
+| `author`                 | string | `""`        | `cart.author()` return value                             |
+| `version`                | string | `""`        | `cart.version()` return value                            |
+| `description`            | string | `""`        | Not used at runtime                                      |
+| `id`                     | string | `""`        | SDL app identifier (reverse-DNS, e.g. `com.example.app`) |
 | `display.width`          | int    | 320         | Framebuffer width in pixels                              |
 | `display.height`         | int    | 180         | Framebuffer height in pixels                             |
 | `display.scale`          | int    | 3           | Initial window = framebuffer × scale                     |

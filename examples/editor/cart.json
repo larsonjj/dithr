@@ -1,10 +1,8 @@
 {
-  "meta": {
-    "title": "dithr Editor",
-    "author": "dithr",
-    "version": "0.1.0",
-    "description": "A minimal text editor built on the dithr fantasy console"
-  },
+  "title": "dithr Editor",
+  "author": "dithr",
+  "version": "0.1.0",
+  "description": "A minimal text editor built on the dithr fantasy console",
   "display": {
     "width": 640,
     "height": 360,

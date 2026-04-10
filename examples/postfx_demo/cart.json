@@ -1,10 +1,8 @@
 {
-  "meta": {
-    "title": "PostFX Demo",
-    "author": "dithr",
-    "version": "1.0.0",
-    "description": "Demonstrates the post-processing pipeline: CRT, scanlines, bloom, aberration"
-  },
+  "title": "PostFX Demo",
+  "author": "dithr",
+  "version": "1.0.0",
+  "description": "Demonstrates the post-processing pipeline: CRT, scanlines, bloom, aberration",
   "display": {
     "width": 320,
     "height": 180,

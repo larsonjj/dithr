@@ -1,10 +1,8 @@
 {
-  "meta": {
-    "title": "Tilemap Demo",
-    "author": "dithr",
-    "version": "1.0.0",
-    "description": "Demonstrates tile map drawing, camera scrolling, and tile queries"
-  },
+  "title": "Tilemap Demo",
+  "author": "dithr",
+  "version": "1.0.0",
+  "description": "Demonstrates tile map drawing, camera scrolling, and tile queries",
   "display": {
     "width": 320,
     "height": 180,
@@ -23,10 +21,26 @@
   },
   "input": {
     "default_mappings": {
-      "left": ["KEY_LEFT", "KEY_A", "PAD_LEFT"],
-      "right": ["KEY_RIGHT", "KEY_D", "PAD_RIGHT"],
-      "up": ["KEY_UP", "KEY_W", "PAD_UP"],
-      "down": ["KEY_DOWN", "KEY_S", "PAD_DOWN"]
+      "left": [
+        "KEY_LEFT",
+        "KEY_A",
+        "PAD_LEFT"
+      ],
+      "right": [
+        "KEY_RIGHT",
+        "KEY_D",
+        "PAD_RIGHT"
+      ],
+      "up": [
+        "KEY_UP",
+        "KEY_W",
+        "PAD_UP"
+      ],
+      "down": [
+        "KEY_DOWN",
+        "KEY_S",
+        "PAD_DOWN"
+      ]
     }
   },
   "code": "src/main.js",

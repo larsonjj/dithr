@@ -1,10 +1,8 @@
 {
-  "meta": {
-    "title": "Map Demo",
-    "author": "dithr",
-    "version": "1.0.0",
-    "description": "Demonstrates the map.* tilemap API and cam.* camera helpers"
-  },
+  "title": "Map Demo",
+  "author": "dithr",
+  "version": "1.0.0",
+  "description": "Demonstrates the map.* tilemap API and cam.* camera helpers",
   "display": {
     "width": 320,
     "height": 180,
@@ -22,11 +20,31 @@
   },
   "input": {
     "default_mappings": {
-      "left": ["KEY_LEFT", "KEY_A", "PAD_LEFT"],
-      "right": ["KEY_RIGHT", "KEY_D", "PAD_RIGHT"],
-      "up": ["KEY_UP", "KEY_W", "PAD_UP"],
-      "down": ["KEY_DOWN", "KEY_S", "PAD_DOWN"],
-      "action": ["KEY_Z", "KEY_SPACE", "PAD_A"]
+      "left": [
+        "KEY_LEFT",
+        "KEY_A",
+        "PAD_LEFT"
+      ],
+      "right": [
+        "KEY_RIGHT",
+        "KEY_D",
+        "PAD_RIGHT"
+      ],
+      "up": [
+        "KEY_UP",
+        "KEY_W",
+        "PAD_UP"
+      ],
+      "down": [
+        "KEY_DOWN",
+        "KEY_S",
+        "PAD_DOWN"
+      ],
+      "action": [
+        "KEY_Z",
+        "KEY_SPACE",
+        "PAD_A"
+      ]
     }
   },
   "code": "src/main.js",

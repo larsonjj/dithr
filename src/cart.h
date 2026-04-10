@@ -153,6 +153,7 @@ typedef struct dtr_cart_meta {
     char author[DTR_CART_TITLE_LEN];
     char version[32];
     char description[256];
+    char id[128];
     char default_postfx[32];
 } dtr_cart_meta_t;
 

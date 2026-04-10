@@ -157,16 +157,13 @@ bool dtr_cart_parse(dtr_cart_t *cart, JSContext *ctx, const char *json, size_t l
         return false;
     }
 
-    /* --- meta --- */
-    sub = JS_GetPropertyStr(ctx, root, "meta");
-    if (JS_IsObject(sub)) {
-        prv_json_str(ctx, sub, "title", cart->meta.title, sizeof(cart->meta.title), "Untitled");
-        prv_json_str(ctx, sub, "author", cart->meta.author, sizeof(cart->meta.author), "");
-        prv_json_str(ctx, sub, "version", cart->meta.version, sizeof(cart->meta.version), "0.1.0");
-        prv_json_str(
-            ctx, sub, "description", cart->meta.description, sizeof(cart->meta.description), "");
-    }
-    JS_FreeValue(ctx, sub);
+    /* --- meta (flat at root level) --- */
+    prv_json_str(ctx, root, "title", cart->meta.title, sizeof(cart->meta.title), "Untitled");
+    prv_json_str(ctx, root, "author", cart->meta.author, sizeof(cart->meta.author), "");
+    prv_json_str(ctx, root, "version", cart->meta.version, sizeof(cart->meta.version), "0.1.0");
+    prv_json_str(
+        ctx, root, "description", cart->meta.description, sizeof(cart->meta.description), "");
+    prv_json_str(ctx, root, "id", cart->meta.id, sizeof(cart->meta.id), "");
 
     /* --- display --- */
     sub = JS_GetPropertyStr(ctx, root, "display");

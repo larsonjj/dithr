@@ -114,11 +114,9 @@ static void test_cart_parse_meta(void)
     dtr_cart_t *cart;
     bool        ok;
     const char *json = "{"
-                       "  \"meta\": {"
-                       "    \"title\": \"My Game\","
-                       "    \"author\": \"Dev\","
-                       "    \"version\": \"1.0.0\""
-                       "  }"
+                       "  \"title\": \"My Game\","
+                       "  \"author\": \"Dev\","
+                       "  \"version\": \"1.0.0\""
                        "}";
 
     cart = dtr_cart_create();
@@ -802,7 +800,7 @@ static void test_cart_parse_empty_strings(void)
     dtr_cart_t *cart;
     bool        ok;
     const char *json = "{"
-                       "  \"meta\": { \"title\": \"\", \"author\": \"\" },"
+                       "  \"title\": \"\", \"author\": \"\","
                        "  \"code\": \"\","
                        "  \"sfx\": [],"
                        "  \"music\": [],"

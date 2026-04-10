@@ -60,7 +60,7 @@ function main() {
 
     const basePath = path.dirname(cartPath);
     const cart = readCartFile(cartPath);
-    const title = (cart.meta && cart.meta.title) || "dithr cart";
+    const title = cart.title || "dithr cart";
 
     if (!outFile) {
         outFile = path.join(basePath, `${title.replace(/[^a-zA-Z0-9_-]/g, "_")}.html`);
