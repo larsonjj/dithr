@@ -740,8 +740,8 @@ static JSValue js_map_resize(JSContext *ctx, JSValueConst this_val, int argc, JS
         copy_w = (old_w < new_w) ? old_w : new_w;
         copy_h = (old_h < new_h) ? old_h : new_h;
         for (int32_t row = 0; row < copy_h; ++row) {
-            SDL_memcpy(&new_tiles[row * new_w],
-                       &layer->tiles[row * old_w],
+            SDL_memcpy(&new_tiles[(size_t)row * new_w],
+                       &layer->tiles[(size_t)row * old_w],
                        (size_t)copy_w * sizeof(int32_t));
         }
 

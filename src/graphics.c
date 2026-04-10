@@ -1362,7 +1362,7 @@ bool dtr_gfx_load_flags_hex(dtr_graphics_t *gfx, const char *hex, size_t hex_len
         --hex_len;
     }
 
-    if (hex_len != CONSOLE_MAX_SPRITES * 2) {
+    if (hex_len != (size_t)CONSOLE_MAX_SPRITES * 2) {
         return false;
     }
 
@@ -1372,8 +1372,8 @@ bool dtr_gfx_load_flags_hex(dtr_graphics_t *gfx, const char *hex, size_t hex_len
         uint8_t chi;
         uint8_t clo;
 
-        chi = (uint8_t)hex[idx * 2];
-        clo = (uint8_t)hex[idx * 2 + 1];
+        chi = (uint8_t)hex[(size_t)idx * 2];
+        clo = (uint8_t)hex[(size_t)idx * 2 + 1];
 
         if (chi >= '0' && chi <= '9') {
             hic = chi - '0';
@@ -2115,8 +2115,8 @@ bool dtr_gfx_load_sheet_hex(dtr_graphics_t *gfx,
         uint8_t chi;
         uint8_t clo;
 
-        chi = (uint8_t)hex[idx * 2];
-        clo = (uint8_t)hex[idx * 2 + 1];
+        chi = (uint8_t)hex[(size_t)idx * 2];
+        clo = (uint8_t)hex[(size_t)idx * 2 + 1];
 
         /* Convert hex char to nibble */
         if (chi >= '0' && chi <= '9') {

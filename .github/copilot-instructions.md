@@ -1,1 +1,1 @@
-Follow the project conventions described in README.md and the coding style rules in docs/code-style.md.
+Follow the project conventions described in README.md and the coding style rules in docs/code-style.md (C11) and docs/js-code-style.md (JavaScript). Also, be sure to match formatting and naming style, as the codebase is formatted with clang-format and linted with clang-tidy for C11 and ESLint + Prettier for JavaScript.

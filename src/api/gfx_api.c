@@ -781,10 +781,10 @@ js_gfx_sheet_data(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst 
     }
 
     for (int32_t i = 0; i < total; i++) {
-        hex[i * 2]     = prv_hex_table[px[i] >> 4];
-        hex[i * 2 + 1] = prv_hex_table[px[i] & 0x0F];
+        hex[(size_t)i * 2]     = prv_hex_table[px[i] >> 4];
+        hex[(size_t)i * 2 + 1] = prv_hex_table[px[i] & 0x0F];
     }
-    hex[total * 2] = '\0';
+    hex[(size_t)total * 2] = '\0';
 
     result = JS_NewStringLen(ctx, hex, (size_t)total * 2);
     js_free(ctx, hex);
@@ -836,14 +836,14 @@ js_gfx_sheet_load(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst 
     }
 
     total = gfx->sheet.width * gfx->sheet.height;
-    if ((int32_t)str_len != total * 2) {
+    if (str_len != (size_t)total * 2) {
         JS_FreeCString(ctx, str);
         return JS_FALSE;
     }
 
     for (int32_t i = 0; i < total; i++) {
-        int hi = prv_hex_val(str[i * 2]);
-        int lo = prv_hex_val(str[i * 2 + 1]);
+        int hi = prv_hex_val(str[(size_t)i * 2]);
+        int lo = prv_hex_val(str[(size_t)i * 2 + 1]);
         if (hi < 0 || lo < 0) {
             JS_FreeCString(ctx, str);
             return JS_FALSE;
@@ -883,12 +883,12 @@ js_gfx_flags_data(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst 
     }
 
     for (int32_t i = 0; i < CONSOLE_MAX_SPRITES; i++) {
-        hex[i * 2]     = prv_hex_table[gfx->sheet.flags[i] >> 4];
-        hex[i * 2 + 1] = prv_hex_table[gfx->sheet.flags[i] & 0x0F];
+        hex[(size_t)i * 2]     = prv_hex_table[gfx->sheet.flags[i] >> 4];
+        hex[(size_t)i * 2 + 1] = prv_hex_table[gfx->sheet.flags[i] & 0x0F];
     }
-    hex[CONSOLE_MAX_SPRITES * 2] = '\0';
+    hex[(size_t)CONSOLE_MAX_SPRITES * 2] = '\0';
 
-    result = JS_NewStringLen(ctx, hex, CONSOLE_MAX_SPRITES * 2);
+    result = JS_NewStringLen(ctx, hex, (size_t)CONSOLE_MAX_SPRITES * 2);
     js_free(ctx, hex);
     return result;
 }
@@ -918,14 +918,14 @@ js_gfx_flags_load(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst 
         return JS_FALSE;
     }
 
-    if ((int32_t)str_len != CONSOLE_MAX_SPRITES * 2) {
+    if (str_len != (size_t)CONSOLE_MAX_SPRITES * 2) {
         JS_FreeCString(ctx, str);
         return JS_FALSE;
     }
 
     for (int32_t i = 0; i < CONSOLE_MAX_SPRITES; i++) {
-        int hic = prv_hex_val(str[i * 2]);
-        int loc = prv_hex_val(str[i * 2 + 1]);
+        int hic = prv_hex_val(str[(size_t)i * 2]);
+        int loc = prv_hex_val(str[(size_t)i * 2 + 1]);
 
         if (hic < 0 || loc < 0) {
             JS_FreeCString(ctx, str);

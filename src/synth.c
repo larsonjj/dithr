@@ -385,7 +385,7 @@ int16_t *dtr_synth_render(const dtr_synth_sfx_t *sfx, size_t *out_len)
 
                         time_s = (float)idx / (float)DTR_SYNTH_SAMPLE_RATE;
                         mrate = (sfx->speed <= 8 ? 32 : 16) / (note->effect == DTR_FX_ARPF ? 4 : 8);
-                        ncyc  = (int32_t)(mrate * 7.5f * time_s);
+                        ncyc  = (int32_t)((float)mrate * 7.5f * time_s);
                         arp_note = (nti & ~3) | (ncyc & 3);
                         if (arp_note < DTR_SYNTH_NOTES && sfx->notes[arp_note].pitch > 0) {
                             cur_freq = prv_pitch_freq(sfx->notes[arp_note].pitch);

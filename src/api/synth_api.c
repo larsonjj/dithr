@@ -173,6 +173,7 @@ static int16_t prv_voice_sample(dtr_synth_voice_t *v)
      * active notes — different wave shapes at the same phase produce
      * a discontinuity click. */
     if (v->note_pos == 0) {
+        /* NOLINTBEGIN(bugprone-branch-clone) — same duration, different trigger */
         if (note->pitch == 0 && (v->last_out > 1.0f || v->last_out < -1.0f)) {
             v->xfade_base = v->last_out;
             v->xfade_len  = PARAM_XFADE;
@@ -193,6 +194,7 @@ static int16_t prv_voice_sample(dtr_synth_voice_t *v)
             v->xfade_len  = PARAM_XFADE;
             v->xfade_rem  = PARAM_XFADE;
         }
+        /* NOLINTEND(bugprone-branch-clone) */
         v->latch_pitch = note->pitch;
         v->latch_wave  = note->waveform;
         v->latch_fx    = note->effect;
@@ -289,7 +291,7 @@ static int16_t prv_voice_sample(dtr_synth_voice_t *v)
 
                 time_s   = (float)v->total_pos / (float)DTR_SYNTH_SAMPLE_RATE;
                 mrate    = (sfx->speed <= 8 ? 32 : 16) / (note->effect == DTR_FX_ARPF ? 4 : 8);
-                ncyc     = (int32_t)(mrate * 7.5f * time_s);
+                ncyc     = (int32_t)((float)mrate * 7.5f * time_s);
                 arp_note = (nti & ~3) | (ncyc & 3);
                 if (arp_note < DTR_SYNTH_NOTES && sfx->notes[arp_note].pitch > 0) {
                     cur_freq = dtr_synth_pitch_freq(sfx->notes[arp_note].pitch);
