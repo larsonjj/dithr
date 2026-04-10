@@ -309,11 +309,10 @@ static void test_event_destroy_null(void)
 /*  FIFO ordering — events dispatched in emit order                    */
 /* ------------------------------------------------------------------ */
 
-static const char *FIFO_HANDLER_SRC =
-    "globalThis.__order = [];\n"
-    "globalThis.__fifo_handler = function(payload) {\n"
-    "    globalThis.__order.push(payload);\n"
-    "};\n";
+static const char *FIFO_HANDLER_SRC = "globalThis.__order = [];\n"
+                                      "globalThis.__fifo_handler = function(payload) {\n"
+                                      "    globalThis.__order.push(payload);\n"
+                                      "};\n";
 
 static void test_event_fifo_order(void)
 {
@@ -322,16 +321,16 @@ static void test_event_fifo_order(void)
 
     prv_setup();
     {
-        JSValue r = JS_Eval(s_ctx, FIFO_HANDLER_SRC, strlen(FIFO_HANDLER_SRC),
-                            "<test>", JS_EVAL_TYPE_GLOBAL);
+        JSValue r = JS_Eval(
+            s_ctx, FIFO_HANDLER_SRC, strlen(FIFO_HANDLER_SRC), "<test>", JS_EVAL_TYPE_GLOBAL);
         JS_FreeValue(s_ctx, r);
     }
 
     bus = dtr_event_create(s_ctx);
 
     {
-        JSValue global  = JS_GetGlobalObject(s_ctx);
-        handler         = JS_GetPropertyStr(s_ctx, global, "__fifo_handler");
+        JSValue global = JS_GetGlobalObject(s_ctx);
+        handler        = JS_GetPropertyStr(s_ctx, global, "__fifo_handler");
         JS_FreeValue(s_ctx, global);
     }
 
@@ -357,8 +356,8 @@ static void test_event_fifo_order(void)
         DTR_ASSERT_EQ_INT(len, 3);
 
         for (int32_t i = 0; i < 3; ++i) {
-            JSValue  elem = JS_GetPropertyUint32(s_ctx, arr, (uint32_t)i);
-            int32_t  val  = 0;
+            JSValue elem = JS_GetPropertyUint32(s_ctx, arr, (uint32_t)i);
+            int32_t val  = 0;
             JS_ToInt32(s_ctx, &val, elem);
             DTR_ASSERT_EQ_INT(val, i + 1);
             JS_FreeValue(s_ctx, elem);
