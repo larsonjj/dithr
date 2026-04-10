@@ -1,6 +1,6 @@
 # API Reference
 
-dithr exposes **17 namespaces** to cart JavaScript code. All functions are
+dithr exposes **18 namespaces** to cart JavaScript code. All functions are
 available as globals on their namespace object (e.g. `gfx.cls()`).
 
 The engine calls three optional global callbacks each frame:
@@ -98,6 +98,23 @@ gfx.print(msg, (320 - w) / 2, 87, 7);
 gfx.spr(8, player.x, player.y, 2, 1, player.facing < 0, false);
 ```
 
+### Indexed tilemap
+
+| Function  | Parameters                                  | Returns | Description                                                                                       |
+| --------- | ------------------------------------------- | ------- | ------------------------------------------------------------------------------------------------- |
+| `tilemap` | `tiles, mapW, mapH, colors, tileW?, tileH?` | —       | Render an indexed-colour tilemap. `tiles` and `colors` are flat arrays; tile size defaults to 8×8 |
+
+`tiles` is a flat array of tile indices (one per cell, row-major). `colors`
+maps each tile index to a palette colour. Tiles outside the palette range are
+skipped.
+
+```js
+/* 4×2 tilemap with two tile types */
+var tiles = [0, 1, 0, 1, 1, 0, 1, 0];
+var colors = [7, 8]; // tile 0 → white, tile 1 → red
+gfx.tilemap(tiles, 4, 2, colors);
+```
+
 ### Sprite flags
 
 | Function | Parameters       | Returns         | Description                                                                                            |
@@ -123,6 +140,36 @@ if (gfx.sheetW() === 0) gfx.sheetCreate(128, 128, 8, 8);
 var old = gfx.sget(16, 8); // get colour at (16, 8) on sheet
 gfx.sset(16, 8, 7); // set it to white
 ```
+
+### Spritesheet & flag serialization
+
+| Function    | Parameters | Returns  | Description                                                     |
+| ----------- | ---------- | -------- | --------------------------------------------------------------- |
+| `sheetData` |            | `string` | Hex-encoded string of all spritesheet pixel data                |
+| `sheetLoad` | `hex`      | `bool`   | Decode a hex string into the spritesheet pixel buffer           |
+| `flagsData` |            | `string` | Hex-encoded string of all sprite flags                          |
+| `flagsLoad` | `hex`      | `bool`   | Decode a hex string into the sprite flag array                  |
+| `exportPNG` | `path`     | `bool`   | Save the spritesheet as a PNG file (relative to cart directory) |
+
+```js
+/* Round-trip the spritesheet through hex */
+var hex = gfx.sheetData();
+gfx.sheetLoad(hex); // restore
+
+/* Export the sheet to disk */
+gfx.exportPNG("sprites.png");
+```
+
+### Raw framebuffer access
+
+Direct pixel read/write that bypasses the camera, clipping rectangle and
+palette remapping. Addresses run from 0 to `screenW * screenH - 1`, in
+row-major order.
+
+| Function | Parameters  | Returns | Description                                       |
+| -------- | ----------- | ------- | ------------------------------------------------- |
+| `poke`   | `addr, col` | —       | Write palette colour `col` at framebuffer address |
+| `peek`   | `addr`      | `int`   | Read palette index at framebuffer address         |
 
 ### Palette
 
@@ -694,6 +741,87 @@ function _update(dt) {
     /* Smoothly follow the player, centred on screen */
     cam.follow(player.x - 160, player.y - 90, 0.08);
 }
+```
+
+---
+
+## `synth` — Procedural Sound Synthesis
+
+Create, edit and play back procedural sound effects at runtime. Each SFX
+slot holds a 32-note pattern with per-note waveform, volume and effect
+settings. Up to 64 SFX slots and 4 simultaneous playback channels are
+supported.
+
+### Definitions
+
+| Function | Parameters                                 | Returns                                             | Description                                                                                                               |
+| -------- | ------------------------------------------ | --------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| `set`    | `idx, notes, speed?, loopStart?, loopEnd?` | `bool`                                              | Define an SFX. `notes` is an array of `{pitch, waveform, volume, effect}` objects (max 32). `speed` defaults to 8 (1–255) |
+| `get`    | `idx`                                      | `{notes, speed, loopStart, loopEnd}` or `undefined` | Read back the full SFX definition at slot `idx`                                                                           |
+| `count`  |                                            | `int`                                               | Number of defined SFX slots (highest index + 1)                                                                           |
+
+### Playback
+
+| Function   | Parameters                                            | Returns | Description                                                                |
+| ---------- | ----------------------------------------------------- | ------- | -------------------------------------------------------------------------- |
+| `play`     | `idx, channel?`                                       | —       | Play SFX `idx` on `channel` (0–3, default 0). Edits are heard in real time |
+| `playNote` | `pitch, waveform, volume?, effect?, speed?, channel?` | —       | Preview a single note. `volume` default 5, `speed` default 8               |
+| `stop`     | `channel?`                                            | —       | Stop playback. Omit `channel` to stop all channels and note preview        |
+| `playing`  | `channel?`                                            | `bool`  | Is the given channel playing? (default channel 0)                          |
+| `noteIdx`  | `channel?`                                            | `int`   | Current note index (0–31) or −1 if not playing                             |
+
+### Rendering
+
+| Function    | Parameters  | Returns       | Description                                   |
+| ----------- | ----------- | ------------- | --------------------------------------------- |
+| `render`    | `idx`       | `ArrayBuffer` | Render the full SFX to PCM S16 mono 44 100 Hz |
+| `exportWav` | `idx, path` | `bool`        | Write a WAV file (relative to cart directory) |
+
+### Utilities
+
+| Function    | Parameters | Returns    | Description                          |
+| ----------- | ---------- | ---------- | ------------------------------------ |
+| `noteName`  | `pitch`    | `string`   | Human-readable name, e.g. `"C-4"`    |
+| `pitchFreq` | `pitch`    | `number`   | Frequency in Hz for pitch index 0–96 |
+| `waveNames` |            | `string[]` | Waveform names (indices 0–7)         |
+| `fxNames`   |            | `string[]` | Effect names (indices 0–7)           |
+
+### Waveforms (0–7)
+
+| Index | Name     |
+| ----- | -------- |
+| 0     | triangle |
+| 1     | tiltsaw  |
+| 2     | saw      |
+| 3     | square   |
+| 4     | pulse    |
+| 5     | organ    |
+| 6     | noise    |
+| 7     | phaser   |
+
+### Effects (0–7)
+
+| Index | Name     |
+| ----- | -------- |
+| 0     | none     |
+| 1     | slide    |
+| 2     | vibrato  |
+| 3     | drop     |
+| 4     | fade in  |
+| 5     | fade out |
+| 6     | arp fast |
+| 7     | arp slow |
+
+```js
+/* Define a simple laser SFX and play it */
+synth.set(0, [
+    { pitch: 72, waveform: 2, volume: 7, effect: 3 },
+    { pitch: 60, waveform: 2, volume: 5, effect: 0 },
+]);
+synth.play(0);
+
+/* Preview a single note */
+synth.playNote(49, 0, 5); // C-4 triangle
 ```
 
 ---

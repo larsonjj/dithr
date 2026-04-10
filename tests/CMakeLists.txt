@@ -104,6 +104,9 @@ dtr_add_test(test_synth test_synth.c)
 # --- Tween tests ---
 dtr_add_test(test_tween test_tween.c LINK_LIB dithr_core_test)
 
+# --- Console lifecycle tests ---
+dtr_add_test(test_console test_console.c)
+
 # --- Editor JS tests (pure logic, evaluated by QuickJS) ---
 dtr_add_test(test_editor_js test_editor_js.c)
 target_compile_definitions(test_editor_js PRIVATE
@@ -114,7 +117,7 @@ target_compile_definitions(test_editor_js PRIVATE
 set_tests_properties(
     test_input test_cart test_graphics test_graphics_ext test_event
     test_mouse_gamepad test_runtime test_module_normalize test_audio test_postfx
-    test_cart_import test_col test_cam test_ui test_synth test_tween
+    test_cart_import test_col test_cam test_ui test_synth test_tween test_console
     PROPERTIES
         TIMEOUT 120
         ENVIRONMENT "SDL_AUDIO_DRIVER=dummy;SDL_VIDEO_DRIVER=dummy;SDL_AUDIODRIVER=dummy;SDL_VIDEODRIVER=dummy"

@@ -25,6 +25,7 @@
 #   collision_demo     - Collision helper functions
 #   sys_explorer       - System introspection, file I/O & clipboard
 #   tween_showcase     - Tweening, easing & runtime input remapping
+#   synth_demo         - Procedural sound synthesis with the synth API
 
 # Install example carts alongside the executable
 install(DIRECTORY
@@ -49,6 +50,7 @@ install(DIRECTORY
     collision_demo
     sys_explorer
     tween_showcase
+    synth_demo
     DESTINATION examples
     PATTERN "node_modules" EXCLUDE
 )
