@@ -20,9 +20,14 @@
 #endif
 
 /* ASan inflates stack frames; give QuickJS more room. */
-#if defined(__SANITIZE_ADDRESS__) || (defined(__has_feature) && __has_feature(address_sanitizer))
+#if defined(__SANITIZE_ADDRESS__)
 #define TEST_STACK_KB 1024
-#else
+#elif defined(__has_feature)
+#if __has_feature(address_sanitizer)
+#define TEST_STACK_KB 1024
+#endif
+#endif
+#ifndef TEST_STACK_KB
 #define TEST_STACK_KB 256
 #endif
 
