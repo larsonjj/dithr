@@ -39,8 +39,8 @@ function draw_fps_widget() {
 // Tile legend (drawn directly into spritesheet at runtime)
 //   0 = empty (transparent)
 //   1 = grass (green)
-//   2 = wall  (brown) — flagged as solid
-//   3 = water (blue)  — flagged as solid
+//   2 = wall  (brown)  — solid
+//   3 = water (blue)   — solid
 //   4 = path  (beige)
 //   5 = spawn (yellow marker)
 //   6 = chest (orange marker)
@@ -48,8 +48,8 @@ function draw_fps_widget() {
 
 var TILE_COLS = [0, 11, 4, 12, 15, 10, 9];
 
-var MAP_W = 40;
-var MAP_H = 23;
+var MAP_W = 80;
+var MAP_H = 45;
 var TILE = 8;
 
 var px = 0;
@@ -62,6 +62,7 @@ var level_idx = 0;
 var objects_near = [];
 var info_msg = "";
 var info_timer = 0;
+var PLAYER_SPRITE = 7; // sprite index for player tile
 
 function build_sheet() {
     gfx.sheetCreate(128, 128, 8, 8);
@@ -75,9 +76,18 @@ function build_sheet() {
             }
         }
     }
-    // Mark wall (2) and water (3) as solid via flag bit 0
-    gfx.fset(2, 0, 1);
-    gfx.fset(3, 0, 1);
+    // Player sprite (index 7) — red square
+    var psx = (PLAYER_SPRITE % 16) * 8;
+    var psy = math.flr(PLAYER_SPRITE / 16) * 8;
+    for (var py3 = 0; py3 < 8; ++py3) {
+        for (var px3 = 0; px3 < 8; ++px3) {
+            gfx.sset(psx + px3, psy + py3, 8);
+        }
+    }
+    // Mark solid tiles via flag bit 0
+    // map.flag uses tile-1 as sprite index, so tile N → sprite N-1
+    gfx.fset(1, 0, 1); // wall (tile 2)  → sprite 1
+    gfx.fset(2, 0, 1); // water (tile 3) → sprite 2
 }
 
 function build_level(name) {
@@ -100,43 +110,49 @@ function build_level(name) {
         map.set(MAP_W - 1, cy2, 2);
     }
 
-    // Scattered features based on level name
+    // Seeded random
     var seed = 0;
     for (var ch = 0; ch < name.length; ++ch) seed += name.charCodeAt(ch);
     math.seed(seed);
 
-    // Random water pools
-    for (var w = 0; w < 4; ++w) {
-        var wx2 = math.rnd_int(MAP_W - 8) + 3;
-        var wy2 = math.rnd_int(MAP_H - 6) + 3;
-        for (var dy = 0; dy < 3; ++dy) {
-            for (var dx = 0; dx < 4; ++dx) {
+    // Water pools
+    for (var w = 0; w < 10; ++w) {
+        var wx2 = math.rnd_int(MAP_W - 10) + 3;
+        var wy2 = math.rnd_int(MAP_H - 8) + 3;
+        var pw = math.rnd_int(3) + 3;
+        var ph = math.rnd_int(2) + 2;
+        for (var dy = 0; dy < ph; ++dy) {
+            for (var dx = 0; dx < pw; ++dx) {
                 map.set(wx2 + dx, wy2 + dy, 3);
             }
         }
     }
 
-    // Random walls
-    for (var wb = 0; wb < 8; ++wb) {
-        var bx = math.rnd_int(MAP_W - 6) + 3;
-        var by2 = math.rnd_int(MAP_H - 4) + 2;
+    // Interior walls
+    for (var wb = 0; wb < 20; ++wb) {
+        var bx = math.rnd_int(MAP_W - 10) + 3;
+        var by2 = math.rnd_int(MAP_H - 8) + 2;
         var horiz = math.rnd(1) > 0.5;
-        for (var s = 0; s < 5; ++s) {
+        var wlen = math.rnd_int(4) + 3;
+        for (var s = 0; s < wlen; ++s) {
             if (horiz) map.set(bx + s, by2, 2);
             else map.set(bx, by2 + s, 2);
         }
     }
 
-    // Path
+    // Paths
     for (var px3 = 2; px3 < MAP_W - 2; ++px3) {
         map.set(px3, math.flr(MAP_H / 2), 4);
     }
 
-    // Ensure spawn area is clear
+    // Ensure spawn area is clear (4x4 tiles around spawn)
+    for (var sy = 1; sy <= 4; ++sy) {
+        for (var sx = 1; sx <= 4; ++sx) {
+            map.set(sx, sy, 1);
+        }
+    }
     map.set(2, 2, 4);
     map.set(3, 2, 4);
-    map.set(2, 3, 4);
-    map.set(3, 3, 4);
 
     // Add a second layer for decoration
     map.add_layer("overlay");
@@ -144,7 +160,7 @@ function build_level(name) {
     map.set(2, 2, 5, 1);
 
     // Place chest objects via overlay
-    for (var c = 0; c < 3; ++c) {
+    for (var c = 0; c < 8; ++c) {
         var cx3 = math.rnd_int(MAP_W - 6) + 3;
         var cy3 = math.rnd_int(MAP_H - 6) + 3;
         map.set(cx3, cy3, 6, 1);
@@ -159,9 +175,8 @@ function show_info(msg) {
 function _init() {
     build_sheet();
 
-    // Create two levels
+    // Create overworld
     build_level("overworld");
-    build_level("dungeon");
 
     level_names = map.levels();
     level_idx = 0;
@@ -183,7 +198,7 @@ function _init() {
     py = 2 * TILE;
     cam.reset();
 
-    show_info("Level: " + current_level_name + " | TAB=switch | Arrow/WASD=move");
+    show_info("Arrow/WASD=move | Action=pick up chests");
 }
 
 function _update(dt) {
@@ -192,16 +207,6 @@ function _update(dt) {
     fps_hist_idx = (fps_hist_idx + 1) % FPS_HIST_LEN;
 
     if (info_timer > 0) info_timer -= dt;
-
-    // Switch level with TAB
-    if (key.btnp(key.TAB)) {
-        level_idx = (level_idx + 1) % level_names.length;
-        map.load(level_names[level_idx]);
-        current_level_name = map.current_level();
-        px = 2 * TILE;
-        py = 2 * TILE;
-        show_info("Switched to: " + current_level_name);
-    }
 
     // Movement with collision via map.flag
     var dx = 0;
@@ -256,8 +261,18 @@ function _update(dt) {
         }
     }
 
-    // Smooth camera follow
-    cam.follow(px - 160 + 4, py - 90 + 4, 0.08);
+    // Camera follow — track player, centered on screen
+    cam.follow(px - 160 + 4, py - 90 + 4, 0.1);
+
+    // Clamp engine camera to map bounds
+    var c = cam.get();
+    var max_cx = MAP_W * TILE - 320;
+    var max_cy = MAP_H * TILE - 180;
+    if (c.x < 0) cam.set(0, c.y);
+    if (c.y < 0) cam.set(cam.get().x, 0);
+    c = cam.get();
+    if (c.x > max_cx) cam.set(max_cx, c.y);
+    if (c.y > max_cy) cam.set(cam.get().x, max_cy);
 }
 
 function _draw() {
@@ -267,9 +282,8 @@ function _draw() {
     map.draw(0, 0, 0, 0); // base layer
     map.draw(0, 0, 0, 0, undefined, undefined, 1); // overlay layer
 
-    // Draw player (simple coloured rect in world coords)
-    var cam_pos = cam.get();
-    gfx.rectfill(px - cam_pos.x, py - cam_pos.y, px - cam_pos.x + 7, py - cam_pos.y + 7, 8);
+    // Draw player as sprite (respects engine camera automatically)
+    gfx.spr(PLAYER_SPRITE, px, py);
 
     // HUD (screen-space — temporarily reset camera)
     var saved_cam = cam.get();

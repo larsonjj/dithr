@@ -174,9 +174,6 @@ js_postfx_available(JSContext *ctx, JSValueConst this_val, int argc, JSValueCons
 /*  postfx.save() / postfx.restore()  — snapshot effect stack          */
 /* ------------------------------------------------------------------ */
 
-static dtr_postfx_entry_t s_saved_stack[DTR_POSTFX_MAX_STACK];
-static int32_t            s_saved_count = 0;
-
 static JSValue js_postfx_save(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
     dtr_postfx_t *pfx;
@@ -186,8 +183,8 @@ static JSValue js_postfx_save(JSContext *ctx, JSValueConst this_val, int argc, J
     (void)argv;
     pfx = PFX(ctx);
 
-    s_saved_count = pfx->count;
-    SDL_memcpy(s_saved_stack, pfx->stack, (size_t)pfx->count * sizeof(dtr_postfx_entry_t));
+    pfx->saved_count = pfx->count;
+    SDL_memcpy(pfx->saved_stack, pfx->stack, (size_t)pfx->count * sizeof(dtr_postfx_entry_t));
     return JS_UNDEFINED;
 }
 
@@ -201,8 +198,8 @@ js_postfx_restore(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst 
     (void)argv;
     pfx = PFX(ctx);
 
-    pfx->count = s_saved_count;
-    SDL_memcpy(pfx->stack, s_saved_stack, (size_t)s_saved_count * sizeof(dtr_postfx_entry_t));
+    pfx->count = pfx->saved_count;
+    SDL_memcpy(pfx->stack, pfx->saved_stack, (size_t)pfx->saved_count * sizeof(dtr_postfx_entry_t));
     return JS_UNDEFINED;
 }
 

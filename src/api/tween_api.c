@@ -137,7 +137,10 @@ static JSValue js_tween_start(JSContext *ctx, JSValueConst this_val, int argc, J
 
     idx = dtr_tween_add(TWN(ctx), from, too, dur, ease, delay);
     if (idx < 0) {
-        return JS_ThrowInternalError(ctx, "tween pool full");
+        result = JS_NewObject(ctx);
+        JS_SetPropertyStr(ctx, result, "id", JS_NewInt32(ctx, -1));
+        JS_SetPropertyStr(ctx, result, "done", JS_UNDEFINED);
+        return result;
     }
 
     /* Create a Promise that resolves when the tween finishes */

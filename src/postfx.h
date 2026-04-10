@@ -44,6 +44,10 @@ struct dtr_postfx {
     dtr_postfx_entry_t stack[DTR_POSTFX_MAX_STACK];
     int32_t            count;
 
+    /* Saved snapshot for save/restore */
+    dtr_postfx_entry_t saved_stack[DTR_POSTFX_MAX_STACK];
+    int32_t            saved_count;
+
     /* Scratch buffer for multi-pass effects */
     uint32_t *scratch;
     int32_t   width;

@@ -32,6 +32,10 @@ static JSValue js_col_rect(JSContext *ctx, JSValueConst this_val, int argc, JSVa
     w2 = dtr_api_opt_int(ctx, argc, argv, 6, 0);
     h2 = dtr_api_opt_int(ctx, argc, argv, 7, 0);
 
+    if (w1 <= 0 || h1 <= 0 || w2 <= 0 || h2 <= 0) {
+        return JS_FALSE;
+    }
+
     if (x1 < x2 + w2 && x1 + w1 > x2 && y1 < y2 + h2 && y1 + h1 > y2) {
         return JS_TRUE;
     }
@@ -62,6 +66,10 @@ static JSValue js_col_circ(JSContext *ctx, JSValueConst this_val, int argc, JSVa
     x2 = dtr_api_opt_float(ctx, argc, argv, 3, 0.0);
     y2 = dtr_api_opt_float(ctx, argc, argv, 4, 0.0);
     r2 = dtr_api_opt_float(ctx, argc, argv, 5, 0.0);
+
+    if (r1 < 0.0 || r2 < 0.0) {
+        return JS_FALSE;
+    }
 
     dx      = x2 - x1;
     dy      = y2 - y1;
@@ -96,6 +104,10 @@ js_col_point_rect(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst 
     rw = dtr_api_opt_int(ctx, argc, argv, 4, 0);
     rh = dtr_api_opt_int(ctx, argc, argv, 5, 0);
 
+    if (rw <= 0 || rh <= 0) {
+        return JS_FALSE;
+    }
+
     if (px >= rx && px < rx + rw && py >= ry && py < ry + rh) {
         return JS_TRUE;
     }
@@ -123,6 +135,10 @@ js_col_point_circ(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst 
     cx = dtr_api_opt_float(ctx, argc, argv, 2, 0.0);
     cy = dtr_api_opt_float(ctx, argc, argv, 3, 0.0);
     r  = dtr_api_opt_float(ctx, argc, argv, 4, 0.0);
+
+    if (r < 0.0) {
+        return JS_FALSE;
+    }
 
     dx = px - cx;
     dy = py - cy;
@@ -158,6 +174,10 @@ static JSValue js_col_circ_rect(JSContext *ctx, JSValueConst this_val, int argc,
     ry = dtr_api_opt_float(ctx, argc, argv, 4, 0.0);
     rw = dtr_api_opt_float(ctx, argc, argv, 5, 0.0);
     rh = dtr_api_opt_float(ctx, argc, argv, 6, 0.0);
+
+    if (cr < 0.0 || rw <= 0.0 || rh <= 0.0) {
+        return JS_FALSE;
+    }
 
     /* Clamp circle center to rect to find nearest point */
     nearest_x = cx;
