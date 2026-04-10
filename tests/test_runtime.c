@@ -13,10 +13,17 @@
 /*  Helpers                                                            */
 /* ------------------------------------------------------------------ */
 
+/* ASan inflates stack frames; give QuickJS more room. */
+#if defined(__SANITIZE_ADDRESS__) || (defined(__has_feature) && __has_feature(address_sanitizer))
+#define TEST_STACK_KB 1024
+#else
+#define TEST_STACK_KB 256
+#endif
+
 /** Create a runtime with no console (safe for pure JS tests). */
 static dtr_runtime_t *prv_make_rt(void)
 {
-    return dtr_runtime_create(NULL, 8, 256);
+    return dtr_runtime_create(NULL, 8, TEST_STACK_KB);
 }
 
 /* ------------------------------------------------------------------ */

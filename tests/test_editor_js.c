@@ -19,6 +19,13 @@
 #error "JS_TEST_DIR must be defined at compile time"
 #endif
 
+/* ASan inflates stack frames; give QuickJS more room. */
+#if defined(__SANITIZE_ADDRESS__) || (defined(__has_feature) && __has_feature(address_sanitizer))
+#define TEST_STACK_KB 1024
+#else
+#define TEST_STACK_KB 256
+#endif
+
 /* ------------------------------------------------------------------ */
 /*  Helpers                                                            */
 /* ------------------------------------------------------------------ */
@@ -55,7 +62,7 @@ static void prv_run_js_test(const char *filename)
     char *code = prv_read_file(path);
     DTR_ASSERT_NOT_NULL(code);
 
-    dtr_runtime_t *rt = dtr_runtime_create(NULL, 8, 256);
+    dtr_runtime_t *rt = dtr_runtime_create(NULL, 8, TEST_STACK_KB);
     DTR_ASSERT_NOT_NULL(rt);
 
     bool ok = dtr_runtime_eval(rt, code, strlen(code), filename);
