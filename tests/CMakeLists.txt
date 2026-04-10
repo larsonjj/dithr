@@ -120,6 +120,11 @@ dtr_add_test(test_synth test_synth.c)
 # --- Tween tests ---
 dtr_add_test(test_tween test_tween.c LINK_LIB dithr_core_test)
 
+# --- API bridge tests (require QuickJS, no graphics/audio) ---
+if (NOT EMSCRIPTEN)
+    dtr_add_test(test_api_bridge test_api_bridge.c)
+endif()
+
 # --- Console lifecycle tests (require SDL display subsystem) ---
 if (NOT EMSCRIPTEN)
     dtr_add_test(test_console test_console.c)
@@ -142,6 +147,7 @@ set(DTR_TEST_TARGETS
 if (NOT EMSCRIPTEN)
     list(APPEND DTR_TEST_TARGETS
         test_cart test_event test_runtime test_cart_import test_console
+        test_api_bridge
     )
 endif()
 set_tests_properties(${DTR_TEST_TARGETS}
