@@ -251,10 +251,9 @@ function _draw() {
             const tx = math.flr(touch.x(ti));
             const ty = math.flr(touch.y(ti));
             // Draw crosshair at touch point
-            gfx.circ(tx, ty, 6, 12);
-            gfx.line(tx - 3, ty, tx + 3, ty, 12);
-            gfx.line(tx, ty - 3, tx, ty + 3, 12);
-            gfx.print(`${ti}`, tx + 8, ty - 3, 12);
+            gfx.line(tx - 4, ty, tx + 4, ty, 12);
+            gfx.line(tx, ty - 4, tx, ty + 4, 12);
+            gfx.print(`${ti}`, tx + 6, ty - 3, 12);
         }
     } else {
         gfx.print('(no touches)', 160, 70, 5);
