@@ -107,30 +107,30 @@ static float prv_waveform(uint8_t wave, float phase)
 
     switch (wave) {
         case DTR_WAVE_TRIANGLE:
-            /* PICO-8: peak ±0.50 */
+            /* peak ±0.50 */
             return (1.0f - SDL_fabsf(4.0f * phase - 2.0f)) * 0.5f;
 
         case DTR_WAVE_TILTSAW:
-            /* PICO-8: asymmetric triangle, ramp 87.5% up / 12.5% down, peak ±0.50 */
+            /* Asymmetric triangle, ramp 87.5% up / 12.5% down, peak ±0.50 */
             val = 0.875f;
             ret = phase < val ? 2.0f * phase / val - 1.0f :
                                 2.0f * (1.0f - phase) / (1.0f - val) - 1.0f;
             return ret * 0.5f;
 
         case DTR_WAVE_SAW:
-            /* PICO-8: peak ±0.327 */
+            /* peak ±0.327 */
             return 0.653f * (phase < 0.5f ? phase : phase - 1.0f);
 
         case DTR_WAVE_SQUARE:
-            /* PICO-8: 50% duty, peak ±0.25 */
+            /* 50% duty, peak ±0.25 */
             return phase < 0.5f ? 0.25f : -0.25f;
 
         case DTR_WAVE_PULSE:
-            /* PICO-8: ~31.6% duty, peak ±0.25 */
+            /* ~31.6% duty, peak ±0.25 */
             return phase < 0.316f ? 0.25f : -0.25f;
 
         case DTR_WAVE_ORGAN:
-            /* PICO-8: dual-speed triangle, peak ±0.333 */
+            /* Dual-speed triangle, peak ±0.333 */
             ret = phase < 0.5f ? 3.0f - SDL_fabsf(24.0f * phase - 6.0f) :
                                  1.0f - SDL_fabsf(16.0f * phase - 12.0f);
             return ret / 9.0f;
@@ -139,7 +139,7 @@ static float prv_waveform(uint8_t wave, float phase)
             return prv_noise() * 0.5f;
 
         case DTR_WAVE_PHASER:
-            /* PICO-8: two detuned triangles, peak ±0.50 */
+            /* Two detuned triangles, peak ±0.50 */
             ret = 2.0f - SDL_fabsf(8.0f * phase - 4.0f);
             ret += 1.0f - SDL_fabsf(4.0f * phase - 2.0f);
             return ret / 6.0f;
@@ -168,7 +168,7 @@ static float prv_waveform_bl(uint8_t wave, float phase, float dtp)
 
     switch (wave) {
         case DTR_WAVE_SQUARE:
-            /* PICO-8 peak: ±0.25 — PolyBLEP at 50% duty */
+            /* Peak ±0.25 — PolyBLEP at 50% duty */
             val = phase < 0.5f ? 0.25f : -0.25f;
             val += prv_polyblep(phase, dtp) * 0.25f;
             blp = phase + 0.5f;
@@ -179,7 +179,7 @@ static float prv_waveform_bl(uint8_t wave, float phase, float dtp)
             return val;
 
         case DTR_WAVE_PULSE:
-            /* PICO-8 peak: ±0.25 — PolyBLEP at ~31.6% duty */
+            /* Peak ±0.25 — PolyBLEP at ~31.6% duty */
             val = phase < 0.316f ? 0.25f : -0.25f;
             val += prv_polyblep(phase, dtp) * 0.25f;
             blp = phase + (1.0f - 0.316f);
@@ -190,7 +190,7 @@ static float prv_waveform_bl(uint8_t wave, float phase, float dtp)
             return val;
 
         case DTR_WAVE_SAW:
-            /* PICO-8 peak: ±0.327 — PolyBLEP on naive saw */
+            /* Peak ±0.327 — PolyBLEP on naive saw */
             val = 0.653f * (phase < 0.5f ? phase : phase - 1.0f);
             val -= prv_polyblep(phase, dtp) * 0.327f;
             return val;
@@ -211,7 +211,7 @@ float dtr_synth_waveform_bl(uint8_t wave, float phase, float dtp)
 /* ------------------------------------------------------------------ */
 
 /**
- * Speed value maps to samples per note (PICO-8 style: higher = slower):
+ * Speed value maps to samples per note (higher = slower):
  *   samples_per_note = speed * (sample_rate / 128)
  * Each speed unit = 1/128 second. UI range: 1-32, clamped internally.
  */
@@ -278,7 +278,7 @@ int16_t *dtr_synth_render(const dtr_synth_sfx_t *sfx, size_t *out_len)
     prv_noise_state = 0x12345678;
 
     {
-        uint8_t prev_key = 49; /* C-4 = PICO-8 default C-2 (261.6 Hz) */
+        uint8_t prev_key = 49; /* C-4 (261.6 Hz) */
         float   prev_vol = 0.0f;
         int32_t first_nti;
         float   smooth_vol_off;
@@ -321,7 +321,7 @@ int16_t *dtr_synth_render(const dtr_synth_sfx_t *sfx, size_t *out_len)
                     buf[idx++] = 0;
                 }
                 phase = 0.0f;
-                /* Update previous-note tracking for slide (PICO-8) */
+                /* Update previous-note tracking for slide */
                 if (prev_key != note->pitch) {
                     prev_vol = prev_key > 0 ? vol : 0.0f;
                 }
@@ -338,7 +338,7 @@ int16_t *dtr_synth_render(const dtr_synth_sfx_t *sfx, size_t *out_len)
 
                 frac = (float)sid / (float)spn;
 
-                /* Apply effects — PICO-8 compatible (matches zepto8) */
+                /* Apply effects */
                 cur_freq   = base_freq;
                 sample_vol = vol;
 
@@ -376,7 +376,7 @@ int16_t *dtr_synth_render(const dtr_synth_sfx_t *sfx, size_t *out_len)
                         break;
                     case DTR_FX_ARPF:
                     case DTR_FX_ARPS: {
-                        /* 4-note group arpeggio (PICO-8 style).
+                        /* 4-note group arpeggio.
                          * Cycles through notes (nti & ~3) .. (nti & ~3)+3. */
                         float   time_s;
                         int32_t mrate;
@@ -435,7 +435,7 @@ int16_t *dtr_synth_render(const dtr_synth_sfx_t *sfx, size_t *out_len)
                 buf[idx++] = (int16_t)(sample * 32767.0f);
             }
 
-            /* Update previous-note tracking for slide (PICO-8) */
+            /* Update previous-note tracking for slide */
             if (prev_key != note->pitch) {
                 prev_vol = prev_key > 0 ? vol : 0.0f;
             }

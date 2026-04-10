@@ -279,7 +279,7 @@ function drawMathPage() {
     gfx.print(`rndRange(10, 20) = ${math.rndRange(10, 20).toFixed(2)}`, 4, y, 6);
     y += gap;
 
-    // sin / cos (PICO-8 style 0-1)
+    // sin / cos (0-1 = full rotation)
     const angle = t;
     gfx.print(
         `sin(${angle.toFixed(2)})=${math.sin(angle).toFixed(3)}  cos=${math.cos(angle).toFixed(3)}`,

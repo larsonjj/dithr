@@ -13,7 +13,7 @@
 #include <string.h>
 
 /* ------------------------------------------------------------------ */
-/*  Default 256-colour palette (first 16 inspired by PICO-8)           */
+/*  Default 256-colour palette (first 16 match the classic palette)    */
 /* ------------------------------------------------------------------ */
 
 /* RGBA packed as 0xRRGGBBAA */

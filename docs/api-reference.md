@@ -461,9 +461,9 @@ Effects are managed as a stack applied after `_draw()`.
 
 ### Trigonometry
 
-Trig functions use **PICO-8 conventions**: angles are in the range 0–1 where 1
-equals a full rotation. `sin` is **inverted** (returns −sin) to match PICO-8
-screen coordinates (Y-down).
+Trig functions use **turn-based conventions**: angles are in the range 0–1 where 1
+equals a full rotation. `sin` is **inverted** (returns −sin) so that positive
+values move downward in screen coordinates (Y-down).
 
 | Function | Parameters | Returns | Description                      |
 | -------- | ---------- | ------- | -------------------------------- |
@@ -616,7 +616,7 @@ traversal are rejected with a `RangeError`.
 | -------- | ---------- | ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `config` | `path?`    | `any`                        | Read cart config. Dot-separated path (e.g. `"display.width"`). No argument returns the full config object                                                                                                         |
 | `limit`  | `key`      | `int`                        | Compile-time limit. Keys: `"fb_width"`, `"fb_height"`, `"palette_size"`, `"max_sprites"`, `"max_maps"`, `"max_map_layers"`, `"max_map_objects"`, `"max_channels"`, `"js_heap_mb"`, `"js_stack_kb"`, `"targetFps"` |
-| `stat`   | `n`        | `float`, `string`, or `bool` | PICO-8 compatible stat. `0` = memory, `1` = CPU, `7` = FPS, `32` = mouse X, `33` = mouse Y, `34` = mouse button mask, `36` = wheel, `90` = ticks                                                                  |
+| `stat`   | `n`        | `float`, `string`, or `bool` | System stat query. `0` = memory, `1` = CPU, `7` = FPS, `32` = mouse X, `33` = mouse Y, `34` = mouse button mask, `36` = wheel, `90` = ticks                                                                  |
 
 ---
 

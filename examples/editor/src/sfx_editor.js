@@ -129,7 +129,7 @@ function markSfxHasData(idx, knownTrue) {
 function loadSfx(idx) {
     const data = synth.get(idx);
     if (data) {
-        // Default speed to 16 (PICO-8 default) when C struct is zero-initialized
+        // Default speed to 16 when C struct is zero-initialized
         if (!data.speed) data.speed = 16;
         if (data.speed > 32) data.speed = 32;
         return data;

@@ -130,5 +130,5 @@ on native builds.
 node tools/create-cart.js my-game --template blank
 ```
 
-Templates: `blank`, `platformer`, `pico8-port`. The tool creates the directory
+Templates: `blank`, `platformer`. The tool creates the directory
 structure, a starter `cart.json`, and a template `src/main.js`.

@@ -14,7 +14,7 @@
 #define CON(ctx) dtr_api_get_console(ctx)
 #define AUD(ctx) (CON(ctx)->audio)
 
-/* Default prev_key pitch: C-4 = PICO-8 default C-2 (261.6 Hz) */
+/* Default prev_key pitch: C-4 (261.6 Hz) */
 #define DEFAULT_PREV_KEY 49
 
 /* ------------------------------------------------------------------ */
@@ -111,7 +111,7 @@ static dtr_synth_store_t *prv_get_store(void)
 #define VOL_SMOOTH_COEFF 0.005f /* exponential smoothing (~4.5ms tau) */
 
 /**
- * Compute samples-per-note from speed value (PICO-8 style: higher = slower).
+ * Compute samples-per-note from speed value (higher = slower).
  */
 static int32_t prv_spn(uint8_t speed)
 {
@@ -245,7 +245,7 @@ static int16_t prv_voice_sample(dtr_synth_voice_t *v)
         cur_freq   = base_freq;
         sample_vol = vol;
 
-        /* Effects — PICO-8 compatible (matches zepto8 sfx.cpp) */
+        /* Effects */
         switch (note->effect) {
             case DTR_FX_SLIDE: {
                 /* Slide from previous note's pitch/vol to current */
@@ -282,7 +282,7 @@ static int16_t prv_voice_sample(dtr_synth_voice_t *v)
                 break;
             case DTR_FX_ARPF:
             case DTR_FX_ARPS: {
-                /* 4-note group arpeggio (PICO-8 style).
+                /* 4-note group arpeggio.
                  * Cycles through notes (nti & ~3) .. (nti & ~3)+3. */
                 float   time_s;
                 int32_t mrate;
@@ -327,7 +327,7 @@ static int16_t prv_voice_sample(dtr_synth_voice_t *v)
     v->note_pos++;
     v->total_pos++;
     if (v->note_pos >= spn) {
-        /* Update previous-note tracking for slide effect (PICO-8) */
+        /* Update previous-note tracking for slide effect */
         if (v->prev_key != note->pitch) {
             v->prev_vol = v->prev_key > 0 ? (float)note->volume / 7.0f : 0.0f;
         }

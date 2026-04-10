@@ -198,7 +198,7 @@ struct dtr_cart {
     int32_t  sprite_rgba_w;
     int32_t  sprite_rgba_h;
 
-    /* dget/dset numeric persistence (PICO-8 compat) */
+    /* dget/dset numeric persistence */
     double dslots[DTR_CART_PERSIST_SLOTS];
 
     /* Named key/value persistence */

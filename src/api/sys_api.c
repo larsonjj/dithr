@@ -380,7 +380,7 @@ static JSValue js_sys_limit(JSContext *ctx, JSValueConst this_val, int argc, JSV
 }
 
 /* ------------------------------------------------------------------ */
-/*  PICO-8 stat shim                                                   */
+/*  System stat query                                                  */
 /* ------------------------------------------------------------------ */
 
 static JSValue js_sys_stat(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)

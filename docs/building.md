@@ -21,7 +21,6 @@ dithr uses CMake with presets for easy configuration. All library dependencies
 | ---------- | ---------------- | ------------------------------------------- |
 | `debug`    | `build/debug`    | Debug build, developer mode on              |
 | `release`  | `build/release`  | Optimised release build                     |
-| `retro`    | `build/retro`    | 128×128 framebuffer, scale 4 (PICO-8 style) |
 | `wasm`     | `build/wasm`     | Emscripten WASM release (Ninja)             |
 | `wasm-dev` | `build/wasm-dev` | Emscripten WASM debug (Ninja)               |
 
@@ -170,7 +169,7 @@ All console defaults can be overridden at configure time:
 | `DTR_BUILD_TESTS`     | ON                     | Build test suite              |
 | `DTR_WASM_CART_DIR`   | `examples/hello_world` | Cart to bundle in WASM builds |
 
-Example — a PICO-8 style build with a tiny framebuffer:
+Example — a custom build with a tiny framebuffer:
 
 ```bash
 cmake --preset debug -DDTR_FB_WIDTH=128 -DDTR_FB_HEIGHT=128 -DDTR_WINDOW_SCALE=4
@@ -201,7 +200,7 @@ at runtime.
 
 | Script                          | Usage                                                     | Description                                                                  |
 | ------------------------------- | --------------------------------------------------------- | ---------------------------------------------------------------------------- |
-| `tools/create-cart.js`          | `node tools/create-cart.js <name> [--template <t>]`       | Scaffold a new cart project (templates: `blank`, `platformer`, `pico8-port`) |
+| `tools/create-cart.js`          | `node tools/create-cart.js <name> [--template <t>]`       | Scaffold a new cart project (templates: `blank`, `platformer`)               |
 | `tools/cart-export.js`          | `node tools/cart-export.js <cart.json> [--out file.html]` | Export a cart to standalone HTML                                             |
 | `tools/serve-wasm.js`           | `node tools/serve-wasm.js [port]`                         | WASM dev server (default port 8080)                                          |
 | `tools/generate-pages-index.js` | `node tools/generate-pages-index.js <siteDir>`            | Generate index.html linking to all built WASM examples (used by CI)          |

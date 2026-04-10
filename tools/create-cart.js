@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // tools/create-cart.js — Project scaffolding tool for dithr carts
-// Usage: node create-cart.js <name> [--template blank|platformer|pico8-port]
+// Usage: node create-cart.js <name> [--template blank|platformer]
 
 "use strict";
 
@@ -12,7 +12,6 @@ const TEMPLATES_DIR = path.join(__dirname, "templates");
 const TEMPLATES = {
     blank: "blank.js",
     platformer: "platformer.js",
-    "pico8-port": "pico8-port.js",
 };
 
 function usage() {

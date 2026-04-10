@@ -187,7 +187,7 @@ static JSValue js_math_mid(JSContext *ctx, JSValueConst this_val, int argc, JSVa
 }
 
 /* ------------------------------------------------------------------ */
-/*  Trigonometry (PICO-8 style: 0..1 = full rotation)                  */
+/*  Trigonometry (0..1 = full rotation)                                 */
 /* ------------------------------------------------------------------ */
 
 #define DTR_PI  3.14159265358979323846
@@ -248,7 +248,7 @@ static JSValue js_math_atan2(JSContext *ctx, JSValueConst this_val, int argc, JS
     dy = dtr_api_opt_float(ctx, argc, argv, 0, 0.0);
     dx = dtr_api_opt_float(ctx, argc, argv, 1, 0.0);
 
-    /* Return in 0..1 range (full rotation), PICO-8 convention */
+    /* Return in 0..1 range (full rotation) */
     a = atan2(-dy, dx) / DTR_TAU;
     if (a < 0.0) {
         a += 1.0;

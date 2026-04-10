@@ -27,18 +27,6 @@
       }
     },
     {
-      "name": "retro",
-      "displayName": "Retro (128x128)",
-      "description": "Tiny square framebuffer for PICO-8 style games",
-      "inherits": "debug",
-      "binaryDir": "${sourceDir}/build/retro",
-      "cacheVariables": {
-        "DTR_FB_WIDTH": "128",
-        "DTR_FB_HEIGHT": "128",
-        "DTR_WINDOW_SCALE": "4"
-      }
-    },
-    {
       "name": "wasm",
       "displayName": "WASM Release",
       "description": "Emscripten WebAssembly release build",
@@ -105,10 +93,6 @@
     {
       "name": "release",
       "configurePreset": "release"
-    },
-    {
-      "name": "retro",
-      "configurePreset": "retro"
     },
     {
       "name": "wasm",

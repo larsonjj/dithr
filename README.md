@@ -9,8 +9,7 @@ in the browser via WebAssembly.
 
 ## Features
 
-- **320 x 180** default framebuffer (configurable down to 128 x 128 for
-  PICO-8 style games)
+- **320 x 180** default framebuffer (configurable at build time)
 - **256-colour palette** with draw palette, screen palette, and transparency
 - **Sprite sheet** rendering with flip, stretch-blit, and per-sprite flags
 - **Tilemap** support with multiple levels, layers, and object queries
@@ -54,7 +53,7 @@ cmake --build build/debug --config Debug
 ./build/debug/Debug/dithr examples/hello_world/cart.json
 ```
 
-See [docs/building.md](docs/building.md) for all presets (release, retro,
+See [docs/building.md](docs/building.md) for all presets (release,
 WASM) and available CMake cache variables.
 
 ## Creating a Cart
