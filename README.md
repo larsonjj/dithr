@@ -118,6 +118,32 @@ tools/         Node.js tooling (cart scaffold, export, WASM dev server)
 docs/          Documentation
 ```
 
+## Examples
+
+The `examples/` directory contains playable demo carts:
+
+| Example            | Description                                              |
+| ------------------ | -------------------------------------------------------- |
+| `hello_world`      | Minimal starter — prints text on screen                  |
+| `sprite_animation` | Animated sprite with frame cycling                       |
+| `tilemap`          | Multi-layer tilemap with camera scrolling                |
+| `audio_demo`       | Sound effects and music playback                         |
+| `input_demo`       | Keyboard, mouse, gamepad, and virtual action mapping     |
+| `platformer`       | Side-scrolling platformer with tile collision            |
+| `raycaster`        | Wolfenstein-style first-person raycaster                 |
+| `spritemark`       | Bunnymark-style sprite benchmark (SOA data layout)       |
+| `postfx_demo`      | Post-processing effects showcase                         |
+| `persistence`      | Save/load game state with `cart.save()` / `cart.load()`  |
+| `ui_demo`          | Immediate-mode UI widgets (buttons, sliders, text input) |
+| `gauntlet_clone`   | Gauntlet-inspired dungeon crawler with procedural levels |
+| `editor`           | Built-in sprite, map, music, and SFX editors             |
+
+Run any example after building:
+
+```bash
+./build/debug/dithr examples/platformer/cart.json
+```
+
 ## Testing
 
 Build and run the test suite with CTest:

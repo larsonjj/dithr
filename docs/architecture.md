@@ -123,6 +123,25 @@ The `gfx` JS namespace maps directly to `dtr_gfx_*` C functions. The API
 resolves a colour argument of `-1` to the current draw colour, so omitting a
 colour parameter uses whatever was last set with `gfx.color()`.
 
+### Sprite rendering fast path
+
+`dtr_gfx_spr` has two code paths:
+
+- **Fast path** — for the common case of a single-tile (1×1) sprite with no
+  fill pattern. Source coordinates are guaranteed in-range by the clipping
+  math, so per-pixel bounds checks are eliminated. Transparency and palette
+  remap use local pointers for better code generation.
+- **General path** — for multi-tile sprites and/or when a fill pattern is
+  active. The fill pattern row bits are pre-shifted once per scanline to
+  avoid recomputing the bit position on every pixel.
+
+### Framebuffer flip
+
+`dtr_gfx_flip_to` converts the 8-bit indexed framebuffer to RGBA for
+texture upload. A 256-entry LUT is built once per frame from the screen
+palette, then applied in a 4×-unrolled loop for reduced overhead on the
+320×180 (57 600 pixel) default framebuffer.
+
 ## Input
 
 Three layers of input:
