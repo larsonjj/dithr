@@ -174,18 +174,18 @@ static void test_input_map_and_query(void)
     dtr_input_map(inp, "jump", binds, 1);
 
     /* Not pressed yet */
-    dtr_input_update(inp, keys, NULL);
+    dtr_input_update(inp, keys, NULL, NULL, NULL);
     assert(!dtr_input_btn(inp, "jump"));
 
     /* Press the key */
     dtr_key_set(keys, DTR_KEY_Z, true);
-    dtr_input_update(inp, keys, NULL);
+    dtr_input_update(inp, keys, NULL, NULL, NULL);
     assert(dtr_input_btn(inp, "jump"));
     assert(dtr_input_btnp(inp, "jump")); /* first frame → just pressed */
 
     /* Hold */
     dtr_key_update(keys, 0.016f);
-    dtr_input_update(inp, keys, NULL);
+    dtr_input_update(inp, keys, NULL, NULL, NULL);
     assert(dtr_input_btn(inp, "jump"));
     assert(!dtr_input_btnp(inp, "jump")); /* held → not just pressed */
 
@@ -295,7 +295,7 @@ static void test_input_remap(void)
     dtr_input_map(inp, "move", binds, 1);
 
     dtr_key_set(keys, DTR_KEY_LEFT, true);
-    dtr_input_update(inp, keys, NULL);
+    dtr_input_update(inp, keys, NULL, NULL, NULL);
     DTR_ASSERT(dtr_input_btn(inp, "move"));
 
     /* Remap "move" → KEY_RIGHT */
@@ -305,12 +305,12 @@ static void test_input_remap(void)
     /* LEFT should no longer fire "move" */
     dtr_key_set(keys, DTR_KEY_LEFT, true);
     dtr_key_set(keys, DTR_KEY_RIGHT, false);
-    dtr_input_update(inp, keys, NULL);
+    dtr_input_update(inp, keys, NULL, NULL, NULL);
     DTR_ASSERT(!dtr_input_btn(inp, "move"));
 
     /* RIGHT should fire "move" */
     dtr_key_set(keys, DTR_KEY_RIGHT, true);
-    dtr_input_update(inp, keys, NULL);
+    dtr_input_update(inp, keys, NULL, NULL, NULL);
     DTR_ASSERT(dtr_input_btn(inp, "move"));
 
     dtr_input_destroy(inp);
@@ -345,19 +345,19 @@ static void test_input_axis_with_gamepad(void)
 
     /* Axis at 0 — below threshold */
     pads->pads[0].axes[DTR_PAD_AXIS_LX] = 0.0f;
-    dtr_input_update(inp, keys, pads);
+    dtr_input_update(inp, keys, pads, NULL, NULL);
     DTR_ASSERT(!dtr_input_btn(inp, "horizontal"));
     DTR_ASSERT_NEAR(dtr_input_axis(inp, "horizontal"), 0.0f, 0.001f);
 
     /* Axis above threshold */
     pads->pads[0].axes[DTR_PAD_AXIS_LX] = 0.8f;
-    dtr_input_update(inp, keys, pads);
+    dtr_input_update(inp, keys, pads, NULL, NULL);
     DTR_ASSERT(dtr_input_btn(inp, "horizontal"));
     DTR_ASSERT_NEAR(dtr_input_axis(inp, "horizontal"), 0.8f, 0.001f);
 
     /* Negative axis */
     pads->pads[0].axes[DTR_PAD_AXIS_LX] = -0.6f;
-    dtr_input_update(inp, keys, pads);
+    dtr_input_update(inp, keys, pads, NULL, NULL);
     DTR_ASSERT(dtr_input_btn(inp, "horizontal"));
     DTR_ASSERT_NEAR(dtr_input_axis(inp, "horizontal"), -0.6f, 0.001f);
 
@@ -392,12 +392,12 @@ static void test_input_pad_button_binding(void)
     dtr_input_map(inp, "jump", binds, 1);
 
     /* Not pressed */
-    dtr_input_update(inp, keys, pads);
+    dtr_input_update(inp, keys, pads, NULL, NULL);
     DTR_ASSERT(!dtr_input_btn(inp, "jump"));
 
     /* Press pad A */
     pads->pads[0].btn_current[DTR_PAD_A] = true;
-    dtr_input_update(inp, keys, pads);
+    dtr_input_update(inp, keys, pads, NULL, NULL);
     DTR_ASSERT(dtr_input_btn(inp, "jump"));
 
     dtr_input_destroy(inp);
@@ -429,12 +429,12 @@ static void test_input_multiple_bindings(void)
     dtr_input_map(inp, "fire", binds, 2);
 
     /* Neither pressed */
-    dtr_input_update(inp, keys, NULL);
+    dtr_input_update(inp, keys, NULL, NULL, NULL);
     DTR_ASSERT(!dtr_input_btn(inp, "fire"));
 
     /* Only second binding pressed */
     dtr_key_set(keys, DTR_KEY_X, true);
-    dtr_input_update(inp, keys, NULL);
+    dtr_input_update(inp, keys, NULL, NULL, NULL);
     DTR_ASSERT(dtr_input_btn(inp, "fire"));
 
     dtr_input_destroy(inp);
@@ -468,12 +468,12 @@ static void test_input_clear_action_preserves_others(void)
 
     /* "fire" should still work */
     dtr_key_set(keys, DTR_KEY_X, true);
-    dtr_input_update(inp, keys, NULL);
+    dtr_input_update(inp, keys, NULL, NULL, NULL);
     DTR_ASSERT(dtr_input_btn(inp, "fire"));
 
     /* "jump" should not fire (bindings cleared) */
     dtr_key_set(keys, DTR_KEY_Z, true);
-    dtr_input_update(inp, keys, NULL);
+    dtr_input_update(inp, keys, NULL, NULL, NULL);
     DTR_ASSERT(!dtr_input_btn(inp, "jump"));
 
     dtr_input_destroy(inp);

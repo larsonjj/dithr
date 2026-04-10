@@ -72,8 +72,7 @@ static void prv_teardown(test_ctx_t *tc)
 }
 
 /** Register a single API namespace. */
-static void prv_register(test_ctx_t *tc,
-                          void (*fn)(JSContext *, JSValue))
+static void prv_register(test_ctx_t *tc, void (*fn)(JSContext *, JSValue))
 {
     JSValue global;
 
@@ -629,16 +628,15 @@ static void test_input_map_btn(void)
     prv_register(tc, dtr_key_api_register);
 
     /* Map "jump" to KEY_Z via JS */
-    prv_eval_void(tc,
-                  "input.map('jump', [{type: input.KEY, code: key.Z}])");
+    prv_eval_void(tc, "input.map('jump', [{type: input.KEY, code: key.Z}])");
 
     /* Not pressed yet */
-    dtr_input_update(tc->con.input, tc->con.keys, tc->con.gamepads);
+    dtr_input_update(tc->con.input, tc->con.keys, tc->con.gamepads, tc->con.mouse, tc->con.touch);
     DTR_ASSERT(!prv_eval_bool(tc, "input.btn('jump')"));
 
     /* Press Z */
     dtr_key_set(tc->con.keys, DTR_KEY_Z, true);
-    dtr_input_update(tc->con.input, tc->con.keys, tc->con.gamepads);
+    dtr_input_update(tc->con.input, tc->con.keys, tc->con.gamepads, tc->con.mouse, tc->con.touch);
     DTR_ASSERT(prv_eval_bool(tc, "input.btn('jump')"));
 
     prv_teardown(tc);
@@ -658,12 +656,12 @@ static void test_input_btnp(void)
     }
 
     dtr_key_set(tc->con.keys, DTR_KEY_Z, true);
-    dtr_input_update(tc->con.input, tc->con.keys, tc->con.gamepads);
+    dtr_input_update(tc->con.input, tc->con.keys, tc->con.gamepads, tc->con.mouse, tc->con.touch);
     DTR_ASSERT(prv_eval_bool(tc, "input.btnp('jump')"));
 
     /* Second frame: no longer "just pressed" */
     dtr_key_update(tc->con.keys, 1.0f / 60.0f);
-    dtr_input_update(tc->con.input, tc->con.keys, tc->con.gamepads);
+    dtr_input_update(tc->con.input, tc->con.keys, tc->con.gamepads, tc->con.mouse, tc->con.touch);
     DTR_ASSERT(!prv_eval_bool(tc, "input.btnp('jump')"));
 
     prv_teardown(tc);
@@ -677,7 +675,7 @@ static void test_input_axis(void)
     prv_register(tc, dtr_input_api_register);
 
     /* No mapping → axis returns 0 */
-    dtr_input_update(tc->con.input, tc->con.keys, tc->con.gamepads);
+    dtr_input_update(tc->con.input, tc->con.keys, tc->con.gamepads, tc->con.mouse, tc->con.touch);
     DTR_ASSERT_NEAR(prv_eval_f64(tc, "input.axis('move')"), 0.0, 0.001);
 
     prv_teardown(tc);

@@ -14,8 +14,8 @@
 #include "input.h"
 #include "mouse.h"
 #include "postfx.h"
-#include "touch.h"
 #include "runtime.h"
+#include "touch.h"
 
 #include <stdio.h>
 
@@ -691,15 +691,21 @@ void dtr_console_event(dtr_console_t *con, SDL_Event *event)
             break;
 
         case SDL_EVENT_FINGER_DOWN:
-            dtr_touch_on_down(
-                con->touch, event->tfinger.fingerID, event->tfinger.x, event->tfinger.y,
-                event->tfinger.pressure);
+            dtr_touch_on_down(con->touch,
+                              event->tfinger.fingerID,
+                              event->tfinger.x,
+                              event->tfinger.y,
+                              event->tfinger.pressure);
             break;
 
         case SDL_EVENT_FINGER_MOTION:
-            dtr_touch_on_motion(
-                con->touch, event->tfinger.fingerID, event->tfinger.x, event->tfinger.y,
-                event->tfinger.dx, event->tfinger.dy, event->tfinger.pressure);
+            dtr_touch_on_motion(con->touch,
+                                event->tfinger.fingerID,
+                                event->tfinger.x,
+                                event->tfinger.y,
+                                event->tfinger.dx,
+                                event->tfinger.dy,
+                                event->tfinger.pressure);
             break;
 
         case SDL_EVENT_FINGER_UP:
@@ -900,7 +906,7 @@ void dtr_console_iterate(dtr_console_t *con)
     con->mouse->wheel   = 0.0f;
     dtr_touch_update(con->touch);
     dtr_gamepad_update(con->gamepads);
-    dtr_input_update(con->input, con->keys, con->gamepads);
+    dtr_input_update(con->input, con->keys, con->gamepads, con->mouse, con->touch);
 
     ++con->frame_count;
 

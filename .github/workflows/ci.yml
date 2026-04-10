@@ -315,6 +315,36 @@ jobs:
                   SDL_VIDEODRIVER: dummy
 
     # ---------------------------------------------------------------------------
+    #  macOS — AppleClang + ASan / UBSan
+    # ---------------------------------------------------------------------------
+    macos-sanitizers:
+        runs-on: macos-latest
+        steps:
+            - uses: actions/checkout@v6
+
+            - name: Cache build
+              uses: actions/cache@v5
+              with:
+                  path: build/asan/_deps
+                  key: macos-asan-deps-${{ hashFiles('CMakeLists.txt') }}
+                  restore-keys: macos-asan-deps-
+
+            - name: Configure
+              run: cmake --preset asan -G Ninja
+
+            - name: Build
+              run: cmake --build build/asan
+
+            - name: Test
+              working-directory: build/asan
+              run: ctest --output-on-failure --timeout 300
+              env:
+                  SDL_AUDIO_DRIVER: dummy
+                  SDL_VIDEO_DRIVER: dummy
+                  SDL_AUDIODRIVER: dummy
+                  SDL_VIDEODRIVER: dummy
+
+    # ---------------------------------------------------------------------------
     #  Linux — Clang
     # ---------------------------------------------------------------------------
     linux-clang:

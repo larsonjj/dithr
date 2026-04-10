@@ -179,6 +179,7 @@ void dtr_input_api_register(JSContext *ctx, JSValue global)
     JS_SetPropertyStr(ctx, ns, "PAD_BTN", JS_NewInt32(ctx, DTR_BIND_PAD_BTN));
     JS_SetPropertyStr(ctx, ns, "PAD_AXIS", JS_NewInt32(ctx, DTR_BIND_PAD_AXIS));
     JS_SetPropertyStr(ctx, ns, "MOUSE_BTN", JS_NewInt32(ctx, DTR_BIND_MOUSE_BTN));
+    JS_SetPropertyStr(ctx, ns, "TOUCH", JS_NewInt32(ctx, DTR_BIND_TOUCH));
 
     JS_SetPropertyStr(ctx, global, "input", ns);
 }

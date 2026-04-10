@@ -6,6 +6,8 @@
 #include "input.h"
 
 #include "gamepad.h"
+#include "mouse.h"
+#include "touch.h"
 
 #include <math.h>
 
@@ -356,7 +358,11 @@ void dtr_input_clear_all(dtr_input_state_t *inp)
     inp->action_count = 0;
 }
 
-void dtr_input_update(dtr_input_state_t *inp, dtr_key_state_t *keys, dtr_gamepad_state_t *pads)
+void dtr_input_update(dtr_input_state_t   *inp,
+                      dtr_key_state_t     *keys,
+                      dtr_gamepad_state_t *pads,
+                      dtr_mouse_state_t   *mouse,
+                      dtr_touch_state_t   *touch)
 {
     for (int32_t idx = 0; idx < inp->action_count; ++idx) {
         dtr_input_action_t *act;
@@ -397,6 +403,18 @@ void dtr_input_update(dtr_input_state_t *inp, dtr_key_state_t *keys, dtr_gamepad
                     }
                     break;
                 }
+
+                case DTR_BIND_MOUSE_BTN:
+                    if (mouse != NULL && dtr_mouse_btn(mouse, (dtr_mouse_btn_t)bind->code)) {
+                        pressed = true;
+                    }
+                    break;
+
+                case DTR_BIND_TOUCH:
+                    if (touch != NULL && dtr_touch_active(touch, bind->code)) {
+                        pressed = true;
+                    }
+                    break;
 
                 default:
                     break;
@@ -532,6 +550,22 @@ bool dtr_input_parse_binding(const char *str, dtr_binding_t *out)
             return false;
         }
         out->type      = DTR_BIND_MOUSE_BTN;
+        out->threshold = 0.0f;
+        return true;
+    }
+
+    /* TOUCH_* → touch finger binding */
+    if (SDL_strncmp(str, "TOUCH_", 6) == 0) {
+        const char *name;
+        int32_t     idx;
+
+        name = str + 6;
+        idx  = SDL_atoi(name);
+        if (idx < 0 || idx >= DTR_MAX_FINGERS) {
+            return false;
+        }
+        out->type      = DTR_BIND_TOUCH;
+        out->code      = idx;
         out->threshold = 0.0f;
         return true;
     }

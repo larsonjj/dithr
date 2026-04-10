@@ -1,6 +1,6 @@
 # API Reference
 
-dithr exposes **18 namespaces** to cart JavaScript code. All functions are
+dithr exposes **19 namespaces** to cart JavaScript code. All functions are
 available as globals on their namespace object (e.g. `gfx.cls()`).
 
 The engine calls three optional global callbacks each frame:
@@ -377,7 +377,7 @@ if (input.btnp("jump")) {
 
 ### Binding type constants
 
-`input.KEY` `input.PAD_BTN` `input.PAD_AXIS` `input.MOUSE_BTN`
+`input.KEY` `input.PAD_BTN` `input.PAD_AXIS` `input.MOUSE_BTN` `input.TOUCH`
 
 ---
 
@@ -452,6 +452,17 @@ Effects are managed as a stack applied after `_draw()`.
 
 `postfx.NONE` `postfx.CRT` `postfx.SCANLINES` `postfx.BLOOM`
 `postfx.ABERRATION`
+
+### Effect parameters
+
+All effects accept a `strength` parameter (0.0–1.0) controlling intensity.
+
+| Effect       | Behaviour                                                                                           |
+| ------------ | --------------------------------------------------------------------------------------------------- |
+| `CRT`        | Vignette darkening + colour-channel horizontal shift. Higher strength = more shift and darker edges |
+| `SCANLINES`  | Darkens every other row. Factor = 1 − strength × 0.4                                                |
+| `BLOOM`      | Brightens luminant pixels. Threshold = 200 − strength × 100; boost = 1 + strength × 0.3             |
+| `ABERRATION` | Chromatic aberration. Offset = floor(strength × 2 + 0.5) pixels; R shifts left, B shifts right      |
 
 ---
 

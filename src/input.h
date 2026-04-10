@@ -178,6 +178,7 @@ typedef enum dtr_binding_type {
     DTR_BIND_PAD_BTN,
     DTR_BIND_PAD_AXIS,
     DTR_BIND_MOUSE_BTN,
+    DTR_BIND_TOUCH,
 } dtr_binding_type_t;
 
 typedef struct dtr_binding {
@@ -202,20 +203,24 @@ struct dtr_input_state {
 
 dtr_input_state_t *dtr_input_create(void);
 void               dtr_input_destroy(dtr_input_state_t *inp);
-void  dtr_input_update(dtr_input_state_t *inp, dtr_key_state_t *keys, dtr_gamepad_state_t *pads);
-void  dtr_input_map(dtr_input_state_t   *inp,
-                    const char          *action,
-                    const dtr_binding_t *bindings,
-                    int32_t              count);
-void  dtr_input_remap(dtr_input_state_t   *inp,
-                      const char          *action,
-                      const dtr_binding_t *bindings,
-                      int32_t              count);
-void  dtr_input_clear_action(dtr_input_state_t *inp, const char *action);
-void  dtr_input_clear_all(dtr_input_state_t *inp);
-bool  dtr_input_btn(dtr_input_state_t *inp, const char *action);
-bool  dtr_input_btnp(dtr_input_state_t *inp, const char *action);
-float dtr_input_axis(dtr_input_state_t *inp, const char *action);
+void               dtr_input_update(dtr_input_state_t   *inp,
+                                    dtr_key_state_t     *keys,
+                                    dtr_gamepad_state_t *pads,
+                                    dtr_mouse_state_t   *mouse,
+                                    dtr_touch_state_t   *touch);
+void               dtr_input_map(dtr_input_state_t   *inp,
+                                 const char          *action,
+                                 const dtr_binding_t *bindings,
+                                 int32_t              count);
+void               dtr_input_remap(dtr_input_state_t   *inp,
+                                   const char          *action,
+                                   const dtr_binding_t *bindings,
+                                   int32_t              count);
+void               dtr_input_clear_action(dtr_input_state_t *inp, const char *action);
+void               dtr_input_clear_all(dtr_input_state_t *inp);
+bool               dtr_input_btn(dtr_input_state_t *inp, const char *action);
+bool               dtr_input_btnp(dtr_input_state_t *inp, const char *action);
+float              dtr_input_axis(dtr_input_state_t *inp, const char *action);
 
 /**
  * \brief           Parse a binding string like "KEY_LEFT", "PAD_A", "MOUSE_LEFT"
