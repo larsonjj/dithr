@@ -20,25 +20,28 @@ var TILE_SIZE = 16;
 // Sprite indices in the sheet (first row of tiles)
 var SPR_CHARS = [0, 1, 2];
 
-// --- State -----------------------------------------------------------
+// --- State (structure-of-arrays for cache-friendly iteration) --------
 
-var sprites = [];
+var sp_x = [];
+var sp_y = [];
+var sp_vx = [];
+var sp_vy = [];
+var sp_spr = []; // resolved tile index (skip lookup at draw time)
+var sp_flip = [];
 var total = 0;
 
 // --- Helpers ---------------------------------------------------------
 
 function spawn(count) {
     for (var i = 0; i < count; ++i) {
-        sprites.push({
-            x: math.rnd(SCREEN_W - TILE_SIZE),
-            y: math.rnd(SCREEN_H / 2),
-            vx: math.rnd_range(-3, 3),
-            vy: math.rnd_range(-2, 0),
-            frame: math.rnd_int(SPR_CHARS.length),
-            flip: math.rnd() > 0.5,
-        });
+        sp_x.push(math.rnd(SCREEN_W - TILE_SIZE));
+        sp_y.push(math.rnd(SCREEN_H / 2));
+        sp_vx.push(math.rnd_range(-3, 3));
+        sp_vy.push(math.rnd_range(-2, 0));
+        sp_spr.push(SPR_CHARS[math.rnd_int(SPR_CHARS.length)]);
+        sp_flip.push(math.rnd() > 0.5);
     }
-    total = sprites.length;
+    total = sp_x.length;
 }
 
 var smooth_fps = 60;
@@ -85,33 +88,34 @@ function _update(dt) {
         spawn(SPAWN_COUNT);
     }
 
-    // Physics
-    for (var i = 0; i < sprites.length; ++i) {
-        var s = sprites[i];
-
-        s.vy += GRAVITY;
-        s.x += s.vx;
-        s.y += s.vy;
+    // Physics (SOA — flat array access, no property hash lookups)
+    var right = SCREEN_W - TILE_SIZE;
+    var bottom = SCREEN_H - TILE_SIZE;
+    var num_chars = SPR_CHARS.length;
+    for (var i = 0; i < total; ++i) {
+        sp_vy[i] += GRAVITY;
+        sp_x[i] += sp_vx[i];
+        sp_y[i] += sp_vy[i];
 
         // Bounce off edges
-        if (s.x < 0) {
-            s.x = 0;
-            s.vx = -s.vx;
-            s.flip = !s.flip;
-        } else if (s.x > SCREEN_W - TILE_SIZE) {
-            s.x = SCREEN_W - TILE_SIZE;
-            s.vx = -s.vx;
-            s.flip = !s.flip;
+        if (sp_x[i] < 0) {
+            sp_x[i] = 0;
+            sp_vx[i] = -sp_vx[i];
+            sp_flip[i] = !sp_flip[i];
+        } else if (sp_x[i] > right) {
+            sp_x[i] = right;
+            sp_vx[i] = -sp_vx[i];
+            sp_flip[i] = !sp_flip[i];
         }
 
-        if (s.y > SCREEN_H - TILE_SIZE) {
-            s.y = SCREEN_H - TILE_SIZE;
-            s.vy = -s.vy * 0.85;
+        if (sp_y[i] > bottom) {
+            sp_y[i] = bottom;
+            sp_vy[i] = -sp_vy[i] * 0.85;
             // Cycle animation frame on each bounce
-            s.frame = (s.frame + 1) % SPR_CHARS.length;
-        } else if (s.y < 0) {
-            s.y = 0;
-            s.vy = -s.vy;
+            sp_spr[i] = (sp_spr[i] + 1) % num_chars;
+        } else if (sp_y[i] < 0) {
+            sp_y[i] = 0;
+            sp_vy[i] = -sp_vy[i];
         }
     }
 }
@@ -119,10 +123,9 @@ function _update(dt) {
 function _draw() {
     gfx.cls(1);
 
-    // Draw all sprites
-    for (var i = 0; i < sprites.length; ++i) {
-        var s = sprites[i];
-        gfx.spr(SPR_CHARS[s.frame], s.x, s.y, 1, 1, s.flip, false);
+    // Draw all sprites (pre-resolved tile index, no object access)
+    for (var i = 0; i < total; ++i) {
+        gfx.spr(sp_spr[i], sp_x[i], sp_y[i], 1, 1, sp_flip[i], false);
     }
 
     // HUD background

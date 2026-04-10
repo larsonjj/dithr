@@ -1020,23 +1020,71 @@ void dtr_gfx_spr(dtr_graphics_t *gfx,
 
     /* Clamp visible region to clip rect */
     {
-        int32_t vis_x0;
-        int32_t vis_y0;
-        int32_t vis_x1;
-        int32_t vis_y1;
-        int32_t fb_w;
+        int32_t  vis_x0;
+        int32_t  vis_y0;
+        int32_t  vis_x1;
+        int32_t  vis_y1;
+        int32_t  fb_w;
+        uint16_t pat;
 
         vis_x0 = (dst_x0 > clip_l) ? dst_x0 : clip_l;
         vis_y0 = (dst_y0 > clip_t) ? dst_y0 : clip_t;
         vis_x1 = (dst_x1 < clip_r) ? dst_x1 : clip_r;
         vis_y1 = (dst_y1 < clip_b) ? dst_y1 : clip_b;
         fb_w   = gfx->width;
+        pat    = gfx->fill_pattern;
 
+        /*
+         * Fast path: single-tile sprite, no fill pattern.
+         * Source coords are guaranteed in-range because the
+         * visible region is clipped to the destination rect
+         * which maps 1:1 onto a single tile.
+         */
+        if (w_tiles == 1 && h_tiles == 1 && pat == 0) {
+            const bool  *transp  = gfx->transparent;
+            const uint8_t *dpal  = gfx->draw_pal;
+            const uint8_t *sheet = sht->pixels;
+
+            for (int32_t scr_y = vis_y0; scr_y <= vis_y1;
+                 ++scr_y) {
+                int32_t  row;
+                int32_t  src_y;
+                int32_t  row_off;
+                uint8_t *dst_row;
+
+                row     = scr_y - dst_y0;
+                src_y   = flip_y ? (tile_h - 1 - row) : row;
+                row_off = (src_y + sy0) * sht_w;
+                dst_row = &gfx->framebuffer[
+                    (ptrdiff_t)scr_y * fb_w];
+
+                for (int32_t scr_x = vis_x0;
+                     scr_x <= vis_x1; ++scr_x) {
+                    int32_t col_idx;
+                    int32_t src_x;
+                    uint8_t col;
+
+                    col_idx = scr_x - dst_x0;
+                    src_x   = flip_x
+                        ? (tile_w - 1 - col_idx)
+                        : col_idx;
+                    col = sheet[row_off + src_x + sx0];
+                    if (transp[col]) {
+                        continue;
+                    }
+                    dst_row[scr_x] = dpal[col];
+                }
+            }
+            return;
+        }
+
+        /* General path: multi-tile and/or fill-pattern */
         for (int32_t scr_y = vis_y0; scr_y <= vis_y1; ++scr_y) {
             int32_t  row;
             int32_t  src_y;
             int32_t  row_off;
             uint8_t *dst_row;
+            uint16_t row_pat;
 
             row   = scr_y - dst_y0;
             src_y = flip_y ? (px_h - 1 - row) : row;
@@ -1045,15 +1093,23 @@ void dtr_gfx_spr(dtr_graphics_t *gfx,
                 continue;
             }
             row_off = src_y * sht_w;
-            dst_row = &gfx->framebuffer[(ptrdiff_t)scr_y * fb_w];
+            dst_row = &gfx->framebuffer[
+                (ptrdiff_t)scr_y * fb_w];
 
-            for (int32_t scr_x = vis_x0; scr_x <= vis_x1; ++scr_x) {
+            /* Pre-shift pattern row once per scanline */
+            row_pat = (pat != 0)
+                ? (uint16_t)((pat >> ((scr_y & 3) * 4)) & 0xF)
+                : 0;
+
+            for (int32_t scr_x = vis_x0;
+                 scr_x <= vis_x1; ++scr_x) {
                 int32_t col_idx;
                 int32_t src_x;
                 uint8_t col;
 
                 col_idx = scr_x - dst_x0;
-                src_x   = flip_x ? (px_w - 1 - col_idx) : col_idx;
+                src_x   = flip_x
+                    ? (px_w - 1 - col_idx) : col_idx;
                 src_x += sx0;
                 if (src_x < 0 || src_x >= sht_w) {
                     continue;
@@ -1065,13 +1121,9 @@ void dtr_gfx_spr(dtr_graphics_t *gfx,
                 }
                 col = gfx->draw_pal[col];
 
-                if (gfx->fill_pattern != 0) {
-                    int32_t bit;
-
-                    bit = (scr_y & 3) * 4 + (scr_x & 3);
-                    if (!(gfx->fill_pattern & (1 << bit))) {
-                        continue;
-                    }
+                if (pat != 0
+                    && !(row_pat & (1 << (scr_x & 3)))) {
+                    continue;
                 }
 
                 dst_row[scr_x] = col;
@@ -1858,16 +1910,28 @@ void dtr_gfx_dl_end(dtr_graphics_t *gfx)
 
 void dtr_gfx_flip_to(dtr_graphics_t *gfx, uint32_t *dst)
 {
-    int32_t  total;
-    uint32_t lut[CONSOLE_PALETTE_SIZE];
+    int32_t        total;
+    int32_t        idx;
+    int32_t        tail;
+    const uint8_t *src;
+    uint32_t       lut[CONSOLE_PALETTE_SIZE];
 
-    for (int32_t idx = 0; idx < CONSOLE_PALETTE_SIZE; ++idx) {
+    for (idx = 0; idx < CONSOLE_PALETTE_SIZE; ++idx) {
         lut[idx] = gfx->colors[gfx->screen_pal[idx]];
     }
 
     total = gfx->width * gfx->height;
-    for (int32_t idx = 0; idx < total; ++idx) {
-        dst[idx] = lut[gfx->framebuffer[idx]];
+    src   = gfx->framebuffer;
+    tail  = total & ~3;    /* round down to multiple of 4 */
+
+    for (idx = 0; idx < tail; idx += 4) {
+        dst[idx]     = lut[src[idx]];
+        dst[idx + 1] = lut[src[idx + 1]];
+        dst[idx + 2] = lut[src[idx + 2]];
+        dst[idx + 3] = lut[src[idx + 3]];
+    }
+    for (; idx < total; ++idx) {
+        dst[idx] = lut[src[idx]];
     }
 }
 
