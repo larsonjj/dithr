@@ -304,6 +304,29 @@ games).
 
 ---
 
+## `touch` — Touch Input
+
+Up to 10 simultaneous fingers are tracked. The `index` parameter (0–9)
+selects which finger slot to query.
+
+| Function   | Parameters | Returns | Description                                      |
+| ---------- | ---------- | ------- | ------------------------------------------------ |
+| `count`    |            | `int`   | Number of fingers currently touching             |
+| `active`   | `index?`   | `bool`  | Is finger slot active (touching)?                |
+| `pressed`  | `index?`   | `bool`  | Did finger touch down this frame?                |
+| `released` | `index?`   | `bool`  | Did finger lift this frame?                      |
+| `x`        | `index?`   | `float` | Finger X in framebuffer coordinates              |
+| `y`        | `index?`   | `float` | Finger Y in framebuffer coordinates              |
+| `dx`       | `index?`   | `float` | X movement since last frame (framebuffer pixels) |
+| `dy`       | `index?`   | `float` | Y movement since last frame (framebuffer pixels) |
+| `pressure` | `index?`   | `float` | Finger pressure 0.0–1.0 (device dependent)       |
+
+### Constants
+
+`touch.MAX_FINGERS` (10)
+
+---
+
 ## `pad` — Gamepads
 
 Up to 4 gamepads are supported. The `index` parameter (default 0) selects

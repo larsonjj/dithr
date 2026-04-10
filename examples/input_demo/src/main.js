@@ -131,6 +131,12 @@ function _update(dt) {
     if (pad.btnp(pad.DOWN, 0)) prvLog('pad: DPAD DN');
     if (pad.btnp(pad.LEFT, 0)) prvLog('pad: DPAD L');
     if (pad.btnp(pad.RIGHT, 0)) prvLog('pad: DPAD R');
+
+    // Log touch events
+    for (let ti = 0; ti < touch.MAX_FINGERS; ++ti) {
+        if (touch.pressed(ti)) prvLog(`touch: finger ${ti} down`);
+        if (touch.released(ti)) prvLog(`touch: finger ${ti} up`);
+    }
 }
 
 function _draw() {
@@ -235,10 +241,29 @@ function _draw() {
         gfx.print(`${name}: ${held ? 'HELD' : '-'}`, 160, 12 + i * 8, c);
     }
 
+    // --- Touch ---
+    gfx.print('-- touch --', 160, 62, 6);
+    const tc = touch.count();
+    if (tc > 0) {
+        gfx.print(`fingers: ${tc}`, 160, 70, 7);
+        for (let ti = 0; ti < touch.MAX_FINGERS; ++ti) {
+            if (!touch.active(ti)) continue;
+            const tx = math.flr(touch.x(ti));
+            const ty = math.flr(touch.y(ti));
+            // Draw crosshair at touch point
+            gfx.circ(tx, ty, 6, 12);
+            gfx.line(tx - 3, ty, tx + 3, ty, 12);
+            gfx.line(tx, ty - 3, tx, ty + 3, 12);
+            gfx.print(`${ti}`, tx + 8, ty - 3, 12);
+        }
+    } else {
+        gfx.print('(no touches)', 160, 70, 5);
+    }
+
     // --- Event log ---
-    gfx.print('-- event log --', 160, 68, 6);
+    gfx.print('-- event log --', 160, 82, 6);
     for (let i = 0; i < logLines.length; ++i) {
-        gfx.print(logLines[i], 160, 76 + i * 8, 7);
+        gfx.print(logLines[i], 160, 90 + i * 8, 7);
     }
 
     // --- Instructions ---

@@ -14,6 +14,7 @@
 #include "input.h"
 #include "mouse.h"
 #include "postfx.h"
+#include "touch.h"
 #include "runtime.h"
 
 #include <stdio.h>
@@ -46,6 +47,7 @@ static void prv_console_cleanup(dtr_console_t *con)
     dtr_postfx_destroy(con->postfx);
     dtr_event_destroy(con->events);
     dtr_input_destroy(con->input);
+    dtr_touch_destroy(con->touch);
     dtr_gamepad_destroy(con->gamepads);
     dtr_mouse_destroy(con->mouse);
     dtr_key_destroy(con->keys);
@@ -364,6 +366,7 @@ dtr_console_t *dtr_console_create(const char *cart_path)
         }
     }
     con->gamepads = dtr_gamepad_create();
+    con->touch    = dtr_touch_create(con->fb_width, con->fb_height);
     con->input    = dtr_input_create();
 
     /* --- Mouse coordinate mapping (handled by SDL_ConvertEventToRenderCoordinates) --- */
@@ -687,6 +690,23 @@ void dtr_console_event(dtr_console_t *con, SDL_Event *event)
                 con->gamepads, event->gaxis.which, event->gaxis.axis, event->gaxis.value);
             break;
 
+        case SDL_EVENT_FINGER_DOWN:
+            dtr_touch_on_down(
+                con->touch, event->tfinger.fingerID, event->tfinger.x, event->tfinger.y,
+                event->tfinger.pressure);
+            break;
+
+        case SDL_EVENT_FINGER_MOTION:
+            dtr_touch_on_motion(
+                con->touch, event->tfinger.fingerID, event->tfinger.x, event->tfinger.y,
+                event->tfinger.dx, event->tfinger.dy, event->tfinger.pressure);
+            break;
+
+        case SDL_EVENT_FINGER_UP:
+        case SDL_EVENT_FINGER_CANCELED:
+            dtr_touch_on_up(con->touch, event->tfinger.fingerID);
+            break;
+
         case SDL_EVENT_WINDOW_FOCUS_LOST:
             dtr_event_emit(con->events, "sys:focus_lost", JS_UNDEFINED);
             break;
@@ -878,6 +898,7 @@ void dtr_console_iterate(dtr_console_t *con)
     con->mouse->dy      = 0.0f;
     con->mouse->wheel_x = 0.0f;
     con->mouse->wheel   = 0.0f;
+    dtr_touch_update(con->touch);
     dtr_gamepad_update(con->gamepads);
     dtr_input_update(con->input, con->keys, con->gamepads);
 

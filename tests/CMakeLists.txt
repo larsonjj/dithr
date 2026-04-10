@@ -83,6 +83,9 @@ endif()
 # --- Mouse / Gamepad tests ---
 dtr_add_test(test_mouse_gamepad test_mouse_gamepad.c)
 
+# --- Touch tests ---
+dtr_add_test(test_touch test_touch.c)
+
 # --- Runtime tests (require QuickJS + host file I/O) ---
 if (NOT EMSCRIPTEN)
     dtr_add_test(test_runtime test_runtime.c)

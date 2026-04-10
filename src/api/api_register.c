@@ -31,6 +31,7 @@ void dtr_api_register_all(dtr_runtime_t *rt)
     dtr_ui_api_register(ctx, global);
     dtr_tween_api_register(ctx, global);
     dtr_synth_api_register(ctx, global);
+    dtr_touch_api_register(ctx, global);
 
     JS_FreeValue(ctx, global);
 }

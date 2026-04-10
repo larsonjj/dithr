@@ -219,8 +219,10 @@ set(DITHR_CORE_SOURCES
     src/api/tween_api.c
     src/api/synth_api.c
     src/synth.c
+    src/touch.c
     src/ui.c
     src/tween.c
+    src/api/touch_api.c
 )
 
 set(DITHR_COMPILE_DEFS

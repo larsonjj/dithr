@@ -7,6 +7,7 @@
 #define DTR_CONSOLE_H
 
 #include "console_defs.h"
+#include "touch.h"
 #include "tween.h"
 
 #include <SDL3/SDL.h>
@@ -44,6 +45,7 @@ typedef struct dtr_console {
     dtr_key_state_t     *keys;
     dtr_mouse_state_t   *mouse;
     dtr_gamepad_state_t *gamepads;
+    dtr_touch_state_t   *touch;
     dtr_input_state_t   *input;
     dtr_event_bus_t     *events;
     dtr_cart_t          *cart;
