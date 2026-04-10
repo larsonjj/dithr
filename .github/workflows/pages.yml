@@ -37,6 +37,14 @@ jobs:
                     - spritemark
                     - ui_demo
                     - gauntlet_clone
+                    - map_demo
+                    - event_demo
+                    - transition_demo
+                    - drawlist_demo
+                    - palette_fx
+                    - collision_demo
+                    - sys_explorer
+                    - tween_showcase
         steps:
             - uses: actions/checkout@v6
 

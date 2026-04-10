@@ -1,0 +1,31 @@
+{
+  "meta": {
+    "title": "Tween Showcase",
+    "author": "dithr",
+    "version": "1.0.0",
+    "description": "Demonstrates tween.* easing, advanced math interpolation, and runtime input remapping"
+  },
+  "display": {
+    "width": 320,
+    "height": 180,
+    "scale": 3
+  },
+  "timing": {
+    "fps": 60
+  },
+  "sprites": {
+    "tileW": 8,
+    "tileH": 8
+  },
+  "audio": {
+    "channels": 8
+  },
+  "input": {
+    "default_mappings": {
+      "move_left": ["KEY_LEFT", "KEY_A"],
+      "move_right": ["KEY_RIGHT", "KEY_D"]
+    }
+  },
+  "code": "src/main.js",
+  "maps": []
+}

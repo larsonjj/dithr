@@ -1,0 +1,28 @@
+{
+  "meta": {
+    "title": "Palette FX",
+    "author": "dithr",
+    "version": "1.0.0",
+    "description": "Demonstrates palette remapping, transparency, fill patterns, clip, and custom fonts"
+  },
+  "display": {
+    "width": 320,
+    "height": 180,
+    "scale": 3
+  },
+  "timing": {
+    "fps": 60
+  },
+  "sprites": {
+    "tileW": 8,
+    "tileH": 8
+  },
+  "audio": {
+    "channels": 8
+  },
+  "input": {
+    "default_mappings": {}
+  },
+  "code": "src/main.js",
+  "maps": []
+}

@@ -17,6 +17,14 @@
 #   ui_demo            - UI layout helpers & tween animations
 #   editor             - Minimal text editor (640×360 framebuffer)
 #   gauntlet_clone     - Top-down dungeon crawler (Gauntlet-style)
+#   map_demo           - Tilemap API, camera helpers & map objects
+#   event_demo         - Event bus and system events
+#   transition_demo    - Screen transitions (fade, wipe, dissolve)
+#   drawlist_demo      - Depth-sorted rendering with draw list
+#   palette_fx         - Palette remapping, fill patterns & custom fonts
+#   collision_demo     - Collision helper functions
+#   sys_explorer       - System introspection, file I/O & clipboard
+#   tween_showcase     - Tweening, easing & runtime input remapping
 
 # Install example carts alongside the executable
 install(DIRECTORY
@@ -33,6 +41,14 @@ install(DIRECTORY
     ui_demo
     editor
     gauntlet_clone
+    map_demo
+    event_demo
+    transition_demo
+    drawlist_demo
+    palette_fx
+    collision_demo
+    sys_explorer
+    tween_showcase
     DESTINATION examples
     PATTERN "node_modules" EXCLUDE
 )

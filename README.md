@@ -136,6 +136,14 @@ The `examples/` directory contains playable demo carts:
 | `persistence`      | Save/load game state with `cart.save()` / `cart.load()`  |
 | `ui_demo`          | Immediate-mode UI widgets (buttons, sliders, text input) |
 | `gauntlet_clone`   | Gauntlet-inspired dungeon crawler with procedural levels |
+| `map_demo`         | Tilemap API with camera, layers, levels & object queries |
+| `event_demo`       | Event bus (on/once/off/emit) and system events           |
+| `transition_demo`  | Screen transitions — fade, wipe, dissolve                |
+| `drawlist_demo`    | Depth-sorted rendering with draw list commands           |
+| `palette_fx`       | Palette remapping, fill patterns & custom fonts          |
+| `collision_demo`   | Collision helpers — rect, circle, point & mixed tests    |
+| `sys_explorer`     | System introspection, file I/O & clipboard               |
+| `tween_showcase`   | Easing curves, tween pool, math utils & input remapping  |
 | `editor`           | Built-in sprite, map, music, and SFX editors             |
 
 Run any example after building:

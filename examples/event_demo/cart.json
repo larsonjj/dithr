@@ -1,0 +1,34 @@
+{
+  "meta": {
+    "title": "Event Demo",
+    "author": "dithr",
+    "version": "1.0.0",
+    "description": "Demonstrates the evt.* event bus and system events"
+  },
+  "display": {
+    "width": 320,
+    "height": 180,
+    "scale": 3
+  },
+  "timing": {
+    "fps": 60
+  },
+  "sprites": {
+    "tileW": 8,
+    "tileH": 8
+  },
+  "audio": {
+    "channels": 8
+  },
+  "input": {
+    "default_mappings": {
+      "left": ["KEY_LEFT", "KEY_A", "PAD_LEFT"],
+      "right": ["KEY_RIGHT", "KEY_D", "PAD_RIGHT"],
+      "up": ["KEY_UP", "KEY_W", "PAD_UP"],
+      "down": ["KEY_DOWN", "KEY_S", "PAD_DOWN"],
+      "action": ["KEY_Z", "KEY_SPACE", "PAD_A"]
+    }
+  },
+  "code": "src/main.js",
+  "maps": []
+}

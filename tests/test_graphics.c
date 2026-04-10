@@ -1504,6 +1504,261 @@ static void test_gfx_load_flags_hex_trailing_newline(void)
 }
 
 /* ------------------------------------------------------------------ */
+/*  Sprite + fill pattern                                              */
+/* ------------------------------------------------------------------ */
+
+static void test_gfx_spr_fill_pattern(void)
+{
+    dtr_graphics_t *gfx = dtr_gfx_create(TW, TH);
+    uint8_t         sheet_data[8 * 8];
+
+    dtr_gfx_cls(gfx, 0);
+
+    /* Fill the entire tile with colour 3 */
+    memset(sheet_data, 3, sizeof(sheet_data));
+
+    gfx->sheet.pixels = sheet_data;
+    gfx->sheet.width  = 8;
+    gfx->sheet.height = 8;
+    gfx->sheet.tile_w = 8;
+    gfx->sheet.tile_h = 8;
+    gfx->sheet.cols   = 1;
+    gfx->sheet.rows   = 1;
+    gfx->sheet.count  = 1;
+
+    /* Checkerboard fill pattern — half of pixels should be masked */
+    dtr_gfx_fillp(gfx, 0x5A5A);
+
+    dtr_gfx_spr(gfx, 0, 0, 0, 1, 1, false, false);
+
+    /* Count drawn pixels in the 8x8 tile area */
+    int count = 0;
+    for (int y = 0; y < 8; ++y) {
+        for (int x = 0; x < 8; ++x) {
+            if (dtr_gfx_pget(gfx, x, y) == 3)
+                ++count;
+        }
+    }
+    /* Checkerboard pattern should mask exactly half the pixels */
+    DTR_ASSERT_EQ_INT(count, 32);
+
+    dtr_gfx_fillp(gfx, 0);
+    gfx->sheet.pixels = NULL;
+    dtr_gfx_destroy(gfx);
+    DTR_PASS();
+}
+
+/* ------------------------------------------------------------------ */
+/*  Sprite + camera (exercises fast path)                              */
+/* ------------------------------------------------------------------ */
+
+static void test_gfx_spr_with_camera(void)
+{
+    dtr_graphics_t *gfx = dtr_gfx_create(TW, TH);
+    uint8_t         sheet_data[8 * 8];
+
+    dtr_gfx_cls(gfx, 0);
+    memset(sheet_data, 0, sizeof(sheet_data));
+    sheet_data[0] = 5; /* top-left pixel */
+
+    gfx->sheet.pixels = sheet_data;
+    gfx->sheet.width  = 8;
+    gfx->sheet.height = 8;
+    gfx->sheet.tile_w = 8;
+    gfx->sheet.tile_h = 8;
+    gfx->sheet.cols   = 1;
+    gfx->sheet.rows   = 1;
+    gfx->sheet.count  = 1;
+
+    /* Camera offset shifts the draw position */
+    dtr_gfx_camera(gfx, 3, 2);
+
+    /* Draw at world (3, 2) → screen (0, 0) */
+    dtr_gfx_spr(gfx, 0, 3, 2, 1, 1, false, false);
+
+    /* pget also applies camera, so use framebuffer directly */
+    DTR_ASSERT_EQ_INT(gfx->framebuffer[0 * TW + 0], 5);
+    /* Screen position (3, 2) should be untouched */
+    DTR_ASSERT_EQ_INT(gfx->framebuffer[2 * TW + 3], 0);
+
+    dtr_gfx_camera(gfx, 0, 0);
+    gfx->sheet.pixels = NULL;
+    dtr_gfx_destroy(gfx);
+    DTR_PASS();
+}
+
+/* ------------------------------------------------------------------ */
+/*  Sprite fast-path clipping (1x1 tile partially off-screen)          */
+/* ------------------------------------------------------------------ */
+
+static void test_gfx_spr_fast_path_clip(void)
+{
+    dtr_graphics_t *gfx = dtr_gfx_create(TW, TH);
+    uint8_t         sheet_data[8 * 8];
+
+    dtr_gfx_cls(gfx, 0);
+    memset(sheet_data, 7, sizeof(sheet_data));
+
+    gfx->sheet.pixels = sheet_data;
+    gfx->sheet.width  = 8;
+    gfx->sheet.height = 8;
+    gfx->sheet.tile_w = 8;
+    gfx->sheet.tile_h = 8;
+    gfx->sheet.cols   = 1;
+    gfx->sheet.rows   = 1;
+    gfx->sheet.count  = 1;
+
+    /* Draw 1x1 sprite at x=TW-4 — only 4 columns should be visible */
+    dtr_gfx_spr(gfx, 0, TW - 4, 0, 1, 1, false, false);
+
+    /* Visible columns: x = TW-4 .. TW-1 */
+    for (int y = 0; y < 8; ++y) {
+        for (int x = TW - 4; x < TW; ++x) {
+            DTR_ASSERT_EQ_INT(dtr_gfx_pget(gfx, x, y), 7);
+        }
+    }
+
+    /* Column just before the sprite should be untouched */
+    DTR_ASSERT_EQ_INT(dtr_gfx_pget(gfx, TW - 5, 0), 0);
+
+    gfx->sheet.pixels = NULL;
+    dtr_gfx_destroy(gfx);
+    DTR_PASS();
+}
+
+/* ------------------------------------------------------------------ */
+/*  sspr — scale up (4x4 → 8x8)                                       */
+/* ------------------------------------------------------------------ */
+
+static void test_gfx_sspr_scale_up(void)
+{
+    dtr_graphics_t *gfx = dtr_gfx_create(TW, TH);
+    uint8_t         sheet_data[8 * 8];
+
+    dtr_gfx_cls(gfx, 0);
+    memset(sheet_data, 6, sizeof(sheet_data));
+
+    gfx->sheet.pixels = sheet_data;
+    gfx->sheet.width  = 8;
+    gfx->sheet.height = 8;
+
+    /* Scale 4x4 source → 8x8 destination at (0, 0) */
+    dtr_gfx_sspr(gfx, 0, 0, 4, 4, 0, 0, 8, 8);
+
+    /* All 8x8 destination pixels should be colour 6 */
+    for (int y = 0; y < 8; ++y) {
+        for (int x = 0; x < 8; ++x) {
+            DTR_ASSERT_EQ_INT(dtr_gfx_pget(gfx, x, y), 6);
+        }
+    }
+
+    /* Pixel just outside should be 0 */
+    DTR_ASSERT_EQ_INT(dtr_gfx_pget(gfx, 8, 0), 0);
+
+    gfx->sheet.pixels = NULL;
+    dtr_gfx_destroy(gfx);
+    DTR_PASS();
+}
+
+/* ------------------------------------------------------------------ */
+/*  sspr — scale down (8x8 → 4x4)                                     */
+/* ------------------------------------------------------------------ */
+
+static void test_gfx_sspr_scale_down(void)
+{
+    dtr_graphics_t *gfx = dtr_gfx_create(TW, TH);
+    uint8_t         sheet_data[8 * 8];
+
+    dtr_gfx_cls(gfx, 0);
+    memset(sheet_data, 9, sizeof(sheet_data));
+
+    gfx->sheet.pixels = sheet_data;
+    gfx->sheet.width  = 8;
+    gfx->sheet.height = 8;
+
+    /* Scale 8x8 source → 4x4 destination at (2, 2) */
+    dtr_gfx_sspr(gfx, 0, 0, 8, 8, 2, 2, 4, 4);
+
+    /* All 4x4 destination pixels should be colour 9 */
+    for (int y = 2; y < 6; ++y) {
+        for (int x = 2; x < 6; ++x) {
+            DTR_ASSERT_EQ_INT(dtr_gfx_pget(gfx, x, y), 9);
+        }
+    }
+
+    /* Just outside should be 0 */
+    DTR_ASSERT_EQ_INT(dtr_gfx_pget(gfx, 1, 2), 0);
+    DTR_ASSERT_EQ_INT(dtr_gfx_pget(gfx, 6, 2), 0);
+
+    gfx->sheet.pixels = NULL;
+    dtr_gfx_destroy(gfx);
+    DTR_PASS();
+}
+
+/* ------------------------------------------------------------------ */
+/*  sspr — clip (destination extends past framebuffer edge)            */
+/* ------------------------------------------------------------------ */
+
+static void test_gfx_sspr_clip(void)
+{
+    dtr_graphics_t *gfx = dtr_gfx_create(TW, TH);
+    uint8_t         sheet_data[8 * 8];
+
+    dtr_gfx_cls(gfx, 0);
+    memset(sheet_data, 2, sizeof(sheet_data));
+
+    gfx->sheet.pixels = sheet_data;
+    gfx->sheet.width  = 8;
+    gfx->sheet.height = 8;
+
+    /* Destination extends 4 pixels past right edge — should not crash */
+    dtr_gfx_sspr(gfx, 0, 0, 8, 8, TW - 4, 0, 8, 8);
+
+    /* Visible part: x = TW-4 .. TW-1 */
+    for (int y = 0; y < 8; ++y) {
+        for (int x = TW - 4; x < TW; ++x) {
+            DTR_ASSERT_EQ_INT(dtr_gfx_pget(gfx, x, y), 2);
+        }
+    }
+
+    /* Just before the visible region */
+    DTR_ASSERT_EQ_INT(dtr_gfx_pget(gfx, TW - 5, 0), 0);
+
+    gfx->sheet.pixels = NULL;
+    dtr_gfx_destroy(gfx);
+    DTR_PASS();
+}
+
+/* ------------------------------------------------------------------ */
+/*  sspr — zero/negative dimensions (safety)                           */
+/* ------------------------------------------------------------------ */
+
+static void test_gfx_sspr_zero_dims(void)
+{
+    dtr_graphics_t *gfx = dtr_gfx_create(TW, TH);
+    uint8_t         sheet_data[8 * 8];
+
+    dtr_gfx_cls(gfx, 0);
+    memset(sheet_data, 4, sizeof(sheet_data));
+
+    gfx->sheet.pixels = sheet_data;
+    gfx->sheet.width  = 8;
+    gfx->sheet.height = 8;
+
+    /* Zero source width — should be a no-op */
+    dtr_gfx_sspr(gfx, 0, 0, 0, 4, 0, 0, 4, 4);
+    DTR_ASSERT_EQ_INT(dtr_gfx_pget(gfx, 0, 0), 0);
+
+    /* Zero destination height — should be a no-op */
+    dtr_gfx_sspr(gfx, 0, 0, 4, 4, 0, 0, 4, 0);
+    DTR_ASSERT_EQ_INT(dtr_gfx_pget(gfx, 0, 0), 0);
+
+    gfx->sheet.pixels = NULL;
+    dtr_gfx_destroy(gfx);
+    DTR_PASS();
+}
+
+/* ------------------------------------------------------------------ */
 /*  Main                                                               */
 /* ------------------------------------------------------------------ */
 
@@ -1583,6 +1838,13 @@ int main(int argc, char *argv[])
     DTR_RUN_TEST(test_gfx_load_flags_hex_basic);
     DTR_RUN_TEST(test_gfx_load_flags_hex_bad_length);
     DTR_RUN_TEST(test_gfx_load_flags_hex_trailing_newline);
+    DTR_RUN_TEST(test_gfx_spr_fill_pattern);
+    DTR_RUN_TEST(test_gfx_spr_with_camera);
+    DTR_RUN_TEST(test_gfx_spr_fast_path_clip);
+    DTR_RUN_TEST(test_gfx_sspr_scale_up);
+    DTR_RUN_TEST(test_gfx_sspr_scale_down);
+    DTR_RUN_TEST(test_gfx_sspr_clip);
+    DTR_RUN_TEST(test_gfx_sspr_zero_dims);
 
     DTR_TEST_END();
 }

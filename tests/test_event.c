@@ -306,6 +306,75 @@ static void test_event_destroy_null(void)
 }
 
 /* ------------------------------------------------------------------ */
+/*  FIFO ordering — events dispatched in emit order                    */
+/* ------------------------------------------------------------------ */
+
+static const char *FIFO_HANDLER_SRC =
+    "globalThis.__order = [];\n"
+    "globalThis.__fifo_handler = function(payload) {\n"
+    "    globalThis.__order.push(payload);\n"
+    "};\n";
+
+static void test_event_fifo_order(void)
+{
+    dtr_event_bus_t *bus;
+    JSValue          handler;
+
+    prv_setup();
+    {
+        JSValue r = JS_Eval(s_ctx, FIFO_HANDLER_SRC, strlen(FIFO_HANDLER_SRC),
+                            "<test>", JS_EVAL_TYPE_GLOBAL);
+        JS_FreeValue(s_ctx, r);
+    }
+
+    bus = dtr_event_create(s_ctx);
+
+    {
+        JSValue global  = JS_GetGlobalObject(s_ctx);
+        handler         = JS_GetPropertyStr(s_ctx, global, "__fifo_handler");
+        JS_FreeValue(s_ctx, global);
+    }
+
+    dtr_event_on(bus, "test:seq", handler);
+    JS_FreeValue(s_ctx, handler);
+
+    /* Emit three events with distinct integer payloads */
+    for (int32_t i = 1; i <= 3; ++i) {
+        dtr_event_emit(bus, "test:seq", JS_NewInt32(s_ctx, i));
+    }
+    DTR_ASSERT_EQ_INT(bus->queue_count, 3);
+
+    dtr_event_flush(bus);
+    DTR_ASSERT_EQ_INT(bus->queue_count, 0);
+
+    /* Verify __order === [1, 2, 3] */
+    {
+        JSValue global = JS_GetGlobalObject(s_ctx);
+        JSValue arr    = JS_GetPropertyStr(s_ctx, global, "__order");
+        JSValue len_v  = JS_GetPropertyStr(s_ctx, arr, "length");
+        int32_t len    = 0;
+        JS_ToInt32(s_ctx, &len, len_v);
+        DTR_ASSERT_EQ_INT(len, 3);
+
+        for (int32_t i = 0; i < 3; ++i) {
+            JSValue  elem = JS_GetPropertyUint32(s_ctx, arr, (uint32_t)i);
+            int32_t  val  = 0;
+            JS_ToInt32(s_ctx, &val, elem);
+            DTR_ASSERT_EQ_INT(val, i + 1);
+            JS_FreeValue(s_ctx, elem);
+        }
+
+        JS_FreeValue(s_ctx, len_v);
+        JS_FreeValue(s_ctx, arr);
+        JS_FreeValue(s_ctx, global);
+    }
+
+    dtr_event_destroy(bus);
+    prv_teardown();
+    DTR_PASS();
+}
+
+/* ------------------------------------------------------------------ */
 /*  Main                                                               */
 /* ------------------------------------------------------------------ */
 
@@ -325,6 +394,7 @@ int main(int argc, char *argv[])
     DTR_RUN_TEST(test_event_queue_overflow);
     DTR_RUN_TEST(test_event_handler_overflow);
     DTR_RUN_TEST(test_event_destroy_null);
+    DTR_RUN_TEST(test_event_fifo_order);
 
     DTR_TEST_END();
 }

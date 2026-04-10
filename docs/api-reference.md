@@ -160,6 +160,9 @@ Queue sprite draws and flush them sorted by layer. Lower layers draw first.
 Use this when you need depth-sorted rendering (e.g. isometric or top-down
 games).
 
+> **Capacity:** Up to 1 024 draw commands per frame. Commands beyond this
+> limit are silently dropped.
+
 | Function        | Parameters                                               | Returns | Description                               |
 | --------------- | -------------------------------------------------------- | ------- | ----------------------------------------- |
 | `dl_begin`      |                                                          | —       | Start recording draw commands             |
@@ -318,6 +321,10 @@ if (input.btnp("jump")) {
 
 Events are queued by `emit()` and dispatched during the engine's flush at the
 end of each frame.
+
+> **Capacity:** Up to 128 handler registrations and 64 queued events per frame.
+> Excess handlers return −1 from `on()`/`once()`; excess events are silently
+> dropped.
 
 ```js
 /* Simple event-driven scoring */
