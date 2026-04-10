@@ -197,31 +197,18 @@ static JSValue js_map_draw(JSContext *ctx, JSValueConst this_val, int argc, JSVa
             return JS_UNDEFINED;
         }
 
-        for (int32_t ty = 0; ty < th; ++ty) {
-            for (int32_t tx = 0; tx < tw; ++tx) {
-                int32_t mx;
-                int32_t my;
-                int32_t tile;
-
-                mx = sx + tx;
-                my = sy + ty;
-                if (mx < 0 || mx >= layer->width || my < 0 || my >= layer->height) {
-                    continue;
-                }
-
-                tile = layer->tiles[my * layer->width + mx];
-                if (tile > 0) {
-                    dtr_gfx_spr(con->graphics,
-                                tile - 1,
-                                dx + tx * con->cart->sprites.tile_w,
-                                dy + ty * con->cart->sprites.tile_h,
-                                1,
-                                1,
-                                false,
-                                false);
-                }
-            }
-        }
+        dtr_gfx_map_draw(con->graphics,
+                         layer->tiles,
+                         layer->width,
+                         layer->height,
+                         sx,
+                         sy,
+                         tw,
+                         th,
+                         dx,
+                         dy,
+                         con->cart->sprites.tile_w,
+                         con->cart->sprites.tile_h);
     }
 
     return JS_UNDEFINED;

@@ -757,6 +757,12 @@ prv_print_custom_char(dtr_graphics_t *gfx, uint8_t chr, int32_t x, int32_t y, ui
     int32_t             glyph_idx;
     int32_t             gx;
     int32_t             gy;
+    int32_t             cam_x;
+    int32_t             cam_y;
+    int32_t             clip_l;
+    int32_t             clip_t;
+    int32_t             clip_r;
+    int32_t             clip_b;
 
     font = &gfx->custom_font;
     sht  = &gfx->sheet;
@@ -773,23 +779,70 @@ prv_print_custom_char(dtr_graphics_t *gfx, uint8_t chr, int32_t x, int32_t y, ui
     gx = font->sx + (glyph_idx % font->cols) * font->char_w;
     gy = font->sy + (glyph_idx / font->cols) * font->char_h;
 
-    for (int32_t row = 0; row < font->char_h; ++row) {
-        for (int32_t px = 0; px < font->char_w; ++px) {
-            int32_t src_x;
-            int32_t src_y;
-            uint8_t src_col;
+    cam_x  = gfx->camera_x;
+    cam_y  = gfx->camera_y;
+    clip_l = gfx->clip_x;
+    clip_t = gfx->clip_y;
+    clip_r = clip_l + gfx->clip_w - 1;
+    clip_b = clip_t + gfx->clip_h - 1;
 
-            src_x = gx + px;
-            src_y = gy + row;
-            if (src_x < 0 || src_x >= sht->width || src_y < 0 || src_y >= sht->height) {
+    /* Early reject entire glyph */
+    {
+        int32_t scr_x0 = x - cam_x;
+        int32_t scr_y0 = y - cam_y;
+        int32_t scr_x1 = scr_x0 + font->char_w - 1;
+        int32_t scr_y1 = scr_y0 + font->char_h - 1;
+
+        if (scr_x1 < clip_l || scr_x0 > clip_r || scr_y1 < clip_t || scr_y0 > clip_b) {
+            return;
+        }
+    }
+
+    {
+        int32_t  fb_w;
+        uint16_t pat;
+        uint8_t  mapped_col;
+
+        fb_w       = gfx->width;
+        pat        = gfx->fill_pattern;
+        mapped_col = gfx->draw_pal[col];
+
+        for (int32_t row = 0; row < font->char_h; ++row) {
+            int32_t scr_y = y + row - cam_y;
+
+            if (scr_y < clip_t || scr_y > clip_b) {
                 continue;
             }
 
-            src_col = sht->pixels[src_y * sht->width + src_x];
-            if (gfx->transparent[src_col]) {
-                continue;
+            {
+                uint8_t *dst_row = &gfx->framebuffer[(ptrdiff_t)scr_y * fb_w];
+                uint16_t row_pat = (pat != 0) ? (uint16_t)((pat >> ((scr_y & 3) * 4)) & 0xF) : 0;
+
+                for (int32_t px = 0; px < font->char_w; ++px) {
+                    int32_t src_x;
+                    int32_t src_y;
+                    int32_t scr_x;
+
+                    scr_x = x + px - cam_x;
+                    if (scr_x < clip_l || scr_x > clip_r) {
+                        continue;
+                    }
+
+                    src_x = gx + px;
+                    src_y = gy + row;
+                    if (src_x < 0 || src_x >= sht->width || src_y < 0 || src_y >= sht->height) {
+                        continue;
+                    }
+
+                    if (gfx->transparent[sht->pixels[src_y * sht->width + src_x]]) {
+                        continue;
+                    }
+
+                    if (pat == 0 || (row_pat & (1 << (scr_x & 3)))) {
+                        dst_row[scr_x] = mapped_col;
+                    }
+                }
             }
-            prv_put_pixel(gfx, x + px, y + row, col);
         }
     }
 }
@@ -800,10 +853,28 @@ int32_t dtr_gfx_print(dtr_graphics_t *gfx, const char *str, int32_t x, int32_t y
     const char *ptr;
     int32_t     cw;
     int32_t     ch;
+    int32_t     cam_x;
+    int32_t     cam_y;
+    int32_t     clip_l;
+    int32_t     clip_t;
+    int32_t     clip_r;
+    int32_t     clip_b;
+    int32_t     fb_w;
+    uint16_t    pat;
+    uint8_t     mapped_col;
 
-    ox = x;
-    cw = gfx->custom_font.active ? gfx->custom_font.char_w : DTR_FONT_W;
-    ch = gfx->custom_font.active ? gfx->custom_font.char_h : DTR_FONT_H;
+    ox         = x;
+    cw         = gfx->custom_font.active ? gfx->custom_font.char_w : DTR_FONT_W;
+    ch         = gfx->custom_font.active ? gfx->custom_font.char_h : DTR_FONT_H;
+    cam_x      = gfx->camera_x;
+    cam_y      = gfx->camera_y;
+    clip_l     = gfx->clip_x;
+    clip_t     = gfx->clip_y;
+    clip_r     = clip_l + gfx->clip_w - 1;
+    clip_b     = clip_t + gfx->clip_h - 1;
+    fb_w       = gfx->width;
+    pat        = gfx->fill_pattern;
+    mapped_col = gfx->draw_pal[col];
 
     for (ptr = str; *ptr != '\0'; ++ptr) {
         uint8_t chr;
@@ -825,7 +896,19 @@ int32_t dtr_gfx_print(dtr_graphics_t *gfx, const char *str, int32_t x, int32_t y
             }
             prv_print_custom_char(gfx, chr, x, y, col);
         } else {
+            int32_t scr_x0;
+            int32_t scr_y0;
+
             if (chr < DTR_FONT_FIRST || chr > DTR_FONT_LAST) {
+                x += cw + 1;
+                continue;
+            }
+
+            /* Early reject entire glyph */
+            scr_x0 = x - cam_x;
+            scr_y0 = y - cam_y;
+            if (scr_x0 + DTR_FONT_W - 1 < clip_l || scr_x0 > clip_r ||
+                scr_y0 + DTR_FONT_H - 1 < clip_t || scr_y0 > clip_b) {
                 x += cw + 1;
                 continue;
             }
@@ -838,9 +921,30 @@ int32_t dtr_gfx_print(dtr_graphics_t *gfx, const char *str, int32_t x, int32_t y
                 glyph     = DTR_FONT_DATA[glyph_idx];
 
                 for (int32_t row = 0; row < DTR_FONT_H; ++row) {
+                    int32_t  scr_y;
+                    uint8_t *dst_row;
+                    uint16_t row_pat;
+
+                    scr_y = scr_y0 + row;
+                    if (scr_y < clip_t || scr_y > clip_b) {
+                        continue;
+                    }
+
+                    dst_row = &gfx->framebuffer[(ptrdiff_t)scr_y * fb_w];
+                    row_pat = (pat != 0) ? (uint16_t)((pat >> ((scr_y & 3) * 4)) & 0xF) : 0;
+
                     for (int32_t bit = 0; bit < DTR_FONT_W; ++bit) {
-                        if (glyph[row] & (0x8 >> bit)) {
-                            prv_put_pixel(gfx, x + bit, y + row, col);
+                        int32_t scr_x;
+
+                        if (!(glyph[row] & (0x8 >> bit))) {
+                            continue;
+                        }
+                        scr_x = scr_x0 + bit;
+                        if (scr_x < clip_l || scr_x > clip_r) {
+                            continue;
+                        }
+                        if (pat == 0 || (row_pat & (1 << (scr_x & 3)))) {
+                            dst_row[scr_x] = mapped_col;
                         }
                     }
                 }
@@ -1145,34 +1249,89 @@ void dtr_gfx_sspr(dtr_graphics_t *gfx,
     }
 
     {
-        /* Fixed-point 16.16 stepping to avoid per-pixel division */
-        int32_t step_x = (sw << 16) / dw;
-        int32_t step_y = (sh << 16) / dh;
+        int32_t        cam_x;
+        int32_t        cam_y;
+        int32_t        dst_x0;
+        int32_t        dst_y0;
+        int32_t        dst_x1;
+        int32_t        dst_y1;
+        int32_t        clip_l;
+        int32_t        clip_t;
+        int32_t        clip_r;
+        int32_t        clip_b;
+        int32_t        vis_x0;
+        int32_t        vis_y0;
+        int32_t        vis_x1;
+        int32_t        vis_y1;
+        int32_t        step_x;
+        int32_t        step_y;
+        int32_t        fb_w;
+        uint16_t       pat;
+        const bool    *transp;
+        const uint8_t *dpal;
 
-        for (int32_t row = 0; row < dh; ++row) {
-            int32_t src_y  = sy + ((row * step_y) >> 16);
-            int32_t dest_y = dy + row;
+        cam_x  = gfx->camera_x;
+        cam_y  = gfx->camera_y;
+        dst_x0 = dx - cam_x;
+        dst_y0 = dy - cam_y;
+        dst_x1 = dst_x0 + dw - 1;
+        dst_y1 = dst_y0 + dh - 1;
 
+        clip_l = gfx->clip_x;
+        clip_t = gfx->clip_y;
+        clip_r = clip_l + gfx->clip_w - 1;
+        clip_b = clip_t + gfx->clip_h - 1;
+
+        if (dst_x1 < clip_l || dst_x0 > clip_r || dst_y1 < clip_t || dst_y0 > clip_b) {
+            return;
+        }
+
+        vis_x0 = (dst_x0 > clip_l) ? dst_x0 : clip_l;
+        vis_y0 = (dst_y0 > clip_t) ? dst_y0 : clip_t;
+        vis_x1 = (dst_x1 < clip_r) ? dst_x1 : clip_r;
+        vis_y1 = (dst_y1 < clip_b) ? dst_y1 : clip_b;
+
+        /* Fixed-point 16.16 stepping */
+        step_x = (sw << 16) / dw;
+        step_y = (sh << 16) / dh;
+        fb_w   = gfx->width;
+        pat    = gfx->fill_pattern;
+        transp = gfx->transparent;
+        dpal   = gfx->draw_pal;
+
+        for (int32_t scr_y = vis_y0; scr_y <= vis_y1; ++scr_y) {
+            int32_t  row;
+            int32_t  src_y;
+            uint8_t *src_row_ptr;
+            uint8_t *dst_row;
+            uint16_t row_pat;
+            int32_t  x_acc;
+
+            row   = scr_y - dst_y0;
+            src_y = sy + ((row * step_y) >> 16);
             if (src_y < 0 || src_y >= sht->height) {
                 continue;
             }
 
-            {
-                int32_t  x_acc   = 0;
-                uint8_t *src_row = sht->pixels + (ptrdiff_t)src_y * sht->width;
+            src_row_ptr = sht->pixels + (ptrdiff_t)src_y * sht->width;
+            dst_row     = &gfx->framebuffer[(ptrdiff_t)scr_y * fb_w];
+            row_pat     = (pat != 0) ? (uint16_t)((pat >> ((scr_y & 3) * 4)) & 0xF) : 0;
+            x_acc       = (vis_x0 - dst_x0) * step_x;
 
-                for (int32_t px = 0; px < dw; ++px) {
-                    int32_t src_x = sx + (x_acc >> 16);
-                    uint8_t col;
+            for (int32_t scr_x = vis_x0; scr_x <= vis_x1; ++scr_x) {
+                int32_t src_x;
+                uint8_t col;
 
-                    if (src_x >= 0 && src_x < sht->width) {
-                        col = src_row[src_x];
-                        if (!gfx->transparent[col]) {
-                            prv_put_pixel(gfx, dx + px, dest_y, col);
+                src_x = sx + (x_acc >> 16);
+                if (src_x >= 0 && src_x < sht->width) {
+                    col = src_row_ptr[src_x];
+                    if (!transp[col]) {
+                        if (pat == 0 || (row_pat & (1 << (scr_x & 3)))) {
+                            dst_row[scr_x] = dpal[col];
                         }
                     }
-                    x_acc += step_x;
                 }
+                x_acc += step_x;
             }
         }
     }
@@ -1206,25 +1365,136 @@ void dtr_gfx_spr_rot(dtr_graphics_t *gfx,
     cos_a  = cosf(angle);
     sin_a  = sinf(angle);
 
-    /* Scan bounding box of rotated sprite */
+    /* Compute tight rotated AABB from sprite corners */
     {
-        int32_t extent;
-        int32_t max_dim;
+        int32_t        sht_w;
+        int32_t        cam_x;
+        int32_t        cam_y;
+        int32_t        clip_l;
+        int32_t        clip_t;
+        int32_t        clip_r;
+        int32_t        clip_b;
+        int32_t        fb_w;
+        uint16_t       pat;
+        const bool    *transp;
+        const uint8_t *dpal;
+        float          cx_f;
+        float          cy_f;
+        float          min_dx;
+        float          max_dx;
+        float          min_dy;
+        float          max_dy;
+        int32_t        d_x0;
+        int32_t        d_x1;
+        int32_t        d_y0;
+        int32_t        d_y1;
+        int32_t        vis_x0;
+        int32_t        vis_y0;
+        int32_t        vis_x1;
+        int32_t        vis_y1;
 
-        max_dim = (tile_w > tile_h) ? tile_w : tile_h;
-        extent  = (int32_t)((float)max_dim * 1.42f) + 1;
+        sht_w  = sht->width;
+        cam_x  = gfx->camera_x;
+        cam_y  = gfx->camera_y;
+        clip_l = gfx->clip_x;
+        clip_t = gfx->clip_y;
+        clip_r = clip_l + gfx->clip_w - 1;
+        clip_b = clip_t + gfx->clip_h - 1;
+        fb_w   = gfx->width;
+        pat    = gfx->fill_pattern;
+        transp = gfx->transparent;
+        dpal   = gfx->draw_pal;
+        cx_f   = (float)cx;
+        cy_f   = (float)cy;
 
-        for (int32_t dy_val = -extent; dy_val <= extent; ++dy_val) {
-            for (int32_t dx_val = -extent; dx_val <= extent; ++dx_val) {
+        /* Forward-rotate the 4 source corners to find output AABB */
+        min_dx = 1e9f;
+        max_dx = -1e9f;
+        min_dy = 1e9f;
+        max_dy = -1e9f;
+
+        for (int32_t c = 0; c < 4; ++c) {
+            float rx;
+            float ry;
+            float od_x;
+            float od_y;
+            float sx_f;
+            float sy_f;
+
+            sx_f = (c & 1) ? (float)(tile_w - 1) : 0.0f;
+            sy_f = (c & 2) ? (float)(tile_h - 1) : 0.0f;
+            rx   = sx_f - cx_f;
+            ry   = sy_f - cy_f;
+            od_x = cos_a * rx - sin_a * ry;
+            od_y = sin_a * rx + cos_a * ry;
+
+            if (od_x < min_dx) {
+                min_dx = od_x;
+            }
+            if (od_x > max_dx) {
+                max_dx = od_x;
+            }
+            if (od_y < min_dy) {
+                min_dy = od_y;
+            }
+            if (od_y > max_dy) {
+                max_dy = od_y;
+            }
+        }
+
+        d_x0 = (int32_t)floorf(min_dx);
+        d_x1 = (int32_t)ceilf(max_dx);
+        d_y0 = (int32_t)floorf(min_dy);
+        d_y1 = (int32_t)ceilf(max_dy);
+
+        /* Clip to screen */
+        vis_x0 = x + d_x0 - cam_x;
+        vis_y0 = y + d_y0 - cam_y;
+        vis_x1 = x + d_x1 - cam_x;
+        vis_y1 = y + d_y1 - cam_y;
+
+        if (vis_x1 < clip_l || vis_x0 > clip_r || vis_y1 < clip_t || vis_y0 > clip_b) {
+            return;
+        }
+
+        if (vis_x0 < clip_l) {
+            d_x0 += clip_l - vis_x0;
+        }
+        if (vis_y0 < clip_t) {
+            d_y0 += clip_t - vis_y0;
+        }
+        if (vis_x1 > clip_r) {
+            d_x1 -= vis_x1 - clip_r;
+        }
+        if (vis_y1 > clip_b) {
+            d_y1 -= vis_y1 - clip_b;
+        }
+
+        for (int32_t dy_val = d_y0; dy_val <= d_y1; ++dy_val) {
+            int32_t  scr_y;
+            uint8_t *dst_row;
+            uint16_t row_pat;
+            float    base_fx;
+            float    base_fy;
+
+            scr_y   = y + dy_val - cam_y;
+            dst_row = &gfx->framebuffer[(ptrdiff_t)scr_y * fb_w];
+            row_pat = (pat != 0) ? (uint16_t)((pat >> ((scr_y & 3) * 4)) & 0xF) : 0;
+
+            /* Precompute the dy_val contribution to the inverse rotation */
+            base_fx = sin_a * (float)dy_val + cx_f;
+            base_fy = cos_a * (float)dy_val + cy_f;
+
+            for (int32_t dx_val = d_x0; dx_val <= d_x1; ++dx_val) {
                 int32_t src_x;
                 int32_t src_y;
                 uint8_t col;
                 float   fx;
                 float   fy;
+                int32_t scr_x;
 
-                /* Inverse rotate */
-                fx = cos_a * (float)dx_val + sin_a * (float)dy_val + (float)cx;
-                fy = -sin_a * (float)dx_val + cos_a * (float)dy_val + (float)cy;
+                fx = cos_a * (float)dx_val + base_fx;
+                fy = -sin_a * (float)dx_val + base_fy;
 
                 src_x = (int32_t)fx;
                 src_y = (int32_t)fy;
@@ -1233,11 +1503,15 @@ void dtr_gfx_spr_rot(dtr_graphics_t *gfx,
                     continue;
                 }
 
-                col = sht->pixels[(sy0 + src_y) * sht->width + (sx0 + src_x)];
-                if (gfx->transparent[col]) {
+                col = sht->pixels[(sy0 + src_y) * sht_w + (sx0 + src_x)];
+                if (transp[col]) {
                     continue;
                 }
-                prv_put_pixel(gfx, x + dx_val, y + dy_val, col);
+
+                scr_x = x + dx_val - cam_x;
+                if (pat == 0 || (row_pat & (1 << (scr_x & 3)))) {
+                    dst_row[scr_x] = dpal[col];
+                }
             }
         }
     }
@@ -1258,9 +1532,15 @@ void dtr_gfx_spr_affine(dtr_graphics_t *gfx,
     int32_t             sy0;
     int32_t             tile_w;
     int32_t             tile_h;
+    float               det;
 
     sht = &gfx->sheet;
     if (sht->pixels == NULL || idx < 0 || idx >= sht->count) {
+        return;
+    }
+
+    det = rot_x * rot_x + rot_y * rot_y;
+    if (det < 0.001f) {
         return;
     }
 
@@ -1269,29 +1549,138 @@ void dtr_gfx_spr_affine(dtr_graphics_t *gfx,
     sx0    = (idx % sht->cols) * tile_w;
     sy0    = (idx / sht->cols) * tile_h;
 
+    /* Compute tight AABB from forward-transformed sprite corners */
     {
-        int32_t extent;
-        int32_t max_dim;
+        int32_t        sht_w;
+        int32_t        cam_x;
+        int32_t        cam_y;
+        int32_t        clip_l;
+        int32_t        clip_t;
+        int32_t        clip_r;
+        int32_t        clip_b;
+        int32_t        fb_w;
+        uint16_t       pat;
+        const bool    *transp;
+        const uint8_t *dpal;
+        float          min_dx;
+        float          max_dx;
+        float          min_dy;
+        float          max_dy;
+        float          inv_det;
+        int32_t        d_x0;
+        int32_t        d_x1;
+        int32_t        d_y0;
+        int32_t        d_y1;
+        int32_t        vis_x0;
+        int32_t        vis_y0;
+        int32_t        vis_x1;
+        int32_t        vis_y1;
 
-        max_dim = (tile_w > tile_h) ? tile_w : tile_h;
-        extent  = max_dim * 2;
+        sht_w   = sht->width;
+        cam_x   = gfx->camera_x;
+        cam_y   = gfx->camera_y;
+        clip_l  = gfx->clip_x;
+        clip_t  = gfx->clip_y;
+        clip_r  = clip_l + gfx->clip_w - 1;
+        clip_b  = clip_t + gfx->clip_h - 1;
+        fb_w    = gfx->width;
+        pat     = gfx->fill_pattern;
+        transp  = gfx->transparent;
+        dpal    = gfx->draw_pal;
+        inv_det = 1.0f / det;
 
-        for (int32_t dy_val = -extent; dy_val <= extent; ++dy_val) {
-            for (int32_t dx_val = -extent; dx_val <= extent; ++dx_val) {
+        /*
+         * Forward transform: source (sx,sy) relative to origin →
+         *   dx = rot_x * (sx - ox) - rot_y * (sy - oy)
+         *   dy = rot_y * (sx - ox) + rot_x * (sy - oy)
+         */
+        min_dx = 1e9f;
+        max_dx = -1e9f;
+        min_dy = 1e9f;
+        max_dy = -1e9f;
+
+        for (int32_t c = 0; c < 4; ++c) {
+            float rx;
+            float ry;
+            float od_x;
+            float od_y;
+            float sx_f;
+            float sy_f;
+
+            sx_f = (c & 1) ? (float)(tile_w - 1) : 0.0f;
+            sy_f = (c & 2) ? (float)(tile_h - 1) : 0.0f;
+            rx   = sx_f - origin_x;
+            ry   = sy_f - origin_y;
+            od_x = rot_x * rx - rot_y * ry;
+            od_y = rot_y * rx + rot_x * ry;
+
+            if (od_x < min_dx) {
+                min_dx = od_x;
+            }
+            if (od_x > max_dx) {
+                max_dx = od_x;
+            }
+            if (od_y < min_dy) {
+                min_dy = od_y;
+            }
+            if (od_y > max_dy) {
+                max_dy = od_y;
+            }
+        }
+
+        d_x0 = (int32_t)floorf(min_dx);
+        d_x1 = (int32_t)ceilf(max_dx);
+        d_y0 = (int32_t)floorf(min_dy);
+        d_y1 = (int32_t)ceilf(max_dy);
+
+        /* Clip to screen */
+        vis_x0 = x + d_x0 - cam_x;
+        vis_y0 = y + d_y0 - cam_y;
+        vis_x1 = x + d_x1 - cam_x;
+        vis_y1 = y + d_y1 - cam_y;
+
+        if (vis_x1 < clip_l || vis_x0 > clip_r || vis_y1 < clip_t || vis_y0 > clip_b) {
+            return;
+        }
+
+        if (vis_x0 < clip_l) {
+            d_x0 += clip_l - vis_x0;
+        }
+        if (vis_y0 < clip_t) {
+            d_y0 += clip_t - vis_y0;
+        }
+        if (vis_x1 > clip_r) {
+            d_x1 -= vis_x1 - clip_r;
+        }
+        if (vis_y1 > clip_b) {
+            d_y1 -= vis_y1 - clip_b;
+        }
+
+        for (int32_t dy_val = d_y0; dy_val <= d_y1; ++dy_val) {
+            int32_t  scr_y;
+            uint8_t *dst_row;
+            uint16_t row_pat;
+            float    base_fx;
+            float    base_fy;
+
+            scr_y   = y + dy_val - cam_y;
+            dst_row = &gfx->framebuffer[(ptrdiff_t)scr_y * fb_w];
+            row_pat = (pat != 0) ? (uint16_t)((pat >> ((scr_y & 3) * 4)) & 0xF) : 0;
+
+            /* Precompute the dy_val contribution to the inverse transform */
+            base_fx = (rot_y * (float)dy_val) * inv_det + origin_x;
+            base_fy = (rot_x * (float)dy_val) * inv_det + origin_y;
+
+            for (int32_t dx_val = d_x0; dx_val <= d_x1; ++dx_val) {
                 int32_t src_x;
                 int32_t src_y;
                 uint8_t col;
                 float   fx;
                 float   fy;
-                float   det;
+                int32_t scr_x;
 
-                /* Inverse affine transform */
-                det = rot_x * rot_x + rot_y * rot_y;
-                if (det < 0.001f) {
-                    continue;
-                }
-                fx = (rot_x * (float)dx_val + rot_y * (float)dy_val) / det + origin_x;
-                fy = (-rot_y * (float)dx_val + rot_x * (float)dy_val) / det + origin_y;
+                fx = (rot_x * (float)dx_val) * inv_det + base_fx;
+                fy = (-rot_y * (float)dx_val) * inv_det + base_fy;
 
                 src_x = (int32_t)fx;
                 src_y = (int32_t)fy;
@@ -1300,11 +1689,167 @@ void dtr_gfx_spr_affine(dtr_graphics_t *gfx,
                     continue;
                 }
 
-                col = sht->pixels[(sy0 + src_y) * sht->width + (sx0 + src_x)];
-                if (gfx->transparent[col]) {
+                col = sht->pixels[(sy0 + src_y) * sht_w + (sx0 + src_x)];
+                if (transp[col]) {
                     continue;
                 }
-                prv_put_pixel(gfx, x + dx_val, y + dy_val, col);
+
+                scr_x = x + dx_val - cam_x;
+                if (pat == 0 || (row_pat & (1 << (scr_x & 3)))) {
+                    dst_row[scr_x] = dpal[col];
+                }
+            }
+        }
+    }
+}
+
+/* ------------------------------------------------------------------ */
+/*  Batch tilemap draw                                                 */
+/* ------------------------------------------------------------------ */
+
+void dtr_gfx_map_draw(dtr_graphics_t *gfx,
+                      const int32_t  *tiles,
+                      int32_t         map_w,
+                      int32_t         map_h,
+                      int32_t         src_x,
+                      int32_t         src_y,
+                      int32_t         num_w,
+                      int32_t         num_h,
+                      int32_t         dst_x,
+                      int32_t         dst_y,
+                      int32_t         tile_pw,
+                      int32_t         tile_ph)
+{
+    dtr_sprite_sheet_t *sht;
+    int32_t             sht_tw;
+    int32_t             sht_th;
+    int32_t             sht_w;
+    int32_t             sht_cols;
+    int32_t             sht_count;
+    int32_t             cam_x;
+    int32_t             cam_y;
+    int32_t             clip_l;
+    int32_t             clip_t;
+    int32_t             clip_r;
+    int32_t             clip_b;
+    int32_t             fb_w;
+    uint16_t            pat;
+    const bool         *transp;
+    const uint8_t      *dpal;
+    const uint8_t      *sheet;
+
+    sht = &gfx->sheet;
+    if (sht->pixels == NULL || tiles == NULL || num_w <= 0 || num_h <= 0) {
+        return;
+    }
+
+    sht_tw    = sht->tile_w;
+    sht_th    = sht->tile_h;
+    sht_w     = sht->width;
+    sht_cols  = sht->cols;
+    sht_count = sht->count;
+    cam_x     = gfx->camera_x;
+    cam_y     = gfx->camera_y;
+    clip_l    = gfx->clip_x;
+    clip_t    = gfx->clip_y;
+    clip_r    = clip_l + gfx->clip_w - 1;
+    clip_b    = clip_t + gfx->clip_h - 1;
+    fb_w      = gfx->width;
+    pat       = gfx->fill_pattern;
+    transp    = gfx->transparent;
+    dpal      = gfx->draw_pal;
+    sheet     = sht->pixels;
+
+    for (int32_t ty = 0; ty < num_h; ++ty) {
+        int32_t my;
+        int32_t tile_dy;
+        int32_t tile_dy1;
+
+        my = src_y + ty;
+        if (my < 0 || my >= map_h) {
+            continue;
+        }
+
+        tile_dy  = dst_y + ty * tile_ph - cam_y;
+        tile_dy1 = tile_dy + sht_th - 1;
+
+        /* Skip entire row if off-screen */
+        if (tile_dy1 < clip_t || tile_dy > clip_b) {
+            continue;
+        }
+
+        for (int32_t tx = 0; tx < num_w; ++tx) {
+            int32_t mx;
+            int32_t tile;
+            int32_t idx;
+            int32_t sx0;
+            int32_t sy0;
+            int32_t tile_dx;
+            int32_t tile_dx1;
+            int32_t vis_x0;
+            int32_t vis_y0;
+            int32_t vis_x1;
+            int32_t vis_y1;
+
+            mx = src_x + tx;
+            if (mx < 0 || mx >= map_w) {
+                continue;
+            }
+
+            tile = tiles[my * map_w + mx];
+            if (tile <= 0) {
+                continue;
+            }
+
+            idx = tile - 1;
+            if (idx >= sht_count) {
+                continue;
+            }
+
+            /* Dest rect for this tile */
+            tile_dx  = dst_x + tx * tile_pw - cam_x;
+            tile_dx1 = tile_dx + sht_tw - 1;
+
+            /* Skip tile if off-screen horizontally */
+            if (tile_dx1 < clip_l || tile_dx > clip_r) {
+                continue;
+            }
+
+            /* Source position in sprite sheet */
+            sx0 = (idx % sht_cols) * sht_tw;
+            sy0 = (idx / sht_cols) * sht_th;
+
+            /* Visible region */
+            vis_x0 = (tile_dx > clip_l) ? tile_dx : clip_l;
+            vis_y0 = (tile_dy > clip_t) ? tile_dy : clip_t;
+            vis_x1 = (tile_dx1 < clip_r) ? tile_dx1 : clip_r;
+            vis_y1 = (tile_dy1 < clip_b) ? tile_dy1 : clip_b;
+
+            for (int32_t scr_y = vis_y0; scr_y <= vis_y1; ++scr_y) {
+                int32_t  src_row;
+                int32_t  row_off;
+                uint8_t *dst_row;
+                uint16_t row_pat;
+
+                src_row = scr_y - tile_dy;
+                row_off = (sy0 + src_row) * sht_w;
+                dst_row = &gfx->framebuffer[(ptrdiff_t)scr_y * fb_w];
+                row_pat = (pat != 0) ? (uint16_t)((pat >> ((scr_y & 3) * 4)) & 0xF) : 0;
+
+                for (int32_t scr_x = vis_x0; scr_x <= vis_x1; ++scr_x) {
+                    int32_t src_col;
+                    uint8_t col;
+
+                    src_col = scr_x - tile_dx;
+                    col     = sheet[row_off + sx0 + src_col];
+                    if (transp[col]) {
+                        continue;
+                    }
+                    if (pat != 0 && !(row_pat & (1 << (scr_x & 3)))) {
+                        continue;
+                    }
+                    dst_row[scr_x] = dpal[col];
+                }
             }
         }
     }

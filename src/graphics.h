@@ -343,6 +343,18 @@ void dtr_gfx_spr_affine(dtr_graphics_t *gfx,
                         float           origin_y,
                         float           rot_x,
                         float           rot_y);
+void dtr_gfx_map_draw(dtr_graphics_t *gfx,
+                      const int32_t  *tiles,
+                      int32_t         map_w,
+                      int32_t         map_h,
+                      int32_t         src_x,
+                      int32_t         src_y,
+                      int32_t         num_w,
+                      int32_t         num_h,
+                      int32_t         dst_x,
+                      int32_t         dst_y,
+                      int32_t         tile_pw,
+                      int32_t         tile_ph);
 
 /* ------------------------------------------------------------------------ */
 /*  Sprite flags                                                             */

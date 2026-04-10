@@ -17,12 +17,12 @@ dithr uses CMake with presets for easy configuration. All library dependencies
 
 ## Build presets
 
-| Preset     | Binary dir       | Description                                 |
-| ---------- | ---------------- | ------------------------------------------- |
-| `debug`    | `build/debug`    | Debug build, developer mode on              |
-| `release`  | `build/release`  | Optimised release build                     |
-| `wasm`     | `build/wasm`     | Emscripten WASM release (Ninja)             |
-| `wasm-dev` | `build/wasm-dev` | Emscripten WASM debug (Ninja)               |
+| Preset     | Binary dir       | Description                     |
+| ---------- | ---------------- | ------------------------------- |
+| `debug`    | `build/debug`    | Debug build, developer mode on  |
+| `release`  | `build/release`  | Optimised release build         |
+| `wasm`     | `build/wasm`     | Emscripten WASM release (Ninja) |
+| `wasm-dev` | `build/wasm-dev` | Emscripten WASM debug (Ninja)   |
 
 ## Native build
 
@@ -198,9 +198,9 @@ at runtime.
 
 ## Tooling
 
-| Script                          | Usage                                                     | Description                                                                  |
-| ------------------------------- | --------------------------------------------------------- | ---------------------------------------------------------------------------- |
-| `tools/create-cart.js`          | `node tools/create-cart.js <name> [--template <t>]`       | Scaffold a new cart project (templates: `blank`, `platformer`)               |
-| `tools/cart-export.js`          | `node tools/cart-export.js <cart.json> [--out file.html]` | Export a cart to standalone HTML                                             |
-| `tools/serve-wasm.js`           | `node tools/serve-wasm.js [port]`                         | WASM dev server (default port 8080)                                          |
-| `tools/generate-pages-index.js` | `node tools/generate-pages-index.js <siteDir>`            | Generate index.html linking to all built WASM examples (used by CI)          |
+| Script                          | Usage                                                     | Description                                                         |
+| ------------------------------- | --------------------------------------------------------- | ------------------------------------------------------------------- |
+| `tools/create-cart.js`          | `node tools/create-cart.js <name> [--template <t>]`       | Scaffold a new cart project (templates: `blank`, `platformer`)      |
+| `tools/cart-export.js`          | `node tools/cart-export.js <cart.json> [--out file.html]` | Export a cart to standalone HTML                                    |
+| `tools/serve-wasm.js`           | `node tools/serve-wasm.js [port]`                         | WASM dev server (default port 8080)                                 |
+| `tools/generate-pages-index.js` | `node tools/generate-pages-index.js <siteDir>`            | Generate index.html linking to all built WASM examples (used by CI) |
