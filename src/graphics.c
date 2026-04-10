@@ -4,9 +4,9 @@
  */
 
 #include "graphics.h"
-#include "simd.h"
 
 #include "font.h"
+#include "simd.h"
 
 #include <math.h>
 #include <stdlib.h>
@@ -1939,16 +1939,14 @@ void dtr_gfx_flip_to(dtr_graphics_t *gfx, uint32_t *dst)
          * Each lane independently looks up its palette index. */
         int32_t tail = total & ~3;
         for (idx = 0; idx < tail; idx += 4) {
-            dtr_v4i indices = dtr_v4i_set(
-                (int32_t)src[idx],
-                (int32_t)src[idx + 1],
-                (int32_t)src[idx + 2],
-                (int32_t)src[idx + 3]);
-            dtr_v4i colors = dtr_v4i_set(
-                (int32_t)lut[dtr_v4i_lane(indices, 0)],
-                (int32_t)lut[dtr_v4i_lane(indices, 1)],
-                (int32_t)lut[dtr_v4i_lane(indices, 2)],
-                (int32_t)lut[dtr_v4i_lane(indices, 3)]);
+            dtr_v4i indices = dtr_v4i_set((int32_t)src[idx],
+                                          (int32_t)src[idx + 1],
+                                          (int32_t)src[idx + 2],
+                                          (int32_t)src[idx + 3]);
+            dtr_v4i colors  = dtr_v4i_set((int32_t)lut[dtr_v4i_lane(indices, 0)],
+                                         (int32_t)lut[dtr_v4i_lane(indices, 1)],
+                                         (int32_t)lut[dtr_v4i_lane(indices, 2)],
+                                         (int32_t)lut[dtr_v4i_lane(indices, 3)]);
             dtr_v4i_store_u32(&dst[idx], colors);
         }
         for (; idx < total; ++idx) {

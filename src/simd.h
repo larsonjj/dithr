@@ -208,17 +208,18 @@ static inline dtr_v4i dtr_v4i_sll(dtr_v4i v, int32_t count)
 /** Extract lane (0-3).  idx must be a compile-time constant. */
 static inline int32_t dtr_v4i_lane(dtr_v4i v, int32_t idx)
 {
+    /* All three backends use store+load to avoid the compile-time
+     * constant requirement of the native lane-extract intrinsics
+     * (NEON vgetq_lane, WASM wasm_i32x4_extract_lane). */
+    int32_t tmp[4];
 #if defined(DTR_SIMD_WASM)
-    return wasm_i32x4_extract_lane(v, idx);
+    wasm_v128_store(tmp, v);
 #elif defined(DTR_SIMD_SSE2)
-    int32_t tmp[4];
     _mm_storeu_si128((__m128i *)tmp, v);
-    return tmp[idx];
 #elif defined(DTR_SIMD_NEON)
-    int32_t tmp[4];
     vst1q_s32(tmp, v);
-    return tmp[idx];
 #endif
+    return tmp[idx];
 }
 
 /** Pack 4 RGBA channels (each 0-255 in int32 lanes) into one uint32 */
@@ -234,11 +235,10 @@ static inline uint32_t dtr_v4i_pack_rgba(dtr_v4i v)
 /** Unpack a uint32 RGBA into 4 int32 lanes {R, G, B, A} */
 static inline dtr_v4i dtr_v4i_unpack_rgba(uint32_t px)
 {
-    return dtr_v4i_set(
-        (int32_t)((px >> 24) & 0xFF),
-        (int32_t)((px >> 16) & 0xFF),
-        (int32_t)((px >> 8) & 0xFF),
-        (int32_t)(px & 0xFF));
+    return dtr_v4i_set((int32_t)((px >> 24) & 0xFF),
+                       (int32_t)((px >> 16) & 0xFF),
+                       (int32_t)((px >> 8) & 0xFF),
+                       (int32_t)(px & 0xFF));
 }
 
 /* ------------------------------------------------------------------ */

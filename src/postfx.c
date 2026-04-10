@@ -119,19 +119,18 @@ static void prv_apply_scanlines(uint32_t *pixels, int32_t w, int32_t h, float st
                 b4 = dtr_v4f_to_v4i(dtr_v4f_mul(dtr_v4i_to_v4f(b4), fv));
 
                 dtr_v4i_store_u32(&pixels[row_off + x],
-                    dtr_v4i_or(dtr_v4i_or(dtr_v4i_sll(r4, 24), dtr_v4i_sll(g4, 16)),
-                        dtr_v4i_or(dtr_v4i_sll(b4, 8), a4)));
+                                  dtr_v4i_or(dtr_v4i_or(dtr_v4i_sll(r4, 24), dtr_v4i_sll(g4, 16)),
+                                             dtr_v4i_or(dtr_v4i_sll(b4, 8), a4)));
             }
 
             /* Scalar tail */
             for (; x < w; ++x) {
                 uint32_t px = pixels[row_off + x];
 
-                pixels[row_off + x] = PX_PACK(
-                    (uint32_t)((float)PX_R(px) * factor),
-                    (uint32_t)((float)PX_G(px) * factor),
-                    (uint32_t)((float)PX_B(px) * factor),
-                    PX_A(px));
+                pixels[row_off + x] = PX_PACK((uint32_t)((float)PX_R(px) * factor),
+                                              (uint32_t)((float)PX_G(px) * factor),
+                                              (uint32_t)((float)PX_B(px) * factor),
+                                              PX_A(px));
             }
         }
     }
@@ -218,8 +217,8 @@ static void prv_apply_crt(uint32_t *pixels, int32_t w, int32_t h, float strength
                 b4 = dtr_v4f_to_v4i(dtr_v4f_mul(dtr_v4i_to_v4f(b4), vig));
 
                 dtr_v4i_store_u32(&pixels[row_off + x],
-                    dtr_v4i_or(dtr_v4i_or(dtr_v4i_sll(r4, 24), dtr_v4i_sll(g4, 16)),
-                        dtr_v4i_or(dtr_v4i_sll(b4, 8), a4)));
+                                  dtr_v4i_or(dtr_v4i_or(dtr_v4i_sll(r4, 24), dtr_v4i_sll(g4, 16)),
+                                             dtr_v4i_or(dtr_v4i_sll(b4, 8), a4)));
             }
 
             /* Scalar tail */
@@ -233,12 +232,11 @@ static void prv_apply_crt(uint32_t *pixels, int32_t w, int32_t h, float strength
                     vignette = 0.0f;
                 }
 
-                px = pixels[row_off + x];
-                pixels[row_off + x] = PX_PACK(
-                    (uint32_t)((float)PX_R(px) * vignette),
-                    (uint32_t)((float)PX_G(px) * vignette),
-                    (uint32_t)((float)PX_B(px) * vignette),
-                    PX_A(px));
+                px                  = pixels[row_off + x];
+                pixels[row_off + x] = PX_PACK((uint32_t)((float)PX_R(px) * vignette),
+                                              (uint32_t)((float)PX_G(px) * vignette),
+                                              (uint32_t)((float)PX_B(px) * vignette),
+                                              PX_A(px));
             }
         }
     }
