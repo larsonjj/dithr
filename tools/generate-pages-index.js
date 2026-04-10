@@ -33,8 +33,8 @@ for (const name of fs.readdirSync(examplesDir, { withFileTypes: true })) {
     }
 
     const cart = JSON.parse(fs.readFileSync(cartPath, "utf-8"));
-    const title = (cart.meta && cart.meta.title) || name.name;
-    const desc = (cart.meta && cart.meta.description) || "";
+    const title = cart.title || (cart.meta && cart.meta.title) || name.name;
+    const desc = cart.description || (cart.meta && cart.meta.description) || "";
     entries.push({ dir: name.name, title, desc });
 }
 

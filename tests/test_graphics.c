@@ -1759,6 +1759,143 @@ static void test_gfx_sspr_zero_dims(void)
 }
 
 /* ------------------------------------------------------------------ */
+/*  map_draw (batch tilemap blit from sprite sheet)                    */
+/* ------------------------------------------------------------------ */
+
+static void test_gfx_map_draw_basic(void)
+{
+    dtr_graphics_t *gfx = dtr_gfx_create(TW, TH);
+
+    /* 16x16 sheet, one 8x8 tile filled with colour 5 */
+    uint8_t sheet_data[16 * 16];
+
+    memset(sheet_data, 0, sizeof(sheet_data));
+    /* Fill tile 0 (top-left 8x8 region) with colour 5 */
+    for (int r = 0; r < 8; ++r) {
+        for (int c = 0; c < 8; ++c) {
+            sheet_data[r * 16 + c] = 5;
+        }
+    }
+    /* Fill tile 1 (top-right 8x8 region) with colour 7 */
+    for (int r = 0; r < 8; ++r) {
+        for (int c = 0; c < 8; ++c) {
+            sheet_data[r * 16 + 8 + c] = 7;
+        }
+    }
+
+    gfx->sheet.pixels = sheet_data;
+    gfx->sheet.width  = 16;
+    gfx->sheet.height = 16;
+    gfx->sheet.tile_w = 8;
+    gfx->sheet.tile_h = 8;
+    gfx->sheet.cols   = 2;
+    gfx->sheet.rows   = 2;
+    gfx->sheet.count  = 4;
+
+    /* 2x1 map: tile indices 1-based (1 = sprite 0, 2 = sprite 1) */
+    int32_t tiles[] = {1, 2};
+
+    dtr_gfx_cls(gfx, 0);
+    dtr_gfx_map_draw(gfx, tiles, 2, 1, 0, 0, 2, 1, 0, 0, 8, 8);
+
+    /* Tile 0 → colour 5 at (0,0) */
+    DTR_ASSERT_EQ_INT(dtr_gfx_pget(gfx, 0, 0), 5);
+    DTR_ASSERT_EQ_INT(dtr_gfx_pget(gfx, 7, 7), 5);
+    /* Tile 1 → colour 7 at (8,0) */
+    DTR_ASSERT_EQ_INT(dtr_gfx_pget(gfx, 8, 0), 7);
+    DTR_ASSERT_EQ_INT(dtr_gfx_pget(gfx, 15, 7), 7);
+
+    gfx->sheet.pixels = NULL;
+    dtr_gfx_destroy(gfx);
+    DTR_PASS();
+}
+
+static void test_gfx_map_draw_empty_tiles(void)
+{
+    dtr_graphics_t *gfx = dtr_gfx_create(TW, TH);
+    uint8_t         sheet_data[8 * 8];
+
+    memset(sheet_data, 3, sizeof(sheet_data));
+
+    gfx->sheet.pixels = sheet_data;
+    gfx->sheet.width  = 8;
+    gfx->sheet.height = 8;
+    gfx->sheet.tile_w = 8;
+    gfx->sheet.tile_h = 8;
+    gfx->sheet.cols   = 1;
+    gfx->sheet.rows   = 1;
+    gfx->sheet.count  = 1;
+
+    /* Tile value 0 = empty, should not draw anything */
+    int32_t tiles[] = {0, 0, 0, 0};
+
+    dtr_gfx_cls(gfx, 0);
+    dtr_gfx_map_draw(gfx, tiles, 2, 2, 0, 0, 2, 2, 0, 0, 8, 8);
+
+    DTR_ASSERT_EQ_INT(dtr_gfx_pget(gfx, 0, 0), 0);
+    DTR_ASSERT_EQ_INT(dtr_gfx_pget(gfx, 8, 8), 0);
+
+    gfx->sheet.pixels = NULL;
+    dtr_gfx_destroy(gfx);
+    DTR_PASS();
+}
+
+static void test_gfx_map_draw_null_inputs(void)
+{
+    dtr_graphics_t *gfx = dtr_gfx_create(TW, TH);
+    dtr_gfx_cls(gfx, 0);
+
+    /* NULL tiles — should not crash */
+    dtr_gfx_map_draw(gfx, NULL, 2, 2, 0, 0, 2, 2, 0, 0, 8, 8);
+
+    /* NULL sheet — should not crash */
+    int32_t tiles[] = {1};
+    dtr_gfx_map_draw(gfx, tiles, 1, 1, 0, 0, 1, 1, 0, 0, 8, 8);
+
+    DTR_ASSERT_EQ_INT(dtr_gfx_pget(gfx, 0, 0), 0);
+
+    dtr_gfx_destroy(gfx);
+    DTR_PASS();
+}
+
+static void test_gfx_map_draw_with_camera(void)
+{
+    dtr_graphics_t *gfx = dtr_gfx_create(TW, TH);
+    uint8_t         sheet_data[8 * 8];
+
+    memset(sheet_data, 9, sizeof(sheet_data));
+
+    gfx->sheet.pixels = sheet_data;
+    gfx->sheet.width  = 8;
+    gfx->sheet.height = 8;
+    gfx->sheet.tile_w = 8;
+    gfx->sheet.tile_h = 8;
+    gfx->sheet.cols   = 1;
+    gfx->sheet.rows   = 1;
+    gfx->sheet.count  = 1;
+
+    int32_t tiles[] = {1};
+
+    /* Camera offset shifts tile left by 4 pixels */
+    dtr_gfx_cls(gfx, 0);
+    dtr_gfx_camera(gfx, 4, 0);
+    dtr_gfx_map_draw(gfx, tiles, 1, 1, 0, 0, 1, 1, 0, 0, 8, 8);
+
+    /* Tile at world (0,0) drawn at screen (-4,0); pget uses world coords.
+     * World x=4 → screen x=0 → visible, filled with colour 9.
+     * World x=7 → screen x=3 → visible.
+     * World x=8 → screen x=4 → past the tile → should be 0.            */
+    DTR_ASSERT_EQ_INT(dtr_gfx_pget(gfx, 4, 0), 9);
+    DTR_ASSERT_EQ_INT(dtr_gfx_pget(gfx, 7, 0), 9);
+    DTR_ASSERT_EQ_INT(dtr_gfx_pget(gfx, 8, 0), 0);
+
+    dtr_gfx_camera(gfx, 0, 0);
+    gfx->sheet.pixels = NULL;
+    dtr_gfx_destroy(gfx);
+    DTR_PASS();
+}
+
+/* ------------------------------------------------------------------ */
 /*  Main                                                               */
 /* ------------------------------------------------------------------ */
 
@@ -1845,6 +1982,10 @@ int main(int argc, char *argv[])
     DTR_RUN_TEST(test_gfx_sspr_scale_down);
     DTR_RUN_TEST(test_gfx_sspr_clip);
     DTR_RUN_TEST(test_gfx_sspr_zero_dims);
+    DTR_RUN_TEST(test_gfx_map_draw_basic);
+    DTR_RUN_TEST(test_gfx_map_draw_empty_tiles);
+    DTR_RUN_TEST(test_gfx_map_draw_null_inputs);
+    DTR_RUN_TEST(test_gfx_map_draw_with_camera);
 
     DTR_TEST_END();
 }
