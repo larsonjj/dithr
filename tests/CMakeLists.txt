@@ -66,21 +66,27 @@ endfunction()
 # --- Input tests ---
 dtr_add_test(test_input test_input.c)
 
-# --- Cart tests ---
-dtr_add_test(test_cart test_cart.c)
+# --- Cart tests (require QuickJS init not available under Emscripten) ---
+if (NOT EMSCRIPTEN)
+    dtr_add_test(test_cart test_cart.c)
+endif()
 
 # --- Graphics tests ---
 dtr_add_test(test_graphics test_graphics.c LINK_LIB dithr_core_test)
 dtr_add_test(test_graphics_ext test_graphics_ext.c LINK_LIB dithr_core_test)
 
-# --- Event tests ---
-dtr_add_test(test_event test_event.c)
+# --- Event tests (require QuickJS init not available under Emscripten) ---
+if (NOT EMSCRIPTEN)
+    dtr_add_test(test_event test_event.c)
+endif()
 
 # --- Mouse / Gamepad tests ---
 dtr_add_test(test_mouse_gamepad test_mouse_gamepad.c)
 
-# --- Runtime tests ---
-dtr_add_test(test_runtime test_runtime.c)
+# --- Runtime tests (require QuickJS + host file I/O) ---
+if (NOT EMSCRIPTEN)
+    dtr_add_test(test_runtime test_runtime.c)
+endif()
 
 # --- Module normalize tests ---
 dtr_add_test(test_module_normalize test_module_normalize.c)
@@ -91,8 +97,10 @@ dtr_add_test(test_audio test_audio.c)
 # --- PostFX tests ---
 dtr_add_test(test_postfx test_postfx.c)
 
-# --- Cart import tests ---
-dtr_add_test(test_cart_import test_cart_import.c)
+# --- Cart import tests (require host file I/O) ---
+if (NOT EMSCRIPTEN)
+    dtr_add_test(test_cart_import test_cart_import.c)
+endif()
 
 # --- Collision tests ---
 dtr_add_test(test_col test_col.c)
@@ -112,20 +120,31 @@ dtr_add_test(test_synth test_synth.c)
 # --- Tween tests ---
 dtr_add_test(test_tween test_tween.c LINK_LIB dithr_core_test)
 
-# --- Console lifecycle tests ---
-dtr_add_test(test_console test_console.c)
+# --- Console lifecycle tests (require SDL display subsystem) ---
+if (NOT EMSCRIPTEN)
+    dtr_add_test(test_console test_console.c)
+endif()
 
-# --- Editor JS tests (pure logic, evaluated by QuickJS) ---
-dtr_add_test(test_editor_js test_editor_js.c)
-target_compile_definitions(test_editor_js PRIVATE
-    JS_TEST_DIR="${CMAKE_CURRENT_SOURCE_DIR}/js"
-)
+# --- Editor JS tests (require QuickJS + host file paths) ---
+if (NOT EMSCRIPTEN)
+    dtr_add_test(test_editor_js test_editor_js.c)
+    target_compile_definitions(test_editor_js PRIVATE
+        JS_TEST_DIR="${CMAKE_CURRENT_SOURCE_DIR}/js"
+    )
+endif()
 
 # --- CTest properties ---
-set_tests_properties(
-    test_input test_cart test_graphics test_graphics_ext test_event
-    test_mouse_gamepad test_runtime test_module_normalize test_audio test_postfx
-    test_cart_import test_col test_cam test_ui test_synth test_tween test_console
+set(DTR_TEST_TARGETS
+    test_input test_graphics test_graphics_ext
+    test_mouse_gamepad test_module_normalize test_audio test_postfx
+    test_col test_cam test_ui test_map test_synth test_tween
+)
+if (NOT EMSCRIPTEN)
+    list(APPEND DTR_TEST_TARGETS
+        test_cart test_event test_runtime test_cart_import test_console
+    )
+endif()
+set_tests_properties(${DTR_TEST_TARGETS}
     PROPERTIES
         TIMEOUT 120
         ENVIRONMENT "SDL_AUDIO_DRIVER=dummy;SDL_VIDEO_DRIVER=dummy;SDL_AUDIODRIVER=dummy;SDL_VIDEODRIVER=dummy"
