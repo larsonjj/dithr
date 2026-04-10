@@ -99,13 +99,14 @@ dithr cart.json
 
 ## Documentation
 
-| Document                               | Description                                            |
-| -------------------------------------- | ------------------------------------------------------ |
-| [API Reference](docs/api-reference.md) | All 17 JS namespaces with every function and constant  |
-| [Cart Format](docs/cart-format.md)     | `cart.json` schema and asset conventions               |
-| [Architecture](docs/architecture.md)   | Engine lifecycle, subsystem overview, design decisions |
-| [Building](docs/building.md)           | Build presets, CMake variables, WASM workflow          |
-| [Code Style](docs/code-style.md)       | C coding conventions for contributors                  |
+| Document                               | Description                                              |
+| -------------------------------------- | -------------------------------------------------------- |
+| [API Reference](docs/api-reference.md) | All 17 JS namespaces with every function and constant    |
+| [Cart Format](docs/cart-format.md)     | `cart.json` schema and asset conventions                 |
+| [Architecture](docs/architecture.md)   | Engine lifecycle, subsystem overview, design decisions   |
+| [Building](docs/building.md)           | Build presets, CMake variables, WASM workflow            |
+| [Code Style](docs/code-style.md)       | C coding conventions for contributors                    |
+| [JS Code Style](docs/js-code-style.md) | JavaScript style for cart source files (ESLint/Prettier) |
 
 ## Project Structure
 

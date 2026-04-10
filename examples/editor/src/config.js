@@ -55,7 +55,7 @@ export const MINIMAP_W = 10; // minimap width in pixels
 export const SCROLLBAR_W = 2; // scrollbar width in pixels
 export const ECOLS = COLS - GUTTER; // 123 (minimap overlays text area)
 
-export const TAB = "  "; // soft tab (2 spaces)
+export const TAB = '  '; // soft tab (2 spaces)
 export const SCROLL_MARGIN = 4; // lines of context kept above/below cursor
 
 // ─── Palette indices ─────────────────────────────────────────────────────────
@@ -100,54 +100,54 @@ export const TAB_SPRITES = 1;
 export const TAB_MAP = 2;
 export const TAB_SFX = 3;
 export const TAB_MUSIC = 4;
-export const TAB_NAMES = ["CODE", "SPRITES", "MAP", "SFX", "MUSIC"];
+export const TAB_NAMES = ['CODE', 'SPRITES', 'MAP', 'SFX', 'MUSIC'];
 
 // ─── Bracket / auto-close tables ─────────────────────────────────────────────
 
-export const AUTO_CLOSE = { "(": ")", "[": "]", "{": "}" };
-export const BRACKET_PAIRS = { "(": ")", ")": "(", "[": "]", "]": "[", "{": "}", "}": "{" };
+export const AUTO_CLOSE = { '(': ')', '[': ']', '{': '}' };
+export const BRACKET_PAIRS = { '(': ')', ')': '(', '[': ']', ']': '[', '{': '}', '}': '{' };
 export const BRACKET_COLORS = [8, 9, 12, 11, 13, 14]; // rainbow bracket colors
 
 // ─── JS keywords for syntax highlighting ─────────────────────────────────────
 
 export const KEYWORDS = new Set([
-    "break",
-    "case",
-    "catch",
-    "class",
-    "const",
-    "continue",
-    "debugger",
-    "default",
-    "delete",
-    "do",
-    "else",
-    "export",
-    "extends",
-    "false",
-    "finally",
-    "for",
-    "function",
-    "if",
-    "import",
-    "in",
-    "instanceof",
-    "let",
-    "new",
-    "null",
-    "of",
-    "return",
-    "super",
-    "switch",
-    "this",
-    "throw",
-    "true",
-    "try",
-    "typeof",
-    "undefined",
-    "var",
-    "void",
-    "while",
-    "with",
-    "yield",
+    'break',
+    'case',
+    'catch',
+    'class',
+    'const',
+    'continue',
+    'debugger',
+    'default',
+    'delete',
+    'do',
+    'else',
+    'export',
+    'extends',
+    'false',
+    'finally',
+    'for',
+    'function',
+    'if',
+    'import',
+    'in',
+    'instanceof',
+    'let',
+    'new',
+    'null',
+    'of',
+    'return',
+    'super',
+    'switch',
+    'this',
+    'throw',
+    'true',
+    'try',
+    'typeof',
+    'undefined',
+    'let',
+    'void',
+    'while',
+    'with',
+    'yield',
 ]);

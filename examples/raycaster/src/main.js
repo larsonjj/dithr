@@ -13,21 +13,21 @@
 
 // --- Constants -------------------------------------------------------
 
-var SCREEN_W = 320;
-var SCREEN_H = 180;
-var MAP_W = 16;
-var MAP_H = 16;
-var TILE_SIZE = 1; // world units per tile
-var FOV = math.PI / 3; // 60 degrees
-var HALF_FOV = FOV / 2;
-var NUM_RAYS = SCREEN_W;
-var MOVE_SPEED = 2.5;
-var TURN_SPEED = 2.0;
-var HALF_H = SCREEN_H / 2;
+const SCREEN_W = 320;
+const SCREEN_H = 180;
+const MAP_W = 16;
+const MAP_H = 16;
+const _TILE_SIZE = 1; // world units per tile
+const FOV = math.PI / 3; // 60 degrees
+const HALF_FOV = FOV / 2;
+const NUM_RAYS = SCREEN_W;
+const MOVE_SPEED = 2.5;
+const TURN_SPEED = 2.0;
+const HALF_H = SCREEN_H / 2;
 
 // --- World map (1 = wall, 0 = empty) --------------------------------
 
-var world_map = [
+const worldMap = [
     1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
     1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 1,
     1, 0, 0, 1, 1, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
@@ -39,58 +39,58 @@ var world_map = [
 ];
 
 // Wall colours per hit side (N/S vs E/W) for depth feel
-var WALL_COL_NS = 12; // light blue
-var WALL_COL_EW = 1; // dark blue
+const _WALL_COL_NS = 12; // light blue
+const _WALL_COL_EW = 1; // dark blue
 
 // Palette indices used for distance shading (light → dark)
-var SHADE_NS = [12, 13, 2, 1];
-var SHADE_EW = [6, 13, 2, 1];
+const SHADE_NS = [12, 13, 2, 1];
+const SHADE_EW = [6, 13, 2, 1];
 
 // --- Player state ----------------------------------------------------
 
-var px = 2.5;
-var py = 2.5;
-var pa = 0; // angle in radians
-var show_minimap = true; // toggle with M key
-var smooth_fps = 60;
-var fps_history = [];
-var fps_hist_idx = 0;
-var FPS_HIST_LEN = 50;
-for (var _i = 0; _i < FPS_HIST_LEN; ++_i) fps_history.push(60);
+let px = 2.5;
+let py = 2.5;
+let pa = 0; // angle in radians
+let showMinimap = true; // toggle with M key
+let smoothFps = 60;
+const fpsHistory = [];
+let fpsHistIdx = 0;
+const FPS_HIST_LEN = 50;
+for (let _i = 0; _i < FPS_HIST_LEN; ++_i) fpsHistory.push(60);
 
-function draw_fps_widget() {
-    var wx = SCREEN_W - FPS_HIST_LEN - 4;
-    var wy = 0;
-    var ww = FPS_HIST_LEN + 4;
-    var gh = 16;
-    var target = sys.targetFps();
+function drawFpsWidget() {
+    const wx = SCREEN_W - FPS_HIST_LEN - 4;
+    const wy = 0;
+    const ww = FPS_HIST_LEN + 4;
+    const gh = 16;
+    const target = sys.targetFps();
     gfx.rectfill(wx, wy, wx + ww - 1, wy + 8 + gh + 1, 0);
-    gfx.print(math.flr(smooth_fps) + " FPS", wx + 2, wy + 1, 7);
+    gfx.print(`${math.flr(smoothFps)} FPS`, wx + 2, wy + 1, 7);
     gfx.rect(wx + 1, wy + 8, wx + ww - 2, wy + 8 + gh, 5);
-    for (var idx = 1; idx < FPS_HIST_LEN; ++idx) {
-        var i0 = (fps_hist_idx + idx - 1) % FPS_HIST_LEN;
-        var i1 = (fps_hist_idx + idx) % FPS_HIST_LEN;
-        var v0 = math.clamp(fps_history[i0] / target, 0, 1);
-        var v1 = math.clamp(fps_history[i1] / target, 0, 1);
-        var y0 = wy + 8 + gh - 1 - math.flr(v0 * (gh - 2));
-        var y1 = wy + 8 + gh - 1 - math.flr(v1 * (gh - 2));
-        var clr = v1 > 0.9 ? 11 : v1 > 0.5 ? 9 : 8;
+    for (let idx = 1; idx < FPS_HIST_LEN; ++idx) {
+        const i0 = (fpsHistIdx + idx - 1) % FPS_HIST_LEN;
+        const i1 = (fpsHistIdx + idx) % FPS_HIST_LEN;
+        const v0 = math.clamp(fpsHistory[i0] / target, 0, 1);
+        const v1 = math.clamp(fpsHistory[i1] / target, 0, 1);
+        const y0 = wy + 8 + gh - 1 - math.flr(v0 * (gh - 2));
+        const y1 = wy + 8 + gh - 1 - math.flr(v1 * (gh - 2));
+        const clr = v1 > 0.9 ? 11 : v1 > 0.5 ? 9 : 8;
         gfx.line(wx + 2 + idx - 1, y0, wx + 2 + idx, y1, clr);
     }
 }
 
 // --- Helpers ---------------------------------------------------------
 
-function map_at(x, y) {
-    var mx = math.flr(x);
-    var my = math.flr(y);
+function mapAt(x, y) {
+    const mx = math.flr(x);
+    const my = math.flr(y);
     if (mx < 0 || mx >= MAP_W || my < 0 || my >= MAP_H) return 1;
-    return world_map[my * MAP_W + mx];
+    return worldMap[my * MAP_W + mx];
 }
 
-function shade_color(dist, is_ns) {
-    var shades = is_ns ? SHADE_NS : SHADE_EW;
-    var idx = math.flr(dist / 3);
+function shadeColor(dist, isNs) {
+    const shades = isNs ? SHADE_NS : SHADE_EW;
+    let idx = math.flr(dist / 3);
     if (idx >= shades.length) idx = shades.length - 1;
     return shades[idx];
 }
@@ -102,68 +102,68 @@ function _init() {
 }
 
 function _update(dt) {
-    smooth_fps = math.lerp(smooth_fps, sys.fps(), 0.05);
-    fps_history[fps_hist_idx] = smooth_fps;
-    fps_hist_idx = (fps_hist_idx + 1) % FPS_HIST_LEN;
+    smoothFps = math.lerp(smoothFps, sys.fps(), 0.05);
+    fpsHistory[fpsHistIdx] = smoothFps;
+    fpsHistIdx = (fpsHistIdx + 1) % FPS_HIST_LEN;
 
     // Toggle minimap
-    if (key.btnp(key.M)) show_minimap = !show_minimap;
+    if (key.btnp(key.M)) showMinimap = !showMinimap;
 
     // Turning
-    if (input.btn("turn_left")) pa -= TURN_SPEED * dt;
-    if (input.btn("turn_right")) pa += TURN_SPEED * dt;
+    if (input.btn('turn_left')) pa -= TURN_SPEED * dt;
+    if (input.btn('turn_right')) pa += TURN_SPEED * dt;
 
     // Gamepad right stick for turning
     if (pad.connected(0)) {
-        var rx = pad.axis(pad.RX, 0);
+        const rx = pad.axis(pad.RX, 0);
         pa += rx * TURN_SPEED * dt;
     }
 
     // Movement vectors
-    var cos_a = Math.cos(pa);
-    var sin_a = Math.sin(pa);
+    const cosA = Math.cos(pa);
+    const sinA = Math.sin(pa);
 
-    var dx = 0;
-    var dy = 0;
+    let dx = 0;
+    let dy = 0;
 
     // Forward / back
-    if (input.btn("forward")) {
-        dx += cos_a * MOVE_SPEED * dt;
-        dy += sin_a * MOVE_SPEED * dt;
+    if (input.btn('forward')) {
+        dx += cosA * MOVE_SPEED * dt;
+        dy += sinA * MOVE_SPEED * dt;
     }
-    if (input.btn("back")) {
-        dx -= cos_a * MOVE_SPEED * dt;
-        dy -= sin_a * MOVE_SPEED * dt;
+    if (input.btn('back')) {
+        dx -= cosA * MOVE_SPEED * dt;
+        dy -= sinA * MOVE_SPEED * dt;
     }
 
-    // Strafe (left perpendicular in Y-down coords is (sin_a, -cos_a))
-    if (input.btn("strafe_left")) {
-        dx += sin_a * MOVE_SPEED * dt;
-        dy -= cos_a * MOVE_SPEED * dt;
+    // Strafe (left perpendicular in Y-down coords is (sinA, -cosA))
+    if (input.btn('strafe_left')) {
+        dx += sinA * MOVE_SPEED * dt;
+        dy -= cosA * MOVE_SPEED * dt;
     }
-    if (input.btn("strafe_right")) {
-        dx -= sin_a * MOVE_SPEED * dt;
-        dy += cos_a * MOVE_SPEED * dt;
+    if (input.btn('strafe_right')) {
+        dx -= sinA * MOVE_SPEED * dt;
+        dy += cosA * MOVE_SPEED * dt;
     }
 
     // Gamepad left stick movement
     if (pad.connected(0)) {
-        var lx = pad.axis(pad.LX, 0);
-        var ly = pad.axis(pad.LY, 0);
+        const lx = pad.axis(pad.LX, 0);
+        const ly = pad.axis(pad.LY, 0);
         // Forward/back on LY
-        dx += cos_a * -ly * MOVE_SPEED * dt;
-        dy += sin_a * -ly * MOVE_SPEED * dt;
-        // Strafe on LX (positive LX = right = (-sin_a, cos_a))
-        dx -= sin_a * lx * MOVE_SPEED * dt;
-        dy += cos_a * lx * MOVE_SPEED * dt;
+        dx += cosA * -ly * MOVE_SPEED * dt;
+        dy += sinA * -ly * MOVE_SPEED * dt;
+        // Strafe on LX (positive LX = right = (-sinA, cosA))
+        dx -= sinA * lx * MOVE_SPEED * dt;
+        dy += cosA * lx * MOVE_SPEED * dt;
     }
 
     // Slide along walls — try X and Y independently
-    var margin = 0.2;
-    if (map_at(px + dx + (dx > 0 ? margin : -margin), py) === 0) {
+    const margin = 0.2;
+    if (mapAt(px + dx + (dx > 0 ? margin : -margin), py) === 0) {
         px += dx;
     }
-    if (map_at(px, py + dy + (dy > 0 ? margin : -margin)) === 0) {
+    if (mapAt(px, py + dy + (dy > 0 ? margin : -margin)) === 0) {
         py += dy;
     }
 }
@@ -176,135 +176,135 @@ function _draw() {
 
     // --- Cast rays (batched drawing) ---------------------------------
 
-    var angle_step = FOV / NUM_RAYS;
-    var start_angle = pa - HALF_FOV;
-    var ipx = math.flr(px);
-    var ipy = math.flr(py);
+    const angleStep = FOV / NUM_RAYS;
+    const startAngle = pa - HALF_FOV;
+    const ipx = math.flr(px);
+    const ipy = math.flr(py);
 
     // State for batching adjacent columns with same color & height
-    var batch_x0 = 0;
-    var batch_start = 0;
-    var batch_end = 0;
-    var batch_col = -1;
+    let batchX0 = 0;
+    let batchStart = 0;
+    let batchEnd = 0;
+    let batchCol = -1;
 
-    for (var i = 0; i <= NUM_RAYS; i++) {
-        var col = -1;
-        var draw_start = 0;
-        var draw_end = 0;
+    for (let i = 0; i <= NUM_RAYS; i++) {
+        let col = -1;
+        let drawStart = 0;
+        let drawEnd = 0;
 
         if (i < NUM_RAYS) {
-            var ray_angle = start_angle + i * angle_step;
-            var ray_cos = Math.cos(ray_angle);
-            var ray_sin = Math.sin(ray_angle);
+            const rayAngle = startAngle + i * angleStep;
+            const rayCos = Math.cos(rayAngle);
+            const raySin = Math.sin(rayAngle);
 
             // DDA setup
-            var map_x = ipx;
-            var map_y = ipy;
+            let mapX = ipx;
+            let mapY = ipy;
 
-            var step_x = ray_cos >= 0 ? 1 : -1;
-            var step_y = ray_sin >= 0 ? 1 : -1;
+            const stepX = rayCos >= 0 ? 1 : -1;
+            const stepY = raySin >= 0 ? 1 : -1;
 
-            var delta_x = ray_cos === 0 ? 1e30 : ray_cos > 0 ? 1 / ray_cos : -1 / ray_cos;
-            var delta_y = ray_sin === 0 ? 1e30 : ray_sin > 0 ? 1 / ray_sin : -1 / ray_sin;
+            const deltaX = rayCos === 0 ? 1e30 : rayCos > 0 ? 1 / rayCos : -1 / rayCos;
+            const deltaY = raySin === 0 ? 1e30 : raySin > 0 ? 1 / raySin : -1 / raySin;
 
-            var side_x = ray_cos < 0 ? (px - map_x) * delta_x : (map_x + 1 - px) * delta_x;
-            var side_y = ray_sin < 0 ? (py - map_y) * delta_y : (map_y + 1 - py) * delta_y;
+            let sideX = rayCos < 0 ? (px - mapX) * deltaX : (mapX + 1 - px) * deltaX;
+            let sideY = raySin < 0 ? (py - mapY) * deltaY : (mapY + 1 - py) * deltaY;
 
             // DDA traversal — inline map lookup
-            var side = 0;
+            let side = 0;
             for (;;) {
-                if (side_x < side_y) {
-                    side_x += delta_x;
-                    map_x += step_x;
+                if (sideX < sideY) {
+                    sideX += deltaX;
+                    mapX += stepX;
                     side = 0;
                 } else {
-                    side_y += delta_y;
-                    map_y += step_y;
+                    sideY += deltaY;
+                    mapY += stepY;
                     side = 1;
                 }
                 if (
-                    map_x < 0 ||
-                    map_x >= MAP_W ||
-                    map_y < 0 ||
-                    map_y >= MAP_H ||
-                    world_map[map_y * MAP_W + map_x] !== 0
+                    mapX < 0 ||
+                    mapX >= MAP_W ||
+                    mapY < 0 ||
+                    mapY >= MAP_H ||
+                    worldMap[mapY * MAP_W + mapX] !== 0
                 ) {
                     break;
                 }
             }
 
             // Perpendicular distance (fixes fisheye)
-            var perp_dist;
+            let perpDist;
             if (side === 0) {
-                perp_dist = (map_x - px + (1 - step_x) / 2) / ray_cos;
+                perpDist = (mapX - px + (1 - stepX) / 2) / rayCos;
             } else {
-                perp_dist = (map_y - py + (1 - step_y) / 2) / ray_sin;
+                perpDist = (mapY - py + (1 - stepY) / 2) / raySin;
             }
-            if (perp_dist < 0.01) perp_dist = 0.01;
+            if (perpDist < 0.01) perpDist = 0.01;
 
             // Wall column height
-            var line_h = math.flr(SCREEN_H / perp_dist);
-            draw_start = math.flr(HALF_H - line_h / 2);
-            draw_end = draw_start + line_h - 1;
-            if (draw_start < 0) draw_start = 0;
-            if (draw_end >= SCREEN_H) draw_end = SCREEN_H - 1;
+            const lineH = math.flr(SCREEN_H / perpDist);
+            drawStart = math.flr(HALF_H - lineH / 2);
+            drawEnd = drawStart + lineH - 1;
+            if (drawStart < 0) drawStart = 0;
+            if (drawEnd >= SCREEN_H) drawEnd = SCREEN_H - 1;
 
             // Shade by distance + side
-            col = shade_color(perp_dist, side === 0);
+            col = shadeColor(perpDist, side === 0);
         }
 
         // Flush batch when color or height changes (or last column)
-        if (col !== batch_col || draw_start !== batch_start || draw_end !== batch_end) {
-            if (batch_col >= 0) {
-                gfx.rectfill(batch_x0, batch_start, i - 1, batch_end, batch_col);
+        if (col !== batchCol || drawStart !== batchStart || drawEnd !== batchEnd) {
+            if (batchCol >= 0) {
+                gfx.rectfill(batchX0, batchStart, i - 1, batchEnd, batchCol);
             }
-            batch_x0 = i;
-            batch_start = draw_start;
-            batch_end = draw_end;
-            batch_col = col;
+            batchX0 = i;
+            batchStart = drawStart;
+            batchEnd = drawEnd;
+            batchCol = col;
         }
     }
 
     // --- Minimap overlay (top-left, toggleable with M) ---------------
 
-    if (show_minimap) {
-        var mm_scale = 4;
-        var mm_x0 = 4;
-        var mm_y0 = 4;
+    if (showMinimap) {
+        const mmScale = 4;
+        const mmX0 = 4;
+        const mmY0 = 4;
 
-        for (var my = 0; my < MAP_H; my++) {
-            for (var mx = 0; mx < MAP_W; mx++) {
-                var c = world_map[my * MAP_W + mx] !== 0 ? 6 : 0;
+        for (let my = 0; my < MAP_H; my++) {
+            for (let mx = 0; mx < MAP_W; mx++) {
+                const c = worldMap[my * MAP_W + mx] !== 0 ? 6 : 0;
                 gfx.rectfill(
-                    mm_x0 + mx * mm_scale,
-                    mm_y0 + my * mm_scale,
-                    mm_x0 + mx * mm_scale + mm_scale - 1,
-                    mm_y0 + my * mm_scale + mm_scale - 1,
+                    mmX0 + mx * mmScale,
+                    mmY0 + my * mmScale,
+                    mmX0 + mx * mmScale + mmScale - 1,
+                    mmY0 + my * mmScale + mmScale - 1,
                     c,
                 );
             }
         }
 
         // Player dot on minimap
-        var pp_x = mm_x0 + math.flr(px * mm_scale);
-        var pp_y = mm_y0 + math.flr(py * mm_scale);
-        gfx.rectfill(pp_x - 1, pp_y - 1, pp_x + 1, pp_y + 1, 8);
+        const ppX = mmX0 + math.flr(px * mmScale);
+        const ppY = mmY0 + math.flr(py * mmScale);
+        gfx.rectfill(ppX - 1, ppY - 1, ppX + 1, ppY + 1, 8);
 
         // Direction line on minimap
-        var dir_len = 6;
+        const dirLen = 6;
         gfx.line(
-            pp_x,
-            pp_y,
-            pp_x + math.flr(Math.cos(pa) * dir_len),
-            pp_y + math.flr(Math.sin(pa) * dir_len),
+            ppX,
+            ppY,
+            ppX + math.flr(Math.cos(pa) * dirLen),
+            ppY + math.flr(Math.sin(pa) * dirLen),
             11,
         );
     }
 
     // --- HUD ---------------------------------------------------------
 
-    gfx.print("WASD/Arrows: Move  M: Map", 72, 2, 7);
+    gfx.print('WASD/Arrows: Move  M: Map', 72, 2, 7);
 
     // FPS widget
-    draw_fps_widget();
+    drawFpsWidget();
 }

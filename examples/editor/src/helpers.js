@@ -1,6 +1,6 @@
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-import { st } from "./state.js";
+import { st } from './state.js';
 import {
     EROWS,
     ECOLS,
@@ -11,10 +11,10 @@ import {
     TAB_MAP,
     TAB_SFX,
     TAB_MUSIC,
-} from "./config.js";
+} from './config.js';
 
-const IS_MAC = sys.platform() === "macos";
-export const MOD_NAME = IS_MAC ? "Cmd" : "Ctrl";
+const IS_MAC = sys.platform() === 'macos';
+export const MOD_NAME = IS_MAC ? 'Cmd' : 'Ctrl';
 
 export function modKey() {
     if (IS_MAC)
@@ -77,11 +77,11 @@ export function ensureVisible() {
 
 export function isWordChar(c) {
     return (
-        (c >= "a" && c <= "z") ||
-        (c >= "A" && c <= "Z") ||
-        (c >= "0" && c <= "9") ||
-        c === "_" ||
-        c === "$"
+        (c >= 'a' && c <= 'z') ||
+        (c >= 'A' && c <= 'Z') ||
+        (c >= '0' && c <= '9') ||
+        c === '_' ||
+        c === '$'
     );
 }
 
@@ -89,11 +89,11 @@ export function wordBoundaryLeft(line, col) {
     let c = col;
     if (c <= 0) return 0;
     c--;
-    while (c > 0 && line[c] === " ") c--;
+    while (c > 0 && line[c] === ' ') c--;
     if (isWordChar(line[c])) {
         while (c > 0 && isWordChar(line[c - 1])) c--;
     } else {
-        while (c > 0 && !isWordChar(line[c - 1]) && line[c - 1] !== " ") c--;
+        while (c > 0 && !isWordChar(line[c - 1]) && line[c - 1] !== ' ') c--;
     }
     return c;
 }
@@ -103,10 +103,10 @@ export function wordBoundaryRight(line, col) {
     if (c >= line.length) return line.length;
     if (isWordChar(line[c])) {
         while (c < line.length && isWordChar(line[c])) c++;
-    } else if (line[c] !== " ") {
-        while (c < line.length && !isWordChar(line[c]) && line[c] !== " ") c++;
+    } else if (line[c] !== ' ') {
+        while (c < line.length && !isWordChar(line[c]) && line[c] !== ' ') c++;
     }
-    while (c < line.length && line[c] === " ") c++;
+    while (c < line.length && line[c] === ' ') c++;
     return c;
 }
 
@@ -115,11 +115,11 @@ export function wordBoundaryRight(line, col) {
 // ─── Bracket context helper ─────────────────────────────────────────────────
 // Returns a boolean array: true at positions inside a string or comment.
 function buildContextMask(line, inBlock) {
-    let mask = new Uint8Array(line.length);
-    let i = 0,
-        n = line.length;
+    const mask = new Uint8Array(line.length);
+    let i = 0;
+    const n = line.length;
     if (inBlock) {
-        let end = line.indexOf("*/");
+        const end = line.indexOf('*/');
         if (end >= 0) {
             for (let j = 0; j <= end + 1; j++) mask[j] = 1;
             i = end + 2;
@@ -129,9 +129,9 @@ function buildContextMask(line, inBlock) {
         }
     }
     while (i < n) {
-        if (line[i] === "/" && i + 1 < n) {
-            if (line[i + 1] === "*") {
-                let end = line.indexOf("*/", i + 2);
+        if (line[i] === '/' && i + 1 < n) {
+            if (line[i + 1] === '*') {
+                const end = line.indexOf('*/', i + 2);
                 if (end >= 0) {
                     for (let j = i; j <= end + 1; j++) mask[j] = 1;
                     i = end + 2;
@@ -141,17 +141,17 @@ function buildContextMask(line, inBlock) {
                     return mask;
                 }
             }
-            if (line[i + 1] === "/") {
+            if (line[i + 1] === '/') {
                 for (let j = i; j < n; j++) mask[j] = 1;
                 return mask;
             }
         }
-        if (line[i] === '"' || line[i] === "'" || line[i] === "`") {
-            let q = line[i];
+        if (line[i] === '"' || line[i] === "'" || line[i] === '`') {
+            const q = line[i];
             mask[i] = 1;
             let j = i + 1;
             while (j < n && line[j] !== q) {
-                if (line[j] === "\\") {
+                if (line[j] === '\\') {
                     mask[j] = 1;
                     j++;
                 }
@@ -168,24 +168,24 @@ function buildContextMask(line, inBlock) {
 }
 
 export function findMatchingBracket(row, col) {
-    let ch = st.buf[row] ? st.buf[row][col] : undefined;
+    const ch = st.buf[row] ? st.buf[row][col] : undefined;
     if (!ch || !BRACKET_PAIRS[ch]) return null;
-    let open = "([{";
-    let isOpen = open.indexOf(ch) >= 0;
-    let target = BRACKET_PAIRS[ch];
-    let dir = isOpen ? 1 : -1;
+    const open = '([{';
+    const isOpen = open.indexOf(ch) >= 0;
+    const target = BRACKET_PAIRS[ch];
+    const dir = isOpen ? 1 : -1;
     let depth = 0;
-    let r = row,
-        c = col;
+    let r = row;
+    let c = col;
     let steps = 0;
     // Get block state for this row from cache
     let inBlock = r < st._blockStateCache.length ? st._blockStateCache[r] : false;
     let mask = buildContextMask(st.buf[r], inBlock);
     while (r >= 0 && r < st.buf.length && steps < 5000) {
-        let line = st.buf[r];
+        const line = st.buf[r];
         while (c >= 0 && c < line.length) {
             if (!mask[c]) {
-                let cur = line[c];
+                const cur = line[c];
                 if (cur === ch) depth++;
                 else if (cur === target) depth--;
                 if (depth === 0) return { y: r, x: c };
@@ -211,7 +211,7 @@ export function getCachedBracketMatch() {
     ) {
         return st._bracketMatchCache.result;
     }
-    let result = findMatchingBracket(st.cy, st.cx);
+    const result = findMatchingBracket(st.cy, st.cx);
     st._bracketMatchCache = { cy: st.cy, cx: st.cx, result };
     return result;
 }
@@ -219,31 +219,31 @@ export function getCachedBracketMatch() {
 // ─── Block comment state tracking ────────────────────────────────────────────
 
 export function trackBlockState(line, inBlock) {
-    let i = 0,
-        n = line.length;
+    let i = 0;
+    const n = line.length;
     if (inBlock) {
-        let end = line.indexOf("*/");
+        const end = line.indexOf('*/');
         if (end >= 0) {
             i = end + 2;
             inBlock = false;
         } else return true;
     }
     while (i < n) {
-        let c = line[i];
-        if (c === "/" && i + 1 < n) {
-            if (line[i + 1] === "*") {
-                let end = line.indexOf("*/", i + 2);
+        const c = line[i];
+        if (c === '/' && i + 1 < n) {
+            if (line[i + 1] === '*') {
+                const end = line.indexOf('*/', i + 2);
                 if (end >= 0) {
                     i = end + 2;
                     continue;
                 } else return true;
             }
-            if (line[i + 1] === "/") return false;
+            if (line[i + 1] === '/') return false;
         }
-        if (c === '"' || c === "'" || c === "`") {
+        if (c === '"' || c === "'" || c === '`') {
             let j = i + 1;
             while (j < n && line[j] !== c) {
-                if (line[j] === "\\") j++;
+                if (line[j] === '\\') j++;
                 j++;
             }
             i = j < n ? j + 1 : j;
@@ -261,14 +261,14 @@ function rebuildBracketDepthCache(upTo) {
     let depth = 0;
     for (let r = 0; r < upTo; r++) {
         st._bracketDepthCache[r] = depth;
-        let line = st.buf[r];
-        let inBlock = r < st._blockStateCache.length ? st._blockStateCache[r] : false;
-        let mask = buildContextMask(line, inBlock);
+        const line = st.buf[r];
+        const inBlock = r < st._blockStateCache.length ? st._blockStateCache[r] : false;
+        const mask = buildContextMask(line, inBlock);
         for (let c = 0; c < line.length; c++) {
             if (mask[c]) continue;
-            let ch = line[c];
-            if (ch === "(" || ch === "[" || ch === "{") depth++;
-            else if (ch === ")" || ch === "]" || ch === "}") depth--;
+            const ch = line[c];
+            if (ch === '(' || ch === '[' || ch === '{') depth++;
+            else if (ch === ')' || ch === ']' || ch === '}') depth--;
         }
     }
 }
@@ -283,7 +283,7 @@ function rebuildBlockStateCache(upTo) {
 }
 
 export function ensureCaches() {
-    let needed = Math.min(st.oy + EROWS + 1, st.buf.length);
+    const needed = Math.min(st.oy + EROWS + 1, st.buf.length);
     if (st._lastCacheVersion !== st._bufVersion || needed > st._blockStateCache.length) {
         rebuildBlockStateCache(needed);
         rebuildBracketDepthCache(needed);
@@ -295,15 +295,15 @@ export function ensureCaches() {
 // ─── Indent / line helpers ───────────────────────────────────────────────────
 
 export function firstNonBlank(line) {
-    let s = st.buf[line];
+    const s = st.buf[line];
     let i = 0;
-    while (i < s.length && (s[i] === " " || s[i] === "\t")) i++;
+    while (i < s.length && (s[i] === ' ' || s[i] === '\t')) i++;
     return i;
 }
 
 export function getIndent(line) {
-    let m = st.buf[line].match(/^(\s*)/);
-    return m ? m[1] : "";
+    const m = st.buf[line].match(/^(\s*)/);
+    return m ? m[1] : '';
 }
 
 // ─── Vim word motions ────────────────────────────────────────────────────────
@@ -316,20 +316,20 @@ export function vimWordForward() {
             st.cx = 0;
             line = st.buf[st.cy];
         }
-        while (st.cx < line.length && line[st.cx] === " ") st.cx++;
+        while (st.cx < line.length && line[st.cx] === ' ') st.cx++;
         return;
     }
     if (isWordChar(line[st.cx])) {
         while (st.cx < line.length && isWordChar(line[st.cx])) st.cx++;
-    } else if (line[st.cx] !== " ") {
-        while (st.cx < line.length && !isWordChar(line[st.cx]) && line[st.cx] !== " ") st.cx++;
+    } else if (line[st.cx] !== ' ') {
+        while (st.cx < line.length && !isWordChar(line[st.cx]) && line[st.cx] !== ' ') st.cx++;
     }
-    while (st.cx < line.length && line[st.cx] === " ") st.cx++;
+    while (st.cx < line.length && line[st.cx] === ' ') st.cx++;
     if (st.cx >= line.length && st.cy < st.buf.length - 1) {
         st.cy++;
         st.cx = 0;
         line = st.buf[st.cy];
-        while (st.cx < line.length && line[st.cx] === " ") st.cx++;
+        while (st.cx < line.length && line[st.cx] === ' ') st.cx++;
     }
 }
 
@@ -341,13 +341,13 @@ export function vimWordBack() {
         }
         return;
     }
-    let line = st.buf[st.cy];
+    const line = st.buf[st.cy];
     st.cx--;
-    while (st.cx > 0 && line[st.cx] === " ") st.cx--;
+    while (st.cx > 0 && line[st.cx] === ' ') st.cx--;
     if (isWordChar(line[st.cx])) {
         while (st.cx > 0 && isWordChar(line[st.cx - 1])) st.cx--;
     } else {
-        while (st.cx > 0 && !isWordChar(line[st.cx - 1]) && line[st.cx - 1] !== " ") st.cx--;
+        while (st.cx > 0 && !isWordChar(line[st.cx - 1]) && line[st.cx - 1] !== ' ') st.cx--;
     }
 }
 
@@ -358,17 +358,17 @@ export function vimWordEnd() {
             st.cy++;
             st.cx = 0;
             line = st.buf[st.cy];
-            while (st.cx < line.length && line[st.cx] === " ") st.cx++;
+            while (st.cx < line.length && line[st.cx] === ' ') st.cx++;
         }
     } else {
         st.cx++;
     }
     line = st.buf[st.cy];
-    while (st.cx < line.length && line[st.cx] === " ") st.cx++;
+    while (st.cx < line.length && line[st.cx] === ' ') st.cx++;
     if (isWordChar(line[st.cx])) {
         while (st.cx < line.length - 1 && isWordChar(line[st.cx + 1])) st.cx++;
     } else {
-        while (st.cx < line.length - 1 && !isWordChar(line[st.cx + 1]) && line[st.cx + 1] !== " ")
+        while (st.cx < line.length - 1 && !isWordChar(line[st.cx + 1]) && line[st.cx + 1] !== ' ')
             st.cx++;
     }
 }

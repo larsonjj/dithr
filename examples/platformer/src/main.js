@@ -13,48 +13,48 @@
 
 // --- Constants -------------------------------------------------------
 
-var TILE = 8;
-var MAP_W = 60; // level width in tiles
-var MAP_H = 23; // level height in tiles (fits 180px)
-var GRAVITY = 0.35;
-var JUMP = -5.5;
-var MOVE = 1.8;
-var FRICTION = 0.85;
+const TILE = 8;
+const MAP_W = 60; // level width in tiles
+const MAP_H = 23; // level height in tiles (fits 180px)
+const GRAVITY = 0.35;
+const JUMP = -5.5;
+const MOVE = 1.8;
+const FRICTION = 0.85;
 
 // Tile types
-var T_EMPTY = 0;
-var T_SOLID = 1;
-var T_COIN = 2;
-var T_SPIKE = 3;
+const T_EMPTY = 0;
+const T_SOLID = 1;
+const T_COIN = 2;
+const T_SPIKE = 3;
 
 // --- Level data (procedurally generated) -----------------------------
 
-var tiles = [];
-var coins_left = 0;
+let tiles = [];
+let coinsLeft = 0;
 
-function solid_at(cx, cy) {
+function solidAt(cx, cy) {
     if (cx < 0 || cy < 0 || cx >= MAP_W || cy >= MAP_H) return true;
     return tiles[cy * MAP_W + cx] === T_SOLID;
 }
 
-function tile_at(cx, cy) {
+function tileAt(cx, cy) {
     if (cx < 0 || cy < 0 || cx >= MAP_W || cy >= MAP_H) return T_SOLID;
     return tiles[cy * MAP_W + cx];
 }
 
-function set_tile(cx, cy, v) {
+function setTile(cx, cy, v) {
     if (cx >= 0 && cy >= 0 && cx < MAP_W && cy < MAP_H) {
         tiles[cy * MAP_W + cx] = v;
     }
 }
 
-function generate_level() {
+function generateLevel() {
     tiles = [];
-    coins_left = 0;
+    coinsLeft = 0;
 
     // Start with empty space + floor at bottom
-    for (var y = 0; y < MAP_H; ++y) {
-        for (var x = 0; x < MAP_W; ++x) {
+    for (let y = 0; y < MAP_H; ++y) {
+        for (let x = 0; x < MAP_W; ++x) {
             if (y === MAP_H - 1 || x === 0 || x === MAP_W - 1) {
                 tiles.push(T_SOLID);
             } else {
@@ -65,41 +65,41 @@ function generate_level() {
 
     // Generate platforms
     math.seed(7);
-    for (var i = 0; i < 20; ++i) {
-        var px = 3 + math.rndInt(MAP_W - 8);
-        var py = 5 + math.rndInt(MAP_H - 8);
-        var pw = 3 + math.rndInt(5);
-        for (var x = px; x < px + pw && x < MAP_W - 1; ++x) {
-            set_tile(x, py, T_SOLID);
+    for (let i = 0; i < 20; ++i) {
+        const px = 3 + math.rndInt(MAP_W - 8);
+        const py = 5 + math.rndInt(MAP_H - 8);
+        const pw = 3 + math.rndInt(5);
+        for (let x = px; x < px + pw && x < MAP_W - 1; ++x) {
+            setTile(x, py, T_SOLID);
         }
     }
 
     // Place coins on top of platforms
-    for (var y = 1; y < MAP_H - 1; ++y) {
-        for (var x = 1; x < MAP_W - 1; ++x) {
+    for (let y = 1; y < MAP_H - 1; ++y) {
+        for (let x = 1; x < MAP_W - 1; ++x) {
             if (
                 tiles[y * MAP_W + x] === T_EMPTY &&
                 tiles[(y + 1) * MAP_W + x] === T_SOLID &&
                 math.rnd() < 0.3
             ) {
                 tiles[y * MAP_W + x] = T_COIN;
-                ++coins_left;
+                ++coinsLeft;
             }
         }
     }
 
     // Place some spikes
-    for (var x = 5; x < MAP_W - 5; x += 8 + math.rndInt(6)) {
-        var base_y = MAP_H - 2;
-        if (tiles[base_y * MAP_W + x] === T_EMPTY) {
-            tiles[base_y * MAP_W + x] = T_SPIKE;
+    for (let x = 5; x < MAP_W - 5; x += 8 + math.rndInt(6)) {
+        const baseY = MAP_H - 2;
+        if (tiles[baseY * MAP_W + x] === T_EMPTY) {
+            tiles[baseY * MAP_W + x] = T_SPIKE;
         }
     }
 }
 
 // --- Player ----------------------------------------------------------
 
-var player = {
+let player = {
     x: 24,
     y: 100,
     vx: 0,
@@ -112,22 +112,22 @@ var player = {
     score: 0,
 };
 
-var high_score = 0;
-var cam_x = 0;
-var cam_y = 0;
+let highScore = 0;
+let camX = 0;
+let camY = 0;
 
 // --- Enemies ---------------------------------------------------------
 
-var enemies = [];
+let enemies = [];
 
-function spawn_enemies() {
+function spawnEnemies() {
     enemies = [];
-    for (var i = 0; i < 6; ++i) {
-        var ex = 40 + i * 70;
-        var ey = 0;
+    for (let i = 0; i < 6; ++i) {
+        const ex = 40 + i * 70;
+        let ey = 0;
         // Find ground under spawn X
-        for (var y = 0; y < MAP_H - 1; ++y) {
-            if (solid_at(math.flr(ex / TILE), y + 1)) {
+        for (let y = 0; y < MAP_H - 1; ++y) {
+            if (solidAt(math.flr(ex / TILE), y + 1)) {
                 ey = y * TILE;
                 break;
             }
@@ -145,19 +145,19 @@ function spawn_enemies() {
 
 // --- Collision helpers ------------------------------------------------
 
-function collide_x(obj) {
-    var left = math.flr(obj.x / TILE);
-    var right = math.flr((obj.x + obj.w - 1) / TILE);
-    var top = math.flr(obj.y / TILE);
-    var bot = math.flr((obj.y + obj.h - 1) / TILE);
+function collideX(obj) {
+    const left = math.flr(obj.x / TILE);
+    const right = math.flr((obj.x + obj.w - 1) / TILE);
+    const top = math.flr(obj.y / TILE);
+    const bot = math.flr((obj.y + obj.h - 1) / TILE);
 
-    for (var ty = top; ty <= bot; ++ty) {
-        if (solid_at(left, ty)) {
+    for (let ty = top; ty <= bot; ++ty) {
+        if (solidAt(left, ty)) {
             obj.x = (left + 1) * TILE;
             obj.vx = 0;
             return;
         }
-        if (solid_at(right, ty)) {
+        if (solidAt(right, ty)) {
             obj.x = right * TILE - obj.w;
             obj.vx = 0;
             return;
@@ -165,20 +165,20 @@ function collide_x(obj) {
     }
 }
 
-function collide_y(obj) {
-    var left = math.flr(obj.x / TILE);
-    var right = math.flr((obj.x + obj.w - 1) / TILE);
-    var top = math.flr(obj.y / TILE);
-    var bot = math.flr((obj.y + obj.h - 1) / TILE);
+function collideY(obj) {
+    const left = math.flr(obj.x / TILE);
+    const right = math.flr((obj.x + obj.w - 1) / TILE);
+    const top = math.flr(obj.y / TILE);
+    const bot = math.flr((obj.y + obj.h - 1) / TILE);
 
     obj.grounded = false;
-    for (var tx = left; tx <= right; ++tx) {
-        if (solid_at(tx, top)) {
+    for (let tx = left; tx <= right; ++tx) {
+        if (solidAt(tx, top)) {
             obj.y = (top + 1) * TILE;
             obj.vy = 0;
             return;
         }
-        if (solid_at(tx, bot)) {
+        if (solidAt(tx, bot)) {
             obj.y = bot * TILE - obj.h;
             obj.vy = 0;
             obj.grounded = true;
@@ -187,13 +187,13 @@ function collide_y(obj) {
     }
 }
 
-function boxes_overlap(a, b) {
+function boxesOverlap(a, b) {
     return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
 }
 
 // --- Game logic ------------------------------------------------------
 
-function reset_player() {
+function resetPlayer() {
     player.x = 24;
     player.y = 100;
     player.vx = 0;
@@ -201,29 +201,29 @@ function reset_player() {
     player.alive = true;
 }
 
-var smooth_fps = 60;
-var fps_history = [];
-var fps_hist_idx = 0;
-var FPS_HIST_LEN = 50;
-for (var _i = 0; _i < FPS_HIST_LEN; ++_i) fps_history.push(60);
+let smoothFps = 60;
+const fpsHistory = [];
+let fpsHistIdx = 0;
+const FPS_HIST_LEN = 50;
+for (let _i = 0; _i < FPS_HIST_LEN; ++_i) fpsHistory.push(60);
 
-function draw_fps_widget() {
-    var wx = 320 - FPS_HIST_LEN - 4;
-    var wy = 0;
-    var ww = FPS_HIST_LEN + 4;
-    var gh = 16;
-    var target = sys.targetFps();
+function drawFpsWidget() {
+    const wx = 320 - FPS_HIST_LEN - 4;
+    const wy = 0;
+    const ww = FPS_HIST_LEN + 4;
+    const gh = 16;
+    const target = sys.targetFps();
     gfx.rectfill(wx, wy, wx + ww - 1, wy + 8 + gh + 1, 0);
-    gfx.print(math.flr(smooth_fps) + " FPS", wx + 2, wy + 1, 7);
+    gfx.print(`${math.flr(smoothFps)} FPS`, wx + 2, wy + 1, 7);
     gfx.rect(wx + 1, wy + 8, wx + ww - 2, wy + 8 + gh, 5);
-    for (var idx = 1; idx < FPS_HIST_LEN; ++idx) {
-        var i0 = (fps_hist_idx + idx - 1) % FPS_HIST_LEN;
-        var i1 = (fps_hist_idx + idx) % FPS_HIST_LEN;
-        var v0 = math.clamp(fps_history[i0] / target, 0, 1);
-        var v1 = math.clamp(fps_history[i1] / target, 0, 1);
-        var y0 = wy + 8 + gh - 1 - math.flr(v0 * (gh - 2));
-        var y1 = wy + 8 + gh - 1 - math.flr(v1 * (gh - 2));
-        var clr = v1 > 0.9 ? 11 : v1 > 0.5 ? 9 : 8;
+    for (let idx = 1; idx < FPS_HIST_LEN; ++idx) {
+        const i0 = (fpsHistIdx + idx - 1) % FPS_HIST_LEN;
+        const i1 = (fpsHistIdx + idx) % FPS_HIST_LEN;
+        const v0 = math.clamp(fpsHistory[i0] / target, 0, 1);
+        const v1 = math.clamp(fpsHistory[i1] / target, 0, 1);
+        const y0 = wy + 8 + gh - 1 - math.flr(v0 * (gh - 2));
+        const y1 = wy + 8 + gh - 1 - math.flr(v1 * (gh - 2));
+        const clr = v1 > 0.9 ? 11 : v1 > 0.5 ? 9 : 8;
         gfx.line(wx + 2 + idx - 1, y0, wx + 2 + idx, y1, clr);
     }
 }
@@ -231,40 +231,40 @@ function draw_fps_widget() {
 // --- Callbacks -------------------------------------------------------
 
 function _init() {
-    generate_level();
-    spawn_enemies();
-    high_score = cart.dget(0) || 0;
+    generateLevel();
+    spawnEnemies();
+    highScore = cart.dget(0) || 0;
 }
 
 function _update(dt) {
-    smooth_fps = math.lerp(smooth_fps, sys.fps(), 0.05);
-    fps_history[fps_hist_idx] = smooth_fps;
-    fps_hist_idx = (fps_hist_idx + 1) % FPS_HIST_LEN;
+    smoothFps = math.lerp(smoothFps, sys.fps(), 0.05);
+    fpsHistory[fpsHistIdx] = smoothFps;
+    fpsHistIdx = (fpsHistIdx + 1) % FPS_HIST_LEN;
     if (!player.alive) {
-        if (input.btnp("jump")) {
-            if (player.score > high_score) {
-                high_score = player.score;
-                cart.dset(0, high_score);
+        if (input.btnp('jump')) {
+            if (player.score > highScore) {
+                highScore = player.score;
+                cart.dset(0, highScore);
             }
             player.score = 0;
-            reset_player();
+            resetPlayer();
         }
         return;
     }
 
     // Horizontal movement
-    if (input.btn("left")) {
+    if (input.btn('left')) {
         player.vx -= MOVE;
         player.facing = -1;
     }
-    if (input.btn("right")) {
+    if (input.btn('right')) {
         player.vx += MOVE;
         player.facing = 1;
     }
     player.vx *= FRICTION;
 
     // Jump
-    if (player.grounded && input.btnp("jump")) {
+    if (player.grounded && input.btnp('jump')) {
         player.vy = JUMP;
     }
 
@@ -273,24 +273,24 @@ function _update(dt) {
 
     // Move + collide X then Y
     player.x += player.vx;
-    collide_x(player);
+    collideX(player);
     player.y += player.vy;
-    collide_y(player);
+    collideY(player);
 
     // Collect coins
-    var pcx1 = math.flr(player.x / TILE);
-    var pcx2 = math.flr((player.x + player.w - 1) / TILE);
-    var pcy1 = math.flr(player.y / TILE);
-    var pcy2 = math.flr((player.y + player.h - 1) / TILE);
-    for (var ty = pcy1; ty <= pcy2; ++ty) {
-        for (var tx = pcx1; tx <= pcx2; ++tx) {
-            if (tile_at(tx, ty) === T_COIN) {
-                set_tile(tx, ty, T_EMPTY);
+    const pcx1 = math.flr(player.x / TILE);
+    const pcx2 = math.flr((player.x + player.w - 1) / TILE);
+    const pcy1 = math.flr(player.y / TILE);
+    const pcy2 = math.flr((player.y + player.h - 1) / TILE);
+    for (let ty = pcy1; ty <= pcy2; ++ty) {
+        for (let tx = pcx1; tx <= pcx2; ++tx) {
+            if (tileAt(tx, ty) === T_COIN) {
+                setTile(tx, ty, T_EMPTY);
                 player.score += 10;
-                --coins_left;
+                --coinsLeft;
                 // sfx.play(0); // uncomment when SFX loaded
             }
-            if (tile_at(tx, ty) === T_SPIKE) {
+            if (tileAt(tx, ty) === T_SPIKE) {
                 player.alive = false;
                 // sfx.play(1); // uncomment when SFX loaded
             }
@@ -298,21 +298,21 @@ function _update(dt) {
     }
 
     // Update enemies
-    for (var i = 0; i < enemies.length; ++i) {
-        var e = enemies[i];
+    for (let i = 0; i < enemies.length; ++i) {
+        const e = enemies[i];
         if (!e.alive) continue;
 
         e.x += e.vx;
         // Reverse at walls
-        var ecx = math.flr((e.x + (e.vx > 0 ? e.w : 0)) / TILE);
-        var ecy = math.flr((e.y + e.h - 1) / TILE);
-        if (solid_at(ecx, ecy) || !solid_at(ecx, ecy + 1)) {
+        const ecx = math.flr((e.x + (e.vx > 0 ? e.w : 0)) / TILE);
+        const ecy = math.flr((e.y + e.h - 1) / TILE);
+        if (solidAt(ecx, ecy) || !solidAt(ecx, ecy + 1)) {
             e.vx = -e.vx;
             e.x += e.vx;
         }
 
         // Player collision
-        if (player.alive && boxes_overlap(player, e)) {
+        if (player.alive && boxesOverlap(player, e)) {
             // Stomp if falling onto enemy
             if (player.vy > 0 && player.y + player.h - 4 < e.y + 2) {
                 e.alive = false;
@@ -326,17 +326,17 @@ function _update(dt) {
     }
 
     // Camera follow
-    var target_x = player.x - 160 + player.w / 2;
-    var target_y = player.y - 90;
-    cam_x += (target_x - cam_x) * 0.08;
-    cam_y += (target_y - cam_y) * 0.08;
+    const targetX = player.x - 160 + player.w / 2;
+    const targetY = player.y - 90;
+    camX += (targetX - camX) * 0.08;
+    camY += (targetY - camY) * 0.08;
 
-    var max_cx = MAP_W * TILE - 320;
-    var max_cy = MAP_H * TILE - 180;
-    if (cam_x < 0) cam_x = 0;
-    if (cam_y < 0) cam_y = 0;
-    if (cam_x > max_cx) cam_x = max_cx;
-    if (cam_y > max_cy) cam_y = max_cy;
+    const maxCx = MAP_W * TILE - 320;
+    const maxCy = MAP_H * TILE - 180;
+    if (camX < 0) camX = 0;
+    if (camY < 0) camY = 0;
+    if (camX > maxCx) camX = maxCx;
+    if (camY > maxCy) camY = maxCy;
 
     // Fell off bottom
     if (player.y > MAP_H * TILE + 16) {
@@ -348,23 +348,23 @@ function _draw() {
     gfx.cls(12); // sky colour
 
     // Camera
-    var ox = math.flr(cam_x);
-    var oy = math.flr(cam_y);
+    const ox = math.flr(camX);
+    const oy = math.flr(camY);
     gfx.camera(ox, oy);
 
     // --- Draw tiles ---
-    var sx = math.flr(cam_x / TILE);
-    var sy = math.flr(cam_y / TILE);
-    var ex = sx + 41;
-    var ey = sy + 24;
+    const sx = math.flr(camX / TILE);
+    const sy = math.flr(camY / TILE);
+    let ex = sx + 41;
+    let ey = sy + 24;
     if (ex > MAP_W) ex = MAP_W;
     if (ey > MAP_H) ey = MAP_H;
 
-    for (var ty = sy; ty < ey; ++ty) {
-        for (var tx = sx; tx < ex; ++tx) {
-            var t = tile_at(tx, ty);
-            var px = tx * TILE;
-            var py = ty * TILE;
+    for (let ty = sy; ty < ey; ++ty) {
+        for (let tx = sx; tx < ex; ++tx) {
+            const t = tileAt(tx, ty);
+            const px = tx * TILE;
+            const py = ty * TILE;
 
             if (t === T_SOLID) {
                 // PLACEHOLDER: solid block (replace with gfx.spr())
@@ -372,7 +372,7 @@ function _draw() {
                 gfx.rect(px, py, px + 7, py + 7, 2);
             } else if (t === T_COIN) {
                 // PLACEHOLDER: spinning coin
-                var cr = 2 + math.abs(math.sin(sys.time() * 0.3));
+                const cr = 2 + math.abs(math.sin(sys.time() * 0.3));
                 gfx.circfill(px + 4, py + 4, cr, 10);
             } else if (t === T_SPIKE) {
                 // PLACEHOLDER: spike triangle
@@ -382,13 +382,13 @@ function _draw() {
     }
 
     // --- Draw enemies ---
-    for (var i = 0; i < enemies.length; ++i) {
-        var e = enemies[i];
+    for (let i = 0; i < enemies.length; ++i) {
+        const e = enemies[i];
         if (!e.alive) continue;
         // PLACEHOLDER: red box (replace with gfx.spr())
         gfx.rectfill(e.x, e.y, e.x + e.w, e.y + e.h, 8);
         // Eyes
-        var ex1 = e.vx > 0 ? e.x + 4 : e.x + 1;
+        const ex1 = e.vx > 0 ? e.x + 4 : e.x + 1;
         gfx.pset(ex1, e.y + 2, 7);
         gfx.pset(ex1 + 2, e.y + 2, 7);
     }
@@ -398,50 +398,50 @@ function _draw() {
         // PLACEHOLDER: coloured box (replace with gfx.spr())
         gfx.rectfill(player.x, player.y, player.x + player.w, player.y + player.h, 11);
         // Eye
-        var eye_x = player.facing > 0 ? player.x + 4 : player.x + 1;
-        gfx.pset(eye_x, player.y + 2, 0);
+        const eyeX = player.facing > 0 ? player.x + 4 : player.x + 1;
+        gfx.pset(eyeX, player.y + 2, 0);
     }
 
     // --- HUD (fixed position) ---
     gfx.camera(0, 0);
 
     gfx.rectfill(0, 0, 319, 10, 0);
-    gfx.print("score:" + player.score, 4, 2, 10);
-    gfx.print("high:" + high_score, 80, 2, 7);
-    gfx.print("coins:" + coins_left, 160, 2, 10);
+    gfx.print(`score:${player.score}`, 4, 2, 10);
+    gfx.print(`high:${highScore}`, 80, 2, 7);
+    gfx.print(`coins:${coinsLeft}`, 160, 2, 10);
 
     if (!player.alive) {
         gfx.rectfill(80, 70, 240, 110, 0);
         gfx.rect(80, 70, 240, 110, 8);
-        gfx.print("game over!", 130, 78, 8);
-        gfx.print("score: " + player.score, 130, 90, 7);
-        gfx.print("press jump to retry", 110, 100, 5);
+        gfx.print('game over!', 130, 78, 8);
+        gfx.print(`score: ${player.score}`, 130, 90, 7);
+        gfx.print('press jump to retry', 110, 100, 5);
     }
 
     // FPS widget
-    draw_fps_widget();
+    drawFpsWidget();
 }
 
 // --- Hot reload state preservation -----------------------------------
 
 function _save() {
     return {
-        tiles: tiles,
-        coins_left: coins_left,
-        player: player,
-        high_score: high_score,
-        cam_x: cam_x,
-        cam_y: cam_y,
-        enemies: enemies,
+        tiles,
+        coinsLeft,
+        player,
+        highScore,
+        camX,
+        camY,
+        enemies,
     };
 }
 
 function _restore(state) {
     tiles = state.tiles;
-    coins_left = state.coins_left;
+    coinsLeft = state.coinsLeft;
     player = state.player;
-    high_score = state.high_score;
-    cam_x = state.cam_x;
-    cam_y = state.cam_y;
+    highScore = state.highScore;
+    camX = state.camX;
+    camY = state.camY;
     enemies = state.enemies;
 }

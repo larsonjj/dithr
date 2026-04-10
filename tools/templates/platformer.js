@@ -1,15 +1,15 @@
 // Platformer template — simple gravity + tile collision
 
-var px = 64;
-var py = 64;
-var vx = 0;
-var vy = 0;
-var grounded = false;
+let px = 64;
+let py = 64;
+let vx = 0;
+let vy = 0;
+let grounded = false;
 
-var GRAVITY = 0.4;
-var JUMP_VEL = -5.0;
-var MOVE_SPD = 2.0;
-var FRICTION = 0.8;
+const GRAVITY = 0.4;
+const JUMP_VEL = -5.0;
+const MOVE_SPD = 2.0;
+const FRICTION = 0.8;
 
 function _init() {
     gfx.cls(0);

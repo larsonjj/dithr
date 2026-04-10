@@ -86,10 +86,10 @@ gfx.print(msg, (320 - w) / 2, 87, 7);
 
 ### Sprites
 
-| Function     | Parameters                                           | Returns | Description                                                                               |
-| ------------ | ---------------------------------------------------- | ------- | ----------------------------------------------------------------------------------------- |
-| `spr`        | `idx?, x?, y?, w?, h?, flip_x?, flip_y?`             | —       | Draw sprite. `w` and `h` are in tiles (default 1). `flip_x`/`flip_y` mirror the sprite    |
-| `sspr`       | `sx?, sy?, sw?, sh?, dx?, dy?, dw?, dh?`             | —       | Stretch-blit a region of the spritesheet. `sw`/`sh` default to 8                          |
+| Function    | Parameters                                           | Returns | Description                                                                               |
+| ----------- | ---------------------------------------------------- | ------- | ----------------------------------------------------------------------------------------- |
+| `spr`       | `idx?, x?, y?, w?, h?, flip_x?, flip_y?`             | —       | Draw sprite. `w` and `h` are in tiles (default 1). `flip_x`/`flip_y` mirror the sprite    |
+| `sspr`      | `sx?, sy?, sw?, sh?, dx?, dy?, dw?, dh?`             | —       | Stretch-blit a region of the spritesheet. `sw`/`sh` default to 8                          |
 | `sprRot`    | `idx?, x?, y?, angle?, cx?, cy?`                     | —       | Draw sprite rotated by `angle` (radians) around pivot (`cx`, `cy`). Pivot −1 = center     |
 | `sprAffine` | `idx?, x?, y?, origin_x?, origin_y?, rot_x?, rot_y?` | —       | Draw sprite with 2×2 affine transform. `rot_x`/`rot_y` = basis vectors (default identity) |
 
@@ -163,12 +163,12 @@ games).
 > **Capacity:** Up to 1 024 draw commands per frame. Commands beyond this
 > limit are silently dropped.
 
-| Function        | Parameters                                               | Returns | Description                               |
-| --------------- | -------------------------------------------------------- | ------- | ----------------------------------------- |
-| `dlBegin`      |                                                          | —       | Start recording draw commands             |
-| `dlEnd`        |                                                          | —       | Sort by layer, flush all draws, and clear |
-| `dlSpr`        | `layer, idx, x, y, w?, h?, flip_x?, flip_y?`             | —       | Queue a sprite draw at the given layer    |
-| `dlSspr`       | `layer, sx, sy, sw, sh, dx, dy, dw, dh`                  | —       | Queue a stretch-blit at the given layer   |
+| Function      | Parameters                                               | Returns | Description                               |
+| ------------- | -------------------------------------------------------- | ------- | ----------------------------------------- |
+| `dlBegin`     |                                                          | —       | Start recording draw commands             |
+| `dlEnd`       |                                                          | —       | Sort by layer, flush all draws, and clear |
+| `dlSpr`       | `layer, idx, x, y, w?, h?, flip_x?, flip_y?`             | —       | Queue a sprite draw at the given layer    |
+| `dlSspr`      | `layer, sx, sy, sw, sh, dx, dy, dw, dh`                  | —       | Queue a stretch-blit at the given layer   |
 | `dlSprRot`    | `layer, idx, x, y, angle?, cx?, cy?`                     | —       | Queue a rotated sprite draw               |
 | `dlSprAffine` | `layer, idx, x, y, origin_x?, origin_y?, rot_x?, rot_y?` | —       | Queue an affine sprite draw               |
 
@@ -176,26 +176,27 @@ games).
 
 ## `map` — Tilemaps
 
-| Function        | Parameters                                | Returns                 | Description                                                 |
-| --------------- | ----------------------------------------- | ----------------------- | ----------------------------------------------------------- | --- | -------- | ------------- | ------ | -------------------------------------- |
-| `get`           | `cx, cy, layer?, slot?`                   | `int`                   | Tile ID at cell position                                    |
-| `set`           | `cx, cy, tile, layer?, slot?`             | —                       | Set a tile ID                                               |
-| `flag`          | `cx, cy, f, slot?`                        | `bool`                  | Test sprite flag `f` on tile at (cx, cy)                    |
-| `draw`          | `sx, sy, dx, dy, tw?, th?, layer?, slot?` | —                       | Draw a map region. `tw`/`th` default to the full level size |
-| `width`         | `slot?`                                   | `int`                   | Level width in tiles                                        |
-| `height`        | `slot?`                                   | `int`                   | Level height in tiles                                       |
-| `layers`        | `slot?`                                   | `string[]`              | Array of layer names                                        |
-| `levels`        |                                           | `string[]`              | Array of all loaded level names                             |
+| Function       | Parameters                                | Returns                 | Description                                                 |
+| -------------- | ----------------------------------------- | ----------------------- | ----------------------------------------------------------- |
+| `get`          | `cx, cy, layer?, slot?`                   | `int`                   | Tile ID at cell position                                    |
+| `set`          | `cx, cy, tile, layer?, slot?`             | —                       | Set a tile ID                                               |
+| `flag`         | `cx, cy, f, slot?`                        | `bool`                  | Test sprite flag `f` on tile at (cx, cy)                    |
+| `draw`         | `sx, sy, dx, dy, tw?, th?, layer?, slot?` | —                       | Draw a map region. `tw`/`th` default to the full level size |
+| `width`        | `slot?`                                   | `int`                   | Level width in tiles                                        |
+| `height`       | `slot?`                                   | `int`                   | Level height in tiles                                       |
+| `layers`       | `slot?`                                   | `string[]`              | Array of layer names                                        |
+| `levels`       |                                           | `string[]`              | Array of all loaded level names                             |
 | `currentLevel` |                                           | `string`                | Name of the active level                                    |
-| `load`          | `name`                                    | `bool`                  | Switch active level by name                                 |
-| `objects`       | `name?, slot?`                            | `object[]`              | Get map objects, optionally filtered by name                |
-| `object`        | `name, slot?`                             | `object` or `undefined` | First object matching name                                  |
+| `load`         | `name`                                    | `bool`                  | Switch active level by name                                 |
+| `objects`      | `name?, slot?`                            | `object[]`              | Get map objects, optionally filtered by name                |
+| `object`       | `name, slot?`                             | `object` or `undefined` | First object matching name                                  |
 | `objectsIn`    | `x, y, w, h, slot?`                       | `object[]`              | AABB query for objects overlapping a rectangle              |
-| `objectsWith`  | `prop, value?, slot?`                     | `object[]`              | Filter objects by type or custom property                   |     | `create` | `w, h, name?` | `bool` | Create a blank map with one tile layer |
-| `resize`        | `w, h, slot?`                             | `bool`                  | Resize all tile layers (preserves existing data)            |
+| `objectsWith`  | `prop, value?, slot?`                     | `object[]`              | Filter objects by type or custom property                   |
+| `create`       | `w, h, name?`                             | `bool`                  | Create a blank map with one tile layer                      |
+| `resize`       | `w, h, slot?`                             | `bool`                  | Resize all tile layers (preserves existing data)            |
 | `addLayer`     | `name?, slot?`                            | `int`                   | Add a tile layer, returns index (-1 on error)               |
 | `removeLayer`  | `idx, slot?`                              | `bool`                  | Remove a layer (must keep at least one)                     |
-| `data`          | `slot?`                                   | `object` or `null`      | Full map data for serialization (name, layers, tiles)       |
+| `data`         | `slot?`                                   | `object` or `null`      | Full map data for serialization (name, layers, tiles)       |
 
 **Map object shape:**
 
@@ -388,12 +389,12 @@ Effects are managed as a stack applied after `_draw()`.
 
 ### Random number generation (xorshift64)
 
-| Function    | Parameters | Returns | Description                           |
-| ----------- | ---------- | ------- | ------------------------------------- |
-| `rnd`       | `max?`     | `float` | Random float in [0, max). Default 1.0 |
+| Function   | Parameters | Returns | Description                           |
+| ---------- | ---------- | ------- | ------------------------------------- |
+| `rnd`      | `max?`     | `float` | Random float in [0, max). Default 1.0 |
 | `rndInt`   | `max?`     | `int`   | Random int in [0, max)                |
 | `rndRange` | `lo?, hi?` | `float` | Random float in [lo, hi)              |
-| `seed`      | `s?`       | —       | Seed the PRNG (default 1)             |
+| `seed`     | `s?`       | —       | Seed the PRNG (default 1)             |
 
 ### Basic maths
 
@@ -493,13 +494,13 @@ if (score > hi) {
 
 ### Timing
 
-| Function         | Parameters | Returns | Description                    |
-| ---------------- | ---------- | ------- | ------------------------------ |
-| `time`           |            | `float` | Seconds since start            |
-| `delta`          |            | `float` | Last frame delta in seconds    |
-| `frame`          |            | `float` | Total frame count              |
-| `fps`            |            | `float` | Current FPS (1 / delta)        |
-| `targetFps`     |            | `int`   | Configured target FPS          |
+| Function       | Parameters | Returns | Description                    |
+| -------------- | ---------- | ------- | ------------------------------ |
+| `time`         |            | `float` | Seconds since start            |
+| `delta`        |            | `float` | Last frame delta in seconds    |
+| `frame`        |            | `float` | Total frame count              |
+| `fps`          |            | `float` | Current FPS (1 / delta)        |
+| `targetFps`    |            | `int`   | Configured target FPS          |
 | `setTargetFps` | `fps`      | —       | Set target FPS (clamped 1–240) |
 
 ### Audio
@@ -532,14 +533,14 @@ if (score > hi) {
 
 ### Lifecycle
 
-| Function         | Parameters | Returns | Description                                  |
-| ---------------- | ---------- | ------- | -------------------------------------------- |
-| `pause`          |            | —       | Pause the game loop                          |
-| `resume`         |            | —       | Resume from pause                            |
-| `quit`           |            | —       | Exit the engine                              |
-| `restart`        |            | —       | Restart the cart                             |
-| `paused`         |            | `bool`  | Is the game paused?                          |
-| `fullscreen`     | `enabled?` | `bool`  | Get or set fullscreen. Returns current state |
+| Function        | Parameters | Returns | Description                                  |
+| --------------- | ---------- | ------- | -------------------------------------------- |
+| `pause`         |            | —       | Pause the game loop                          |
+| `resume`        |            | —       | Resume from pause                            |
+| `quit`          |            | —       | Exit the engine                              |
+| `restart`       |            | —       | Restart the cart                             |
+| `paused`        |            | `bool`  | Is the game paused?                          |
+| `fullscreen`    | `enabled?` | `bool`  | Get or set fullscreen. Returns current state |
 | `setFullscreen` | `enabled`  | —       | Set fullscreen mode                          |
 
 ### Text Input
@@ -564,11 +565,11 @@ traversal are rejected with a `RangeError`.
 
 ### Configuration
 
-| Function | Parameters | Returns                      | Description                                                                                                                                                                                                        |
-| -------- | ---------- | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `config` | `path?`    | `any`                        | Read cart config. Dot-separated path (e.g. `"display.width"`). No argument returns the full config object                                                                                                          |
+| Function | Parameters | Returns                      | Description                                                                                                                                                                                                       |
+| -------- | ---------- | ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `config` | `path?`    | `any`                        | Read cart config. Dot-separated path (e.g. `"display.width"`). No argument returns the full config object                                                                                                         |
 | `limit`  | `key`      | `int`                        | Compile-time limit. Keys: `"fb_width"`, `"fb_height"`, `"palette_size"`, `"max_sprites"`, `"max_maps"`, `"max_map_layers"`, `"max_map_objects"`, `"max_channels"`, `"js_heap_mb"`, `"js_stack_kb"`, `"targetFps"` |
-| `stat`   | `n`        | `float`, `string`, or `bool` | PICO-8 compatible stat. `0` = memory, `1` = CPU, `7` = FPS, `32` = mouse X, `33` = mouse Y, `34` = mouse button mask, `36` = wheel, `90` = ticks                                                                   |
+| `stat`   | `n`        | `float`, `string`, or `bool` | PICO-8 compatible stat. `0` = memory, `1` = CPU, `7` = FPS, `32` = mouse X, `33` = mouse Y, `34` = mouse button mask, `36` = wheel, `90` = ticks                                                                  |
 
 ---
 

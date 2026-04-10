@@ -11,62 +11,62 @@
 
 // --- Config ----------------------------------------------------------
 
-var SPAWN_COUNT = 200; // sprites added per click/press
-var GRAVITY = 0.5; // downward acceleration per frame
-var SCREEN_W = 320;
-var SCREEN_H = 180;
-var TILE_SIZE = 16;
+const SPAWN_COUNT = 200; // sprites added per click/press
+const GRAVITY = 0.5; // downward acceleration per frame
+const SCREEN_W = 320;
+const SCREEN_H = 180;
+const TILE_SIZE = 16;
 
 // Sprite indices in the sheet (first row of tiles)
-var SPR_CHARS = [0, 1, 2];
+const SPR_CHARS = [0, 1, 2];
 
 // --- State (structure-of-arrays for cache-friendly iteration) --------
 
-var sp_x = [];
-var sp_y = [];
-var sp_vx = [];
-var sp_vy = [];
-var sp_spr = []; // resolved tile index (skip lookup at draw time)
-var sp_flip = [];
-var total = 0;
+const spX = [];
+const spY = [];
+const spVx = [];
+const spVy = [];
+const spSpr = []; // resolved tile index (skip lookup at draw time)
+const spFlip = [];
+let total = 0;
 
 // --- Helpers ---------------------------------------------------------
 
 function spawn(count) {
-    for (var i = 0; i < count; ++i) {
-        sp_x.push(math.rnd(SCREEN_W - TILE_SIZE));
-        sp_y.push(math.rnd(SCREEN_H / 2));
-        sp_vx.push(math.rndRange(-3, 3));
-        sp_vy.push(math.rndRange(-2, 0));
-        sp_spr.push(SPR_CHARS[math.rndInt(SPR_CHARS.length)]);
-        sp_flip.push(math.rnd() > 0.5);
+    for (let i = 0; i < count; ++i) {
+        spX.push(math.rnd(SCREEN_W - TILE_SIZE));
+        spY.push(math.rnd(SCREEN_H / 2));
+        spVx.push(math.rndRange(-3, 3));
+        spVy.push(math.rndRange(-2, 0));
+        spSpr.push(SPR_CHARS[math.rndInt(SPR_CHARS.length)]);
+        spFlip.push(math.rnd() > 0.5);
     }
-    total = sp_x.length;
+    total = spX.length;
 }
 
-var smooth_fps = 60;
-var fps_history = [];
-var fps_hist_idx = 0;
-var FPS_HIST_LEN = 50;
-for (var _i = 0; _i < FPS_HIST_LEN; ++_i) fps_history.push(60);
+let smoothFps = 60;
+const fpsHistory = [];
+let fpsHistIdx = 0;
+const FPS_HIST_LEN = 50;
+for (let _i = 0; _i < FPS_HIST_LEN; ++_i) fpsHistory.push(60);
 
-function draw_fps_widget() {
-    var wx = 320 - FPS_HIST_LEN - 4;
-    var wy = 0;
-    var ww = FPS_HIST_LEN + 4;
-    var gh = 16;
-    var target = sys.targetFps();
+function drawFpsWidget() {
+    const wx = 320 - FPS_HIST_LEN - 4;
+    const wy = 0;
+    const ww = FPS_HIST_LEN + 4;
+    const gh = 16;
+    const target = sys.targetFps();
     gfx.rectfill(wx, wy, wx + ww - 1, wy + 8 + gh + 1, 0);
-    gfx.print(math.flr(smooth_fps) + " FPS", wx + 2, wy + 1, 7);
+    gfx.print(`${math.flr(smoothFps)} FPS`, wx + 2, wy + 1, 7);
     gfx.rect(wx + 1, wy + 8, wx + ww - 2, wy + 8 + gh, 5);
-    for (var idx = 1; idx < FPS_HIST_LEN; ++idx) {
-        var i0 = (fps_hist_idx + idx - 1) % FPS_HIST_LEN;
-        var i1 = (fps_hist_idx + idx) % FPS_HIST_LEN;
-        var v0 = math.clamp(fps_history[i0] / target, 0, 1);
-        var v1 = math.clamp(fps_history[i1] / target, 0, 1);
-        var y0 = wy + 8 + gh - 1 - math.flr(v0 * (gh - 2));
-        var y1 = wy + 8 + gh - 1 - math.flr(v1 * (gh - 2));
-        var clr = v1 > 0.9 ? 11 : v1 > 0.5 ? 9 : 8;
+    for (let idx = 1; idx < FPS_HIST_LEN; ++idx) {
+        const i0 = (fpsHistIdx + idx - 1) % FPS_HIST_LEN;
+        const i1 = (fpsHistIdx + idx) % FPS_HIST_LEN;
+        const v0 = math.clamp(fpsHistory[i0] / target, 0, 1);
+        const v1 = math.clamp(fpsHistory[i1] / target, 0, 1);
+        const y0 = wy + 8 + gh - 1 - math.flr(v0 * (gh - 2));
+        const y1 = wy + 8 + gh - 1 - math.flr(v1 * (gh - 2));
+        const clr = v1 > 0.9 ? 11 : v1 > 0.5 ? 9 : 8;
         gfx.line(wx + 2 + idx - 1, y0, wx + 2 + idx, y1, clr);
     }
 }
@@ -80,42 +80,42 @@ function _init() {
 }
 
 function _update(dt) {
-    smooth_fps = math.lerp(smooth_fps, sys.fps(), 0.05);
-    fps_history[fps_hist_idx] = smooth_fps;
-    fps_hist_idx = (fps_hist_idx + 1) % FPS_HIST_LEN;
+    smoothFps = math.lerp(smoothFps, sys.fps(), 0.05);
+    fpsHistory[fpsHistIdx] = smoothFps;
+    fpsHistIdx = (fpsHistIdx + 1) % FPS_HIST_LEN;
     // Spawn more on click or space
     if (mouse.btnp() || key.btnp(key.SPACE)) {
         spawn(SPAWN_COUNT);
     }
 
     // Physics (SOA — flat array access, no property hash lookups)
-    var right = SCREEN_W - TILE_SIZE;
-    var bottom = SCREEN_H - TILE_SIZE;
-    var num_chars = SPR_CHARS.length;
-    for (var i = 0; i < total; ++i) {
-        sp_vy[i] += GRAVITY;
-        sp_x[i] += sp_vx[i];
-        sp_y[i] += sp_vy[i];
+    const right = SCREEN_W - TILE_SIZE;
+    const bottom = SCREEN_H - TILE_SIZE;
+    const numChars = SPR_CHARS.length;
+    for (let i = 0; i < total; ++i) {
+        spVy[i] += GRAVITY;
+        spX[i] += spVx[i];
+        spY[i] += spVy[i];
 
         // Bounce off edges
-        if (sp_x[i] < 0) {
-            sp_x[i] = 0;
-            sp_vx[i] = -sp_vx[i];
-            sp_flip[i] = !sp_flip[i];
-        } else if (sp_x[i] > right) {
-            sp_x[i] = right;
-            sp_vx[i] = -sp_vx[i];
-            sp_flip[i] = !sp_flip[i];
+        if (spX[i] < 0) {
+            spX[i] = 0;
+            spVx[i] = -spVx[i];
+            spFlip[i] = !spFlip[i];
+        } else if (spX[i] > right) {
+            spX[i] = right;
+            spVx[i] = -spVx[i];
+            spFlip[i] = !spFlip[i];
         }
 
-        if (sp_y[i] > bottom) {
-            sp_y[i] = bottom;
-            sp_vy[i] = -sp_vy[i] * 0.85;
+        if (spY[i] > bottom) {
+            spY[i] = bottom;
+            spVy[i] = -spVy[i] * 0.85;
             // Cycle animation frame on each bounce
-            sp_spr[i] = (sp_spr[i] + 1) % num_chars;
-        } else if (sp_y[i] < 0) {
-            sp_y[i] = 0;
-            sp_vy[i] = -sp_vy[i];
+            spSpr[i] = (spSpr[i] + 1) % numChars;
+        } else if (spY[i] < 0) {
+            spY[i] = 0;
+            spVy[i] = -spVy[i];
         }
     }
 }
@@ -124,16 +124,16 @@ function _draw() {
     gfx.cls(1);
 
     // Draw all sprites (pre-resolved tile index, no object access)
-    for (var i = 0; i < total; ++i) {
-        gfx.spr(sp_spr[i], sp_x[i], sp_y[i], 1, 1, sp_flip[i], false);
+    for (let i = 0; i < total; ++i) {
+        gfx.spr(spSpr[i], spX[i], spY[i], 1, 1, spFlip[i], false);
     }
 
     // HUD background
     gfx.rectfill(0, 0, 120, 18, 0);
 
     // Sprite count
-    gfx.print("sprites: " + total, 2, 2, 7);
+    gfx.print(`sprites: ${total}`, 2, 2, 7);
 
     // FPS widget
-    draw_fps_widget();
+    drawFpsWidget();
 }

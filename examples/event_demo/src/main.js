@@ -4,29 +4,29 @@
 //   system events (sys:pause, sys:resume, sys:focus_lost, sys:focus_gained)
 
 // --- FPS widget ----------------------------------------------------------
-var smooth_fps = 60;
-var fps_history = [];
-var fps_hist_idx = 0;
-var FPS_HIST_LEN = 50;
-for (var _i = 0; _i < FPS_HIST_LEN; ++_i) fps_history.push(60);
+let smoothFps = 60;
+let fpsHistory = [];
+let fpsHistIdx = 0;
+const FPS_HIST_LEN = 50;
+for (let _i = 0; _i < FPS_HIST_LEN; ++_i) fpsHistory.push(60);
 
-function draw_fps_widget() {
-    var wx = 320 - FPS_HIST_LEN - 4,
-        wy = 0;
-    var ww = FPS_HIST_LEN + 4,
-        gh = 16;
-    var target = sys.targetFps();
+function drawFpsWidget() {
+    const wx = 320 - FPS_HIST_LEN - 4;
+    const wy = 0;
+    const ww = FPS_HIST_LEN + 4;
+    const gh = 16;
+    const target = sys.targetFps();
     gfx.rectfill(wx, wy, wx + ww - 1, wy + 8 + gh + 1, 0);
-    gfx.print(math.flr(smooth_fps) + " FPS", wx + 2, wy + 1, 7);
+    gfx.print(`${math.flr(smoothFps)} FPS`, wx + 2, wy + 1, 7);
     gfx.rect(wx + 1, wy + 8, wx + ww - 2, wy + 8 + gh, 5);
-    for (var idx = 1; idx < FPS_HIST_LEN; ++idx) {
-        var i0 = (fps_hist_idx + idx - 1) % FPS_HIST_LEN;
-        var i1 = (fps_hist_idx + idx) % FPS_HIST_LEN;
-        var v0 = math.clamp(fps_history[i0] / target, 0, 1);
-        var v1 = math.clamp(fps_history[i1] / target, 0, 1);
-        var y0 = wy + 8 + gh - 1 - math.flr(v0 * (gh - 2));
-        var y1 = wy + 8 + gh - 1 - math.flr(v1 * (gh - 2));
-        var clr = v1 > 0.9 ? 11 : v1 > 0.5 ? 9 : 8;
+    for (let idx = 1; idx < FPS_HIST_LEN; ++idx) {
+        const i0 = (fpsHistIdx + idx - 1) % FPS_HIST_LEN;
+        const i1 = (fpsHistIdx + idx) % FPS_HIST_LEN;
+        const v0 = math.clamp(fpsHistory[i0] / target, 0, 1);
+        const v1 = math.clamp(fpsHistory[i1] / target, 0, 1);
+        const y0 = wy + 8 + gh - 1 - math.flr(v0 * (gh - 2));
+        const y1 = wy + 8 + gh - 1 - math.flr(v1 * (gh - 2));
+        const clr = v1 > 0.9 ? 11 : v1 > 0.5 ? 9 : 8;
         gfx.line(wx + 2 + idx - 1, y0, wx + 2 + idx, y1, clr);
     }
 }
@@ -35,27 +35,27 @@ function draw_fps_widget() {
 // Game state — a tiny coin-collecting game driven entirely by events
 // -------------------------------------------------------------------------
 
-var score = 0;
-var coins = [];
-var MAX_COINS = 8;
-var player_x = 160;
-var player_y = 90;
-var SPEED = 80;
+let score = 0;
+let coins = [];
+const MAX_COINS = 8;
+let playerX = 160;
+let playerY = 90;
+const SPEED = 80;
 
 // Event log displayed on screen
-var event_log = [];
-var MAX_LOG = 12;
-var handle_score = -1;
-var handle_spawn = -1;
-var combo = 0;
-var combo_handle = -1;
+const eventLog = [];
+const MAX_LOG = 12;
+let handleScore = -1;
+let _handleSpawn = -1;
+let combo = 0;
+let _comboHandle = -1;
 
-function log_event(msg) {
-    event_log.push({ text: msg, age: 0 });
-    if (event_log.length > MAX_LOG) event_log.shift();
+function logEvent(msg) {
+    eventLog.push({ text: msg, age: 0 });
+    if (eventLog.length > MAX_LOG) eventLog.shift();
 }
 
-function spawn_coin() {
+function spawnCoin() {
     if (coins.length >= MAX_COINS) return;
     coins.push({
         x: math.rndInt(304) + 8,
@@ -68,114 +68,111 @@ function _init() {
     // --- Custom game events ---
 
     // Score handler — persistent
-    handle_score = evt.on("coin:collect", function (e) {
+    handleScore = evt.on('coin:collect', (e) => {
         score += e.value;
         combo++;
-        log_event("coin:collect  score=" + score + " combo=" + combo);
+        logEvent(`coin:collect  score=${score} combo=${combo}`);
     });
 
     // Coin respawn — persistent
-    handle_spawn = evt.on("coin:collect", function () {
+    _handleSpawn = evt.on('coin:collect', () => {
         // Queue a new spawn event
-        evt.emit("coin:spawn");
+        evt.emit('coin:spawn');
     });
 
     // Spawn handler
-    evt.on("coin:spawn", function () {
-        spawn_coin();
-        log_event("coin:spawn  total=" + (coins.length + 1));
+    evt.on('coin:spawn', () => {
+        spawnCoin();
+        logEvent(`coin:spawn  total=${coins.length + 1}`);
     });
 
     // Combo reset — one-shot, re-registered each time
-    function register_combo_reset() {
-        combo_handle = evt.once("combo:reset", function () {
-            log_event("combo:reset  was=" + combo);
+    function registerComboReset() {
+        _comboHandle = evt.once('combo:reset', () => {
+            logEvent(`combo:reset  was=${combo}`);
             combo = 0;
-            register_combo_reset(); // re-register
+            registerComboReset(); // re-register
         });
     }
-    register_combo_reset();
+    registerComboReset();
 
     // --- System events ---
-    evt.on("sys:pause", function () {
-        log_event(">>> sys:pause");
+    evt.on('sys:pause', () => {
+        logEvent('>>> sys:pause');
     });
-    evt.on("sys:resume", function () {
-        log_event(">>> sys:resume");
+    evt.on('sys:resume', () => {
+        logEvent('>>> sys:resume');
     });
-    evt.on("sys:focus_lost", function () {
-        log_event(">>> sys:focus_lost");
+    evt.on('sys:focus_lost', () => {
+        logEvent('>>> sys:focus_lost');
     });
-    evt.on("sys:focus_gained", function () {
-        log_event(">>> sys:focus_gained");
+    evt.on('sys:focus_gained', () => {
+        logEvent('>>> sys:focus_gained');
     });
 
     // Spawn initial coins
-    for (var i = 0; i < 5; ++i) spawn_coin();
+    for (let i = 0; i < 5; ++i) spawnCoin();
 
-    log_event("Game started! Collect coins with arrow keys.");
-    log_event("Press O to evt.off score handler, R to re-register.");
+    logEvent('Game started! Collect coins with arrow keys.');
+    logEvent('Press O to evt.off score handler, R to re-register.');
 }
 
-var combo_timer = 0;
+let comboTimer = 0;
 
 function _update(dt) {
-    smooth_fps = math.lerp(smooth_fps, sys.fps(), 0.05);
-    fps_history[fps_hist_idx] = smooth_fps;
-    fps_hist_idx = (fps_hist_idx + 1) % FPS_HIST_LEN;
+    smoothFps = math.lerp(smoothFps, sys.fps(), 0.05);
+    fpsHistory[fpsHistIdx] = smoothFps;
+    fpsHistIdx = (fpsHistIdx + 1) % FPS_HIST_LEN;
 
     // Age log entries
-    for (var i = 0; i < event_log.length; ++i) {
-        event_log[i].age += dt;
+    for (let i = 0; i < eventLog.length; ++i) {
+        eventLog[i].age += dt;
     }
 
     // Movement
-    if (input.btn("left")) player_x -= SPEED * dt;
-    if (input.btn("right")) player_x += SPEED * dt;
-    if (input.btn("up")) player_y -= SPEED * dt;
-    if (input.btn("down")) player_y += SPEED * dt;
-    player_x = math.clamp(player_x, 0, 312);
-    player_y = math.clamp(player_y, 0, 172);
+    if (input.btn('left')) playerX -= SPEED * dt;
+    if (input.btn('right')) playerX += SPEED * dt;
+    if (input.btn('up')) playerY -= SPEED * dt;
+    if (input.btn('down')) playerY += SPEED * dt;
+    playerX = math.clamp(playerX, 0, 312);
+    playerY = math.clamp(playerY, 0, 172);
 
     // Check coin collisions
-    for (var c = coins.length - 1; c >= 0; --c) {
-        if (
-            !coins[c].collected &&
-            col.rect(player_x, player_y, 8, 8, coins[c].x, coins[c].y, 6, 6)
-        ) {
+    for (let c = coins.length - 1; c >= 0; --c) {
+        if (!coins[c].collected && col.rect(playerX, playerY, 8, 8, coins[c].x, coins[c].y, 6, 6)) {
             coins[c].collected = true;
             coins.splice(c, 1);
-            evt.emit("coin:collect", { value: 10 });
-            combo_timer = 1.5;
+            evt.emit('coin:collect', { value: 10 });
+            comboTimer = 1.5;
         }
     }
 
     // Combo timeout
     if (combo > 0) {
-        combo_timer -= dt;
-        if (combo_timer <= 0) {
-            evt.emit("combo:reset");
+        comboTimer -= dt;
+        if (comboTimer <= 0) {
+            evt.emit('combo:reset');
         }
     }
 
     // Toggle score handler with O key
     if (key.btnp(key.O)) {
-        if (handle_score >= 0) {
-            evt.off(handle_score);
-            handle_score = -1;
-            log_event("evt.off(score handler) — coins won't add score!");
+        if (handleScore >= 0) {
+            evt.off(handleScore);
+            handleScore = -1;
+            logEvent("evt.off(score handler) — coins won't add score!");
         }
     }
 
     // Re-register score handler with R key
     if (key.btnp(key.R)) {
-        if (handle_score < 0) {
-            handle_score = evt.on("coin:collect", function (e) {
+        if (handleScore < 0) {
+            handleScore = evt.on('coin:collect', (e) => {
                 score += e.value;
                 combo++;
-                log_event("coin:collect  score=" + score + " combo=" + combo);
+                logEvent(`coin:collect  score=${score} combo=${combo}`);
             });
-            log_event("Re-registered score handler");
+            logEvent('Re-registered score handler');
         }
     }
 }
@@ -184,56 +181,56 @@ function _draw() {
     gfx.cls(1);
 
     // Draw coins
-    for (var c = 0; c < coins.length; ++c) {
+    for (let c = 0; c < coins.length; ++c) {
         gfx.circfill(coins[c].x + 3, coins[c].y + 3, 3, 10);
         gfx.circ(coins[c].x + 3, coins[c].y + 3, 3, 9);
     }
 
     // Draw player
-    gfx.rectfill(player_x, player_y, player_x + 7, player_y + 7, 8);
-    gfx.rect(player_x, player_y, player_x + 7, player_y + 7, 2);
+    gfx.rectfill(playerX, playerY, playerX + 7, playerY + 7, 8);
+    gfx.rect(playerX, playerY, playerX + 7, playerY + 7, 2);
 
     // Score / combo HUD
     gfx.rectfill(0, 0, 160, 9, 0);
-    gfx.print("SCORE: " + score + "  COMBO: " + combo, 2, 1, 7);
+    gfx.print(`SCORE: ${score}  COMBO: ${combo}`, 2, 1, 7);
 
     // Event log panel
-    var lx = 1;
-    var ly = 180 - MAX_LOG * 7 - 2;
+    const lx = 1;
+    const ly = 180 - MAX_LOG * 7 - 2;
     gfx.rectfill(0, ly - 1, 200, 179, 0);
-    gfx.print("-- event log --", lx, ly - 8, 6);
-    for (var i = 0; i < event_log.length; ++i) {
-        var entry = event_log[i];
-        var c2 = entry.age < 0.5 ? 7 : entry.age < 2 ? 6 : 5;
+    gfx.print('-- event log --', lx, ly - 8, 6);
+    for (let i = 0; i < eventLog.length; ++i) {
+        const entry = eventLog[i];
+        const c2 = entry.age < 0.5 ? 7 : entry.age < 2 ? 6 : 5;
         gfx.print(entry.text, lx, ly + i * 7, c2);
     }
 
     // Controls hint
-    gfx.print("O=off score  R=re-register", 2, 172, 5);
+    gfx.print('O=off score  R=re-register', 2, 172, 5);
 
-    draw_fps_widget();
+    drawFpsWidget();
 }
 
 function _save() {
     return {
-        score: score,
-        player_x: player_x,
-        player_y: player_y,
-        coins: coins,
-        combo: combo,
-        smooth_fps: smooth_fps,
-        fps_history: fps_history,
-        fps_hist_idx: fps_hist_idx,
+        score,
+        playerX,
+        playerY,
+        coins,
+        combo,
+        smoothFps,
+        fpsHistory,
+        fpsHistIdx,
     };
 }
 
 function _restore(s) {
     score = s.score;
-    player_x = s.player_x;
-    player_y = s.player_y;
+    playerX = s.playerX;
+    playerY = s.playerY;
     coins = s.coins;
     combo = s.combo;
-    smooth_fps = s.smooth_fps;
-    fps_history = s.fps_history;
-    fps_hist_idx = s.fps_hist_idx;
+    smoothFps = s.smoothFps;
+    fpsHistory = s.fpsHistory;
+    fpsHistIdx = s.fpsHistIdx;
 }

@@ -14,38 +14,38 @@
 
 // --- Constants -------------------------------------------------------
 
-var MAP_W = 40; // tiles wide
-var MAP_H = 23; // tiles tall
-var TILE = 8; // tile size in pixels
+const MAP_W = 40; // tiles wide
+const MAP_H = 23; // tiles tall
+const TILE = 8; // tile size in pixels
 
 // Camera position (top-left)
-var cam_x = 0;
-var cam_y = 0;
+let camX = 0;
+let camY = 0;
 
 // Cursor position in tiles
-var cur_cx = 5;
-var cur_cy = 5;
+let curCx = 5;
+let curCy = 5;
 
 // Fake tile data (since we have no Tiled map loaded)
 // We'll draw our own grid using pset/rectfill as a placeholder.
-var tiles = [];
+const tiles = [];
 
 // --- Helpers ---------------------------------------------------------
 
-function tile_at(cx, cy) {
+function tileAt(cx, cy) {
     if (cx < 0 || cy < 0 || cx >= MAP_W || cy >= MAP_H) return 0;
     return tiles[cy * MAP_W + cx];
 }
 
-function set_tile(cx, cy, t) {
+function setTile(cx, cy, t) {
     if (cx < 0 || cy < 0 || cx >= MAP_W || cy >= MAP_H) return;
     tiles[cy * MAP_W + cx] = t;
 }
 
 // Procedural map: border walls + random scatter
-function generate_map() {
-    for (var y = 0; y < MAP_H; ++y) {
-        for (var x = 0; x < MAP_W; ++x) {
+function generateMap() {
+    for (let y = 0; y < MAP_H; ++y) {
+        for (let x = 0; x < MAP_W; ++x) {
             if (x === 0 || y === 0 || x === MAP_W - 1 || y === MAP_H - 1) {
                 tiles.push(1); // wall
             } else if (math.rnd() < 0.08) {
@@ -58,31 +58,31 @@ function generate_map() {
 }
 
 // Tile colours for placeholder rendering
-var tile_colors = [1, 5, 3]; // floor=dark blue, wall=dark grey, deco=green
+const tileColors = [1, 5, 3]; // floor=dark blue, wall=dark grey, deco=green
 
-var smooth_fps = 60;
-var fps_history = [];
-var fps_hist_idx = 0;
-var FPS_HIST_LEN = 50;
-for (var _i = 0; _i < FPS_HIST_LEN; ++_i) fps_history.push(60);
+let smoothFps = 60;
+const fpsHistory = [];
+let fpsHistIdx = 0;
+const FPS_HIST_LEN = 50;
+for (let _i = 0; _i < FPS_HIST_LEN; ++_i) fpsHistory.push(60);
 
-function draw_fps_widget() {
-    var wx = 320 - FPS_HIST_LEN - 4;
-    var wy = 0;
-    var ww = FPS_HIST_LEN + 4;
-    var gh = 16;
-    var target = sys.targetFps();
+function drawFpsWidget() {
+    const wx = 320 - FPS_HIST_LEN - 4;
+    const wy = 0;
+    const ww = FPS_HIST_LEN + 4;
+    const gh = 16;
+    const target = sys.targetFps();
     gfx.rectfill(wx, wy, wx + ww - 1, wy + 8 + gh + 1, 0);
-    gfx.print(math.flr(smooth_fps) + " FPS", wx + 2, wy + 1, 7);
+    gfx.print(`${math.flr(smoothFps)} FPS`, wx + 2, wy + 1, 7);
     gfx.rect(wx + 1, wy + 8, wx + ww - 2, wy + 8 + gh, 5);
-    for (var idx = 1; idx < FPS_HIST_LEN; ++idx) {
-        var i0 = (fps_hist_idx + idx - 1) % FPS_HIST_LEN;
-        var i1 = (fps_hist_idx + idx) % FPS_HIST_LEN;
-        var v0 = math.clamp(fps_history[i0] / target, 0, 1);
-        var v1 = math.clamp(fps_history[i1] / target, 0, 1);
-        var y0 = wy + 8 + gh - 1 - math.flr(v0 * (gh - 2));
-        var y1 = wy + 8 + gh - 1 - math.flr(v1 * (gh - 2));
-        var clr = v1 > 0.9 ? 11 : v1 > 0.5 ? 9 : 8;
+    for (let idx = 1; idx < FPS_HIST_LEN; ++idx) {
+        const i0 = (fpsHistIdx + idx - 1) % FPS_HIST_LEN;
+        const i1 = (fpsHistIdx + idx) % FPS_HIST_LEN;
+        const v0 = math.clamp(fpsHistory[i0] / target, 0, 1);
+        const v1 = math.clamp(fpsHistory[i1] / target, 0, 1);
+        const y0 = wy + 8 + gh - 1 - math.flr(v0 * (gh - 2));
+        const y1 = wy + 8 + gh - 1 - math.flr(v1 * (gh - 2));
+        const clr = v1 > 0.9 ? 11 : v1 > 0.5 ? 9 : 8;
         gfx.line(wx + 2 + idx - 1, y0, wx + 2 + idx, y1, clr);
     }
 }
@@ -91,46 +91,46 @@ function draw_fps_widget() {
 
 function _init() {
     math.seed(42);
-    generate_map();
+    generateMap();
 }
 
 function _update(dt) {
-    smooth_fps = math.lerp(smooth_fps, sys.fps(), 0.05);
-    fps_history[fps_hist_idx] = smooth_fps;
-    fps_hist_idx = (fps_hist_idx + 1) % FPS_HIST_LEN;
+    smoothFps = math.lerp(smoothFps, sys.fps(), 0.05);
+    fpsHistory[fpsHistIdx] = smoothFps;
+    fpsHistIdx = (fpsHistIdx + 1) % FPS_HIST_LEN;
     // Move cursor with input actions
-    if (input.btnp("left") && cur_cx > 0) --cur_cx;
-    if (input.btnp("right") && cur_cx < MAP_W - 1) ++cur_cx;
-    if (input.btnp("up") && cur_cy > 0) --cur_cy;
-    if (input.btnp("down") && cur_cy < MAP_H - 1) ++cur_cy;
+    if (input.btnp('left') && curCx > 0) --curCx;
+    if (input.btnp('right') && curCx < MAP_W - 1) ++curCx;
+    if (input.btnp('up') && curCy > 0) --curCy;
+    if (input.btnp('down') && curCy < MAP_H - 1) ++curCy;
 
     // Toggle tile under cursor with Z
     if (key.btnp(key.Z)) {
-        var t = tile_at(cur_cx, cur_cy);
-        set_tile(cur_cx, cur_cy, t === 0 ? 1 : 0);
+        const t = tileAt(curCx, curCy);
+        setTile(curCx, curCy, t === 0 ? 1 : 0);
     }
 
     // Smooth camera follow
-    var target_x = cur_cx * TILE - 160 + 4;
-    var target_y = cur_cy * TILE - 90 + 4;
-    cam_x += (target_x - cam_x) * 0.1;
-    cam_y += (target_y - cam_y) * 0.1;
+    const targetX = curCx * TILE - 160 + 4;
+    const targetY = curCy * TILE - 90 + 4;
+    camX += (targetX - camX) * 0.1;
+    camY += (targetY - camY) * 0.1;
 
     // Clamp camera
-    var max_cx = MAP_W * TILE - 320;
-    var max_cy = MAP_H * TILE - 180;
-    if (cam_x < 0) cam_x = 0;
-    if (cam_y < 0) cam_y = 0;
-    if (cam_x > max_cx) cam_x = max_cx;
-    if (cam_y > max_cy) cam_y = max_cy;
+    const maxCx = MAP_W * TILE - 320;
+    const maxCy = MAP_H * TILE - 180;
+    if (camX < 0) camX = 0;
+    if (camY < 0) camY = 0;
+    if (camX > maxCx) camX = maxCx;
+    if (camY > maxCy) camY = maxCy;
 }
 
 function _draw() {
     gfx.cls(0);
 
     // Apply camera offset
-    var ox = -math.flr(cam_x);
-    var oy = -math.flr(cam_y);
+    const ox = -math.flr(camX);
+    const oy = -math.flr(camY);
     gfx.camera(-ox, -oy);
 
     // NOTE: With a real Tiled map, you would call:
@@ -139,29 +139,29 @@ function _draw() {
     // Since we have no map loaded, we draw placeholder tiles manually:
 
     // Batch-draw the entire visible tilemap in one native call
-    gfx.tilemap(tiles, MAP_W, MAP_H, tile_colors);
+    gfx.tilemap(tiles, MAP_W, MAP_H, tileColors);
 
     // Overlay details on special tiles (only walls/deco, not every tile)
-    var start_tx = math.flr(cam_x / TILE);
-    var start_ty = math.flr(cam_y / TILE);
-    var end_tx = start_tx + 41;
-    var end_ty = start_ty + 24;
+    let startTx = math.flr(camX / TILE);
+    let startTy = math.flr(camY / TILE);
+    let endTx = startTx + 41;
+    let endTy = startTy + 24;
 
-    if (end_tx > MAP_W) end_tx = MAP_W;
-    if (end_ty > MAP_H) end_ty = MAP_H;
-    if (start_tx < 0) start_tx = 0;
-    if (start_ty < 0) start_ty = 0;
+    if (endTx > MAP_W) endTx = MAP_W;
+    if (endTy > MAP_H) endTy = MAP_H;
+    if (startTx < 0) startTx = 0;
+    if (startTy < 0) startTy = 0;
 
-    for (var ty = start_ty; ty < end_ty; ++ty) {
-        for (var tx = start_tx; tx < end_tx; ++tx) {
-            var t = tile_at(tx, ty);
+    for (let ty = startTy; ty < endTy; ++ty) {
+        for (let tx = startTx; tx < endTx; ++tx) {
+            const t = tileAt(tx, ty);
             if (t === 1) {
-                var px = tx * TILE;
-                var py = ty * TILE;
+                const px = tx * TILE;
+                const py = ty * TILE;
                 gfx.rect(px, py, px + TILE - 1, py + TILE - 1, 6);
             } else if (t === 2) {
-                var px = tx * TILE;
-                var py = ty * TILE;
+                const px = tx * TILE;
+                const py = ty * TILE;
                 gfx.pset(px + 3, py + 3, 11);
                 gfx.pset(px + 4, py + 3, 11);
                 gfx.pset(px + 3, py + 4, 11);
@@ -171,9 +171,9 @@ function _draw() {
     }
 
     // Draw cursor
-    var cx_px = cur_cx * TILE;
-    var cy_px = cur_cy * TILE;
-    gfx.rect(cx_px - 1, cy_px - 1, cx_px + TILE, cy_px + TILE, 8);
+    const cxPx = curCx * TILE;
+    const cyPx = curCy * TILE;
+    gfx.rect(cxPx - 1, cyPx - 1, cxPx + TILE, cyPx + TILE, 8);
 
     // Reset camera for HUD
     gfx.camera(0, 0);
@@ -181,18 +181,12 @@ function _draw() {
     // HUD
     gfx.rectfill(0, 0, 319, 10, 0);
     gfx.print(
-        "tilemap demo  cursor:" +
-            cur_cx +
-            "," +
-            cur_cy +
-            "  tile:" +
-            tile_at(cur_cx, cur_cy) +
-            "  Z=toggle",
+        `tilemap demo  cursor:${curCx},${curCy}  tile:${tileAt(curCx, curCy)}  Z=toggle`,
         2,
         2,
         7,
     );
 
     // FPS widget
-    draw_fps_widget();
+    drawFpsWidget();
 }

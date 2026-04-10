@@ -1,7 +1,7 @@
 // ─── Vim mode ────────────────────────────────────────────────────────────────
 
-import { st } from "./state.js";
-import { EDIT_Y, FOOT_Y, CH, LINE_H, GUTTER, CW } from "./config.js";
+import { st } from './state.js';
+import { EDIT_Y, FOOT_Y, LINE_H, GUTTER, CW } from './config.js';
 import {
     clamp,
     ensureVisible,
@@ -12,7 +12,7 @@ import {
     vimWordForward,
     vimWordBack,
     vimWordEnd,
-} from "./helpers.js";
+} from './helpers.js';
 import {
     selText,
     deleteSel,
@@ -21,26 +21,26 @@ import {
     saveFile,
     openBrowser,
     closeFile,
-} from "./buffer.js";
+} from './buffer.js';
 
 export function updateVimKeys() {
-    if (st.vim === "command") {
+    if (st.vim === 'command') {
         if (key.btnp(key.ESCAPE)) {
-            st.vim = "normal";
-            st.vimCmd = "";
+            st.vim = 'normal';
+            st.vimCmd = '';
             return;
         }
         if (key.btnp(key.ENTER)) {
             vimExecCmd(st.vimCmd);
-            st.vim = "normal";
-            st.vimCmd = "";
+            st.vim = 'normal';
+            st.vimCmd = '';
             return;
         }
         if (key.btnr(key.BACKSPACE)) {
             if (st.vimCmd.length > 0) {
                 st.vimCmd = st.vimCmd.slice(0, -1);
             } else {
-                st.vim = "normal";
+                st.vim = 'normal';
             }
             return;
         }
@@ -48,20 +48,20 @@ export function updateVimKeys() {
     }
 
     if (key.btnp(key.ESCAPE)) {
-        if (st.vim === "visual" || st.vim === "vline") {
-            st.vim = "normal";
+        if (st.vim === 'visual' || st.vim === 'vline') {
+            st.vim = 'normal';
             st.anchor = null;
         }
-        st.vimCount = "";
-        st.vimPending = "";
+        st.vimCount = '';
+        st.vimPending = '';
         return;
     }
 
-    let mx = mouse.x();
-    let my = mouse.y();
-    let editY = EDIT_Y;
-    let footY = FOOT_Y;
-    let gutterPx = GUTTER * CW;
+    const mx = mouse.x();
+    const my = mouse.y();
+    const editY = EDIT_Y;
+    const footY = FOOT_Y;
+    const gutterPx = GUTTER * CW;
 
     if (my >= editY && my < footY && mx >= gutterPx) {
         if (mouse.btnp(0)) {
@@ -71,7 +71,7 @@ export function updateVimKeys() {
             col = clamp(col, 0, Math.max(0, st.buf[row].length - 1));
             st.cx = col;
             st.cy = row;
-            if (st.vim !== "visual" && st.vim !== "vline") st.anchor = null;
+            if (st.vim !== 'visual' && st.vim !== 'vline') st.anchor = null;
             ensureVisible();
             resetBlink();
         }
@@ -81,125 +81,125 @@ export function updateVimKeys() {
 // ── Vim normal mode dispatch ──
 
 export function vimNormal(ch) {
-    if (st.vim === "visual" || st.vim === "vline") {
+    if (st.vim === 'visual' || st.vim === 'vline') {
         vimVisual(ch);
         return;
     }
 
-    if ((ch >= "1" && ch <= "9") || (ch === "0" && st.vimCount !== "")) {
+    if ((ch >= '1' && ch <= '9') || (ch === '0' && st.vimCount !== '')) {
         st.vimCount += ch;
         return;
     }
 
-    let count = st.vimCount !== "" ? parseInt(st.vimCount) : 1;
-    st.vimCount = "";
+    const count = st.vimCount !== '' ? parseInt(st.vimCount, 10) : 1;
+    st.vimCount = '';
 
-    if (st.vimPending !== "") {
+    if (st.vimPending !== '') {
         vimResolvePending(ch, count);
         return;
     }
 
     switch (ch) {
-        case "i":
-            st.vim = "insert";
+        case 'i':
+            st.vim = 'insert';
             return;
-        case "I":
+        case 'I':
             st.cx = firstNonBlank(st.cy);
-            st.vim = "insert";
+            st.vim = 'insert';
             return;
-        case "a":
+        case 'a':
             st.cx = Math.min(st.cx + 1, st.buf[st.cy].length);
-            st.vim = "insert";
+            st.vim = 'insert';
             return;
-        case "A":
+        case 'A':
             st.cx = st.buf[st.cy].length;
-            st.vim = "insert";
+            st.vim = 'insert';
             return;
-        case "o": {
+        case 'o': {
             pushUndo();
-            let ind = getIndent(st.cy);
+            const ind = getIndent(st.cy);
             st.buf.splice(st.cy + 1, 0, ind);
             st.cy++;
             st.cx = ind.length;
             st.dirty = true;
-            st.vim = "insert";
+            st.vim = 'insert';
             ensureVisible();
             resetBlink();
             return;
         }
-        case "O": {
+        case 'O': {
             pushUndo();
-            let ind = getIndent(st.cy);
+            const ind = getIndent(st.cy);
             st.buf.splice(st.cy, 0, ind);
             st.cx = ind.length;
             st.dirty = true;
-            st.vim = "insert";
+            st.vim = 'insert';
             ensureVisible();
             resetBlink();
             return;
         }
-        case "v":
+        case 'v':
             st.anchor = { x: st.cx, y: st.cy };
-            st.vim = "visual";
+            st.vim = 'visual';
             return;
-        case "V":
+        case 'V':
             st.vimVlineStart = st.cy;
             st.anchor = { x: 0, y: st.cy };
             st.cx = st.buf[st.cy].length;
-            st.vim = "vline";
+            st.vim = 'vline';
             return;
-        case ":":
-            st.vim = "command";
-            st.vimCmd = "";
+        case ':':
+            st.vim = 'command';
+            st.vimCmd = '';
             return;
-        case "/":
-            st.vim = "command";
-            st.vimCmd = "/";
+        case '/':
+            st.vim = 'command';
+            st.vimCmd = '/';
             return;
 
-        case "h":
+        case 'h':
             for (let i = 0; i < count; i++) if (st.cx > 0) st.cx--;
             break;
-        case "j":
+        case 'j':
             for (let i = 0; i < count; i++) if (st.cy < st.buf.length - 1) st.cy++;
             st.cx = clamp(st.cx, 0, Math.max(0, st.buf[st.cy].length - 1));
             break;
-        case "k":
+        case 'k':
             for (let i = 0; i < count; i++) if (st.cy > 0) st.cy--;
             st.cx = clamp(st.cx, 0, Math.max(0, st.buf[st.cy].length - 1));
             break;
-        case "l":
+        case 'l':
             for (let i = 0; i < count; i++) if (st.cx < st.buf[st.cy].length - 1) st.cx++;
             break;
-        case "w":
+        case 'w':
             for (let i = 0; i < count; i++) vimWordForward();
             break;
-        case "b":
+        case 'b':
             for (let i = 0; i < count; i++) vimWordBack();
             break;
-        case "e":
+        case 'e':
             for (let i = 0; i < count; i++) vimWordEnd();
             break;
-        case "0":
+        case '0':
             st.cx = 0;
             break;
-        case "$":
+        case '$':
             st.cx = Math.max(0, st.buf[st.cy].length - 1);
             break;
-        case "^":
+        case '^':
             st.cx = firstNonBlank(st.cy);
             break;
-        case "G":
+        case 'G':
             if (count > 1) st.cy = clamp(count - 1, 0, st.buf.length - 1);
             else st.cy = st.buf.length - 1;
             st.cx = firstNonBlank(st.cy);
             break;
-        case "g":
-            st.vimPending = "g";
+        case 'g':
+            st.vimPending = 'g';
             st.vimOpCount = count;
             return;
 
-        case "x":
+        case 'x':
             pushUndo();
             for (let i = 0; i < count; i++) {
                 if (st.cx < st.buf[st.cy].length) {
@@ -211,7 +211,7 @@ export function vimNormal(ch) {
             st.vimLinewise = false;
             if (st.cx >= st.buf[st.cy].length && st.cx > 0) st.cx = st.buf[st.cy].length - 1;
             break;
-        case "s":
+        case 's':
             pushUndo();
             if (st.cx < st.buf[st.cy].length) {
                 st.vimReg = st.buf[st.cy][st.cx];
@@ -219,32 +219,32 @@ export function vimNormal(ch) {
                 st.dirty = true;
             }
             st.vimLinewise = false;
-            st.vim = "insert";
+            st.vim = 'insert';
             break;
-        case "r":
-            st.vimPending = "r";
+        case 'r':
+            st.vimPending = 'r';
             return;
-        case "p":
+        case 'p':
             vimPaste(false, count);
             break;
-        case "P":
+        case 'P':
             vimPaste(true, count);
             break;
-        case "u":
+        case 'u':
             for (let i = 0; i < count; i++) doUndo();
             break;
-        case "J":
+        case 'J':
             pushUndo();
             for (let i = 0; i < count; i++) {
                 if (st.cy < st.buf.length - 1) {
-                    let trail = st.buf[st.cy + 1].replace(/^\s+/, "");
-                    st.buf[st.cy] += (trail ? " " : "") + trail;
+                    const trail = st.buf[st.cy + 1].replace(/^\s+/, '');
+                    st.buf[st.cy] += (trail ? ' ' : '') + trail;
                     st.buf.splice(st.cy + 1, 1);
                     st.dirty = true;
                 }
             }
             break;
-        case "D":
+        case 'D':
             pushUndo();
             st.vimReg = st.buf[st.cy].slice(st.cx);
             st.vimLinewise = false;
@@ -252,32 +252,32 @@ export function vimNormal(ch) {
             if (st.cx > 0) st.cx--;
             st.dirty = true;
             break;
-        case "C":
+        case 'C':
             pushUndo();
             st.vimReg = st.buf[st.cy].slice(st.cx);
             st.vimLinewise = false;
             st.buf[st.cy] = st.buf[st.cy].slice(0, st.cx);
             st.dirty = true;
-            st.vim = "insert";
+            st.vim = 'insert';
             break;
 
-        case "d":
-            st.vimPending = "d";
+        case 'd':
+            st.vimPending = 'd';
             st.vimOpCount = count;
             return;
-        case "c":
-            st.vimPending = "c";
+        case 'c':
+            st.vimPending = 'c';
             st.vimOpCount = count;
             return;
-        case "y":
-            st.vimPending = "y";
+        case 'y':
+            st.vimPending = 'y';
             st.vimOpCount = count;
             return;
 
-        case "n":
+        case 'n':
             for (let i = 0; i < count; i++) vimSearchNext(1);
             break;
-        case "N":
+        case 'N':
             for (let i = 0; i < count; i++) vimSearchNext(-1);
             break;
 
@@ -292,87 +292,89 @@ export function vimNormal(ch) {
 // ── Vim visual mode ──
 
 function vimVisual(ch) {
-    if ((ch >= "1" && ch <= "9") || (ch === "0" && st.vimCount !== "")) {
+    if ((ch >= '1' && ch <= '9') || (ch === '0' && st.vimCount !== '')) {
         st.vimCount += ch;
         return;
     }
 
-    let count = st.vimCount !== "" ? parseInt(st.vimCount) : 1;
-    st.vimCount = "";
+    const count = st.vimCount !== '' ? parseInt(st.vimCount, 10) : 1;
+    st.vimCount = '';
 
     switch (ch) {
-        case "d":
-        case "x":
+        case 'd':
+        case 'x':
             st.vimReg = selText();
-            st.vimLinewise = st.vim === "vline";
+            st.vimLinewise = st.vim === 'vline';
             deleteSel();
-            st.vim = "normal";
+            st.vim = 'normal';
             if (st.cx >= st.buf[st.cy].length && st.cx > 0) st.cx = st.buf[st.cy].length - 1;
             ensureVisible();
             resetBlink();
             return;
-        case "y":
+        case 'y':
             st.vimReg = selText();
-            st.vimLinewise = st.vim === "vline";
+            st.vimLinewise = st.vim === 'vline';
             st.anchor = null;
-            st.vim = "normal";
-            status("Yanked");
+            st.vim = 'normal';
+            status('Yanked');
             return;
-        case "c":
+        case 'c':
             st.vimReg = selText();
-            st.vimLinewise = st.vim === "vline";
+            st.vimLinewise = st.vim === 'vline';
             deleteSel();
-            st.vim = "insert";
+            st.vim = 'insert';
             ensureVisible();
             resetBlink();
             return;
+        default:
+            break;
     }
 
     switch (ch) {
-        case "h":
+        case 'h':
             for (let i = 0; i < count; i++) if (st.cx > 0) st.cx--;
             break;
-        case "j":
+        case 'j':
             for (let i = 0; i < count; i++) if (st.cy < st.buf.length - 1) st.cy++;
             st.cx = clamp(st.cx, 0, st.buf[st.cy].length);
             break;
-        case "k":
+        case 'k':
             for (let i = 0; i < count; i++) if (st.cy > 0) st.cy--;
             st.cx = clamp(st.cx, 0, st.buf[st.cy].length);
             break;
-        case "l":
+        case 'l':
             for (let i = 0; i < count; i++) if (st.cx < st.buf[st.cy].length) st.cx++;
             break;
-        case "w":
+        case 'w':
             for (let i = 0; i < count; i++) vimWordForward();
             break;
-        case "b":
+        case 'b':
             for (let i = 0; i < count; i++) vimWordBack();
             break;
-        case "e":
+        case 'e':
             for (let i = 0; i < count; i++) vimWordEnd();
             break;
-        case "0":
+        case '0':
             st.cx = 0;
             break;
-        case "$":
+        case '$':
             st.cx = st.buf[st.cy].length;
             break;
-        case "^":
+        case '^':
             st.cx = firstNonBlank(st.cy);
             break;
-        case "G":
+        case 'G':
             st.cy = st.buf.length - 1;
             st.cx = clamp(st.cx, 0, st.buf[st.cy].length);
             break;
-        case "g":
-            st.vimPending = "g";
+        case 'g':
+            st.vimPending = 'g';
             return;
         default:
             return;
     }
 
-    if (st.vim === "vline") {
+    if (st.vim === 'vline') {
         if (st.cy >= st.vimVlineStart) {
             st.anchor = { x: 0, y: st.vimVlineStart };
             st.cx = st.buf[st.cy].length;
@@ -389,14 +391,14 @@ function vimVisual(ch) {
 // ── Resolve pending operator ──
 
 function vimResolvePending(ch, motionCount) {
-    let op = st.vimPending;
-    let opCount = st.vimOpCount;
-    st.vimPending = "";
+    const op = st.vimPending;
+    const opCount = st.vimOpCount;
+    st.vimPending = '';
     st.vimOpCount = 1;
 
-    let totalCount = opCount * motionCount;
+    const totalCount = opCount * motionCount;
 
-    if (op === "r") {
+    if (op === 'r') {
         pushUndo();
         if (st.cx < st.buf[st.cy].length) {
             st.buf[st.cy] = st.buf[st.cy].slice(0, st.cx) + ch + st.buf[st.cy].slice(st.cx + 1);
@@ -407,8 +409,8 @@ function vimResolvePending(ch, motionCount) {
         return;
     }
 
-    if (op === "g") {
-        if (ch === "g") {
+    if (op === 'g') {
+        if (ch === 'g') {
             st.cy = opCount > 1 ? clamp(opCount - 1, 0, st.buf.length - 1) : 0;
             st.cx = firstNonBlank(st.cy);
         }
@@ -428,23 +430,23 @@ function vimResolvePending(ch, motionCount) {
 // ── Linewise operator (dd, yy, cc) ──
 
 function vimLinewiseOp(op, count) {
-    let startLine = st.cy;
-    let endLine = Math.min(st.cy + count - 1, st.buf.length - 1);
-    let text = "";
-    for (let i = startLine; i <= endLine; i++) text += st.buf[i] + "\n";
+    const startLine = st.cy;
+    const endLine = Math.min(st.cy + count - 1, st.buf.length - 1);
+    let text = '';
+    for (let i = startLine; i <= endLine; i++) text += `${st.buf[i]}\n`;
     st.vimReg = text;
     st.vimLinewise = true;
 
-    if (op === "d" || op === "c") {
+    if (op === 'd' || op === 'c') {
         pushUndo();
         st.buf.splice(startLine, endLine - startLine + 1);
-        if (!st.buf.length) st.buf = [""];
+        if (!st.buf.length) st.buf = [''];
         st.cy = Math.min(startLine, st.buf.length - 1);
         st.cx = firstNonBlank(st.cy);
         st.dirty = true;
     }
-    if (op === "c") st.vim = "insert";
-    if (op === "y") status("Yanked " + (endLine - startLine + 1) + " lines");
+    if (op === 'c') st.vim = 'insert';
+    if (op === 'y') status(`Yanked ${endLine - startLine + 1} lines`);
 
     ensureVisible();
     resetBlink();
@@ -453,67 +455,67 @@ function vimLinewiseOp(op, count) {
 // ── Operator + motion ──
 
 function vimMotionOp(op, ch, count) {
-    let ocx = st.cx,
-        ocy = st.cy;
+    const ocx = st.cx;
+    const ocy = st.cy;
 
     let moved = false;
     switch (ch) {
-        case "h":
+        case 'h':
             for (let i = 0; i < count; i++)
                 if (st.cx > 0) {
                     st.cx--;
                     moved = true;
                 }
             break;
-        case "j":
+        case 'j':
             for (let i = 0; i < count; i++)
                 if (st.cy < st.buf.length - 1) {
                     st.cy++;
                     moved = true;
                 }
             break;
-        case "k":
+        case 'k':
             for (let i = 0; i < count; i++)
                 if (st.cy > 0) {
                     st.cy--;
                     moved = true;
                 }
             break;
-        case "l":
+        case 'l':
             for (let i = 0; i < count; i++)
                 if (st.cx < st.buf[st.cy].length) {
                     st.cx++;
                     moved = true;
                 }
             break;
-        case "w":
+        case 'w':
             for (let i = 0; i < count; i++) vimWordForward();
             moved = true;
             break;
-        case "b":
+        case 'b':
             for (let i = 0; i < count; i++) vimWordBack();
             moved = true;
             break;
-        case "e":
+        case 'e':
             for (let i = 0; i < count; i++) {
                 vimWordEnd();
                 st.cx++;
             }
             moved = true;
             break;
-        case "$":
+        case '$':
             st.cx = st.buf[st.cy].length;
             moved = true;
             break;
-        case "0":
+        case '0':
             st.cx = 0;
             moved = true;
             break;
-        case "^":
+        case '^':
             st.cx = firstNonBlank(st.cy);
             moved = true;
             break;
-        case "G":
+        case 'G':
             st.cy = st.buf.length - 1;
             moved = true;
             break;
@@ -523,35 +525,35 @@ function vimMotionOp(op, ch, count) {
 
     if (!moved) return;
 
-    let linewise = ch === "j" || ch === "k" || ch === "G";
+    const linewise = ch === 'j' || ch === 'k' || ch === 'G';
 
     if (linewise) {
-        let sl = Math.min(ocy, st.cy);
-        let el = Math.max(ocy, st.cy);
-        let text = "";
-        for (let i = sl; i <= el; i++) text += st.buf[i] + "\n";
+        const sl = Math.min(ocy, st.cy);
+        const el = Math.max(ocy, st.cy);
+        let text = '';
+        for (let i = sl; i <= el; i++) text += `${st.buf[i]}\n`;
         st.vimReg = text;
         st.vimLinewise = true;
 
-        if (op === "d" || op === "c") {
+        if (op === 'd' || op === 'c') {
             pushUndo();
             st.buf.splice(sl, el - sl + 1);
-            if (!st.buf.length) st.buf = [""];
+            if (!st.buf.length) st.buf = [''];
             st.cy = Math.min(sl, st.buf.length - 1);
             st.cx = firstNonBlank(st.cy);
             st.dirty = true;
         }
-        if (op === "c") st.vim = "insert";
-        if (op === "y") {
+        if (op === 'c') st.vim = 'insert';
+        if (op === 'y') {
             st.cx = ocx;
             st.cy = ocy;
-            status("Yanked " + (el - sl + 1) + " lines");
+            status(`Yanked ${el - sl + 1} lines`);
         }
     } else {
         let a = { x: ocx, y: ocy };
         let b = { x: st.cx, y: st.cy };
         if (a.y > b.y || (a.y === b.y && a.x > b.x)) {
-            let t = a;
+            const t = a;
             a = b;
             b = t;
         }
@@ -560,15 +562,15 @@ function vimMotionOp(op, ch, count) {
         if (a.y === b.y) {
             text = st.buf[a.y].slice(a.x, b.x);
         } else {
-            let parts = [st.buf[a.y].slice(a.x)];
+            const parts = [st.buf[a.y].slice(a.x)];
             for (let i = a.y + 1; i < b.y; i++) parts.push(st.buf[i]);
             parts.push(st.buf[b.y].slice(0, b.x));
-            text = parts.join("\n");
+            text = parts.join('\n');
         }
         st.vimReg = text;
         st.vimLinewise = false;
 
-        if (op === "d" || op === "c") {
+        if (op === 'd' || op === 'c') {
             pushUndo();
             if (a.y === b.y) {
                 st.buf[a.y] = st.buf[a.y].slice(0, a.x) + st.buf[a.y].slice(b.x);
@@ -578,14 +580,14 @@ function vimMotionOp(op, ch, count) {
             }
             st.cx = a.x;
             st.cy = a.y;
-            if (st.cx >= st.buf[st.cy].length && st.cx > 0 && op === "d") st.cx--;
+            if (st.cx >= st.buf[st.cy].length && st.cx > 0 && op === 'd') st.cx--;
             st.dirty = true;
         }
-        if (op === "c") st.vim = "insert";
-        if (op === "y") {
+        if (op === 'c') st.vim = 'insert';
+        if (op === 'y') {
             st.cx = ocx;
             st.cy = ocy;
-            status("Yanked");
+            status('Yanked');
         }
     }
 
@@ -600,10 +602,10 @@ function vimPaste(before, count) {
     pushUndo();
 
     if (st.vimLinewise) {
-        let lines = st.vimReg.split("\n");
-        if (lines.length && lines[lines.length - 1] === "") lines.pop();
+        const lines = st.vimReg.split('\n');
+        if (lines.length && lines[lines.length - 1] === '') lines.pop();
         for (let c = 0; c < count; c++) {
-            let insertAt = before ? st.cy : st.cy + 1;
+            const insertAt = before ? st.cy : st.cy + 1;
             for (let i = 0; i < lines.length; i++) {
                 st.buf.splice(insertAt + i, 0, lines[i]);
             }
@@ -612,7 +614,7 @@ function vimPaste(before, count) {
         st.cx = firstNonBlank(st.cy);
     } else {
         for (let c = 0; c < count; c++) {
-            let pos = before ? st.cx : Math.min(st.cx + 1, st.buf[st.cy].length);
+            const pos = before ? st.cx : Math.min(st.cx + 1, st.buf[st.cy].length);
             st.buf[st.cy] = st.buf[st.cy].slice(0, pos) + st.vimReg + st.buf[st.cy].slice(pos);
             st.cx = pos + st.vimReg.length - 1;
         }
@@ -626,26 +628,26 @@ function vimPaste(before, count) {
 // ── Vim command execution ──
 
 export function vimExecCmd(cmd) {
-    if (cmd === "w") {
+    if (cmd === 'w') {
         saveFile();
-    } else if (cmd === "q") {
+    } else if (cmd === 'q') {
         closeFile(st.fileIdx);
-    } else if (cmd === "wq") {
+    } else if (cmd === 'wq') {
         saveFile();
         closeFile(st.fileIdx);
-    } else if (cmd === "e" || cmd === "e ") {
+    } else if (cmd === 'e' || cmd === 'e ') {
         openBrowser();
     } else if (/^[0-9]+$/.test(cmd)) {
-        let line = parseInt(cmd);
+        const line = parseInt(cmd, 10);
         st.cy = clamp(line - 1, 0, st.buf.length - 1);
         st.cx = firstNonBlank(st.cy);
         ensureVisible();
         resetBlink();
-    } else if (cmd.charAt(0) === "/") {
+    } else if (cmd.charAt(0) === '/') {
         st.vimSearch = cmd.slice(1);
         if (st.vimSearch) vimSearchNext(1);
     } else {
-        status("Unknown: :" + cmd);
+        status(`Unknown: :${cmd}`);
     }
 }
 
@@ -653,16 +655,16 @@ export function vimExecCmd(cmd) {
 
 export function vimSearchNext(dir) {
     if (!st.vimSearch) {
-        status("No search pattern");
+        status('No search pattern');
         return;
     }
 
-    let total = st.buf.length;
-    let startCol = st.cx + dir;
+    const total = st.buf.length;
+    const startCol = st.cx + dir;
 
     for (let i = 0; i < total; i++) {
-        let li = (st.cy + i * dir + total) % total;
-        let line = st.buf[li];
+        const li = (st.cy + i * dir + total) % total;
+        const line = st.buf[li];
         let col;
 
         if (i === 0) {
@@ -680,10 +682,10 @@ export function vimSearchNext(dir) {
             st.cx = col;
             ensureVisible();
             resetBlink();
-            status("/" + st.vimSearch);
+            status(`/${st.vimSearch}`);
             return;
         }
     }
 
-    status("Not found: " + st.vimSearch);
+    status(`Not found: ${st.vimSearch}`);
 }

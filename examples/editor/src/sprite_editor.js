@@ -7,7 +7,7 @@
 //   Bottom strip : palette picker, flags, tool selector
 //
 
-import { st } from "./state.js";
+import { st } from './state.js';
 import {
     FB_W,
     FB_H,
@@ -15,16 +15,15 @@ import {
     CH,
     TAB_H,
     FG,
-    GUTBG,
     GUTFG,
     FOOTBG,
     FOOTFG,
     GRIDC,
     PANELBG,
     SEPC,
-} from "./config.js";
-import { clamp, modKey, MOD_NAME, status } from "./helpers.js";
-import { createHistory, record, commit, undo, redo } from "./stroke_history.js";
+} from './config.js';
+import { clamp, modKey, status } from './helpers.js';
+import { createHistory, record, commit, undo, redo } from './stroke_history.js';
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -45,7 +44,7 @@ const SPR_CANVAS_W = FB_W - SPR_GRID_W - 2; // canvas area width
 const SPR_PAL_CELL = 10; // palette swatch size
 const SPR_PAL_COLS = 16; // colors per row
 
-const SPR_TOOLS = ["PEN", "ERA", "FIL", "REC", "LIN", "CIR", "SEL"];
+const SPR_TOOLS = ['PEN', 'ERA', 'FIL', 'REC', 'LIN', 'CIR', 'SEL'];
 
 // Tool indices
 const TOOL_PEN = 0;
@@ -67,7 +66,7 @@ const SIZE_PRESETS = [
     [3, 3],
 ];
 
-let sprHist = createHistory(100);
+const sprHist = createHistory(100);
 
 function sprCommit() {
     commit(sprHist);
@@ -84,13 +83,13 @@ const DITHER_PATTERNS = [
     0xa5a5, // 3: cross-hatch
     0xedb7, // 4: 75% inverse checker
 ];
-const DITHER_NAMES = ["OFF", "50%", "25%", "X", "75%"];
+const DITHER_NAMES = ['OFF', '50%', '25%', 'X', '75%'];
 
 // Returns true if the pixel at (px,py) should be drawn for the current dither pattern.
 function ditherCheck(px, py) {
     if (st.sprDither === 0) return true;
-    let mask = DITHER_PATTERNS[st.sprDither];
-    let bit = (py & 3) * 4 + (px & 3);
+    const mask = DITHER_PATTERNS[st.sprDither];
+    const bit = (py & 3) * 4 + (px & 3);
     return (mask >> (15 - bit)) & 1;
 }
 
@@ -98,15 +97,15 @@ function ditherCheck(px, py) {
 
 // Bresenham line: calls plot(x,y) for each pixel
 function bresenhamLine(x0, y0, x1, y1, plot) {
-    let dx = Math.abs(x1 - x0);
-    let dy = Math.abs(y1 - y0);
-    let sx = x0 < x1 ? 1 : -1;
-    let sy = y0 < y1 ? 1 : -1;
+    const dx = Math.abs(x1 - x0);
+    const dy = Math.abs(y1 - y0);
+    const sx = x0 < x1 ? 1 : -1;
+    const sy = y0 < y1 ? 1 : -1;
     let err = dx - dy;
     while (true) {
         plot(x0, y0);
         if (x0 === x1 && y0 === y1) break;
-        let e2 = 2 * err;
+        const e2 = 2 * err;
         if (e2 > -dy) {
             err -= dy;
             x0 += sx;
@@ -152,9 +151,9 @@ function midpointCircleFill(cx, cy, r, plot) {
         plot(cx, cy);
         return;
     }
-    let x = r,
-        y = 0,
-        d = 1 - r;
+    let x = r;
+    let y = 0;
+    let d = 1 - r;
     function hline(x0, x1, yy) {
         for (let i = x0; i <= x1; i++) plot(i, yy);
     }
@@ -180,63 +179,63 @@ function canvasTileSize() {
 
 // Get base pixel coords in sheet for the current selection
 function selBase(sheetCols) {
-    let selCol = st.sprSel % sheetCols;
-    let selRow = Math.floor(st.sprSel / sheetCols);
+    const selCol = st.sprSel % sheetCols;
+    const selRow = Math.floor(st.sprSel / sheetCols);
     return { x: selCol * 8, y: selRow * 8 };
 }
 
 // ─── Shared layout computation ───────────────────────────────────────────────
 
 function computeLayout() {
-    let sw = gfx.sheetW();
-    let sh = gfx.sheetH();
-    let sheetCols = Math.floor(sw / 8);
-    let sheetRows = Math.floor(sh / 8);
-    let sprCount = sheetCols * sheetRows;
-    let { tw: cw, th: ch } = canvasTileSize();
+    const sw = gfx.sheetW();
+    const sh = gfx.sheetH();
+    const sheetCols = Math.floor(sw / 8);
+    const sheetRows = Math.floor(sh / 8);
+    const sprCount = sheetCols * sheetRows;
+    const { tw: cw, th: ch } = canvasTileSize();
 
-    let totalRows = Math.ceil(sprCount / SPR_GRID_COLS);
-    let maxVisRows = Math.floor(SPR_GRID_H / SPR_GRID_CELL);
-    let visRows = Math.min(maxVisRows, totalRows - st.sprScrollY);
-    let gridContentH = visRows * SPR_GRID_CELL;
+    const totalRows = Math.ceil(sprCount / SPR_GRID_COLS);
+    const maxVisRows = Math.floor(SPR_GRID_H / SPR_GRID_CELL);
+    const visRows = Math.min(maxVisRows, totalRows - st.sprScrollY);
+    const gridContentH = visRows * SPR_GRID_CELL;
 
-    let autoZoom = Math.floor(Math.min(SPR_CANVAS_W, SPR_CANVAS_H) / Math.max(cw, ch));
-    let zoom = st.sprZoom > 0 ? st.sprZoom : autoZoom;
-    let canvasPixW = zoom * cw;
-    let canvasPixH = zoom * ch;
-    let canvasOx = SPR_CANVAS_X + Math.floor((SPR_CANVAS_W - canvasPixW) / 2) + st.sprPanX;
-    let canvasOy = SPR_CANVAS_Y + Math.floor((SPR_CANVAS_H - canvasPixH) / 2) + st.sprPanY;
+    const autoZoom = Math.floor(Math.min(SPR_CANVAS_W, SPR_CANVAS_H) / Math.max(cw, ch));
+    const zoom = st.sprZoom > 0 ? st.sprZoom : autoZoom;
+    const canvasPixW = zoom * cw;
+    const canvasPixH = zoom * ch;
+    const canvasOx = SPR_CANVAS_X + Math.floor((SPR_CANVAS_W - canvasPixW) / 2) + st.sprPanX;
+    const canvasOy = SPR_CANVAS_Y + Math.floor((SPR_CANVAS_H - canvasPixH) / 2) + st.sprPanY;
 
-    let palX = SPR_GRID_X;
-    let palY = SPR_GRID_Y + gridContentH + 2;
-    let palTotalRows = Math.ceil(256 / SPR_PAL_COLS);
-    let palAvailH = FB_H - SPR_FOOT_H - palY;
-    let palVisRows = Math.min(palTotalRows, Math.floor(palAvailH / SPR_PAL_CELL));
-    let palMaxScroll = Math.max(0, palTotalRows - palVisRows);
-    let palH = palVisRows * SPR_PAL_CELL;
+    const palX = SPR_GRID_X;
+    const palY = SPR_GRID_Y + gridContentH + 2;
+    const palTotalRows = Math.ceil(256 / SPR_PAL_COLS);
+    const palAvailH = FB_H - SPR_FOOT_H - palY;
+    const palVisRows = Math.min(palTotalRows, Math.floor(palAvailH / SPR_PAL_CELL));
+    const palMaxScroll = Math.max(0, palTotalRows - palVisRows);
+    const palH = palVisRows * SPR_PAL_CELL;
 
     return {
-        sw: sw,
-        sh: sh,
-        sheetCols: sheetCols,
-        sheetRows: sheetRows,
-        sprCount: sprCount,
-        cw: cw,
-        ch: ch,
-        visRows: visRows,
-        gridContentH: gridContentH,
-        autoZoom: autoZoom,
-        zoom: zoom,
-        canvasPixW: canvasPixW,
-        canvasPixH: canvasPixH,
-        canvasOx: canvasOx,
-        canvasOy: canvasOy,
-        palX: palX,
-        palY: palY,
-        palTotalRows: palTotalRows,
-        palVisRows: palVisRows,
-        palMaxScroll: palMaxScroll,
-        palH: palH,
+        sw,
+        sh,
+        sheetCols,
+        sheetRows,
+        sprCount,
+        cw,
+        ch,
+        visRows,
+        gridContentH,
+        autoZoom,
+        zoom,
+        canvasPixW,
+        canvasPixH,
+        canvasOx,
+        canvasOy,
+        palX,
+        palY,
+        palTotalRows,
+        palVisRows,
+        palMaxScroll,
+        palH,
     };
 }
 
@@ -244,20 +243,14 @@ function computeLayout() {
 
 function handlePenEraser(mBtn, symSet) {
     if ((st.sprTool === TOOL_PEN || st.sprTool === TOOL_ERA) && mBtn && st.sprHoverX >= 0) {
-        let newCol = st.sprTool === TOOL_PEN ? st.sprCol : 0;
+        const newCol = st.sprTool === TOOL_PEN ? st.sprCol : 0;
         if (
             st.sprLastPenX >= 0 &&
             (st.sprLastPenX !== st.sprHoverX || st.sprLastPenY !== st.sprHoverY)
         ) {
-            bresenhamLine(
-                st.sprLastPenX,
-                st.sprLastPenY,
-                st.sprHoverX,
-                st.sprHoverY,
-                function (px, py) {
-                    symSet(px, py, newCol);
-                },
-            );
+            bresenhamLine(st.sprLastPenX, st.sprLastPenY, st.sprHoverX, st.sprHoverY, (px, py) => {
+                symSet(px, py, newCol);
+            });
         } else {
             symSet(st.sprHoverX, st.sprHoverY, newCol);
         }
@@ -272,11 +265,11 @@ function handlePenEraser(mBtn, symSet) {
 
 function dedupPendingStroke(mBtn) {
     if (!mBtn && sprHist.pending.length > 0) {
-        let seen = {};
-        let deduped = [];
+        const seen = {};
+        const deduped = [];
         for (let i = sprHist.pending.length - 1; i >= 0; i--) {
-            let op = sprHist.pending[i];
-            let k = op.x + "," + op.y;
+            const op = sprHist.pending[i];
+            const k = `${op.x},${op.y}`;
             if (seen[k] === undefined) {
                 seen[k] = deduped.length;
                 deduped.push(op);
@@ -294,7 +287,7 @@ function dedupPendingStroke(mBtn) {
 
 function handleFill(mPress, base, cw, ch) {
     if (st.sprTool === TOOL_FILL && mPress && st.sprHoverX >= 0) {
-        let target = gfx.sget(base.x + st.sprHoverX, base.y + st.sprHoverY);
+        const target = gfx.sget(base.x + st.sprHoverX, base.y + st.sprHoverY);
         if (target !== st.sprCol) {
             floodFill(base.x, base.y, cw, ch, st.sprHoverX, st.sprHoverY, target, st.sprCol);
             sprCommit();
@@ -320,7 +313,7 @@ function handleRect(mBtn, mPress, symSet) {
             );
             sprCommit();
         } else {
-            status("Shape cancelled", 1);
+            status('Shape cancelled', 1);
         }
         st.sprRectAnchor = null;
     }
@@ -338,7 +331,7 @@ function handleLine(mBtn, mPress, cw, ch, symSet) {
                 st.sprLineAnchor.y,
                 st.sprHoverX,
                 st.sprHoverY,
-                function (px, py) {
+                (px, py) => {
                     if (px >= 0 && px < cw && py >= 0 && py < ch) {
                         symSet(px, py, st.sprCol);
                     }
@@ -346,7 +339,7 @@ function handleLine(mBtn, mPress, cw, ch, symSet) {
             );
             sprCommit();
         } else {
-            status("Shape cancelled", 1);
+            status('Shape cancelled', 1);
         }
         st.sprLineAnchor = null;
     }
@@ -359,18 +352,18 @@ function handleCircle(mBtn, mPress, cw, ch, symSet) {
     }
     if (!mBtn && st.sprCircAnchor) {
         if (st.sprHoverX >= 0) {
-            let cdx = st.sprHoverX - st.sprCircAnchor.x;
-            let cdy = st.sprHoverY - st.sprCircAnchor.y;
-            let r = Math.round(Math.sqrt(cdx * cdx + cdy * cdy));
-            let circFn = st.sprFilled ? midpointCircleFill : midpointCircle;
-            circFn(st.sprCircAnchor.x, st.sprCircAnchor.y, r, function (px, py) {
+            const cdx = st.sprHoverX - st.sprCircAnchor.x;
+            const cdy = st.sprHoverY - st.sprCircAnchor.y;
+            const r = Math.round(Math.sqrt(cdx * cdx + cdy * cdy));
+            const circFn = st.sprFilled ? midpointCircleFill : midpointCircle;
+            circFn(st.sprCircAnchor.x, st.sprCircAnchor.y, r, (px, py) => {
                 if (px >= 0 && px < cw && py >= 0 && py < ch) {
                     symSet(px, py, st.sprCol);
                 }
             });
             sprCommit();
         } else {
-            status("Shape cancelled", 1);
+            status('Shape cancelled', 1);
         }
         st.sprCircAnchor = null;
     }
@@ -380,8 +373,8 @@ function handleSelection(mBtn, mPress, base, cw, ch) {
     if (st.sprTool !== TOOL_SEL) return;
     if (mPress && st.sprHoverX >= 0) {
         if (st.sprSelFloat) {
-            let fx = st.sprHoverX - st.sprSelFloat.x;
-            let fy = st.sprHoverY - st.sprSelFloat.y;
+            const fx = st.sprHoverX - st.sprSelFloat.x;
+            const fy = st.sprHoverY - st.sprSelFloat.y;
             if (fx >= 0 && fx < st.sprSelFloat.w && fy >= 0 && fy < st.sprSelFloat.h) {
                 st.sprSelDrag = {
                     ox: st.sprHoverX - st.sprSelFloat.x,
@@ -394,7 +387,7 @@ function handleSelection(mBtn, mPress, base, cw, ch) {
                 st.sprSelAnchor = { x: st.sprHoverX, y: st.sprHoverY };
             }
         } else if (st.sprSelRect) {
-            let sr = st.sprSelRect;
+            const sr = st.sprSelRect;
             if (
                 st.sprHoverX >= sr.x0 &&
                 st.sprHoverX <= sr.x1 &&
@@ -417,10 +410,10 @@ function handleSelection(mBtn, mPress, base, cw, ch) {
     }
     if (!mBtn && st.sprSelAnchor && !st.sprSelFloat) {
         if (st.sprHoverX >= 0) {
-            let rx0 = Math.min(st.sprSelAnchor.x, st.sprHoverX);
-            let ry0 = Math.min(st.sprSelAnchor.y, st.sprHoverY);
-            let rx1 = Math.max(st.sprSelAnchor.x, st.sprHoverX);
-            let ry1 = Math.max(st.sprSelAnchor.y, st.sprHoverY);
+            const rx0 = Math.min(st.sprSelAnchor.x, st.sprHoverX);
+            const ry0 = Math.min(st.sprSelAnchor.y, st.sprHoverY);
+            const rx1 = Math.max(st.sprSelAnchor.x, st.sprHoverX);
+            const ry1 = Math.max(st.sprSelAnchor.y, st.sprHoverY);
             if (rx1 >= rx0 || ry1 >= ry0) {
                 st.sprSelRect = { x0: rx0, y0: ry0, x1: rx1, y1: ry1 };
             }
@@ -432,26 +425,26 @@ function handleSelection(mBtn, mPress, base, cw, ch) {
 
 /** Save sprite sheet + flags to disk. */
 export function saveSpritesToDisk() {
-    let ok1 = sys.writeFile("sprites.hex", gfx.sheetData());
-    let ok2 = sys.writeFile("flags.hex", gfx.flagsData());
+    const ok1 = sys.writeFile('sprites.hex', gfx.sheetData());
+    const ok2 = sys.writeFile('flags.hex', gfx.flagsData());
     if (ok1 && ok2) st.sprDirty = false;
-    status(ok1 && ok2 ? "Sprites saved" : "Sprite save failed");
+    status(ok1 && ok2 ? 'Sprites saved' : 'Sprite save failed');
 }
 
 // ─── Update ──────────────────────────────────────────────────────────────────
 
 export function updateSpriteEditor(dt) {
-    let ctrl = modKey();
-    let shift = key.btn(key.LSHIFT) || key.btn(key.RSHIFT);
+    const ctrl = modKey();
+    const shift = key.btn(key.LSHIFT) || key.btn(key.RSHIFT);
 
-    let mx = mouse.x();
-    let my = mouse.y();
-    let mBtn = mouse.btn(0);
-    let mPress = mouse.btnp(0);
-    let wheel = mouse.wheel();
+    const mx = mouse.x();
+    const my = mouse.y();
+    const mBtn = mouse.btn(0);
+    const mPress = mouse.btnp(0);
+    const wheel = mouse.wheel();
 
-    let sw = gfx.sheetW();
-    let sh = gfx.sheetH();
+    const sw = gfx.sheetW();
+    const sh = gfx.sheetH();
     if (sw === 0 || sh === 0) return; // no spritesheet loaded
 
     let sheetCols = Math.floor(sw / 8);
@@ -459,7 +452,7 @@ export function updateSpriteEditor(dt) {
 
     // ── Sprite goto input (N to open, Enter to confirm, Escape to cancel) ──
     if (st.sprGoto) {
-        let numKeys = [
+        const numKeys = [
             key.NUM0,
             key.NUM1,
             key.NUM2,
@@ -472,18 +465,18 @@ export function updateSpriteEditor(dt) {
             key.NUM9,
         ];
         for (let i = 0; i < 10; i++) {
-            if (key.btnp(numKeys[i])) st.sprGotoTxt += "" + i;
+            if (key.btnp(numKeys[i])) st.sprGotoTxt += `${i}`;
         }
         if (key.btnp(key.BACKSPACE)) {
             st.sprGotoTxt = st.sprGotoTxt.slice(0, -1);
         }
         if (key.btnp(key.ENTER)) {
-            let n = parseInt(st.sprGotoTxt, 10);
+            const n = parseInt(st.sprGotoTxt, 10);
             if (n >= 0 && n < sprCount) {
                 st.sprSel = n;
                 // Scroll grid to show selected sprite
-                let row = Math.floor(n / SPR_GRID_COLS);
-                let maxVis = Math.floor(SPR_GRID_H / SPR_GRID_CELL);
+                const row = Math.floor(n / SPR_GRID_COLS);
+                const maxVis = Math.floor(SPR_GRID_H / SPR_GRID_CELL);
                 if (row < st.sprScrollY || row >= st.sprScrollY + maxVis) {
                     st.sprScrollY = clamp(
                         row,
@@ -493,32 +486,32 @@ export function updateSpriteEditor(dt) {
                 }
             }
             st.sprGoto = false;
-            st.sprGotoTxt = "";
+            st.sprGotoTxt = '';
         }
         if (key.btnp(key.ESCAPE)) {
             st.sprGoto = false;
-            st.sprGotoTxt = "";
+            st.sprGotoTxt = '';
         }
         return; // block all other sprite editor input while goto is active
     }
     if (key.btnp(key.N) && !ctrl && !shift) {
         st.sprGoto = true;
-        st.sprGotoTxt = "";
+        st.sprGotoTxt = '';
     }
 
-    let lay = computeLayout();
+    const lay = computeLayout();
     sheetCols = lay.sheetCols;
-    let sheetRows = lay.sheetRows;
+    const { sheetRows } = lay;
     sprCount = lay.sprCount;
-    let cw = lay.cw;
-    let ch = lay.ch;
-    let gridContentH = lay.gridContentH;
-    let autoZoom = lay.autoZoom;
-    let zoom = lay.zoom;
-    let canvasPixW = lay.canvasPixW;
-    let canvasPixH = lay.canvasPixH;
-    let canvasOx = lay.canvasOx;
-    let canvasOy = lay.canvasOy;
+    const { cw } = lay;
+    const { ch } = lay;
+    const { gridContentH } = lay;
+    const { autoZoom } = lay;
+    let { zoom } = lay;
+    const { canvasPixW } = lay;
+    const { canvasPixH } = lay;
+    const { canvasOx } = lay;
+    const { canvasOy } = lay;
 
     // ── Sheet grid interaction (click to select sprite) ──
     if (
@@ -531,9 +524,9 @@ export function updateSpriteEditor(dt) {
         let gx = Math.floor((mx - SPR_GRID_X) / SPR_GRID_CELL);
         let gy = Math.floor((my - SPR_GRID_Y) / SPR_GRID_CELL) + st.sprScrollY;
         // Snap to top-left of multi-tile block
-        gx = gx - (gx % st.sprSizeW);
-        gy = gy - (gy % st.sprSizeH);
-        let idx = gy * SPR_GRID_COLS + gx;
+        gx -= gx % st.sprSizeW;
+        gy -= gy % st.sprSizeH;
+        const idx = gy * SPR_GRID_COLS + gx;
         if (idx >= 0 && idx < sprCount) {
             if (idx !== st.sprSel) {
                 st.sprRectAnchor = null;
@@ -561,11 +554,11 @@ export function updateSpriteEditor(dt) {
         );
     }
 
-    let base = selBase(sheetCols);
+    const base = selBase(sheetCols);
 
     // ── Middle-click pan ──
-    let midBtn = mouse.btn(1);
-    let inCanvas =
+    const midBtn = mouse.btn(1);
+    const inCanvas =
         mx >= SPR_CANVAS_X &&
         mx < SPR_CANVAS_X + SPR_CANVAS_W &&
         my >= SPR_CANVAS_Y &&
@@ -587,14 +580,14 @@ export function updateSpriteEditor(dt) {
 
     // ── Scroll-wheel zoom (over canvas area) ──
     if (inCanvas && wheel !== 0 && !st.sprPanning) {
-        let oldZoom = zoom;
-        let minZoom = Math.max(1, Math.floor(autoZoom / 4));
-        let maxZoom = autoZoom * 4;
-        let newZoom = clamp(zoom + wheel, minZoom, maxZoom);
+        const oldZoom = zoom;
+        const minZoom = Math.max(1, Math.floor(autoZoom / 4));
+        const maxZoom = autoZoom * 4;
+        const newZoom = clamp(zoom + wheel, minZoom, maxZoom);
         if (newZoom !== oldZoom) {
             // Zoom toward mouse pointer
-            let pivotX = mx - canvasOx;
-            let pivotY = my - canvasOy;
+            const pivotX = mx - canvasOx;
+            const pivotY = my - canvasOy;
             st.sprPanX = Math.round(st.sprPanX + pivotX - (pivotX * newZoom) / oldZoom);
             st.sprPanY = Math.round(st.sprPanY + pivotY - (pivotY * newZoom) / oldZoom);
             st.sprZoom = newZoom;
@@ -603,7 +596,7 @@ export function updateSpriteEditor(dt) {
     }
 
     // Track hover pixel and toggle system cursor
-    let wasHovering = st.sprHoverX >= 0;
+    const wasHovering = st.sprHoverX >= 0;
     st.sprHoverX = -1;
     st.sprHoverY = -1;
     if (
@@ -621,20 +614,20 @@ export function updateSpriteEditor(dt) {
 
     // ── Symmetry-aware pixel setter ──
     function symSet(px, py, col) {
-        let coords = [[px, py]];
+        const coords = [[px, py]];
         if (st.sprMirrorX) coords.push([cw - 1 - px, py]);
         if (st.sprMirrorY) coords.push([px, ch - 1 - py]);
         if (st.sprMirrorX && st.sprMirrorY) coords.push([cw - 1 - px, ch - 1 - py]);
         for (let i = 0; i < coords.length; i++) {
-            let cx2 = coords[i][0],
-                cy2 = coords[i][1];
+            const cx2 = coords[i][0];
+            const cy2 = coords[i][1];
             if (cx2 >= 0 && cx2 < cw && cy2 >= 0 && cy2 < ch) {
                 if (!ditherCheck(cx2, cy2)) continue;
-                let sx = base.x + cx2,
-                    sy = base.y + cy2;
-                let prev = gfx.sget(sx, sy);
+                const sx = base.x + cx2;
+                const sy = base.y + cy2;
+                const prev = gfx.sget(sx, sy);
                 if (prev !== col) {
-                    record(sprHist, { x: sx, y: sy, prev: prev, next: col });
+                    record(sprHist, { x: sx, y: sy, prev, next: col });
                     gfx.sset(sx, sy, col);
                 }
             }
@@ -679,7 +672,7 @@ export function updateSpriteEditor(dt) {
 
     // Undo (Ctrl+Z)
     if (ctrl && key.btnp(key.Z) && !shift) {
-        undo(sprHist, function (op) {
+        undo(sprHist, (op) => {
             gfx.sset(op.x, op.y, op.prev);
             return { x: op.x, y: op.y, prev: op.next, next: op.prev };
         });
@@ -687,7 +680,7 @@ export function updateSpriteEditor(dt) {
 
     // Redo (Ctrl+Y or Ctrl+Shift+Z)
     if (ctrl && (key.btnp(key.Y) || (shift && key.btnp(key.Z)))) {
-        redo(sprHist, function (op) {
+        redo(sprHist, (op) => {
             gfx.sset(op.x, op.y, op.prev);
             return { x: op.x, y: op.y, prev: op.next, next: op.prev };
         });
@@ -700,17 +693,17 @@ export function updateSpriteEditor(dt) {
 
     // Export sprite sheet as PNG (Ctrl+Shift+E)
     if (ctrl && shift && key.btnp(key.E)) {
-        let ok = gfx.exportPNG("spritesheet.png");
-        status(ok ? "Exported spritesheet.png" : "Export failed");
+        const ok = gfx.exportPNG('spritesheet.png');
+        status(ok ? 'Exported spritesheet.png' : 'Export failed');
     }
 
     // ── Palette (below sprite grid, left panel) ──
-    let palX = lay.palX;
-    let palY = lay.palY;
-    let palVisRows = lay.palVisRows;
-    let palMaxScroll = lay.palMaxScroll;
+    const { palX } = lay;
+    const { palY } = lay;
+    const { palVisRows } = lay;
+    const { palMaxScroll } = lay;
     st.sprPalScrollY = clamp(st.sprPalScrollY, 0, palMaxScroll);
-    let palH = lay.palH;
+    const { palH } = lay;
 
     // Palette click
     if (
@@ -720,9 +713,9 @@ export function updateSpriteEditor(dt) {
         mx >= palX &&
         mx < palX + SPR_PAL_COLS * SPR_PAL_CELL
     ) {
-        let pc = Math.floor((mx - palX) / SPR_PAL_CELL);
-        let pr = Math.floor((my - palY) / SPR_PAL_CELL) + st.sprPalScrollY;
-        let idx = pr * SPR_PAL_COLS + pc;
+        const pc = Math.floor((mx - palX) / SPR_PAL_CELL);
+        const pr = Math.floor((my - palY) / SPR_PAL_CELL) + st.sprPalScrollY;
+        const idx = pr * SPR_PAL_COLS + pc;
         if (idx >= 0 && idx < 256) st.sprCol = idx;
     }
 
@@ -738,12 +731,12 @@ export function updateSpriteEditor(dt) {
     }
 
     // ── Flags toggle (below palette, left panel) ──
-    let flagsY = palY + palH + 2;
-    let flagsX = palX + 7 * CW; // after "FLAGS:" label
+    const flagsY = palY + palH + 2;
+    const flagsX = palX + 7 * CW; // after "FLAGS:" label
     if (mPress && my >= flagsY && my < flagsY + CH && mx >= flagsX && mx < flagsX + 8 * (CW + 2)) {
-        let bit = Math.floor((mx - flagsX) / (CW + 2));
+        const bit = Math.floor((mx - flagsX) / (CW + 2));
         if (bit >= 0 && bit < 8) {
-            let f = gfx.fget(st.sprSel);
+            const f = gfx.fget(st.sprSel);
             gfx.fset(st.sprSel, f ^ (1 << bit));
         }
     }
@@ -763,7 +756,7 @@ export function updateSpriteEditor(dt) {
     // Cycle dither pattern (D key)
     if (key.btnp(key.D) && !ctrl && !shift) {
         st.sprDither = (st.sprDither + 1) % DITHER_PATTERNS.length;
-        status("Dither: " + DITHER_NAMES[st.sprDither]);
+        status(`Dither: ${DITHER_NAMES[st.sprDither]}`);
     }
 
     // Toggle symmetry (Shift+X: horizontal mirror, Shift+Y: vertical mirror)
@@ -771,7 +764,7 @@ export function updateSpriteEditor(dt) {
     if (shift && !ctrl && key.btnp(key.Y)) st.sprMirrorY = !st.sprMirrorY;
 
     // ── Palette number shortcuts (1-9 → col 1-9, 0 → col 0) ──
-    let numKeys = [
+    const numKeys = [
         key.NUM0,
         key.NUM1,
         key.NUM2,
@@ -796,14 +789,14 @@ export function updateSpriteEditor(dt) {
     if (!ctrl && !shift) {
         if (key.btnp(key.MINUS)) {
             st.sprCol = (st.sprCol + 255) % 256;
-            let colRow = Math.floor(st.sprCol / SPR_PAL_COLS);
+            const colRow = Math.floor(st.sprCol / SPR_PAL_COLS);
             if (colRow < st.sprPalScrollY || colRow >= st.sprPalScrollY + palVisRows) {
                 st.sprPalScrollY = clamp(colRow, 0, palMaxScroll);
             }
         }
         if (key.btnp(key.EQUALS)) {
             st.sprCol = (st.sprCol + 1) % 256;
-            let colRow = Math.floor(st.sprCol / SPR_PAL_COLS);
+            const colRow = Math.floor(st.sprCol / SPR_PAL_COLS);
             if (colRow < st.sprPalScrollY || colRow >= st.sprPalScrollY + palVisRows) {
                 st.sprPalScrollY = clamp(colRow, 0, palMaxScroll);
             }
@@ -814,7 +807,7 @@ export function updateSpriteEditor(dt) {
     if (mouse.btn(2) && st.sprHoverX >= 0) {
         st.sprCol = gfx.sget(base.x + st.sprHoverX, base.y + st.sprHoverY);
         // Scroll palette to show selected color
-        let colRow = Math.floor(st.sprCol / SPR_PAL_COLS);
+        const colRow = Math.floor(st.sprCol / SPR_PAL_COLS);
         if (colRow < st.sprPalScrollY || colRow >= st.sprPalScrollY + palVisRows) {
             st.sprPalScrollY = clamp(colRow, 0, palMaxScroll);
         }
@@ -823,7 +816,7 @@ export function updateSpriteEditor(dt) {
 
     // ── Arrow-key sprite navigation (no modifiers) ──
     if (!ctrl && !shift) {
-        let prevSel = st.sprSel;
+        const prevSel = st.sprSel;
         if (key.btnp(key.LEFT)) {
             st.sprSel = Math.max(0, st.sprSel - st.sprSizeW);
         }
@@ -831,11 +824,11 @@ export function updateSpriteEditor(dt) {
             st.sprSel = Math.min(sprCount - 1, st.sprSel + st.sprSizeW);
         }
         if (key.btnp(key.UP)) {
-            let next = st.sprSel - sheetCols * st.sprSizeH;
+            const next = st.sprSel - sheetCols * st.sprSizeH;
             if (next >= 0) st.sprSel = next;
         }
         if (key.btnp(key.DOWN)) {
-            let next = st.sprSel + sheetCols * st.sprSizeH;
+            const next = st.sprSel + sheetCols * st.sprSizeH;
             if (next < sprCount) st.sprSel = next;
         }
         if (st.sprSel !== prevSel) {
@@ -857,14 +850,13 @@ export function updateSpriteEditor(dt) {
                 break;
             }
         }
-        let next = (cur + 1) % SIZE_PRESETS.length;
-        st.sprSizeW = SIZE_PRESETS[next][0];
-        st.sprSizeH = SIZE_PRESETS[next][1];
+        const next = (cur + 1) % SIZE_PRESETS.length;
+        [st.sprSizeW, st.sprSizeH] = SIZE_PRESETS[next];
         // Snap selection to valid multi-tile alignment
         let sc = st.sprSel % sheetCols;
         let sr = Math.floor(st.sprSel / sheetCols);
-        sc = sc - (sc % st.sprSizeW);
-        sr = sr - (sr % st.sprSizeH);
+        sc -= sc % st.sprSizeW;
+        sr -= sr % st.sprSizeH;
         // Clamp so multi-tile block stays within sheet
         sc = Math.min(sc, sheetCols - st.sprSizeW);
         sr = Math.min(sr, sheetRows - st.sprSizeH);
@@ -890,7 +882,7 @@ export function updateSpriteEditor(dt) {
         if (cw === ch) {
             transformRotate90(base, cw, ch);
         } else {
-            status("Rotate requires square selection");
+            status('Rotate requires square selection');
         }
     }
 
@@ -939,12 +931,12 @@ export function updateSpriteEditor(dt) {
         }
         // Auto-swap so from <= to
         if (st.sprAnimFrom > st.sprAnimTo) {
-            let tmp = st.sprAnimFrom;
+            const tmp = st.sprAnimFrom;
             st.sprAnimFrom = st.sprAnimTo;
             st.sprAnimTo = tmp;
         }
         // Clamp frame to new range
-        let newRange = st.sprAnimTo - st.sprAnimFrom + 1;
+        const newRange = st.sprAnimTo - st.sprAnimFrom + 1;
         if (st.sprAnimFrame >= newRange) st.sprAnimFrame = 0;
     }
     // Adjust FPS with [ and ]
@@ -954,10 +946,10 @@ export function updateSpriteEditor(dt) {
     // Advance animation timer
     if (st.sprAnimPlay && st.sprAnimFrom < st.sprAnimTo) {
         st.sprAnimTimer += dt;
-        let interval = 1 / st.sprAnimFps;
+        const interval = 1 / st.sprAnimFps;
         if (st.sprAnimTimer >= interval) {
             st.sprAnimTimer -= interval;
-            let range = st.sprAnimTo - st.sprAnimFrom + 1;
+            const range = st.sprAnimTo - st.sprAnimFrom + 1;
             st.sprAnimFrame = (st.sprAnimFrame + 1) % range;
         }
     }
@@ -965,16 +957,16 @@ export function updateSpriteEditor(dt) {
 
 // ── Flood fill helper ──
 function floodFill(baseX, baseY, tileW, tileH, startX, startY, target, fill) {
-    let stack = [startX + startY * tileW];
-    let visited = new Uint8Array(tileW * tileH);
+    const stack = [startX + startY * tileW];
+    const visited = new Uint8Array(tileW * tileH);
     while (stack.length > 0) {
-        let idx = stack.pop();
+        const idx = stack.pop();
         if (visited[idx]) continue;
         visited[idx] = 1;
-        let px = idx % tileW;
-        let py = Math.floor(idx / tileW);
-        let sx = baseX + px;
-        let sy = baseY + py;
+        const px = idx % tileW;
+        const py = Math.floor(idx / tileW);
+        const sx = baseX + px;
+        const sy = baseY + py;
         if (gfx.sget(sx, sy) !== target) continue;
         // Always explore neighbours for flood extent, but only paint if dither allows
         if (ditherCheck(px, py)) {
@@ -990,10 +982,10 @@ function floodFill(baseX, baseY, tileW, tileH, startX, startY, target, fill) {
 
 // ── Rectangle outline helper ──
 function plotRect(x0, y0, x1, y1, col, filled, plotFn) {
-    let rx0 = Math.min(x0, x1);
-    let ry0 = Math.min(y0, y1);
-    let rx1 = Math.max(x0, x1);
-    let ry1 = Math.max(y0, y1);
+    const rx0 = Math.min(x0, x1);
+    const ry0 = Math.min(y0, y1);
+    const rx1 = Math.max(x0, x1);
+    const ry1 = Math.max(y0, y1);
     for (let py = ry0; py <= ry1; py++) {
         for (let px = rx0; px <= rx1; px++) {
             if (!filled && px !== rx0 && px !== rx1 && py !== ry0 && py !== ry1) continue;
@@ -1004,42 +996,42 @@ function plotRect(x0, y0, x1, y1, col, filled, plotFn) {
 
 // ─── Selection/marquee helpers ───────────────────────────────────────────────
 
-function liftSelection(base, sr, cw, ch) {
-    let w = sr.x1 - sr.x0 + 1;
-    let h = sr.y1 - sr.y0 + 1;
-    let pixels = [];
+function liftSelection(base, sr, _cw, _ch) {
+    const w = sr.x1 - sr.x0 + 1;
+    const h = sr.y1 - sr.y0 + 1;
+    const pixels = [];
     for (let py = 0; py < h; py++) {
         for (let px = 0; px < w; px++) {
-            let sx = base.x + sr.x0 + px;
-            let sy = base.y + sr.y0 + py;
+            const sx = base.x + sr.x0 + px;
+            const sy = base.y + sr.y0 + py;
             pixels.push(gfx.sget(sx, sy));
             // Clear original area
-            let prev = gfx.sget(sx, sy);
+            const prev = gfx.sget(sx, sy);
             if (prev !== 0) {
-                record(sprHist, { x: sx, y: sy, prev: prev, next: 0 });
+                record(sprHist, { x: sx, y: sy, prev, next: 0 });
                 gfx.sset(sx, sy, 0);
             }
         }
     }
-    st.sprSelFloat = { x: sr.x0, y: sr.y0, w: w, h: h, pixels: pixels };
+    st.sprSelFloat = { x: sr.x0, y: sr.y0, w, h, pixels };
     st.sprSelRect = null;
 }
 
 function stampFloat(base, cw, ch) {
     if (!st.sprSelFloat) return;
-    let f = st.sprSelFloat;
+    const f = st.sprSelFloat;
     for (let py = 0; py < f.h; py++) {
         for (let px = 0; px < f.w; px++) {
-            let dx = f.x + px;
-            let dy = f.y + py;
+            const dx = f.x + px;
+            const dy = f.y + py;
             if (dx >= 0 && dx < cw && dy >= 0 && dy < ch) {
-                let col = f.pixels[py * f.w + px];
+                const col = f.pixels[py * f.w + px];
                 if (col !== 0) {
-                    let sx = base.x + dx;
-                    let sy = base.y + dy;
-                    let prev = gfx.sget(sx, sy);
+                    const sx = base.x + dx;
+                    const sy = base.y + dy;
+                    const prev = gfx.sget(sx, sy);
                     if (prev !== col) {
-                        record(sprHist, { x: sx, y: sy, prev: prev, next: col });
+                        record(sprHist, { x: sx, y: sy, prev, next: col });
                         gfx.sset(sx, sy, col);
                     }
                 }
@@ -1052,7 +1044,7 @@ function stampFloat(base, cw, ch) {
 // ─── Transform helpers ──────────────────────────────────────────────────────
 
 function readPixels(base, cw, ch) {
-    let pixels = [];
+    const pixels = [];
     for (let py = 0; py < ch; py++) {
         for (let px = 0; px < cw; px++) {
             pixels.push(gfx.sget(base.x + px, base.y + py));
@@ -1062,15 +1054,15 @@ function readPixels(base, cw, ch) {
 }
 
 function writePixel(sx, sy, newCol) {
-    let prev = gfx.sget(sx, sy);
+    const prev = gfx.sget(sx, sy);
     if (prev !== newCol) {
-        record(sprHist, { x: sx, y: sy, prev: prev, next: newCol });
+        record(sprHist, { x: sx, y: sy, prev, next: newCol });
         gfx.sset(sx, sy, newCol);
     }
 }
 
 function transformFlipH(base, cw, ch) {
-    let pixels = readPixels(base, cw, ch);
+    const pixels = readPixels(base, cw, ch);
     for (let py = 0; py < ch; py++) {
         for (let px = 0; px < cw; px++) {
             writePixel(base.x + px, base.y + py, pixels[py * cw + (cw - 1 - px)]);
@@ -1080,7 +1072,7 @@ function transformFlipH(base, cw, ch) {
 }
 
 function transformFlipV(base, cw, ch) {
-    let pixels = readPixels(base, cw, ch);
+    const pixels = readPixels(base, cw, ch);
     for (let py = 0; py < ch; py++) {
         for (let px = 0; px < cw; px++) {
             writePixel(base.x + px, base.y + py, pixels[(ch - 1 - py) * cw + px]);
@@ -1091,7 +1083,7 @@ function transformFlipV(base, cw, ch) {
 
 function transformRotate90(base, cw, ch) {
     // Rotate 90° clockwise: new(x,y) = old(y, cw-1-x)
-    let pixels = readPixels(base, cw, ch);
+    const pixels = readPixels(base, cw, ch);
     for (let py = 0; py < ch; py++) {
         for (let px = 0; px < cw; px++) {
             writePixel(base.x + px, base.y + py, pixels[(cw - 1 - px) * cw + py]);
@@ -1103,11 +1095,11 @@ function transformRotate90(base, cw, ch) {
 // ─── Shift/nudge with wrapping ──────────────────────────────────────────────
 
 function nudgePixels(base, cw, ch, dx, dy) {
-    let pixels = readPixels(base, cw, ch);
+    const pixels = readPixels(base, cw, ch);
     for (let py = 0; py < ch; py++) {
         for (let px = 0; px < cw; px++) {
-            let srcX = (((px - dx) % cw) + cw) % cw;
-            let srcY = (((py - dy) % ch) + ch) % ch;
+            const srcX = (((px - dx) % cw) + cw) % cw;
+            const srcY = (((py - dy) % ch) + ch) % ch;
             writePixel(base.x + px, base.y + py, pixels[srcY * cw + srcX]);
         }
     }
@@ -1120,11 +1112,11 @@ function clearSprite(base, cw, ch) {
     let anyChanged = false;
     for (let py = 0; py < ch; py++) {
         for (let px = 0; px < cw; px++) {
-            let sx = base.x + px;
-            let sy = base.y + py;
-            let prev = gfx.sget(sx, sy);
+            const sx = base.x + px;
+            const sy = base.y + py;
+            const prev = gfx.sget(sx, sy);
             if (prev !== 0) {
-                record(sprHist, { x: sx, y: sy, prev: prev, next: 0 });
+                record(sprHist, { x: sx, y: sy, prev, next: 0 });
                 gfx.sset(sx, sy, 0);
                 anyChanged = true;
             }
@@ -1141,18 +1133,18 @@ function copySprite(base, cw, ch) {
 
 function pasteSprite(base, cw, ch) {
     if (!st.sprClipboard) return;
-    let clip = st.sprClipboard;
-    let pw = Math.min(clip.w, cw);
-    let ph = Math.min(clip.h, ch);
+    const clip = st.sprClipboard;
+    const pw = Math.min(clip.w, cw);
+    const ph = Math.min(clip.h, ch);
     let anyChanged = false;
     for (let py = 0; py < ph; py++) {
         for (let px = 0; px < pw; px++) {
-            let sx = base.x + px;
-            let sy = base.y + py;
-            let prev = gfx.sget(sx, sy);
-            let newCol = clip.pixels[py * clip.w + px];
+            const sx = base.x + px;
+            const sy = base.y + py;
+            const prev = gfx.sget(sx, sy);
+            const newCol = clip.pixels[py * clip.w + px];
             if (prev !== newCol) {
-                record(sprHist, { x: sx, y: sy, prev: prev, next: newCol });
+                record(sprHist, { x: sx, y: sy, prev, next: newCol });
                 gfx.sset(sx, sy, newCol);
                 anyChanged = true;
             }
@@ -1166,12 +1158,12 @@ function pasteSprite(base, cw, ch) {
 // Drawn last so it appears on top of everything.
 
 function drawToolCursor(mx, my) {
-    let ox = mx + 3; // offset right of cursor
-    let oy = my + 3; // offset below cursor
-    let s = 2; // pixel scale factor
+    const ox = mx + 3; // offset right of cursor
+    const oy = my + 3; // offset below cursor
+    const s = 2; // pixel scale factor
 
     // Collect icon pixel rects: {x0,y0,x1,y1}
-    let rects = [];
+    const rects = [];
     function sp(x, y) {
         rects.push({
             x0: ox + x * s,
@@ -1258,28 +1250,28 @@ function drawToolCursor(mx, my) {
     }
 
     // Crosshair rects
-    let cross = [
+    const cross = [
         { x0: mx - 1, y0: my, x1: mx + 1, y1: my },
         { x0: mx, y0: my - 1, x1: mx, y1: my + 1 },
     ];
 
     // Pass 1: black outline (expand each rect by 1px in all directions)
     for (let i = 0; i < rects.length; i++) {
-        let r = rects[i];
+        const r = rects[i];
         gfx.rectfill(r.x0 - 1, r.y0 - 1, r.x1 + 1, r.y1 + 1, 0);
     }
     for (let i = 0; i < cross.length; i++) {
-        let r = cross[i];
+        const r = cross[i];
         gfx.rectfill(r.x0 - 1, r.y0 - 1, r.x1 + 1, r.y1 + 1, 0);
     }
 
     // Pass 2: white foreground
     for (let i = 0; i < rects.length; i++) {
-        let r = rects[i];
+        const r = rects[i];
         gfx.rectfill(r.x0, r.y0, r.x1, r.y1, FG);
     }
     for (let i = 0; i < cross.length; i++) {
-        let r = cross[i];
+        const r = cross[i];
         gfx.rectfill(r.x0, r.y0, r.x1, r.y1, FG);
     }
 }
@@ -1287,22 +1279,22 @@ function drawToolCursor(mx, my) {
 // ─── Draw ────────────────────────────────────────────────────────────────────
 
 export function drawSpriteEditor() {
-    let sw = gfx.sheetW();
-    let sh = gfx.sheetH();
+    const sw = gfx.sheetW();
+    const sh = gfx.sheetH();
     if (sw === 0 || sh === 0) {
-        gfx.print("No spritesheet loaded", 10, FB_H / 2, FG);
+        gfx.print('No spritesheet loaded', 10, FB_H / 2, FG);
         return;
     }
 
-    let lay = computeLayout();
-    let tileW = 8;
-    let tileH = 8;
-    let sheetCols = lay.sheetCols;
-    let sprCount = lay.sprCount;
-    let cw = lay.cw;
-    let ch = lay.ch;
-    let visRows = lay.visRows;
-    let gridContentH = lay.gridContentH;
+    const lay = computeLayout();
+    const tileW = 8;
+    const tileH = 8;
+    const { sheetCols } = lay;
+    const { sprCount } = lay;
+    const { cw } = lay;
+    const { ch } = lay;
+    const { visRows } = lay;
+    const { gridContentH } = lay;
 
     // ── Panel backgrounds (distinct from header/footer) ──
     gfx.rectfill(
@@ -1322,34 +1314,34 @@ export function drawSpriteEditor() {
     // Draw sprite thumbnails
     for (let r = 0; r < visRows; r++) {
         for (let c = 0; c < SPR_GRID_COLS; c++) {
-            let idx = (r + st.sprScrollY) * SPR_GRID_COLS + c;
+            const idx = (r + st.sprScrollY) * SPR_GRID_COLS + c;
             if (idx >= sprCount) break;
-            let dx = SPR_GRID_X + c * SPR_GRID_CELL;
-            let dy = SPR_GRID_Y + r * SPR_GRID_CELL;
-            let srcX = (idx % sheetCols) * tileW;
-            let srcY = Math.floor(idx / sheetCols) * tileH;
+            const dx = SPR_GRID_X + c * SPR_GRID_CELL;
+            const dy = SPR_GRID_Y + r * SPR_GRID_CELL;
+            const srcX = (idx % sheetCols) * tileW;
+            const srcY = Math.floor(idx / sheetCols) * tileH;
             gfx.sspr(srcX, srcY, tileW, tileH, dx, dy, SPR_GRID_CELL, SPR_GRID_CELL);
         }
     }
 
     // Grid lines in sheet selector
     for (let gc = 1; gc < SPR_GRID_COLS; gc++) {
-        let gx = SPR_GRID_X + gc * SPR_GRID_CELL;
+        const gx = SPR_GRID_X + gc * SPR_GRID_CELL;
         gfx.line(gx, SPR_GRID_Y, gx, SPR_GRID_Y + visRows * SPR_GRID_CELL - 1, SEPC);
     }
     for (let gr = 1; gr <= visRows; gr++) {
-        let gy = SPR_GRID_Y + gr * SPR_GRID_CELL;
+        const gy = SPR_GRID_Y + gr * SPR_GRID_CELL;
         gfx.line(SPR_GRID_X, gy, SPR_GRID_X + SPR_GRID_W - 1, gy, SEPC);
     }
 
     // Highlight selected multi-tile region (draw if any part visible)
-    let selCol = st.sprSel % sheetCols;
-    let selRow = Math.floor(st.sprSel / sheetCols);
-    let gridSelRow = selRow - st.sprScrollY;
+    const selCol = st.sprSel % sheetCols;
+    const selRow = Math.floor(st.sprSel / sheetCols);
+    const gridSelRow = selRow - st.sprScrollY;
     if (gridSelRow + st.sprSizeH > 0 && gridSelRow < visRows) {
         gfx.clip(SPR_GRID_X, SPR_GRID_Y, SPR_GRID_W, gridContentH);
-        let hx = SPR_GRID_X + selCol * SPR_GRID_CELL;
-        let hy = SPR_GRID_Y + gridSelRow * SPR_GRID_CELL;
+        const hx = SPR_GRID_X + selCol * SPR_GRID_CELL;
+        const hy = SPR_GRID_Y + gridSelRow * SPR_GRID_CELL;
         gfx.rect(
             hx,
             hy,
@@ -1361,11 +1353,11 @@ export function drawSpriteEditor() {
     }
 
     // ── Zoomed canvas ──
-    let zoom = lay.zoom;
-    let canvasPixW = lay.canvasPixW;
-    let canvasPixH = lay.canvasPixH;
-    let canvasOx = lay.canvasOx;
-    let canvasOy = lay.canvasOy;
+    const { zoom } = lay;
+    const { canvasPixW } = lay;
+    const { canvasPixH } = lay;
+    const { canvasOx } = lay;
+    const { canvasOy } = lay;
 
     // Clip canvas drawing to the canvas panel area
     gfx.clip(SPR_CANVAS_X, SPR_CANVAS_Y, SPR_CANVAS_W, SPR_CANVAS_H);
@@ -1373,10 +1365,10 @@ export function drawSpriteEditor() {
     // Background
     gfx.rectfill(canvasOx - 1, canvasOy - 1, canvasOx + canvasPixW, canvasOy + canvasPixH, GRIDC);
 
-    let base = selBase(sheetCols);
+    const base = selBase(sheetCols);
     for (let py = 0; py < ch; py++) {
         for (let px = 0; px < cw; px++) {
-            let c = gfx.sget(base.x + px, base.y + py);
+            const c = gfx.sget(base.x + px, base.y + py);
             gfx.rectfill(
                 canvasOx + px * zoom,
                 canvasOy + py * zoom,
@@ -1389,30 +1381,30 @@ export function drawSpriteEditor() {
 
     // Grid lines
     for (let px = 0; px <= cw; px++) {
-        let x = canvasOx + px * zoom;
+        const x = canvasOx + px * zoom;
         gfx.line(x, canvasOy, x, canvasOy + canvasPixH - 1, GRIDC);
     }
     for (let py = 0; py <= ch; py++) {
-        let y = canvasOy + py * zoom;
+        const y = canvasOy + py * zoom;
         gfx.line(canvasOx, y, canvasOx + canvasPixW - 1, y, GRIDC);
     }
 
     // Tile boundary lines (for multi-tile)
     if (st.sprSizeW > 1 || st.sprSizeH > 1) {
         for (let tx = 1; tx < st.sprSizeW; tx++) {
-            let x = canvasOx + tx * tileW * zoom;
+            const x = canvasOx + tx * tileW * zoom;
             gfx.line(x, canvasOy, x, canvasOy + canvasPixH - 1, FG);
         }
         for (let ty = 1; ty < st.sprSizeH; ty++) {
-            let y = canvasOy + ty * tileH * zoom;
+            const y = canvasOy + ty * tileH * zoom;
             gfx.line(canvasOx, y, canvasOx + canvasPixW - 1, y, FG);
         }
     }
 
     // Hover highlight
     if (st.sprHoverX >= 0) {
-        let hx = canvasOx + st.sprHoverX * zoom;
-        let hy = canvasOy + st.sprHoverY * zoom;
+        const hx = canvasOx + st.sprHoverX * zoom;
+        const hy = canvasOy + st.sprHoverY * zoom;
         gfx.rect(hx, hy, hx + zoom - 1, hy + zoom - 1, FG);
 
         // Tool cursor icon (drawn at mouse position)
@@ -1421,10 +1413,10 @@ export function drawSpriteEditor() {
 
     // Rectangle preview while dragging
     if (st.sprTool === TOOL_RECT && st.sprRectAnchor && st.sprHoverX >= 0) {
-        let rx0 = Math.min(st.sprRectAnchor.x, st.sprHoverX);
-        let ry0 = Math.min(st.sprRectAnchor.y, st.sprHoverY);
-        let rx1 = Math.max(st.sprRectAnchor.x, st.sprHoverX);
-        let ry1 = Math.max(st.sprRectAnchor.y, st.sprHoverY);
+        const rx0 = Math.min(st.sprRectAnchor.x, st.sprHoverX);
+        const ry0 = Math.min(st.sprRectAnchor.y, st.sprHoverY);
+        const rx1 = Math.max(st.sprRectAnchor.x, st.sprHoverX);
+        const ry1 = Math.max(st.sprRectAnchor.y, st.sprHoverY);
         gfx.rect(
             canvasOx + rx0 * zoom,
             canvasOy + ry0 * zoom,
@@ -1447,11 +1439,11 @@ export function drawSpriteEditor() {
 
     // Circle preview while dragging
     if (st.sprTool === TOOL_CIRC && st.sprCircAnchor && st.sprHoverX >= 0) {
-        let cdx = st.sprHoverX - st.sprCircAnchor.x;
-        let cdy = st.sprHoverY - st.sprCircAnchor.y;
-        let r = Math.round(Math.sqrt(cdx * cdx + cdy * cdy));
-        let centerScrX = canvasOx + st.sprCircAnchor.x * zoom + Math.floor(zoom / 2);
-        let centerScrY = canvasOy + st.sprCircAnchor.y * zoom + Math.floor(zoom / 2);
+        const cdx = st.sprHoverX - st.sprCircAnchor.x;
+        const cdy = st.sprHoverY - st.sprCircAnchor.y;
+        const r = Math.round(Math.sqrt(cdx * cdx + cdy * cdy));
+        const centerScrX = canvasOx + st.sprCircAnchor.x * zoom + Math.floor(zoom / 2);
+        const centerScrY = canvasOy + st.sprCircAnchor.y * zoom + Math.floor(zoom / 2);
         gfx.circ(centerScrX, centerScrY, r * zoom, FG);
     }
 
@@ -1459,10 +1451,10 @@ export function drawSpriteEditor() {
     if (st.sprTool === TOOL_SEL) {
         // Selection marquee during drag
         if (st.sprSelAnchor && !st.sprSelFloat && st.sprHoverX >= 0) {
-            let rx0 = Math.min(st.sprSelAnchor.x, st.sprHoverX);
-            let ry0 = Math.min(st.sprSelAnchor.y, st.sprHoverY);
-            let rx1 = Math.max(st.sprSelAnchor.x, st.sprHoverX);
-            let ry1 = Math.max(st.sprSelAnchor.y, st.sprHoverY);
+            const rx0 = Math.min(st.sprSelAnchor.x, st.sprHoverX);
+            const ry0 = Math.min(st.sprSelAnchor.y, st.sprHoverY);
+            const rx1 = Math.max(st.sprSelAnchor.x, st.sprHoverX);
+            const ry1 = Math.max(st.sprSelAnchor.y, st.sprHoverY);
             gfx.rect(
                 canvasOx + rx0 * zoom,
                 canvasOy + ry0 * zoom,
@@ -1473,7 +1465,7 @@ export function drawSpriteEditor() {
         }
         // Committed selection rect (marching ants = dashed rect)
         if (st.sprSelRect) {
-            let sr = st.sprSelRect;
+            const sr = st.sprSelRect;
             gfx.rect(
                 canvasOx + sr.x0 * zoom,
                 canvasOy + sr.y0 * zoom,
@@ -1484,13 +1476,13 @@ export function drawSpriteEditor() {
         }
         // Floating selection
         if (st.sprSelFloat) {
-            let f = st.sprSelFloat;
+            const f = st.sprSelFloat;
             for (let py = 0; py < f.h; py++) {
                 for (let px = 0; px < f.w; px++) {
-                    let col = f.pixels[py * f.w + px];
+                    const col = f.pixels[py * f.w + px];
                     if (col !== 0) {
-                        let dx = f.x + px;
-                        let dy = f.y + py;
+                        const dx = f.x + px;
+                        const dy = f.y + py;
                         if (dx >= 0 && dx < cw && dy >= 0 && dy < ch) {
                             gfx.rectfill(
                                 canvasOx + dx * zoom,
@@ -1515,11 +1507,11 @@ export function drawSpriteEditor() {
 
     // Symmetry axis lines
     if (st.sprMirrorX) {
-        let mx2 = canvasOx + Math.floor(cw / 2) * zoom;
+        const mx2 = canvasOx + Math.floor(cw / 2) * zoom;
         gfx.line(mx2, canvasOy, mx2, canvasOy + canvasPixH - 1, 8);
     }
     if (st.sprMirrorY) {
-        let my2 = canvasOy + Math.floor(ch / 2) * zoom;
+        const my2 = canvasOy + Math.floor(ch / 2) * zoom;
         gfx.line(canvasOx, my2, canvasOx + canvasPixW - 1, my2, 8);
     }
 
@@ -1527,36 +1519,36 @@ export function drawSpriteEditor() {
     gfx.clip();
 
     // 2× sprite preview (fixed position, top-right of canvas panel)
-    let prevScale = 2;
-    let prevW = cw * prevScale;
-    let prevH = ch * prevScale;
-    let prevX = FB_W - prevW - 4;
-    let prevY = SPR_CANVAS_Y + 2;
+    const prevScale = 2;
+    const prevW = cw * prevScale;
+    const prevH = ch * prevScale;
+    const prevX = FB_W - prevW - 4;
+    const prevY = SPR_CANVAS_Y + 2;
     gfx.rectfill(prevX - 1, prevY - 1, prevX + prevW, prevY + prevH, GRIDC);
     gfx.sspr(base.x, base.y, cw, ch, prevX, prevY, prevW, prevH);
 
     // ── Animation preview ──
     if (st.sprAnimPlay && st.sprAnimFrom < st.sprAnimTo) {
-        let animIdx = st.sprAnimFrom + st.sprAnimFrame;
-        let animSx = (animIdx % sheetCols) * 8;
-        let animSy = Math.floor(animIdx / sheetCols) * 8;
-        let animPrevY = prevY + prevH + 4;
+        const animIdx = st.sprAnimFrom + st.sprAnimFrame;
+        const animSx = (animIdx % sheetCols) * 8;
+        const animSy = Math.floor(animIdx / sheetCols) * 8;
+        const animPrevY = prevY + prevH + 4;
         gfx.rectfill(prevX - 1, animPrevY - 1, prevX + prevW, animPrevY + prevH, GRIDC);
         gfx.sspr(animSx, animSy, cw, ch, prevX, animPrevY, prevW, prevH);
-        let animTxt = "#" + animIdx + " " + st.sprAnimFps + "fps";
+        const animTxt = `#${animIdx} ${st.sprAnimFps}fps`;
         gfx.print(animTxt, prevX + prevW - gfx.textWidth(animTxt), animPrevY + prevH + 2, GUTFG);
     } else if (st.sprAnimFrom !== st.sprAnimTo) {
         // Show configured range even when not playing
-        let rangeTxt = "ANIM #" + st.sprAnimFrom + "-" + st.sprAnimTo + " " + st.sprAnimFps + "fps";
+        const rangeTxt = `ANIM #${st.sprAnimFrom}-${st.sprAnimTo} ${st.sprAnimFps}fps`;
         gfx.print(rangeTxt, prevX + prevW - gfx.textWidth(rangeTxt), prevY + prevH + 4, GUTFG);
     }
 
     // ── Palette grid (below sprite grid, left panel) ──
-    let palX = lay.palX;
-    let palY = lay.palY;
-    let palVisRows = lay.palVisRows;
-    let palTotalRows = lay.palTotalRows;
-    let palH = lay.palH;
+    const { palX } = lay;
+    const { palY } = lay;
+    const { palVisRows } = lay;
+    const { palTotalRows } = lay;
+    const { palH } = lay;
 
     // Separator line between grid and palette
     gfx.line(SPR_GRID_X, palY - 1, SPR_GRID_X + SPR_GRID_W - 1, palY - 1, SEPC);
@@ -1564,12 +1556,12 @@ export function drawSpriteEditor() {
     // Clip palette drawing to its area
     gfx.clip(palX, palY, SPR_GRID_W, palH);
     for (let r = 0; r < palVisRows; r++) {
-        let row = r + st.sprPalScrollY;
+        const row = r + st.sprPalScrollY;
         for (let c = 0; c < SPR_PAL_COLS; c++) {
-            let colIdx = row * SPR_PAL_COLS + c;
+            const colIdx = row * SPR_PAL_COLS + c;
             if (colIdx >= 256) break;
-            let px = palX + c * SPR_PAL_CELL;
-            let py = palY + r * SPR_PAL_CELL;
+            const px = palX + c * SPR_PAL_CELL;
+            const py = palY + r * SPR_PAL_CELL;
             gfx.rectfill(px, py, px + SPR_PAL_CELL - 1, py + SPR_PAL_CELL - 1, colIdx);
             if (colIdx === st.sprCol) {
                 gfx.rect(px, py, px + SPR_PAL_CELL - 1, py + SPR_PAL_CELL - 1, FG);
@@ -1580,34 +1572,34 @@ export function drawSpriteEditor() {
 
     // Scroll indicator (if not all rows visible)
     if (palVisRows < palTotalRows) {
-        let sbH = Math.max(4, Math.floor((palH * palVisRows) / palTotalRows));
-        let sbY =
+        const sbH = Math.max(4, Math.floor((palH * palVisRows) / palTotalRows));
+        const sbY =
             palY +
             Math.floor(((palH - sbH) * st.sprPalScrollY) / Math.max(1, palTotalRows - palVisRows));
         gfx.rectfill(palX + SPR_GRID_W - 3, sbY, palX + SPR_GRID_W - 1, sbY + sbH - 1, GUTFG);
     }
 
     // ── Flags display (below palette, left panel) ──
-    let flagsY = palY + palH + 2;
-    let flags = gfx.fget(st.sprSel);
-    gfx.print("FLAGS:", palX, flagsY, GUTFG);
+    const flagsY = palY + palH + 2;
+    const flags = gfx.fget(st.sprSel);
+    gfx.print('FLAGS:', palX, flagsY, GUTFG);
     for (let b = 0; b < 8; b++) {
-        let bx = palX + 7 * CW + b * (CW + 2);
-        let on = (flags >> b) & 1;
-        gfx.print("" + b, bx, flagsY, on ? FG : GUTFG);
+        const bx = palX + 7 * CW + b * (CW + 2);
+        const on = (flags >> b) & 1;
+        gfx.print(`${b}`, bx, flagsY, on ? FG : GUTFG);
         if (on) gfx.rectfill(bx, flagsY + CH, bx + CW - 1, flagsY + CH + 1, FG);
     }
 
     // ── Shortcuts (right panel, below canvas) ──
-    let shortcutsY = FB_H - SPR_FOOT_H - (CH + 2) * 2 - 2;
+    const shortcutsY = FB_H - SPR_FOOT_H - (CH + 2) * 2 - 2;
     gfx.print(
-        "B:pen E:era F:fill R:rect L:lin O:cir S:sel  G:fill M:size N:goto",
+        'B:pen E:era F:fill R:rect L:lin O:cir S:sel  G:fill M:size N:goto',
         SPR_CANVAS_X,
         shortcutsY,
         GUTFG,
     );
     gfx.print(
-        "P:anim A/Sh+A:range [/]:fps  Sh+X/Y:mir  -/=:col  Home:reset  Esc:cancel",
+        'P:anim A/Sh+A:range [/]:fps  Sh+X/Y:mir  -/=:col  Home:reset  Esc:cancel',
         SPR_CANVAS_X,
         shortcutsY + CH + 2,
         GUTFG,
@@ -1615,58 +1607,53 @@ export function drawSpriteEditor() {
 
     // ── Goto sprite overlay ──
     if (st.sprGoto) {
-        let goTxt = "Go to sprite #: " + st.sprGotoTxt + "_";
-        let goW = gfx.textWidth(goTxt) + CW * 2;
-        let goX = SPR_CANVAS_X + Math.floor((SPR_CANVAS_W - goW) / 2);
-        let goY = SPR_CANVAS_Y + Math.floor(SPR_CANVAS_H / 2) - CH;
+        const goTxt = `Go to sprite #: ${st.sprGotoTxt}_`;
+        const goW = gfx.textWidth(goTxt) + CW * 2;
+        const goX = SPR_CANVAS_X + Math.floor((SPR_CANVAS_W - goW) / 2);
+        const goY = SPR_CANVAS_Y + Math.floor(SPR_CANVAS_H / 2) - CH;
         gfx.rectfill(goX - 2, goY - 2, goX + goW + 1, goY + CH + 3, FOOTBG);
         gfx.rect(goX - 2, goY - 2, goX + goW + 1, goY + CH + 3, FG);
         gfx.print(goTxt, goX + CW, goY + 1, FG);
     }
 
     // ── Footer (status bar) ──
-    let footY = FB_H - SPR_FOOT_H;
+    const footY = FB_H - SPR_FOOT_H;
     gfx.rectfill(0, footY, FB_W - 1, FB_H - 1, FOOTBG);
-    let footTextY = footY + Math.floor((SPR_FOOT_H - CH) / 2);
-    gfx.print(
-        "TOOL:" + SPR_TOOLS[st.sprTool] + (st.sprFilled ? "*" : ""),
-        1 * CW,
-        footTextY,
-        FOOTFG,
-    );
-    gfx.print("COL:" + st.sprCol, 14 * CW, footTextY, FOOTFG);
+    const footTextY = footY + Math.floor((SPR_FOOT_H - CH) / 2);
+    gfx.print(`TOOL:${SPR_TOOLS[st.sprTool]}${st.sprFilled ? '*' : ''}`, 1 * CW, footTextY, FOOTFG);
+    gfx.print(`COL:${st.sprCol}`, 14 * CW, footTextY, FOOTFG);
     gfx.rectfill(19 * CW, footTextY, 19 * CW + CH - 1, footTextY + CH - 1, st.sprCol);
-    gfx.print("#" + st.sprSel, 22 * CW, footTextY, FG);
-    gfx.print(st.sprSizeW + "x" + st.sprSizeH, 28 * CW, footTextY, FOOTFG);
+    gfx.print(`#${st.sprSel}`, 22 * CW, footTextY, FG);
+    gfx.print(`${st.sprSizeW}x${st.sprSizeH}`, 28 * CW, footTextY, FOOTFG);
     if (st.sprZoom > 0) {
-        gfx.print(zoom + "x", 32 * CW, footTextY, GUTFG);
+        gfx.print(`${zoom}x`, 32 * CW, footTextY, GUTFG);
     }
     // Status indicators
     let statusX = 36;
     if (st.sprDirty) {
-        gfx.print("*", statusX * CW, footTextY, FG);
+        gfx.print('*', statusX * CW, footTextY, FG);
         statusX += 2;
     }
     if (st.sprMirrorX || st.sprMirrorY) {
-        let mirTxt = "MIR:" + (st.sprMirrorX ? "X" : "") + (st.sprMirrorY ? "Y" : "");
+        const mirTxt = `MIR:${st.sprMirrorX ? 'X' : ''}${st.sprMirrorY ? 'Y' : ''}`;
         gfx.print(mirTxt, statusX * CW, footTextY, 8);
         statusX += mirTxt.length + 1;
     }
     if (st.sprDither > 0) {
-        let dTxt = "DTH:" + DITHER_NAMES[st.sprDither];
+        const dTxt = `DTH:${DITHER_NAMES[st.sprDither]}`;
         gfx.print(dTxt, statusX * CW, footTextY, 9);
         statusX += dTxt.length + 1;
     }
     if (st.sprAnimPlay) {
-        gfx.print("ANIM", statusX * CW, footTextY, 11);
+        gfx.print('ANIM', statusX * CW, footTextY, 11);
         statusX += 5;
     }
     if (st.sprHoverX >= 0) {
-        gfx.print("(" + st.sprHoverX + "," + st.sprHoverY + ")", statusX * CW, footTextY, FOOTFG);
+        gfx.print(`(${st.sprHoverX},${st.sprHoverY})`, statusX * CW, footTextY, FOOTFG);
     }
     // Timed status message (right-aligned, like code editor footer)
     if (st.msg) {
-        let rw = gfx.textWidth(st.msg);
+        const rw = gfx.textWidth(st.msg);
         gfx.print(st.msg, FB_W - rw - CW, footTextY, FOOTFG);
     }
 }

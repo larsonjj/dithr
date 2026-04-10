@@ -1,14 +1,14 @@
 // ─── Selection helpers ───────────────────────────────────────────────────────
 
-import { st } from "./state.js";
-import { ensureVisible, resetBlink, status, MOD_NAME } from "./helpers.js";
+import { st } from './state.js';
+import { ensureVisible, resetBlink, status, MOD_NAME } from './helpers.js';
 
 export function selOrdered() {
     if (!st.anchor) return null;
     let a = { x: st.anchor.x, y: st.anchor.y };
     let b = { x: st.cx, y: st.cy };
     if (a.y > b.y || (a.y === b.y && a.x > b.x)) {
-        let t = a;
+        const t = a;
         a = b;
         b = t;
     }
@@ -16,17 +16,17 @@ export function selOrdered() {
 }
 
 export function selText() {
-    let s = selOrdered();
-    if (!s) return "";
+    const s = selOrdered();
+    if (!s) return '';
     if (s.a.y === s.b.y) return st.buf[s.a.y].slice(s.a.x, s.b.x);
-    let parts = [st.buf[s.a.y].slice(s.a.x)];
+    const parts = [st.buf[s.a.y].slice(s.a.x)];
     for (let i = s.a.y + 1; i < s.b.y; i++) parts.push(st.buf[i]);
     parts.push(st.buf[s.b.y].slice(0, s.b.x));
-    return parts.join("\n");
+    return parts.join('\n');
 }
 
 export function deleteSel() {
-    let s = selOrdered();
+    const s = selOrdered();
     if (!s) return false;
     pushUndo();
     if (s.a.y === s.b.y) {
@@ -57,11 +57,11 @@ export function pushUndo() {
 
 export function doUndo() {
     if (!st.undoStack.length) {
-        status("Nothing to undo");
+        status('Nothing to undo');
         return;
     }
     st.redoStack.push(snapshot());
-    let s = st.undoStack.pop();
+    const s = st.undoStack.pop();
     st.buf = s.buf;
     st.cx = s.cx;
     st.cy = s.cy;
@@ -74,12 +74,12 @@ export function doUndo() {
 
 export function doRedo() {
     if (!st.redoStack.length) {
-        status("Nothing to redo");
+        status('Nothing to redo');
         return;
     }
     st.invalidateCaches();
     st.undoStack.push(snapshot());
-    let s = st.redoStack.pop();
+    const s = st.redoStack.pop();
     st.buf = s.buf;
     st.cx = s.cx;
     st.cy = s.cy;
@@ -96,24 +96,22 @@ export function openFile(path) {
     for (let i = 0; i < st.openFiles.length; i++) {
         if (st.openFiles[i].path === path) {
             switchToFile(i);
-            status("Switched to " + path);
+            status(`Switched to ${path}`);
             return;
         }
     }
-    let data = sys.readFile(path);
+    const data = sys.readFile(path);
     if (data === undefined) {
-        status("Cannot read: " + path);
+        status(`Cannot read: ${path}`);
         return;
     }
     storeFileState();
-    let buf = data.replace(/\r\n/g, "\n").split("\n");
-    if (!buf.length) buf = [""];
-    let saved = buf.map(function (l) {
-        return l;
-    });
+    let buf = data.replace(/\r\n/g, '\n').split('\n');
+    if (!buf.length) buf = [''];
+    const saved = buf.map((l) => l);
     st.openFiles.push({
-        path: path,
-        buf: buf,
+        path,
+        buf,
         cx: 0,
         cy: 0,
         ox: 0,
@@ -127,42 +125,40 @@ export function openFile(path) {
     });
     st.fileIdx = st.openFiles.length - 1;
     loadFileState(st.fileIdx);
-    status("Opened " + path);
+    status(`Opened ${path}`);
 }
 
 export function saveFile() {
     if (!st.fname) {
-        status("No file — open one first (" + MOD_NAME + "+O)");
+        status(`No file — open one first (${MOD_NAME}+O)`);
         return;
     }
-    let ok = sys.writeFile(st.fname, st.buf.join("\n"));
+    const ok = sys.writeFile(st.fname, st.buf.join('\n'));
     if (ok) {
         st.dirty = false;
-        st.savedBuf = st.buf.map(function (l) {
-            return l;
-        });
+        st.savedBuf = st.buf.map((l) => l);
         if (st.fileIdx >= 0 && st.fileIdx < st.openFiles.length) {
             st.openFiles[st.fileIdx].dirty = false;
             st.openFiles[st.fileIdx].savedBuf = st.savedBuf;
         }
-        status("Saved " + st.fname);
+        status(`Saved ${st.fname}`);
     } else {
-        status("Write failed: " + st.fname);
+        status(`Write failed: ${st.fname}`);
     }
 }
 
 export function openBrowser() {
-    st.brDir = "";
+    st.brDir = '';
     refreshBrowser();
     st.brMode = true;
 }
 
 export function refreshBrowser() {
-    let dirs = sys.listDirs(st.brDir);
-    let files = sys.listFiles(st.brDir);
+    const dirs = sys.listDirs(st.brDir);
+    const files = sys.listFiles(st.brDir);
     st.brEntries = [];
     if (st.brDir) {
-        st.brEntries.push({ name: "..", isDir: true });
+        st.brEntries.push({ name: '..', isDir: true });
     }
     if (dirs) {
         for (let i = 0; i < dirs.length; i++) {
@@ -182,7 +178,7 @@ export function refreshBrowser() {
 
 export function storeFileState() {
     if (st.fileIdx < 0 || st.fileIdx >= st.openFiles.length) return;
-    let f = st.openFiles[st.fileIdx];
+    const f = st.openFiles[st.fileIdx];
     f.buf = st.buf;
     f.cx = st.cx;
     f.cy = st.cy;
@@ -197,7 +193,7 @@ export function storeFileState() {
 }
 
 export function loadFileState(idx) {
-    let f = st.openFiles[idx];
+    const f = st.openFiles[idx];
     st.buf = f.buf;
     st.cx = f.cx;
     st.cy = f.cy;
@@ -226,9 +222,12 @@ export function closeFile(idx) {
     if (st.openFiles.length === 1) {
         st.openFiles = [];
         st.fileIdx = -1;
-        st.buf = [""];
-        st.fname = "";
-        st.cx = st.cy = st.ox = st.oy = 0;
+        st.buf = [''];
+        st.fname = '';
+        st.cx = 0;
+        st.cy = 0;
+        st.ox = 0;
+        st.oy = 0;
         st.targetOy = 0;
         st.anchor = null;
         st.undoStack = [];

@@ -1,0 +1,20 @@
+{
+    "name": "dithr-example-collision_demo",
+    "version": "1.0.0",
+    "private": true,
+    "scripts": {
+        "lint": "eslint src/",
+        "lint:fix": "eslint --fix src/",
+        "format": "prettier --write src/",
+        "format:check": "prettier --check src/"
+    },
+    "devDependencies": {
+        "@eslint/eslintrc": "^3.0.0",
+        "@eslint/js": "^9.0.0",
+        "eslint": "^9.0.0",
+        "eslint-config-airbnb-base": "^15.0.0",
+        "eslint-config-prettier": "^9.0.0",
+        "eslint-plugin-import": "^2.29.0",
+        "prettier": "^3.0.0"
+    }
+}

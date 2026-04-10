@@ -1,7 +1,7 @@
 // ─── Edit-mode update ────────────────────────────────────────────────────────
 
-import { st } from "./state.js";
-import { EDIT_Y, FOOT_Y, CH, LINE_H, GUTTER, CW, EROWS, TAB } from "./config.js";
+import { st } from './state.js';
+import { EDIT_Y, FOOT_Y, LINE_H, GUTTER, CW, EROWS, TAB } from './config.js';
 import {
     clamp,
     ensureVisible,
@@ -11,9 +11,8 @@ import {
     wordBoundaryLeft,
     wordBoundaryRight,
     getIndent,
-    firstNonBlank,
     modKey,
-} from "./helpers.js";
+} from './helpers.js';
 import {
     selOrdered,
     selText,
@@ -25,12 +24,12 @@ import {
     openBrowser,
     switchToFile,
     closeFile,
-} from "./buffer.js";
-import { updateVimKeys } from "./vim.js";
+} from './buffer.js';
+import { updateVimKeys } from './vim.js';
 
 export function updateEdit() {
-    let ctrl = modKey();
-    let shift = key.btn(key.LSHIFT) || key.btn(key.RSHIFT);
+    const ctrl = modKey();
+    const shift = key.btn(key.LSHIFT) || key.btn(key.RSHIFT);
 
     // ── Autocomplete popup handling ──
     if (st.acActive) {
@@ -48,8 +47,8 @@ export function updateEdit() {
         }
         if (key.btnp(key.ENTER) || key.btnp(key.TAB)) {
             // Accept completion
-            let word = st.acItems[st.acIdx];
-            let suffix = word.slice(st.acPrefix.length);
+            const word = st.acItems[st.acIdx];
+            const suffix = word.slice(st.acPrefix.length);
             pushUndo();
             st.buf[st.cy] = st.buf[st.cy].slice(0, st.cx) + suffix + st.buf[st.cy].slice(st.cx);
             st.cx += suffix.length;
@@ -67,7 +66,7 @@ export function updateEdit() {
     if (ctrl) {
         if (key.btnp(key.TAB)) {
             if (st.openFiles.length > 1) {
-                let next = shift
+                const next = shift
                     ? (st.fileIdx - 1 + st.openFiles.length) % st.openFiles.length
                     : (st.fileIdx + 1) % st.openFiles.length;
                 switchToFile(next);
@@ -81,13 +80,13 @@ export function updateEdit() {
         if (key.btnp(key.GRAVE)) {
             st.vimEnabled = !st.vimEnabled;
             if (st.vimEnabled) {
-                st.vim = "normal";
-                st.vimCount = "";
-                st.vimPending = "";
+                st.vim = 'normal';
+                st.vimCount = '';
+                st.vimPending = '';
                 st.anchor = null;
-                status("Vim ON");
+                status('Vim ON');
             } else {
-                status("Vim OFF");
+                status('Vim OFF');
             }
             return;
         }
@@ -118,22 +117,22 @@ export function updateEdit() {
             return;
         }
         if (key.btnp(key.C)) {
-            let t = selText();
+            const t = selText();
             if (t) sys.clipboardSet(t);
             else sys.clipboardSet(st.buf[st.cy]);
-            status("Copied");
+            status('Copied');
             return;
         }
         if (key.btnp(key.X)) {
-            let t = selText();
+            const t = selText();
             if (t) {
                 sys.clipboardSet(t);
                 deleteSel();
             } else {
-                sys.clipboardSet(st.buf[st.cy] + "\n");
+                sys.clipboardSet(`${st.buf[st.cy]}\n`);
                 pushUndo();
                 st.buf.splice(st.cy, 1);
-                if (!st.buf.length) st.buf = [""];
+                if (!st.buf.length) st.buf = [''];
                 st.cy = Math.min(st.cy, st.buf.length - 1);
                 st.cx = Math.min(st.cx, st.buf[st.cy].length);
                 st.dirty = true;
@@ -143,16 +142,16 @@ export function updateEdit() {
             return;
         }
         if (key.btnp(key.V)) {
-            let t = sys.clipboardGet();
+            const t = sys.clipboardGet();
             if (!t) return;
             deleteSel();
             pushUndo();
-            let parts = t.replace(/\r\n/g, "\n").split("\n");
+            const parts = t.replace(/\r\n/g, '\n').split('\n');
             if (parts.length === 1) {
                 st.buf[st.cy] = st.buf[st.cy].slice(0, st.cx) + t + st.buf[st.cy].slice(st.cx);
                 st.cx += t.length;
             } else {
-                let after = st.buf[st.cy].slice(st.cx);
+                const after = st.buf[st.cy].slice(st.cx);
                 st.buf[st.cy] = st.buf[st.cy].slice(0, st.cx) + parts[0];
                 for (let i = 1; i < parts.length - 1; i++) {
                     st.buf.splice(st.cy + i, 0, parts[i]);
@@ -169,9 +168,9 @@ export function updateEdit() {
         if (key.btnp(key.D)) {
             if (shift && st.anchor) {
                 // Ctrl+Shift+D: duplicate selection inline
-                let t = selText();
+                const t = selText();
                 if (t) {
-                    let s = selOrdered();
+                    const s = selOrdered();
                     pushUndo();
                     st.buf[s.b.y] = st.buf[s.b.y].slice(0, s.b.x) + t + st.buf[s.b.y].slice(s.b.x);
                     st.dirty = true;
@@ -201,27 +200,27 @@ export function updateEdit() {
         }
         if (key.btnp(key.G)) {
             st.gotoMode = true;
-            st.gotoText = "";
+            st.gotoText = '';
             return;
         }
         if (key.btnp(key.SPACE)) {
             // Autocomplete: collect words from buffer matching prefix at cursor
-            let line = st.buf[st.cy];
-            let end = st.cx;
+            const line = st.buf[st.cy];
+            const end = st.cx;
             let start = end;
             while (start > 0 && isWordChar(line[start - 1])) start--;
-            let prefix = line.slice(start, end);
+            const prefix = line.slice(start, end);
             if (prefix.length > 0) {
-                let seen = {};
-                let items = [];
+                const seen = {};
+                const items = [];
                 for (let i = 0; i < st.buf.length; i++) {
-                    let ln = st.buf[i];
+                    const ln = st.buf[i];
                     let j = 0;
                     while (j < ln.length) {
                         if (isWordChar(ln[j])) {
-                            let ws = j;
+                            const ws = j;
                             while (j < ln.length && isWordChar(ln[j])) j++;
-                            let w = ln.slice(ws, j);
+                            const w = ln.slice(ws, j);
                             if (
                                 w.length > prefix.length &&
                                 w.slice(0, prefix.length) === prefix &&
@@ -252,7 +251,7 @@ export function updateEdit() {
         }
         if (shift && key.btnp(key.K)) {
             pushUndo();
-            let s = selOrdered();
+            const s = selOrdered();
             if (s) {
                 st.buf.splice(s.a.y, s.b.y - s.a.y + 1);
                 st.anchor = null;
@@ -260,7 +259,7 @@ export function updateEdit() {
             } else {
                 st.buf.splice(st.cy, 1);
             }
-            if (!st.buf.length) st.buf = [""];
+            if (!st.buf.length) st.buf = [''];
             st.cy = Math.min(st.cy, st.buf.length - 1);
             st.cx = Math.min(st.cx, st.buf[st.cy].length);
             st.dirty = true;
@@ -269,15 +268,15 @@ export function updateEdit() {
             return;
         }
         if (key.btnr(key.LEFT)) {
-            let ox0 = st.cx,
-                oy0 = st.cy;
+            const ox0 = st.cx;
+            const oy0 = st.cy;
             if (st.cx > 0) {
-                let line = st.buf[st.cy];
+                const line = st.buf[st.cy];
                 st.cx--;
                 if (isWordChar(line[st.cx])) {
                     while (st.cx > 0 && isWordChar(line[st.cx - 1])) st.cx--;
                 } else {
-                    while (st.cx > 0 && !isWordChar(line[st.cx - 1]) && line[st.cx - 1] !== " ")
+                    while (st.cx > 0 && !isWordChar(line[st.cx - 1]) && line[st.cx - 1] !== ' ')
                         st.cx--;
                 }
             } else if (st.cy > 0) {
@@ -291,17 +290,17 @@ export function updateEdit() {
             return;
         }
         if (key.btnr(key.RIGHT)) {
-            let ox0 = st.cx,
-                oy0 = st.cy;
-            let line = st.buf[st.cy];
+            const ox0 = st.cx;
+            const oy0 = st.cy;
+            const line = st.buf[st.cy];
             if (st.cx < line.length) {
                 if (isWordChar(line[st.cx])) {
                     while (st.cx < line.length && isWordChar(line[st.cx])) st.cx++;
-                } else if (line[st.cx] !== " ") {
-                    while (st.cx < line.length && !isWordChar(line[st.cx]) && line[st.cx] !== " ")
+                } else if (line[st.cx] !== ' ') {
+                    while (st.cx < line.length && !isWordChar(line[st.cx]) && line[st.cx] !== ' ')
                         st.cx++;
                 }
-                while (st.cx < line.length && line[st.cx] === " ") st.cx++;
+                while (st.cx < line.length && line[st.cx] === ' ') st.cx++;
             } else if (st.cy < st.buf.length - 1) {
                 st.cy++;
                 st.cx = 0;
@@ -315,33 +314,33 @@ export function updateEdit() {
         if (key.btnp(key.SLASH)) {
             // Toggle line comment
             pushUndo();
-            let s = selOrdered();
-            let startLine = s ? s.a.y : st.cy;
-            let endLine = s ? s.b.y : st.cy;
+            const s = selOrdered();
+            const startLine = s ? s.a.y : st.cy;
+            const endLine = s ? s.b.y : st.cy;
             // Check if all lines are commented
             let allCommented = true;
             for (let i = startLine; i <= endLine; i++) {
-                let stripped = st.buf[i].replace(/^\s*/, "");
-                if (stripped.length && stripped.slice(0, 2) !== "//") {
+                const stripped = st.buf[i].replace(/^\s*/, '');
+                if (stripped.length && stripped.slice(0, 2) !== '//') {
                     allCommented = false;
                     break;
                 }
             }
             for (let i = startLine; i <= endLine; i++) {
                 if (allCommented) {
-                    let idx = st.buf[i].indexOf("//");
+                    const idx = st.buf[i].indexOf('//');
                     if (idx >= 0) {
-                        let after = st.buf[i][idx + 2] === " " ? idx + 3 : idx + 2;
+                        const after = st.buf[i][idx + 2] === ' ' ? idx + 3 : idx + 2;
                         st.buf[i] = st.buf[i].slice(0, idx) + st.buf[i].slice(after);
                     }
                 } else {
                     let fnb = 0;
                     while (
                         fnb < st.buf[i].length &&
-                        (st.buf[i][fnb] === " " || st.buf[i][fnb] === "\t")
+                        (st.buf[i][fnb] === ' ' || st.buf[i][fnb] === '\t')
                     )
                         fnb++;
-                    st.buf[i] = st.buf[i].slice(0, fnb) + "// " + st.buf[i].slice(fnb);
+                    st.buf[i] = `${st.buf[i].slice(0, fnb)}// ${st.buf[i].slice(fnb)}`;
                 }
             }
             st.dirty = true;
@@ -350,12 +349,12 @@ export function updateEdit() {
         }
         if (shift && key.btnr(key.UP)) {
             // Move line(s) up
-            let s = selOrdered();
-            let startLine = s ? s.a.y : st.cy;
-            let endLine = s ? s.b.y : st.cy;
+            const s = selOrdered();
+            const startLine = s ? s.a.y : st.cy;
+            const endLine = s ? s.b.y : st.cy;
             if (startLine > 0) {
                 pushUndo();
-                let removed = st.buf.splice(startLine - 1, 1)[0];
+                const removed = st.buf.splice(startLine - 1, 1)[0];
                 st.buf.splice(endLine, 0, removed);
                 st.cy--;
                 if (s) {
@@ -369,12 +368,12 @@ export function updateEdit() {
         }
         if (shift && key.btnr(key.DOWN)) {
             // Move line(s) down
-            let s = selOrdered();
-            let startLine = s ? s.a.y : st.cy;
-            let endLine = s ? s.b.y : st.cy;
+            const s = selOrdered();
+            const startLine = s ? s.a.y : st.cy;
+            const endLine = s ? s.b.y : st.cy;
             if (endLine < st.buf.length - 1) {
                 pushUndo();
-                let removed = st.buf.splice(endLine + 1, 1)[0];
+                const removed = st.buf.splice(endLine + 1, 1)[0];
                 st.buf.splice(startLine, 0, removed);
                 st.cy++;
                 if (s) {
@@ -389,7 +388,7 @@ export function updateEdit() {
         if (shift && key.btnp(key.ENTER)) {
             // Insert line above
             pushUndo();
-            let indent = getIndent(st.cy);
+            const indent = getIndent(st.cy);
             st.buf.splice(st.cy, 0, indent);
             st.cx = indent.length;
             st.dirty = true;
@@ -406,7 +405,7 @@ export function updateEdit() {
             }
             pushUndo();
             if (st.cx > 0) {
-                let nc = wordBoundaryLeft(st.buf[st.cy], st.cx);
+                const nc = wordBoundaryLeft(st.buf[st.cy], st.cx);
                 st.buf[st.cy] = st.buf[st.cy].slice(0, nc) + st.buf[st.cy].slice(st.cx);
                 st.cx = nc;
             } else if (st.cy > 0) {
@@ -429,7 +428,7 @@ export function updateEdit() {
             }
             pushUndo();
             if (st.cx < st.buf[st.cy].length) {
-                let nc = wordBoundaryRight(st.buf[st.cy], st.cx);
+                const nc = wordBoundaryRight(st.buf[st.cy], st.cx);
                 st.buf[st.cy] = st.buf[st.cy].slice(0, st.cx) + st.buf[st.cy].slice(nc);
             } else if (st.cy < st.buf.length - 1) {
                 st.buf[st.cy] += st.buf[st.cy + 1];
@@ -443,20 +442,20 @@ export function updateEdit() {
     }
 
     // ── Mouse wheel (always active, including Vim normal) ──
-    let wheel = mouse.wheel();
+    const wheel = mouse.wheel();
     if (wheel !== 0) {
         st.targetOy = clamp(st.targetOy - wheel * 3, 0, Math.max(0, st.buf.length - 1));
     }
 
     // ── Vim non-insert modes ──
-    if (st.vimEnabled && st.vim !== "insert") {
+    if (st.vimEnabled && st.vim !== 'insert') {
         updateVimKeys();
         return;
     }
 
     // ── Vim insert: Escape returns to normal ──
     if (st.vimEnabled && key.btnp(key.ESCAPE)) {
-        st.vim = "normal";
+        st.vim = 'normal';
         st.cx = Math.max(0, st.cx - 1);
         st.anchor = null;
         ensureVisible();
@@ -465,8 +464,8 @@ export function updateEdit() {
     }
 
     // ── Navigation (with key repeat) ──
-    let pcx = st.cx,
-        pcy = st.cy;
+    const pcx = st.cx;
+    const pcy = st.cy;
 
     if (key.btnr(key.LEFT)) {
         if (st.cx > 0) st.cx--;
@@ -494,7 +493,7 @@ export function updateEdit() {
         let fnb = 0;
         while (
             fnb < st.buf[st.cy].length &&
-            (st.buf[st.cy][fnb] === " " || st.buf[st.cy][fnb] === "\t")
+            (st.buf[st.cy][fnb] === ' ' || st.buf[st.cy][fnb] === '\t')
         )
             fnb++;
         st.cx = st.cx === fnb ? 0 : fnb;
@@ -560,17 +559,17 @@ export function updateEdit() {
         deleteSel();
         pushUndo();
         // Auto-indent: match leading whitespace of current line
-        let indent = "";
-        let m = st.buf[st.cy].match(/^(\s+)/);
-        if (m) indent = m[1];
-        let charBefore = st.cx > 0 ? st.buf[st.cy][st.cx - 1] : "";
-        let charAfter = st.cx < st.buf[st.cy].length ? st.buf[st.cy][st.cx] : "";
-        let after = st.buf[st.cy].slice(st.cx);
+        let indent = '';
+        const m = st.buf[st.cy].match(/^(\s+)/);
+        if (m) [, indent] = m;
+        const charBefore = st.cx > 0 ? st.buf[st.cy][st.cx - 1] : '';
+        const charAfter = st.cx < st.buf[st.cy].length ? st.buf[st.cy][st.cx] : '';
+        const after = st.buf[st.cy].slice(st.cx);
         st.buf[st.cy] = st.buf[st.cy].slice(0, st.cx);
-        if (charBefore === "{") {
-            let newIndent = indent + TAB;
+        if (charBefore === '{') {
+            const newIndent = indent + TAB;
             st.cy++;
-            if (charAfter === "}") {
+            if (charAfter === '}') {
                 // Split braces: cursor on indented middle line, closing brace on dedented line below
                 st.buf.splice(st.cy, 0, newIndent, indent + after);
             } else {
@@ -588,7 +587,7 @@ export function updateEdit() {
     }
 
     if (key.btnr(key.TAB)) {
-        let s = selOrdered();
+        const s = selOrdered();
         if (s && s.a.y !== s.b.y) {
             // Indent / dedent selected lines
             pushUndo();
@@ -629,11 +628,11 @@ export function updateEdit() {
     }
 
     // ── Mouse ──
-    let mx = mouse.x();
-    let my = mouse.y();
-    let editY = EDIT_Y;
-    let footY = FOOT_Y;
-    let gutterPx = GUTTER * CW;
+    const mx = mouse.x();
+    const my = mouse.y();
+    const editY = EDIT_Y;
+    const footY = FOOT_Y;
+    const gutterPx = GUTTER * CW;
 
     if (my >= editY && my < footY && mx >= gutterPx) {
         if (mouse.btnp(0)) {
@@ -643,7 +642,7 @@ export function updateEdit() {
             row = clamp(row, 0, st.buf.length - 1);
             col = clamp(col, 0, st.buf[row].length);
             // Detect double/triple click
-            let now = Date.now();
+            const now = Date.now();
             if (
                 now - st.lastClickTime < 400 &&
                 Math.abs(mx - st.lastClickX) < 4 &&
@@ -659,9 +658,9 @@ export function updateEdit() {
             if (st.clickCount === 2) {
                 // Double-click: select word
                 st.cy = row;
-                let line = st.buf[st.cy];
-                let wl = col,
-                    wr = col;
+                const line = st.buf[st.cy];
+                let wl = col;
+                let wr = col;
                 while (wl > 0 && isWordChar(line[wl - 1])) wl--;
                 while (wr < line.length && isWordChar(line[wr])) wr++;
                 st.anchor = { x: wl, y: st.cy };

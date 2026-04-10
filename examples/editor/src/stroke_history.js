@@ -35,13 +35,13 @@ export function commit(hist) {
  */
 export function undo(hist, applyOp) {
     if (hist.undoStack.length === 0) return false;
-    let stroke = hist.undoStack.pop();
-    let redo = [];
+    const stroke = hist.undoStack.pop();
+    const redoOps = [];
     for (let i = stroke.length - 1; i >= 0; i--) {
-        redo.push(applyOp(stroke[i]));
+        redoOps.push(applyOp(stroke[i]));
     }
-    redo.reverse();
-    hist.redoStack.push(redo);
+    redoOps.reverse();
+    hist.redoStack.push(redoOps);
     return true;
 }
 
@@ -53,8 +53,8 @@ export function undo(hist, applyOp) {
  */
 export function redo(hist, applyOp) {
     if (hist.redoStack.length === 0) return false;
-    let stroke = hist.redoStack.pop();
-    let undoOps = [];
+    const stroke = hist.redoStack.pop();
+    const undoOps = [];
     for (let i = 0; i < stroke.length; i++) {
         undoOps.push(applyOp(stroke[i]));
     }

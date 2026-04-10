@@ -3,10 +3,10 @@
 // All editor state lives on this single exported object so that every module
 // can freely read *and* write it via `st.cx`, `st.buf`, etc.
 
-import { TAB_CODE } from "./config.js";
+import { TAB_CODE } from './config.js';
 
 export const st = {
-    buf: [""], // line buffer
+    buf: [''], // line buffer
     cx: 0,
     cy: 0, // cursor col / row in buffer
     ox: 0,
@@ -15,11 +15,11 @@ export const st = {
 
     blink: 0,
     curOn: true, // cursor blink state
-    fname: "", // current filename
+    fname: '', // current filename
     dirty: false,
     openFiles: [], // [{path,buf,cx,cy,ox,oy,targetOy,anchor,undoStack,redoStack,dirty,savedBuf}]
     fileIdx: -1, // active file index (-1 = no files open)
-    msg: "",
+    msg: '',
     msgT: 0, // status message + timer
     restored: false, // set by _restore to skip default open in _init
 
@@ -33,29 +33,29 @@ export const st = {
     brEntries: [], // {name, isDir}
     brIdx: 0,
     brScroll: 0,
-    brDir: "", // current directory relative to cart root
+    brDir: '', // current directory relative to cart root
 
     // find & replace
     findMode: false,
-    findText: "",
-    replaceText: "",
+    findText: '',
+    replaceText: '',
     findReplace: false, // true = show replace field
     findField: 0, // 0 = find, 1 = replace
 
     // go to line
     gotoMode: false,
-    gotoText: "",
+    gotoText: '',
 
     // vim mode
     vimEnabled: false,
-    vim: "normal", // "normal", "insert", "visual", "vline", "command"
-    vimCount: "",
-    vimPending: "",
+    vim: 'normal', // "normal", "insert", "visual", "vline", "command"
+    vimCount: '',
+    vimPending: '',
     vimOpCount: 1,
-    vimCmd: "",
-    vimReg: "",
+    vimCmd: '',
+    vimReg: '',
     vimLinewise: false,
-    vimSearch: "",
+    vimSearch: '',
     vimVlineStart: 0,
 
     // double-click state
@@ -71,7 +71,7 @@ export const st = {
     savedBuf: [], // snapshot at last save/open
 
     // persistent find highlighting
-    lastFindText: "",
+    lastFindText: '',
 
     // tab state
     activeTab: TAB_CODE,
@@ -95,7 +95,7 @@ export const st = {
     sprPanY: 0, // canvas pan offset Y (pixels)
     sprPanning: false, // middle-click pan in progress
     sprGoto: false, // sprite goto input active
-    sprGotoTxt: "", // sprite goto input text
+    sprGotoTxt: '', // sprite goto input text
     sprClipboard: null, // {w,h,pixels[]} for copy/paste
     sprFilled: false, // filled shape mode for rect/circle
     sprDither: 0, // dither pattern index (0=off, 1-4=presets)
@@ -140,8 +140,8 @@ export const st = {
     mapStampRect: null, // {x0,y0,x1,y1} in sheet grid coords
     mapLayerVis: [], // bool per layer (true=visible)
     mapResizeMode: false,
-    mapResizeW: "",
-    mapResizeH: "",
+    mapResizeW: '',
+    mapResizeH: '',
     mapResizeField: 0, // 0=width, 1=height
     mapLevelMode: false, // level picker active
     mapLevelIdx: 0, // selected index in level picker
@@ -152,7 +152,7 @@ export const st = {
     mapObjDrag: null, // {ox,oy} drag offset when moving object
     mapObjCounter: 0, // incrementing counter for default object names
     mapRenameMode: false, // layer rename dialog active
-    mapRenameTxt: "", // layer rename input text
+    mapRenameTxt: '', // layer rename input text
     mapSpacePan: false, // spacebar+drag panning active
 
     // sfx editor state
@@ -179,7 +179,7 @@ export const st = {
     sfxNoteClip: null, // copied note range [{pitch,waveform,volume,effect},...]
     sfxDragging: false, // mouse drag painting active
     sfxRenaming: false, // SFX rename mode active
-    sfxRenameTxt: "", // SFX rename input text
+    sfxRenameTxt: '', // SFX rename input text
 
     // music editor state
     musPatterns: null, // lazy init: [{ch:[-1,-1,-1,-1], flags:0}] × 64
@@ -195,7 +195,7 @@ export const st = {
     musRedoStack: [], // redo snapshots
     musMute: [false, false, false, false], // per-channel mute
     musRenaming: false, // pattern rename mode active
-    musRenameTxt: "", // pattern rename input text
+    musRenameTxt: '', // pattern rename input text
 
     // caches (invalidated on edit)
     _blockStateCache: [],
@@ -218,7 +218,7 @@ export const st = {
     acActive: false, // completion menu visible
     acItems: [], // completion candidates (strings)
     acIdx: 0, // selected item index
-    acPrefix: "", // prefix being completed
+    acPrefix: '', // prefix being completed
     acX: 0, // screen X of popup
     acY: 0, // screen Y of popup
 

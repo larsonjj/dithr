@@ -9,54 +9,54 @@
 
 // --- Constants -------------------------------------------------------
 
-var COL_BG = 1; // dark blue background
-var COL_PANEL = 2; // dark purple panel fill
-var COL_BORDER = 5; // dark grey border
-var COL_TITLE = 7; // white
-var COL_LABEL = 6; // light grey
-var COL_BAR_BG = 0; // black
-var COL_BAR_HP = 11; // green
-var COL_BAR_MP = 12; // blue
-var COL_BAR_XP = 10; // yellow
-var COL_HIGHLIGHT = 8; // red
-var COL_MENU = 13; // purple-ish
+const COL_BG = 1; // dark blue background
+const COL_PANEL = 2; // dark purple panel fill
+const COL_BORDER = 5; // dark grey border
+const COL_TITLE = 7; // white
+const COL_LABEL = 6; // light grey
+const COL_BAR_BG = 0; // black
+const COL_BAR_HP = 11; // green
+const COL_BAR_MP = 12; // blue
+const COL_BAR_XP = 10; // yellow
+const COL_HIGHLIGHT = 8; // red
+const COL_MENU = 13; // purple-ish
 
 // --- State -----------------------------------------------------------
 
-var sidebar_open = true;
-var sidebar_tw = null; // tween handle for sidebar slide
-var sidebar_t = 1.0; // 0 = closed, 1 = open
+let sidebarOpen = true;
+let sidebarTw = null; // tween handle for sidebar slide
+let sidebarT = 1.0; // 0 = closed, 1 = open
 
-var hp = 0.7;
-var mp = 0.4;
-var xp = 0.55;
+let hp = 0.7;
+let mp = 0.4;
+let xp = 0.55;
 
-var bar_tweens = []; // intro tweens for stat bars
-var bar_values = [0, 0, 0];
+let barTweens = []; // intro tweens for stat bars
+let barValues = [0, 0, 0];
 
-var menu_items = ["Inventory", "Skills", "Map", "Settings"];
-var menu_tweens = []; // staggered menu slide-in tweens
-var menu_offsets = []; // current x-offsets per item
+const menuItems = ['Inventory', 'Skills', 'Map', 'Settings'];
+let menuTweens = []; // staggered menu slide-in tweens
+let menuOffsets = []; // current x-offsets per item
 
-var title_tw = null;
-var title_alpha = 0; // 0..1 for title fade-in
+let titleTw = null;
+let titleAlpha = 0; // 0..1 for title fade-in
 
-var bounce_tw = null;
-var bounce_y = 0;
+let bounceTw = null;
+let bounceY = 0;
 
-var intro_done = false;
+let introDone = false;
 
 // --- Helpers ---------------------------------------------------------
 
-function draw_panel(r, col) {
+function drawPanel(r, col) {
     gfx.rectfill(r.x, r.y, r.x + r.w - 1, r.y + r.h - 1, col);
     gfx.rect(r.x, r.y, r.x + r.w - 1, r.y + r.h - 1, COL_BORDER);
 }
 
-function draw_bar(r, fill, col) {
+function drawBar(r, fill, col) {
     gfx.rectfill(r.x, r.y, r.x + r.w - 1, r.y + r.h - 1, COL_BAR_BG);
     if (fill > 0) {
-        var fw = math.flr(r.w * math.min(fill, 1));
+        const fw = math.flr(r.w * math.min(fill, 1));
         if (fw > 0) {
             gfx.rectfill(r.x, r.y, r.x + fw - 1, r.y + r.h - 1, col);
         }
@@ -64,50 +64,50 @@ function draw_bar(r, fill, col) {
     gfx.rect(r.x, r.y, r.x + r.w - 1, r.y + r.h - 1, COL_BORDER);
 }
 
-function draw_label(text, r, col) {
+function drawLabel(text, r, col) {
     gfx.print(text, r.x + 2, r.y + 1, col);
 }
 
 // --- Animation Setup -------------------------------------------------
 
-function start_intro() {
-    intro_done = false;
+function startIntro() {
+    introDone = false;
 
     // Reset values
-    sidebar_t = 0;
-    bar_values = [0, 0, 0];
-    menu_offsets = [80, 80, 80, 80];
+    sidebarT = 0;
+    barValues = [0, 0, 0];
+    menuOffsets = [80, 80, 80, 80];
 
     // Sidebar slides in
-    sidebar_tw = tween.start(0, 1, 0.5, "easeOutCubic");
-    sidebar_tw.done.then(function () {
-        sidebar_t = 1;
+    sidebarTw = tween.start(0, 1, 0.5, 'easeOutCubic');
+    sidebarTw.done.then(() => {
+        sidebarT = 1;
     });
 
     // Stat bars fill up (staggered)
-    var targets = [hp, mp, xp];
-    bar_tweens = [];
-    for (var i = 0; i < 3; i++) {
-        bar_tweens.push(tween.start(0, targets[i], 0.6, "easeOutQuad", 0.3 + i * 0.15));
+    const targets = [hp, mp, xp];
+    barTweens = [];
+    for (let i = 0; i < 3; i++) {
+        barTweens.push(tween.start(0, targets[i], 0.6, 'easeOutQuad', 0.3 + i * 0.15));
     }
 
     // Menu items slide in from the right (staggered)
-    menu_tweens = [];
-    for (var j = 0; j < menu_items.length; j++) {
-        menu_tweens.push(tween.start(80, 0, 0.4, "easeOutBack", 0.2 + j * 0.1));
+    menuTweens = [];
+    for (let j = 0; j < menuItems.length; j++) {
+        menuTweens.push(tween.start(80, 0, 0.4, 'easeOutBack', 0.2 + j * 0.1));
     }
 
     // Title fades in
-    title_tw = tween.start(0, 1, 0.8, "easeInOut", 0.1);
+    titleTw = tween.start(0, 1, 0.8, 'easeInOut', 0.1);
 
     // Bouncing indicator
-    bounce_tw = tween.start(0, 6, 0.6, "easeOutBounce", 0.5);
-    bounce_tw.done.then(function () {
+    bounceTw = tween.start(0, 6, 0.6, 'easeOutBounce', 0.5);
+    bounceTw.done.then(() => {
         // Chain: bounce back
-        bounce_tw = tween.start(6, 0, 0.4, "easeInOut");
-        bounce_tw.done.then(function () {
-            bounce_y = 0;
-            intro_done = true;
+        bounceTw = tween.start(6, 0, 0.4, 'easeInOut');
+        bounceTw.done.then(() => {
+            bounceY = 0;
+            introDone = true;
         });
     });
 }
@@ -116,33 +116,33 @@ function start_intro() {
 
 function _save() {
     return {
-        sidebar_open: sidebar_open,
-        sidebar_t: sidebar_t,
-        hp: hp,
-        mp: mp,
-        xp: xp,
-        intro_done: intro_done,
+        sidebarOpen,
+        sidebarT,
+        hp,
+        mp,
+        xp,
+        introDone,
     };
 }
 
 function _restore(s) {
-    sidebar_open = s.sidebar_open;
-    sidebar_t = s.sidebar_t;
+    sidebarOpen = s.sidebarOpen;
+    sidebarT = s.sidebarT;
     hp = s.hp;
     mp = s.mp;
     xp = s.xp;
-    intro_done = s.intro_done;
-    bar_values = [hp, mp, xp];
-    menu_offsets = [0, 0, 0, 0];
-    title_alpha = 1;
-    bounce_y = 0;
+    introDone = s.introDone;
+    barValues = [hp, mp, xp];
+    menuOffsets = [0, 0, 0, 0];
+    titleAlpha = 1;
+    bounceY = 0;
 }
 
 // --- Callbacks -------------------------------------------------------
 
 function _init() {
-    if (!intro_done) {
-        start_intro();
+    if (!introDone) {
+        startIntro();
     }
 }
 
@@ -150,40 +150,40 @@ function _update(dt) {
     tween.tick(dt);
 
     // Read tween values
-    if (sidebar_tw) {
-        sidebar_t = tween.val(sidebar_tw, sidebar_t);
+    if (sidebarTw) {
+        sidebarT = tween.val(sidebarTw, sidebarT);
     }
-    for (var i = 0; i < bar_tweens.length; i++) {
-        if (bar_tweens[i]) {
-            bar_values[i] = tween.val(bar_tweens[i], bar_values[i]);
+    for (let i = 0; i < barTweens.length; i++) {
+        if (barTweens[i]) {
+            barValues[i] = tween.val(barTweens[i], barValues[i]);
         }
     }
-    for (var j = 0; j < menu_tweens.length; j++) {
-        if (menu_tweens[j]) {
-            menu_offsets[j] = tween.val(menu_tweens[j], menu_offsets[j]);
+    for (let j = 0; j < menuTweens.length; j++) {
+        if (menuTweens[j]) {
+            menuOffsets[j] = tween.val(menuTweens[j], menuOffsets[j]);
         }
     }
-    if (title_tw) {
-        title_alpha = tween.val(title_tw, title_alpha);
+    if (titleTw) {
+        titleAlpha = tween.val(titleTw, titleAlpha);
     }
-    if (bounce_tw) {
-        bounce_y = tween.val(bounce_tw, bounce_y);
+    if (bounceTw) {
+        bounceY = tween.val(bounceTw, bounceY);
     }
 
     // Replay intro
     if (key.btnp(key.SPACE)) {
         tween.cancelAll();
-        start_intro();
+        startIntro();
     }
 
     // Toggle sidebar
     if (key.btnp(key.Z)) {
-        sidebar_open = !sidebar_open;
-        var from = sidebar_t;
-        var to = sidebar_open ? 1 : 0;
-        sidebar_tw = tween.start(from, to, 0.3, "easeInOut");
-        sidebar_tw.done.then(function () {
-            sidebar_t = to;
+        sidebarOpen = !sidebarOpen;
+        const from = sidebarT;
+        const to = sidebarOpen ? 1 : 0;
+        sidebarTw = tween.start(from, to, 0.3, 'easeInOut');
+        sidebarTw.done.then(() => {
+            sidebarT = to;
         });
     }
 }
@@ -192,121 +192,121 @@ function _draw() {
     gfx.cls(COL_BG);
 
     // Full screen rect
-    var screen = ui.rect(0, 0, 320, 180);
+    const screen = ui.rect(0, 0, 320, 180);
 
     // --- Title bar (top 14px) ---
-    var parts = ui.vsplit(screen, 14 / 180, 0);
-    var title_bar = parts[0];
-    var body = parts[1];
+    const parts = ui.vsplit(screen, 14 / 180, 0);
+    const titleBar = parts[0];
+    const body = parts[1];
 
     // Draw title bar
-    draw_panel(title_bar, COL_PANEL);
-    if (title_alpha > 0.5) {
-        gfx.print("UI & Tween Demo", title_bar.x + 4, title_bar.y + 3, COL_TITLE);
+    drawPanel(titleBar, COL_PANEL);
+    if (titleAlpha > 0.5) {
+        gfx.print('UI & Tween Demo', titleBar.x + 4, titleBar.y + 3, COL_TITLE);
     }
 
     // Show bounce indicator next to title
-    var indicator = ui.place(title_bar, 1.0, 0.5, 8, 8);
+    const indicator = ui.place(titleBar, 1.0, 0.5, 8, 8);
     indicator.x -= 12;
     gfx.rectfill(
         indicator.x,
-        indicator.y - math.flr(bounce_y),
+        indicator.y - math.flr(bounceY),
         indicator.x + 5,
-        indicator.y + 5 - math.flr(bounce_y),
+        indicator.y + 5 - math.flr(bounceY),
         COL_HIGHLIGHT,
     );
 
     // --- Body: sidebar + main area ---
-    var sidebar_w = math.flr(70 * sidebar_t);
-    var body_inset = ui.inset(body, 2);
+    const sidebarW = math.flr(70 * sidebarT);
+    const bodyInset = ui.inset(body, 2);
 
-    if (sidebar_w > 4) {
-        var body_split = ui.hsplit(body_inset, sidebar_w / body_inset.w, 2);
-        var sidebar = body_split[0];
-        var main_area = body_split[1];
+    if (sidebarW > 4) {
+        const bodySplit = ui.hsplit(bodyInset, sidebarW / bodyInset.w, 2);
+        const sidebar = bodySplit[0];
+        const mainArea = bodySplit[1];
 
         // --- Sidebar: stat bars ---
-        draw_panel(sidebar, COL_PANEL);
-        var sb_inner = ui.inset(sidebar, 3);
+        drawPanel(sidebar, COL_PANEL);
+        const sbInner = ui.inset(sidebar, 3);
 
-        gfx.print("Stats", sb_inner.x, sb_inner.y, COL_TITLE);
+        gfx.print('Stats', sbInner.x, sbInner.y, COL_TITLE);
 
-        var bar_area = ui.rect(sb_inner.x, sb_inner.y + 10, sb_inner.w, sb_inner.h - 10);
-        var rows = ui.vstack(bar_area, 3, 3);
+        const barArea = ui.rect(sbInner.x, sbInner.y + 10, sbInner.w, sbInner.h - 10);
+        const rows = ui.vstack(barArea, 3, 3);
 
-        var labels = ["HP", "MP", "XP"];
-        var colors = [COL_BAR_HP, COL_BAR_MP, COL_BAR_XP];
-        for (var i = 0; i < 3; i++) {
-            var label_split = ui.hsplit(rows[i], 0.25, 1);
-            draw_label(labels[i], label_split[0], colors[i]);
-            draw_bar(label_split[1], bar_values[i], colors[i]);
+        const labels = ['HP', 'MP', 'XP'];
+        const colors = [COL_BAR_HP, COL_BAR_MP, COL_BAR_XP];
+        for (let i = 0; i < 3; i++) {
+            const labelSplit = ui.hsplit(rows[i], 0.25, 1);
+            drawLabel(labels[i], labelSplit[0], colors[i]);
+            drawBar(labelSplit[1], barValues[i], colors[i]);
         }
 
-        draw_main_area(main_area);
+        drawMainArea(mainArea);
     } else {
-        draw_main_area(body_inset);
+        drawMainArea(bodyInset);
     }
 
     // --- HUD: bottom info ---
-    gfx.print("SPACE: replay  Z: toggle sidebar", 4, 172, COL_LABEL);
+    gfx.print('SPACE: replay  Z: toggle sidebar', 4, 172, COL_LABEL);
 }
 
-function draw_main_area(area) {
-    draw_panel(area, COL_PANEL);
-    var inner = ui.inset(area, 4);
+function drawMainArea(area) {
+    drawPanel(area, COL_PANEL);
+    const inner = ui.inset(area, 4);
 
     // Top section: menu items as horizontal stack
-    var top_bottom = ui.vsplit(inner, 0.35, 4);
-    var top_section = top_bottom[0];
-    var bottom_section = top_bottom[1];
+    const topBottom = ui.vsplit(inner, 0.35, 4);
+    const topSection = topBottom[0];
+    const bottomSection = topBottom[1];
 
     // --- Menu buttons (hstack) ---
-    gfx.print("Menu", top_section.x, top_section.y, COL_TITLE);
-    var menu_area = ui.rect(top_section.x, top_section.y + 10, top_section.w, top_section.h - 10);
-    var slots = ui.vstack(menu_area, menu_items.length, 2);
-    for (var i = 0; i < menu_items.length; i++) {
-        var slot = slots[i];
-        slot.x += math.flr(menu_offsets[i]);
-        draw_panel(slot, COL_MENU);
-        gfx.print(menu_items[i], slot.x + 3, slot.y + 1, COL_TITLE);
+    gfx.print('Menu', topSection.x, topSection.y, COL_TITLE);
+    const menuArea = ui.rect(topSection.x, topSection.y + 10, topSection.w, topSection.h - 10);
+    const slots = ui.vstack(menuArea, menuItems.length, 2);
+    for (let i = 0; i < menuItems.length; i++) {
+        const slot = slots[i];
+        slot.x += math.flr(menuOffsets[i]);
+        drawPanel(slot, COL_MENU);
+        gfx.print(menuItems[i], slot.x + 3, slot.y + 1, COL_TITLE);
     }
 
     // --- Bottom section: easing curve visualizer ---
-    draw_easing_preview(bottom_section);
+    drawEasingPreview(bottomSection);
 }
 
-function draw_easing_preview(area) {
-    gfx.print("Easing Curves", area.x, area.y, COL_TITLE);
+function drawEasingPreview(area) {
+    gfx.print('Easing Curves', area.x, area.y, COL_TITLE);
 
-    var graph_area = ui.rect(area.x, area.y + 10, area.w, area.h - 10);
-    var cols = ui.hstack(graph_area, 3, 4);
+    const graphArea = ui.rect(area.x, area.y + 10, area.w, area.h - 10);
+    const cols = ui.hstack(graphArea, 3, 4);
 
-    var curves = ["easeOutBounce", "easeOutElastic", "easeOutBack"];
-    var time = (sys.time() % 2.0) / 2.0; // 0..1 over 2 seconds
+    const curves = ['easeOutBounce', 'easeOutElastic', 'easeOutBack'];
+    const time = (sys.time() % 2.0) / 2.0; // 0..1 over 2 seconds
 
-    for (var c = 0; c < 3; c++) {
-        var box = cols[c];
-        draw_panel(box, COL_BAR_BG);
+    for (let c = 0; c < 3; c++) {
+        const box = cols[c];
+        drawPanel(box, COL_BAR_BG);
 
-        var b_inner = ui.inset(box, 2);
+        const bInner = ui.inset(box, 2);
         // Label
-        var short_name = curves[c].replace("easeOut", "");
-        gfx.print(short_name, b_inner.x, b_inner.y, COL_LABEL);
+        const shortName = curves[c].replace('easeOut', '');
+        gfx.print(shortName, bInner.x, bInner.y, COL_LABEL);
 
         // Draw curve
-        var plot = ui.rect(b_inner.x, b_inner.y + 8, b_inner.w, b_inner.h - 8);
+        const plot = ui.rect(bInner.x, bInner.y + 8, bInner.w, bInner.h - 8);
         if (plot.w > 2 && plot.h > 2) {
-            for (var px = 0; px < plot.w; px++) {
-                var t = px / (plot.w - 1);
-                var v = tween.ease(t, curves[c]);
-                var py = plot.y + plot.h - 1 - math.flr(v * (plot.h - 1));
+            for (let px = 0; px < plot.w; px++) {
+                const t = px / (plot.w - 1);
+                const v = tween.ease(t, curves[c]);
+                const py = plot.y + plot.h - 1 - math.flr(v * (plot.h - 1));
                 gfx.pset(plot.x + px, py, COL_LABEL);
             }
             // Moving dot
-            var ev = tween.ease(time, curves[c]);
-            var dot_x = plot.x + math.flr(time * (plot.w - 1));
-            var dot_y = plot.y + plot.h - 1 - math.flr(ev * (plot.h - 1));
-            gfx.circfill(dot_x, dot_y, 2, COL_HIGHLIGHT);
+            const ev = tween.ease(time, curves[c]);
+            const dotX = plot.x + math.flr(time * (plot.w - 1));
+            const dotY = plot.y + plot.h - 1 - math.flr(ev * (plot.h - 1));
+            gfx.circfill(dotX, dotY, 2, COL_HIGHLIGHT);
         }
     }
 }
