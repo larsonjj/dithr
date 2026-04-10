@@ -51,6 +51,14 @@ function(dtr_add_test name source)
     if (MSVC)
         target_compile_options(${name} PRIVATE /wd4244)
     endif()
+    if (EMSCRIPTEN)
+        target_link_options(${name} PRIVATE
+            -sENVIRONMENT=node
+            -sEXIT_RUNTIME=1
+            -sNODERAWFS=1
+            -sALLOW_MEMORY_GROWTH=1
+        )
+    endif()
     dtr_copy_test_dlls(${name})
     add_test(NAME ${name} COMMAND ${name})
 endfunction()

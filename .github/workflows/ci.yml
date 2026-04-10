@@ -137,6 +137,44 @@ jobs:
               run: ctest --output-on-failure --timeout 300
 
     # ---------------------------------------------------------------------------
+    #  Linux — GCC (Release)
+    # ---------------------------------------------------------------------------
+    linux-release:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v6
+
+            - name: Cache build
+              uses: actions/cache@v5
+              with:
+                  path: build/release/_deps
+                  key: linux-release-deps-${{ hashFiles('CMakeLists.txt') }}
+                  restore-keys: linux-release-deps-
+
+            - name: Install dependencies
+              run: |
+                  sudo apt-get update
+                  sudo apt-get install -y ninja-build \
+                    libx11-dev libxext-dev libxcursor-dev libxi-dev \
+                    libxfixes-dev libxrandr-dev libxrender-dev libxss-dev \
+                    libxtst-dev libxxf86vm-dev \
+                    libwayland-dev libxkbcommon-dev \
+                    libdrm-dev libgbm-dev libgl1-mesa-dev libgles2-mesa-dev \
+                    libegl1-mesa-dev libdbus-1-dev libudev-dev \
+                    libasound2-dev libpulse-dev libpipewire-0.3-dev \
+                    libdecor-0-dev
+
+            - name: Configure
+              run: cmake --preset release -G Ninja
+
+            - name: Build
+              run: cmake --build build/release
+
+            - name: Test
+              working-directory: build/release
+              run: ctest --output-on-failure --timeout 300
+
+    # ---------------------------------------------------------------------------
     #  Linux — GCC + ASan / UBSan
     # ---------------------------------------------------------------------------
     linux-sanitizers:
@@ -353,3 +391,20 @@ jobs:
 
             - name: Build
               run: cmake --build build/wasm
+
+            - name: Configure tests
+              run: >
+                  cmake -B build/wasm-test -G Ninja
+                  -DCMAKE_TOOLCHAIN_FILE=${{ github.workspace }}/emsdk/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake
+                  -DCMAKE_BUILD_TYPE=Release
+                  -DCMAKE_CROSSCOMPILING_EMULATOR=node
+                  -DDTR_BUILD_TESTS=ON
+                  -DDTR_BUILD_EXAMPLES=OFF
+                  -DBUILD_SHARED_LIBS=OFF
+
+            - name: Build tests
+              run: cmake --build build/wasm-test
+
+            - name: Test
+              working-directory: build/wasm-test
+              run: ctest --output-on-failure --timeout 300
