@@ -358,7 +358,7 @@ function spawnEnemyNear(cx, cy) {
                 max_hp: isDemon ? DEMON_HP : GHOST_HP,
                 type: isDemon ? 1 : 0, // 0=ghost, 1=demon
                 speed: (isDemon ? 0.08 : 0.12) + level * 0.005,
-                damage: isDemon ? 3 : 1,
+                damage: isDemon ? 2 : 1,
                 alive: true,
                 hit_flash: 0,
             });
@@ -792,10 +792,10 @@ function updatePlay() {
                 player.hp -= ene.damage;
                 player.hit_flash = 6;
             } else {
-                // Potion makes player invulnerable and kills on contact
-                ene.alive = false;
                 player.score += 5;
             }
+            // Enemy dies on contact with player
+            ene.alive = false;
         }
     }
 
