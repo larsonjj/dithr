@@ -1,7 +1,7 @@
 // System Explorer — sys.* introspection, file I/O, clipboard, lifecycle
 //
 // Demonstrates: sys.version, sys.platform, sys.width, sys.height,
-//   sys.frame, sys.delta, sys.set_target_fps, sys.target_fps,
+//   sys.frame, sys.delta, sys.setTargetFps, sys.targetFps,
 //   sys.volume, sys.fullscreen, sys.paused, sys.pause, sys.resume,
 //   sys.log, sys.warn, sys.error, sys.config, sys.limit, sys.stat,
 //   sys.textInput, sys.clipboardGet, sys.clipboardSet,
@@ -20,7 +20,7 @@ function draw_fps_widget() {
         wy = 0;
     var ww = FPS_HIST_LEN + 4,
         gh = 16;
-    var target = sys.target_fps();
+    var target = sys.targetFps();
     gfx.rectfill(wx, wy, wx + ww - 1, wy + 8 + gh + 1, 0);
     gfx.print(math.flr(smooth_fps) + " FPS", wx + 2, wy + 1, 7);
     gfx.rect(wx + 1, wy + 8, wx + ww - 2, wy + 8 + gh, 5);
@@ -172,12 +172,12 @@ function _update(dt) {
     if (page === 0) {
         // +/- to change target FPS
         if (key.btnp(key.EQUALS)) {
-            var fps = sys.target_fps();
-            sys.set_target_fps(fps + 10);
+            var fps = sys.targetFps();
+            sys.setTargetFps(fps + 10);
         }
         if (key.btnp(key.MINUS)) {
-            var fps2 = sys.target_fps();
-            sys.set_target_fps(math.max(10, fps2 - 10));
+            var fps2 = sys.targetFps();
+            sys.setTargetFps(math.max(10, fps2 - 10));
         }
         // V to change volume
         if (key.btnp(key.V)) {
@@ -237,7 +237,7 @@ function draw_sys_info() {
     y += gap;
     gfx.print("Delta: " + sys.delta().toFixed(4) + "s", 4, y, 7);
     y += gap;
-    gfx.print("Target FPS: " + sys.target_fps() + "  (+/- to change)", 4, y, 11);
+    gfx.print("Target FPS: " + sys.targetFps() + "  (+/- to change)", 4, y, 11);
     y += gap;
     gfx.print("Volume: " + sys.volume().toFixed(2) + "  (V to cycle)", 4, y, 11);
     y += gap;
@@ -276,7 +276,7 @@ function draw_limits() {
         "max_channels",
         "js_heap_mb",
         "js_stack_kb",
-        "target_fps",
+        "targetFps",
     ];
     for (var i = 0; i < keys.length; ++i) {
         var val = sys.limit(keys[i]);

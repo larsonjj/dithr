@@ -371,7 +371,7 @@ static JSValue js_sys_limit(JSContext *ctx, JSValueConst this_val, int argc, JSV
             result = JS_NewInt32(ctx, CONSOLE_JS_HEAP_MB);
         } else if (SDL_strcmp(key, "js_stack_kb") == 0) {
             result = JS_NewInt32(ctx, CONSOLE_JS_STACK_KB);
-        } else if (SDL_strcmp(key, "target_fps") == 0) {
+        } else if (SDL_strcmp(key, "targetFps") == 0) {
             result = JS_NewInt32(ctx, CONSOLE_TARGET_FPS);
         }
         JS_FreeCString(ctx, key);
@@ -772,8 +772,8 @@ static const JSCFunctionListEntry js_sys_funcs[] = {
     JS_CFUNC_DEF("delta", 0, js_sys_delta),
     JS_CFUNC_DEF("frame", 0, js_sys_frame),
     JS_CFUNC_DEF("fps", 0, js_sys_fps),
-    JS_CFUNC_DEF("target_fps", 0, js_sys_target_fps),
-    JS_CFUNC_DEF("set_target_fps", 1, js_sys_set_target_fps),
+    JS_CFUNC_DEF("targetFps", 0, js_sys_target_fps),
+    JS_CFUNC_DEF("setTargetFps", 1, js_sys_set_target_fps),
     JS_CFUNC_DEF("width", 0, js_sys_width),
     JS_CFUNC_DEF("height", 0, js_sys_height),
     JS_CFUNC_DEF("version", 0, js_sys_version),
@@ -787,7 +787,7 @@ static const JSCFunctionListEntry js_sys_funcs[] = {
     JS_CFUNC_DEF("restart", 0, js_sys_restart),
     JS_CFUNC_DEF("paused", 0, js_sys_paused),
     JS_CFUNC_DEF("fullscreen", 1, js_sys_fullscreen),
-    JS_CFUNC_DEF("set_fullscreen", 1, js_sys_set_fullscreen),
+    JS_CFUNC_DEF("setFullscreen", 1, js_sys_set_fullscreen),
     JS_CFUNC_DEF("config", 1, js_sys_config),
     JS_CFUNC_DEF("limit", 1, js_sys_limit),
     JS_CFUNC_DEF("stat", 1, js_sys_stat),

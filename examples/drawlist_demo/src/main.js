@@ -1,7 +1,7 @@
 // Draw List Demo — depth-sorted sprite rendering
 //
-// Demonstrates: gfx.dl_begin, gfx.dl_end, gfx.dl_spr, gfx.dl_sspr,
-//   gfx.dl_spr_rot, gfx.dl_spr_affine, gfx.spr_affine,
+// Demonstrates: gfx.dlBegin, gfx.dlEnd, gfx.dlSpr, gfx.dlSspr,
+//   gfx.dlSprRot, gfx.dlSprAffine, gfx.sprAffine,
 //   gfx.sheetCreate, gfx.sset
 
 // --- FPS widget ----------------------------------------------------------
@@ -16,7 +16,7 @@ function draw_fps_widget() {
         wy = 0;
     var ww = FPS_HIST_LEN + 4,
         gh = 16;
-    var target = sys.target_fps();
+    var target = sys.targetFps();
     gfx.rectfill(wx, wy, wx + ww - 1, wy + 8 + gh + 1, 0);
     gfx.print(math.flr(smooth_fps) + " FPS", wx + 2, wy + 1, 7);
     gfx.rect(wx + 1, wy + 8, wx + ww - 2, wy + 8 + gh, 5);
@@ -102,8 +102,8 @@ function _init() {
     for (var i = 0; i < 20; ++i) {
         objects.push({
             type: math.rnd(1) > 0.5 ? 0 : 1, // tree or rock
-            x: math.rnd_int(300) + 10,
-            y: math.rnd_int(140) + 20,
+            x: math.rndInt(300) + 10,
+            y: math.rndInt(140) + 20,
             rot: 0,
         });
     }
@@ -138,48 +138,48 @@ function _draw() {
     }
 
     // --- Draw list: all objects + player sorted by Y (depth) ---
-    gfx.dl_begin();
+    gfx.dlBegin();
 
     // Draw shadows first at a low layer
     for (var i = 0; i < objects.length; ++i) {
         var o = objects[i];
-        gfx.dl_spr(o.y - 1, 3, o.x, o.y + 4);
+        gfx.dlSpr(o.y - 1, 3, o.x, o.y + 4);
     }
     // Player shadow
-    gfx.dl_spr(player.y - 1, 3, player.x, player.y + 4);
+    gfx.dlSpr(player.y - 1, 3, player.x, player.y + 4);
 
     // Objects
     for (var j = 0; j < objects.length; ++j) {
         var ob = objects[j];
         if (ob.type === 0) {
-            // Trees use dl_spr
-            gfx.dl_spr(ob.y, ob.type, ob.x, ob.y);
+            // Trees use dlSpr
+            gfx.dlSpr(ob.y, ob.type, ob.x, ob.y);
         } else {
-            // Rocks use dl_spr_rot with a gentle wobble
+            // Rocks use dlSprRot with a gentle wobble
             var wobble = math.sin(timer * 0.3 + j * 0.7) * 0.05;
-            gfx.dl_spr_rot(ob.y, ob.type, ob.x, ob.y, wobble);
+            gfx.dlSprRot(ob.y, ob.type, ob.x, ob.y, wobble);
         }
     }
 
-    // Player via dl_spr
-    gfx.dl_spr(player.y, 2, player.x, player.y);
+    // Player via dlSpr
+    gfx.dlSpr(player.y, 2, player.x, player.y);
 
-    // A couple of stretch-blitted decorations via dl_sspr
-    gfx.dl_sspr(200, 0, 0, 8, 8, 280, 10, 16, 16);
+    // A couple of stretch-blitted decorations via dlSspr
+    gfx.dlSspr(200, 0, 0, 8, 8, 280, 10, 16, 16);
 
     // An affine-transformed sprite spinning in the corner
     var angle = timer * 0.4;
     var cos_a = Math.cos(angle);
     var sin_a = Math.sin(angle);
-    gfx.dl_spr_affine(200, 0, 20, 20, 4, 4, cos_a, sin_a);
+    gfx.dlSprAffine(200, 0, 20, 20, 4, 4, cos_a, sin_a);
 
-    gfx.dl_end();
+    gfx.dlEnd();
 
-    // Also demonstrate standalone spr_affine (non-draw-list) for label
+    // Also demonstrate standalone sprAffine (non-draw-list) for label
     var sa = timer * 0.2;
     var sc = Math.cos(sa);
     var ss = Math.sin(sa);
-    gfx.spr_affine(1, 290, 160, 4, 4, sc * 1.5, ss * 1.5);
+    gfx.sprAffine(1, 290, 160, 4, 4, sc * 1.5, ss * 1.5);
 
     // HUD
     gfx.rectfill(0, 0, 180, 9, 0);

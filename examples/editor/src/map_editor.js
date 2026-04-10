@@ -303,7 +303,7 @@ function eraseAutoTile(tx, ty) {
 
 /** Check if current layer is an object layer. */
 function isObjectLayer(idx) {
-    return map.layer_type(idx) === "objectgroup";
+    return map.layerType(idx) === "objectgroup";
 }
 
 /** Generate Tiled .tmj JSON string from current map data. */
@@ -413,13 +413,13 @@ function applyMapOp(op) {
             for (let tx = 0; tx < mw; tx++) tiles.push(map.get(tx, ty, idx));
         let lrs = map.layers();
         let name = lrs[idx] || "Layer";
-        map.remove_layer(idx);
+        map.removeLayer(idx);
         if (idx < st.mapLayerVis.length) st.mapLayerVis.splice(idx, 1);
         if (st.mapLayer >= map.layers().length) st.mapLayer = Math.max(0, map.layers().length - 1);
         return { type: "removeLayer", idx: idx, name: name, tiles: tiles };
     }
     if (op.type === "removeLayer") {
-        let newIdx = map.add_layer(op.name);
+        let newIdx = map.addLayer(op.name);
         if (newIdx >= 0) {
             let mw = map.width();
             let mh = map.height();
@@ -434,16 +434,16 @@ function applyMapOp(op) {
         return { type: "addLayer", idx: newIdx >= 0 ? newIdx : 0, name: op.name };
     }
     if (op.type === "addObj") {
-        map.remove_object(op.layer, op.idx);
+        map.removeObject(op.layer, op.idx);
         st.mapObjSel = -1;
         return { type: "removeObj", layer: op.layer, idx: op.idx, obj: op.obj };
     }
     if (op.type === "removeObj") {
-        let idx = map.add_object(op.layer, op.obj);
+        let idx = map.addObject(op.layer, op.obj);
         return { type: "addObj", layer: op.layer, idx: idx >= 0 ? idx : 0, obj: op.obj };
     }
     if (op.type === "moveObj") {
-        map.set_object(op.layer, op.idx, { x: op.prevX, y: op.prevY });
+        map.setObject(op.layer, op.idx, { x: op.prevX, y: op.prevY });
         return {
             type: "moveObj",
             layer: op.layer,
@@ -455,7 +455,7 @@ function applyMapOp(op) {
         };
     }
     if (op.type === "resizeObj") {
-        map.set_object(op.layer, op.idx, { w: op.prevW, h: op.prevH });
+        map.setObject(op.layer, op.idx, { w: op.prevW, h: op.prevH });
         return {
             type: "resizeObj",
             layer: op.layer,
@@ -518,13 +518,13 @@ export function loadMapFromDisk() {
         let layer = layers[li];
         if (li === 0) {
             // Rename the default layer created by map.create
-            if (layer.name) map.rename_layer(0, layer.name);
+            if (layer.name) map.renameLayer(0, layer.name);
         } else {
             // Add additional layers
             if (layer.type === "objectgroup") {
-                map.add_object_layer(layer.name || "Objects " + (li + 1));
+                map.addObjectLayer(layer.name || "Objects " + (li + 1));
             } else {
-                map.add_layer(layer.name || "Layer " + (li + 1));
+                map.addLayer(layer.name || "Layer " + (li + 1));
             }
         }
 
@@ -542,7 +542,7 @@ export function loadMapFromDisk() {
         // Populate objects
         if (layer.type === "objectgroup" && layer.objects) {
             for (let oi = 0; oi < layer.objects.length; oi++) {
-                map.add_object(li, layer.objects[oi]);
+                map.addObject(li, layer.objects[oi]);
             }
         }
     }
@@ -705,7 +705,7 @@ export function updateMapEditor() {
         if (my >= btnY && my < btnY + LAYER_ROW_H) {
             if (mx >= MAP_PICK_X + 2 && mx < MAP_PICK_X + 2 + CW * 3 && layers.length < 8) {
                 let name = "Layer " + layers.length;
-                let newIdx = map.add_layer(name);
+                let newIdx = map.addLayer(name);
                 if (newIdx >= 0) {
                     record(mapHist, { type: "addLayer", idx: newIdx, name: name });
                     mapCommit();
@@ -724,7 +724,7 @@ export function updateMapEditor() {
                 for (let ty = 0; ty < mh2; ty++)
                     for (let tx = 0; tx < mw2; tx++) tiles.push(map.get(tx, ty, ri));
                 let lname = layers[ri] || "Layer " + ri;
-                map.remove_layer(ri);
+                map.removeLayer(ri);
                 record(mapHist, { type: "removeLayer", idx: ri, name: lname, tiles: tiles });
                 mapCommit();
                 if (ri < st.mapLayerVis.length) st.mapLayerVis.splice(ri, 1);
@@ -993,7 +993,7 @@ export function updateMapEditor() {
     // ── Add object layer (Ctrl+Shift+O) ──
     if (ctrl && shift && key.btnp(key.O) && layers.length < 8) {
         let name = "Objects " + layers.length;
-        let newIdx = map.add_object_layer(name);
+        let newIdx = map.addObjectLayer(name);
         if (newIdx >= 0) {
             ensureLayerVis(layers.length + 1);
             st.mapLayer = newIdx;
@@ -1235,7 +1235,7 @@ function handleObjectTool(mBtn, mPress, mRelease) {
     let mapPx = ((mx - MAP_VP_X) / ts) * MAP_TILE_PX + st.mapCamX * MAP_TILE_PX;
     let mapPy = ((my - MAP_VP_Y) / ts) * MAP_TILE_PX + st.mapCamY * MAP_TILE_PX;
 
-    let objs = map.layer_objects(st.mapLayer);
+    let objs = map.layerObjects(st.mapLayer);
 
     // Drag in progress
     if (mBtn && st.mapObjDrag && st.mapObjSel >= 0 && st.mapObjSel < objs.length) {
@@ -1248,11 +1248,11 @@ function handleObjectTool(mBtn, mPress, mRelease) {
                 MAP_TILE_PX,
                 Math.round(st.mapObjDrag.startH + (mapPy - st.mapObjDrag.anchorY)),
             );
-            map.set_object(st.mapLayer, st.mapObjSel, { w: nw, h: nh });
+            map.setObject(st.mapLayer, st.mapObjSel, { w: nw, h: nh });
         } else {
             let nx = Math.round(mapPx - st.mapObjDrag.ox);
             let ny = Math.round(mapPy - st.mapObjDrag.oy);
-            map.set_object(st.mapLayer, st.mapObjSel, { x: nx, y: ny });
+            map.setObject(st.mapLayer, st.mapObjSel, { x: nx, y: ny });
         }
         st.mapDirty = true;
         return;
@@ -1344,7 +1344,7 @@ function handleObjectTool(mBtn, mPress, mRelease) {
                 w: MAP_TILE_PX * 2,
                 h: MAP_TILE_PX * 2,
             };
-            let idx = map.add_object(st.mapLayer, obj);
+            let idx = map.addObject(st.mapLayer, obj);
             if (idx >= 0) {
                 record(mapHist, { type: "addObj", layer: st.mapLayer, idx: idx, obj: obj });
                 mapCommit();
@@ -1361,7 +1361,7 @@ function handleObjectTool(mBtn, mPress, mRelease) {
     if (key.btnp(key.DELETE) && st.mapObjSel >= 0 && st.mapObjSel < objs.length) {
         let o = objs[st.mapObjSel];
         let obj = { name: o.name, type: o.type, x: o.x, y: o.y, w: o.w, h: o.h, gid: o.gid };
-        map.remove_object(st.mapLayer, st.mapObjSel);
+        map.removeObject(st.mapLayer, st.mapObjSel);
         record(mapHist, {
             type: "removeObj",
             layer: st.mapLayer,
@@ -1411,7 +1411,7 @@ function updateRenameDialog() {
     if (key.btnp(key.ENTER)) {
         let name = st.mapRenameTxt.trim();
         if (name.length > 0) {
-            map.rename_layer(st.mapLayer, name);
+            map.renameLayer(st.mapLayer, name);
             st.mapDirty = true;
             status("Renamed layer");
         }
@@ -1491,7 +1491,7 @@ export function drawMapEditor() {
         if (li === st.mapLayer) continue;
         if (!isLayerVisible(li)) continue;
         if (isObjectLayer(li)) {
-            let objs = map.layer_objects(li);
+            let objs = map.layerObjects(li);
             let camPx = st.mapCamX * MAP_TILE_PX;
             let camPy = st.mapCamY * MAP_TILE_PX;
             let ghostScale = ts / MAP_TILE_PX;
@@ -1663,7 +1663,7 @@ export function drawMapEditor() {
 
     // ── Object layer drawing ──
     if (isObjectLayer(st.mapLayer)) {
-        let objs = map.layer_objects(st.mapLayer);
+        let objs = map.layerObjects(st.mapLayer);
         let camPx = st.mapCamX * MAP_TILE_PX;
         let camPy = st.mapCamY * MAP_TILE_PX;
         let scale = ts / MAP_TILE_PX;
@@ -1838,7 +1838,7 @@ export function drawMapEditor() {
         info += " stamp:" + sw2 + "x" + sh2;
     }
     if (st.mapObjSel >= 0 && isObjectLayer(st.mapLayer)) {
-        let objs = map.layer_objects(st.mapLayer);
+        let objs = map.layerObjects(st.mapLayer);
         if (st.mapObjSel < objs.length) {
             let o = objs[st.mapObjSel];
             info += " [" + (o.name || "obj") + "]";
@@ -1847,7 +1847,7 @@ export function drawMapEditor() {
     if (st.mapDirty) info = "* " + info;
     gfx.print(info, CW, footTextY, FOOTFG);
     // Level name on right
-    let lvl = map.current_level();
+    let lvl = map.currentLevel();
     if (lvl) gfx.print(lvl, FB_W - (lvl.length + 1) * CW, footTextY, FOOTFG);
 
     // ── Resize dialog overlay ──
@@ -1921,7 +1921,7 @@ function drawLevelPicker() {
     gfx.print("Levels", dx + 4, dy + 4, FG);
     let ly = dy + 18;
     for (let i = 0; i < levels.length; i++) {
-        let isCur = levels[i] === map.current_level();
+        let isCur = levels[i] === map.currentLevel();
         let isSel = i === st.mapLevelIdx;
         if (isSel) gfx.rectfill(dx + 2, ly, dx + dw - 3, ly + CH + 1, SELBG);
         gfx.print((isCur ? "> " : "  ") + levels[i], dx + 4, ly, FG);

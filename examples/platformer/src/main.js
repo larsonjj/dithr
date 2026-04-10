@@ -66,9 +66,9 @@ function generate_level() {
     // Generate platforms
     math.seed(7);
     for (var i = 0; i < 20; ++i) {
-        var px = 3 + math.rnd_int(MAP_W - 8);
-        var py = 5 + math.rnd_int(MAP_H - 8);
-        var pw = 3 + math.rnd_int(5);
+        var px = 3 + math.rndInt(MAP_W - 8);
+        var py = 5 + math.rndInt(MAP_H - 8);
+        var pw = 3 + math.rndInt(5);
         for (var x = px; x < px + pw && x < MAP_W - 1; ++x) {
             set_tile(x, py, T_SOLID);
         }
@@ -89,7 +89,7 @@ function generate_level() {
     }
 
     // Place some spikes
-    for (var x = 5; x < MAP_W - 5; x += 8 + math.rnd_int(6)) {
+    for (var x = 5; x < MAP_W - 5; x += 8 + math.rndInt(6)) {
         var base_y = MAP_H - 2;
         if (tiles[base_y * MAP_W + x] === T_EMPTY) {
             tiles[base_y * MAP_W + x] = T_SPIKE;
@@ -212,7 +212,7 @@ function draw_fps_widget() {
     var wy = 0;
     var ww = FPS_HIST_LEN + 4;
     var gh = 16;
-    var target = sys.target_fps();
+    var target = sys.targetFps();
     gfx.rectfill(wx, wy, wx + ww - 1, wy + 8 + gh + 1, 0);
     gfx.print(math.flr(smooth_fps) + " FPS", wx + 2, wy + 1, 7);
     gfx.rect(wx + 1, wy + 8, wx + ww - 2, wy + 8 + gh, 5);

@@ -2,8 +2,8 @@
 //
 // Demonstrates: map.create, map.draw, map.get, map.set, map.flag,
 //   map.width, map.height, map.layers, map.levels, map.load,
-//   map.current_level, map.objects, map.object, map.objects_in,
-//   map.objects_with, map.add_layer, map.remove_layer, map.resize, map.data,
+//   map.currentLevel, map.objects, map.object, map.objectsIn,
+//   map.objectsWith, map.addLayer, map.removeLayer, map.resize, map.data,
 //   cam.set, cam.get, cam.reset, cam.follow,
 //   gfx.fget, gfx.fset
 
@@ -19,7 +19,7 @@ function draw_fps_widget() {
         wy = 0;
     var ww = FPS_HIST_LEN + 4,
         gh = 16;
-    var target = sys.target_fps();
+    var target = sys.targetFps();
     gfx.rectfill(wx, wy, wx + ww - 1, wy + 8 + gh + 1, 0);
     gfx.print(math.flr(smooth_fps) + " FPS", wx + 2, wy + 1, 7);
     gfx.rect(wx + 1, wy + 8, wx + ww - 2, wy + 8 + gh, 5);
@@ -56,7 +56,7 @@ var px = 0;
 var py = 0;
 var SPEED = 80; // pixels per second
 
-var current_level_name = "";
+var currentLevel_name = "";
 var level_names = [];
 var level_idx = 0;
 var objects_near = [];
@@ -117,10 +117,10 @@ function build_level(name) {
 
     // Water pools
     for (var w = 0; w < 10; ++w) {
-        var wx2 = math.rnd_int(MAP_W - 10) + 3;
-        var wy2 = math.rnd_int(MAP_H - 8) + 3;
-        var pw = math.rnd_int(3) + 3;
-        var ph = math.rnd_int(2) + 2;
+        var wx2 = math.rndInt(MAP_W - 10) + 3;
+        var wy2 = math.rndInt(MAP_H - 8) + 3;
+        var pw = math.rndInt(3) + 3;
+        var ph = math.rndInt(2) + 2;
         for (var dy = 0; dy < ph; ++dy) {
             for (var dx = 0; dx < pw; ++dx) {
                 map.set(wx2 + dx, wy2 + dy, 3);
@@ -130,10 +130,10 @@ function build_level(name) {
 
     // Interior walls
     for (var wb = 0; wb < 20; ++wb) {
-        var bx = math.rnd_int(MAP_W - 10) + 3;
-        var by2 = math.rnd_int(MAP_H - 8) + 2;
+        var bx = math.rndInt(MAP_W - 10) + 3;
+        var by2 = math.rndInt(MAP_H - 8) + 2;
         var horiz = math.rnd(1) > 0.5;
-        var wlen = math.rnd_int(4) + 3;
+        var wlen = math.rndInt(4) + 3;
         for (var s = 0; s < wlen; ++s) {
             if (horiz) map.set(bx + s, by2, 2);
             else map.set(bx, by2 + s, 2);
@@ -155,14 +155,14 @@ function build_level(name) {
     map.set(3, 2, 4);
 
     // Add a second layer for decoration
-    map.add_layer("overlay");
+    map.addLayer("overlay");
     // Place spawn marker on overlay layer
     map.set(2, 2, 5, 1);
 
     // Place chest objects via overlay
     for (var c = 0; c < 8; ++c) {
-        var cx3 = math.rnd_int(MAP_W - 6) + 3;
-        var cy3 = math.rnd_int(MAP_H - 6) + 3;
+        var cx3 = math.rndInt(MAP_W - 6) + 3;
+        var cy3 = math.rndInt(MAP_H - 6) + 3;
         map.set(cx3, cy3, 6, 1);
     }
 }
@@ -181,13 +181,13 @@ function _init() {
     level_names = map.levels();
     level_idx = 0;
     map.load(level_names[level_idx]);
-    current_level_name = map.current_level();
+    currentLevel_name = map.currentLevel();
 
     // Display map metadata
     var w = map.width();
     var h = map.height();
     var layers = map.layers();
-    sys.log("Level: " + current_level_name + " (" + w + "x" + h + ") layers: " + layers.join(", "));
+    sys.log("Level: " + currentLevel_name + " (" + w + "x" + h + ") layers: " + layers.join(", "));
 
     // Get full map data for logging
     var d = map.data();
@@ -247,8 +247,8 @@ function _update(dt) {
         }
     }
 
-    // Query objects near the player via map.objects_in (overlay layer)
-    objects_near = map.objects_in(px - 16, py - 16, 40, 40);
+    // Query objects near the player via map.objectsIn (overlay layer)
+    objects_near = map.objectsIn(px - 16, py - 16, 40, 40);
 
     // Action button — pick up chests nearby
     if (input.btnp("action")) {
@@ -302,7 +302,7 @@ function _draw() {
     var is_solid = map.flag(pcx, pcy, 0);
     gfx.rectfill(0, 0, 180, 8, 0);
     gfx.print(
-        current_level_name +
+        currentLevel_name +
             " tile:" +
             tile_id +
             (is_solid ? " SOLID" : "") +
@@ -340,5 +340,5 @@ function _restore(s) {
     fps_history = s.fps_history;
     fps_hist_idx = s.fps_hist_idx;
     map.load(level_names[level_idx]);
-    current_level_name = map.current_level();
+    currentLevel_name = map.currentLevel();
 }

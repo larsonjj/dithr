@@ -4,7 +4,7 @@
 //   - Draw sprites with gfx.spr()
 //   - Animate by cycling sprite indices
 //   - Flip sprites horizontally/vertically
-//   - Rotate sprites with gfx.spr_rot()
+//   - Rotate sprites with gfx.sprRot()
 //
 // Spritesheet: 320x320, 16x16 tiles (20 cols x 20 rows = 400 tiles)
 
@@ -52,7 +52,7 @@ function draw_fps_widget() {
     var wy = 0;
     var ww = FPS_HIST_LEN + 4;
     var gh = 16;
-    var target = sys.target_fps();
+    var target = sys.targetFps();
     gfx.rectfill(wx, wy, wx + ww - 1, wy + 8 + gh + 1, 0);
     gfx.print(math.flr(smooth_fps) + " FPS", wx + 2, wy + 1, 7);
     gfx.rect(wx + 1, wy + 8, wx + ww - 2, wy + 8 + gh, 5);
@@ -145,8 +145,8 @@ function _draw() {
     gfx.print("XY", 70, 96, 6);
 
     // --- Section 6: Rotation ---
-    gfx.print("spr_rot()", 4, 108, 7);
-    gfx.spr_rot(SPR_IDLE, 20, 126, rotation, -1, -1);
+    gfx.print("sprRot()", 4, 108, 7);
+    gfx.sprRot(SPR_IDLE, 20, 126, rotation, -1, -1);
     gfx.print(math.flr(rotation * 100) / 100, 44, 130, 6);
 
     // --- Section 7: Ground tiles ---

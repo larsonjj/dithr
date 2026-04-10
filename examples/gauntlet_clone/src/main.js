@@ -113,7 +113,7 @@ function draw_fps_widget() {
     var wy = 0;
     var ww = FPS_HIST_LEN + 4;
     var gh = 16;
-    var target = sys.target_fps();
+    var target = sys.targetFps();
     gfx.rectfill(wx, wy, wx + ww - 1, wy + 8 + gh + 1, 0);
     gfx.print(math.flr(smooth_fps) + " FPS", wx + 2, wy + 1, 7);
     gfx.rect(wx + 1, wy + 8, wx + ww - 2, wy + 8 + gh, 5);
@@ -183,10 +183,10 @@ function generate_level() {
     var rooms = [];
     var attempts = 0;
     while (rooms.length < 8 + level && attempts < 200) {
-        var rw = 4 + math.rnd_int(6);
-        var rh = 4 + math.rnd_int(6);
-        var rx = 2 + math.rnd_int(MAP_W - rw - 4);
-        var ry = 2 + math.rnd_int(MAP_H - rh - 4);
+        var rw = 4 + math.rndInt(6);
+        var rh = 4 + math.rndInt(6);
+        var rx = 2 + math.rndInt(MAP_W - rw - 4);
+        var ry = 2 + math.rndInt(MAP_H - rh - 4);
 
         // Check overlap with existing rooms (with margin)
         var overlap = false;
@@ -262,8 +262,8 @@ function generate_level() {
 
         // Food
         if (math.rnd() < 0.5) {
-            var fx = room.x + 1 + math.rnd_int(room.w - 2);
-            var fy = room.y + 1 + math.rnd_int(room.h - 2);
+            var fx = room.x + 1 + math.rndInt(room.w - 2);
+            var fy = room.y + 1 + math.rndInt(room.h - 2);
             if (tile_at(fx, fy) === T_EMPTY) {
                 set_tile(fx, fy, T_FOOD);
             }
@@ -271,8 +271,8 @@ function generate_level() {
 
         // Treasure
         if (math.rnd() < 0.6) {
-            var tx = room.x + 1 + math.rnd_int(room.w - 2);
-            var ty = room.y + 1 + math.rnd_int(room.h - 2);
+            var tx = room.x + 1 + math.rndInt(room.w - 2);
+            var ty = room.y + 1 + math.rndInt(room.h - 2);
             if (tile_at(tx, ty) === T_EMPTY) {
                 set_tile(tx, ty, T_TREASURE);
             }
@@ -280,8 +280,8 @@ function generate_level() {
 
         // Key (less common)
         if (math.rnd() < 0.3) {
-            var kx = room.x + 1 + math.rnd_int(room.w - 2);
-            var ky = room.y + 1 + math.rnd_int(room.h - 2);
+            var kx = room.x + 1 + math.rndInt(room.w - 2);
+            var ky = room.y + 1 + math.rndInt(room.h - 2);
             if (tile_at(kx, ky) === T_EMPTY) {
                 set_tile(kx, ky, T_KEY);
             }
@@ -289,8 +289,8 @@ function generate_level() {
 
         // Potion (rare)
         if (math.rnd() < 0.15) {
-            var ppx = room.x + 1 + math.rnd_int(room.w - 2);
-            var ppy = room.y + 1 + math.rnd_int(room.h - 2);
+            var ppx = room.x + 1 + math.rndInt(room.w - 2);
+            var ppy = room.y + 1 + math.rndInt(room.h - 2);
             if (tile_at(ppx, ppy) === T_EMPTY) {
                 set_tile(ppx, ppy, T_POTION);
             }
@@ -345,8 +345,8 @@ function spawn_enemy_near(cx, cy) {
     }
     // Try random nearby tiles
     for (var att = 0; att < 20; ++att) {
-        var ex = cx - 2 + math.rnd_int(5);
-        var ey = cy - 2 + math.rnd_int(5);
+        var ex = cx - 2 + math.rndInt(5);
+        var ey = cy - 2 + math.rndInt(5);
         if (tile_at(ex, ey) === T_EMPTY) {
             var is_demon = math.rnd() < 0.3 + level * 0.05;
             enemies.push({

@@ -4,7 +4,7 @@
 //   tween.cancel, tween.cancelAll, tween.ease,
 //   math.smoothstep, math.pingpong, math.unlerp, math.remap,
 //   math.mid, math.sign, math.ceil, math.round, math.trunc, math.pow,
-//   math.rnd_range, math.sin, math.cos, math.atan2,
+//   math.rndRange, math.sin, math.cos, math.atan2,
 //   input.map, input.axis, input.clear
 
 // --- FPS widget ----------------------------------------------------------
@@ -19,7 +19,7 @@ function draw_fps_widget() {
         wy = 0;
     var ww = FPS_HIST_LEN + 4,
         gh = 16;
-    var target = sys.target_fps();
+    var target = sys.targetFps();
     gfx.rectfill(wx, wy, wx + ww - 1, wy + 8 + gh + 1, 0);
     gfx.print(math.flr(smooth_fps) + " FPS", wx + 2, wy + 1, 7);
     gfx.rect(wx + 1, wy + 8, wx + ww - 2, wy + 8 + gh, 5);
@@ -122,15 +122,15 @@ function _update(dt) {
     if (page === 1) {
         // Space spawns a new tween ball
         if (key.btnp(key.SPACE) && balls.length < MAX_BALLS) {
-            var ease_name = EASING_NAMES[math.rnd_int(EASING_NAMES.length)];
-            var dur = math.rnd_range(2.0, 5.0);
-            var start_y = math.rnd_range(30, 140);
+            var ease_name = EASING_NAMES[math.rndInt(EASING_NAMES.length)];
+            var dur = math.rndRange(2.0, 5.0);
+            var start_y = math.rndRange(30, 140);
             var tw = tween.start(10, 300, dur, ease_name);
             balls.push({
                 tw: tw,
                 ease: ease_name,
                 y: start_y,
-                col: math.rnd_int(15) + 1,
+                col: math.rndInt(15) + 1,
             });
         }
         // C cancels all
@@ -280,8 +280,8 @@ function draw_math_page() {
     gfx.print("pow(2, 10) = " + math.pow(2, 10), 4, y, 6);
     y += gap;
 
-    // rnd_range
-    gfx.print("rnd_range(10, 20) = " + math.rnd_range(10, 20).toFixed(2), 4, y, 6);
+    // rndRange
+    gfx.print("rndRange(10, 20) = " + math.rndRange(10, 20).toFixed(2), 4, y, 6);
     y += gap;
 
     // sin / cos (PICO-8 style 0-1)
