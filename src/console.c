@@ -692,7 +692,7 @@ void dtr_console_event(dtr_console_t *con, SDL_Event *event)
 
         case SDL_EVENT_FINGER_DOWN:
             dtr_touch_on_down(con->touch,
-                              event->tfinger.fingerID,
+                              (int64_t)event->tfinger.fingerID,
                               event->tfinger.x,
                               event->tfinger.y,
                               event->tfinger.pressure);
@@ -700,7 +700,7 @@ void dtr_console_event(dtr_console_t *con, SDL_Event *event)
 
         case SDL_EVENT_FINGER_MOTION:
             dtr_touch_on_motion(con->touch,
-                                event->tfinger.fingerID,
+                                (int64_t)event->tfinger.fingerID,
                                 event->tfinger.x,
                                 event->tfinger.y,
                                 event->tfinger.dx,
@@ -710,7 +710,7 @@ void dtr_console_event(dtr_console_t *con, SDL_Event *event)
 
         case SDL_EVENT_FINGER_UP:
         case SDL_EVENT_FINGER_CANCELED:
-            dtr_touch_on_up(con->touch, event->tfinger.fingerID);
+            dtr_touch_on_up(con->touch, (int64_t)event->tfinger.fingerID);
             break;
 
         case SDL_EVENT_WINDOW_FOCUS_LOST:
