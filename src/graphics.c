@@ -1151,28 +1151,88 @@ void dtr_gfx_spr(dtr_graphics_t *gfx,
             const uint8_t *sheet  = sht->pixels;
 
             for (int32_t scr_y = vis_y0; scr_y <= vis_y1; ++scr_y) {
-                int32_t  row;
-                int32_t  src_y;
-                int32_t  row_off;
-                uint8_t *dst_row;
+                int32_t        row;
+                int32_t        src_y;
+                int32_t        row_off;
+                uint8_t       *dst_row;
+                const uint8_t *src_ptr;
+                int32_t        span;
 
                 row     = scr_y - dst_y0;
                 src_y   = flip_y ? (tile_h - 1 - row) : row;
-                row_off = (src_y + sy0) * sht_w;
+                row_off = (src_y + sy0) * sht_w + sx0;
                 dst_row = &gfx->framebuffer[(ptrdiff_t)scr_y * fb_w];
 
-                for (int32_t scr_x = vis_x0; scr_x <= vis_x1; ++scr_x) {
-                    int32_t col_idx;
-                    int32_t src_x;
-                    uint8_t col;
+                /*
+                 * Non-flipped fast path: source pixels are contiguous so
+                 * we can process 4 at a time, checking transparency via
+                 * a SIMD comparison mask.
+                 */
+#if DTR_HAS_SIMD
+                if (!flip_x) {
+                    int32_t start_col;
+                    int32_t scr_x;
 
-                    col_idx = scr_x - dst_x0;
-                    src_x   = flip_x ? (tile_w - 1 - col_idx) : col_idx;
-                    col     = sheet[row_off + src_x + sx0];
-                    if (transp[col]) {
-                        continue;
+                    start_col = vis_x0 - dst_x0;
+                    src_ptr   = &sheet[row_off + start_col];
+                    scr_x     = vis_x0;
+                    span      = vis_x1 - vis_x0 + 1;
+
+                    {
+                        int32_t done = 0;
+
+                        /* 4-wide: load 4 palette indices, check transparency,
+                         * remap in-register, write non-transparent pixels */
+                        for (; done + 3 < span; done += 4) {
+                            int32_t s0;
+                            int32_t s1;
+                            int32_t s2;
+                            int32_t s3;
+
+                            s0 = (int32_t)src_ptr[done];
+                            s1 = (int32_t)src_ptr[done + 1];
+                            s2 = (int32_t)src_ptr[done + 2];
+                            s3 = (int32_t)src_ptr[done + 3];
+
+                            if (!transp[s0]) {
+                                dst_row[scr_x + done] = dpal[s0];
+                            }
+                            if (!transp[s1]) {
+                                dst_row[scr_x + done + 1] = dpal[s1];
+                            }
+                            if (!transp[s2]) {
+                                dst_row[scr_x + done + 2] = dpal[s2];
+                            }
+                            if (!transp[s3]) {
+                                dst_row[scr_x + done + 3] = dpal[s3];
+                            }
+                        }
+                        /* Scalar tail */
+                        for (; done < span; ++done) {
+                            uint8_t col;
+
+                            col = src_ptr[done];
+                            if (!transp[col]) {
+                                dst_row[scr_x + done] = dpal[col];
+                            }
+                        }
                     }
-                    dst_row[scr_x] = dpal[col];
+                } else
+#endif /* DTR_HAS_SIMD */
+                {
+                    for (int32_t scr_x = vis_x0; scr_x <= vis_x1; ++scr_x) {
+                        int32_t col_idx;
+                        int32_t src_x;
+                        uint8_t col;
+
+                        col_idx = scr_x - dst_x0;
+                        src_x   = flip_x ? (tile_w - 1 - col_idx) : col_idx;
+                        col     = sheet[row_off + src_x];
+                        if (transp[col]) {
+                            continue;
+                        }
+                        dst_row[scr_x] = dpal[col];
+                    }
                 }
             }
             return;
@@ -1826,29 +1886,81 @@ void dtr_gfx_map_draw(dtr_graphics_t *gfx,
             vis_y1 = (tile_dy1 < clip_b) ? tile_dy1 : clip_b;
 
             for (int32_t scr_y = vis_y0; scr_y <= vis_y1; ++scr_y) {
-                int32_t  src_row;
-                int32_t  row_off;
-                uint8_t *dst_row;
-                uint16_t row_pat;
+                int32_t        src_row;
+                int32_t        row_off;
+                uint8_t       *dst_row;
+                uint16_t       row_pat;
+                const uint8_t *src_ptr;
+                int32_t        span;
 
                 src_row = scr_y - tile_dy;
-                row_off = (sy0 + src_row) * sht_w;
+                row_off = (sy0 + src_row) * sht_w + sx0;
                 dst_row = &gfx->framebuffer[(ptrdiff_t)scr_y * fb_w];
                 row_pat = (pat != 0) ? (uint16_t)((pat >> ((scr_y & 3) * 4)) & 0xF) : 0;
 
-                for (int32_t scr_x = vis_x0; scr_x <= vis_x1; ++scr_x) {
-                    int32_t src_col;
-                    uint8_t col;
+#if DTR_HAS_SIMD
+                if (pat == 0) {
+                    int32_t start_col;
+                    int32_t scr_x;
 
-                    src_col = scr_x - tile_dx;
-                    col     = sheet[row_off + sx0 + src_col];
-                    if (transp[col]) {
-                        continue;
+                    start_col = vis_x0 - tile_dx;
+                    src_ptr   = &sheet[row_off + start_col];
+                    scr_x     = vis_x0;
+                    span      = vis_x1 - vis_x0 + 1;
+
+                    {
+                        int32_t done = 0;
+
+                        for (; done + 3 < span; done += 4) {
+                            int32_t s0;
+                            int32_t s1;
+                            int32_t s2;
+                            int32_t s3;
+
+                            s0 = (int32_t)src_ptr[done];
+                            s1 = (int32_t)src_ptr[done + 1];
+                            s2 = (int32_t)src_ptr[done + 2];
+                            s3 = (int32_t)src_ptr[done + 3];
+
+                            if (!transp[s0]) {
+                                dst_row[scr_x + done] = dpal[s0];
+                            }
+                            if (!transp[s1]) {
+                                dst_row[scr_x + done + 1] = dpal[s1];
+                            }
+                            if (!transp[s2]) {
+                                dst_row[scr_x + done + 2] = dpal[s2];
+                            }
+                            if (!transp[s3]) {
+                                dst_row[scr_x + done + 3] = dpal[s3];
+                            }
+                        }
+                        for (; done < span; ++done) {
+                            uint8_t col;
+
+                            col = src_ptr[done];
+                            if (!transp[col]) {
+                                dst_row[scr_x + done] = dpal[col];
+                            }
+                        }
                     }
-                    if (pat != 0 && !(row_pat & (1 << (scr_x & 3)))) {
-                        continue;
+                } else
+#endif /* DTR_HAS_SIMD */
+                {
+                    for (int32_t scr_x = vis_x0; scr_x <= vis_x1; ++scr_x) {
+                        int32_t src_col;
+                        uint8_t col;
+
+                        src_col = scr_x - tile_dx;
+                        col     = sheet[row_off + sx0 + src_col];
+                        if (transp[col]) {
+                            continue;
+                        }
+                        if (pat != 0 && !(row_pat & (1 << (scr_x & 3)))) {
+                            continue;
+                        }
+                        dst_row[scr_x] = dpal[col];
                     }
-                    dst_row[scr_x] = dpal[col];
                 }
             }
         }

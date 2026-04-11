@@ -129,7 +129,7 @@ static JSValue js_postfx_stack(JSContext *ctx, JSValueConst this_val, int argc, 
         JSValue     elem;
         const char *name;
 
-        elem = JS_GetPropertyUint32(ctx, arr, (uint32_t)idx);
+        elem = JS_GetPropertyUint32(ctx, arr, (uint32_t)(idx & 0xFFFFFFFF));
         name = JS_ToCString(ctx, elem);
         JS_FreeValue(ctx, elem);
 

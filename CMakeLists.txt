@@ -43,6 +43,40 @@ if (DTR_ENABLE_COVERAGE AND NOT MSVC)
     add_link_options(--coverage)
 endif()
 
+# Link-time optimisation (LTO / IPO)
+option(DTR_ENABLE_LTO "Enable link-time optimisation" OFF)
+if (DTR_ENABLE_LTO AND NOT EMSCRIPTEN)
+    include(CheckIPOSupported)
+    check_ipo_supported(RESULT DTR_IPO_OK OUTPUT DTR_IPO_ERR)
+    if (DTR_IPO_OK)
+        set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
+    else()
+        message(WARNING "LTO not supported: ${DTR_IPO_ERR}")
+    endif()
+endif()
+
+# Profile-guided optimisation (PGO) — GCC / Clang only
+option(DTR_ENABLE_PGO_GENERATE "Instrument build for PGO profile collection" OFF)
+option(DTR_ENABLE_PGO_USE      "Use collected PGO profile data"              OFF)
+set(DTR_PGO_PROFILE_DIR "" CACHE PATH "Directory containing PGO profile data")
+
+if (DTR_ENABLE_PGO_GENERATE AND NOT MSVC)
+    add_compile_options(-fprofile-generate)
+    add_link_options(-fprofile-generate)
+endif()
+if (DTR_ENABLE_PGO_USE AND NOT MSVC)
+    if (DTR_PGO_PROFILE_DIR)
+        add_compile_options(-fprofile-use=${DTR_PGO_PROFILE_DIR} -fprofile-correction)
+        add_link_options(-fprofile-use=${DTR_PGO_PROFILE_DIR})
+    else()
+        add_compile_options(-fprofile-use -fprofile-correction)
+        add_link_options(-fprofile-use)
+    endif()
+endif()
+
+# Fuzzing — libFuzzer (Clang only)
+option(DTR_BUILD_FUZZ "Build fuzz harnesses" OFF)
+
 # SIMD optimisation (SSE2 / NEON / wasm-simd128)
 option(DTR_ENABLE_SIMD "Enable SIMD optimizations" ON)
 if (DTR_ENABLE_SIMD)
@@ -185,46 +219,7 @@ else()
     target_compile_options(quickjs PRIVATE -w)
 endif()
 
-# --- Engine static library (everything except main.c) ---
-# Shared source list and compile definitions for engine libraries.
-set(DITHR_CORE_SOURCES
-    src/console.c
-    src/runtime.c
-    src/graphics.c
-    src/audio.c
-    src/input.c
-    src/mouse.c
-    src/gamepad.c
-    src/event.c
-    src/cart.c
-    src/cart_import.c
-    src/postfx.c
-    src/api/api_register.c
-    src/api/gfx_api.c
-    src/api/map_api.c
-    src/api/sfx_api.c
-    src/api/mus_api.c
-    src/api/key_api.c
-    src/api/mouse_api.c
-    src/api/pad_api.c
-    src/api/input_api.c
-    src/api/evt_api.c
-    src/api/postfx_api.c
-    src/api/math_api.c
-    src/api/cart_api.c
-    src/api/sys_api.c
-    src/api/col_api.c
-    src/api/cam_api.c
-    src/api/ui_api.c
-    src/api/tween_api.c
-    src/api/synth_api.c
-    src/synth.c
-    src/touch.c
-    src/ui.c
-    src/tween.c
-    src/api/touch_api.c
-)
-
+# --- Compile definitions shared with engine libraries ---
 set(DITHR_COMPILE_DEFS
     CONSOLE_FB_WIDTH=${DTR_FB_WIDTH}
     CONSOLE_FB_HEIGHT=${DTR_FB_HEIGHT}
@@ -248,56 +243,8 @@ if (NOT MSVC)
 endif()
 
 # --- Engine static library (everything except main.c) ---
-add_library(dithr_core STATIC ${DITHR_CORE_SOURCES})
-target_include_directories(dithr_core PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
-target_compile_options(dithr_core PRIVATE ${DTR_WARN_FLAGS})
-if (DTR_ENABLE_SIMD AND DTR_SIMD_FLAGS)
-    target_compile_options(dithr_core PRIVATE ${DTR_SIMD_FLAGS})
-endif()
-if (MSVC)
-    target_compile_options(dithr_core PRIVATE /wd4244)
-endif()
-target_link_libraries(dithr_core PUBLIC
-    SDL3::SDL3
-    SDL3_mixer::SDL3_mixer
-    SDL3_image::SDL3_image
-    quickjs
-)
-if (NOT MSVC)
-    target_link_libraries(dithr_core PUBLIC m)
-endif()
-target_compile_definitions(dithr_core PUBLIC ${DITHR_COMPILE_DEFS})
-
-# --- Test-only engine library (same sources, SDL not in link interface) ---
-# SDL is linked PRIVATE so it is available during compilation but not
-# propagated to consumers.  The linker only pulls object files whose symbols
-# are actually referenced, so test binaries that only exercise SDL-free code
-# paths (e.g. graphics) won't load SDL shared libraries at runtime.
-add_library(dithr_core_test STATIC EXCLUDE_FROM_ALL ${DITHR_CORE_SOURCES})
-target_include_directories(dithr_core_test PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
-target_compile_options(dithr_core_test PRIVATE ${DTR_WARN_FLAGS})
-if (DTR_ENABLE_SIMD AND DTR_SIMD_FLAGS)
-    target_compile_options(dithr_core_test PRIVATE ${DTR_SIMD_FLAGS})
-endif()
-if (MSVC)
-    target_compile_options(dithr_core_test PRIVATE /wd4244)
-endif()
-target_link_libraries(dithr_core_test PRIVATE
-    SDL3::SDL3
-    SDL3_mixer::SDL3_mixer
-    SDL3_image::SDL3_image
-    quickjs
-)
-if (NOT MSVC)
-    target_link_libraries(dithr_core_test PUBLIC m)
-endif()
-target_compile_definitions(dithr_core_test PUBLIC ${DITHR_COMPILE_DEFS})
-
-# Dev build flag
-option(DTR_DEV_BUILD "Enable development features (hot reload, debug overlays)" OFF)
-if (DTR_DEV_BUILD)
-    target_compile_definitions(dithr_core PUBLIC DEV_BUILD=1)
-endif()
+# Sources, libraries, and compile definitions are defined in src/CMakeLists.txt.
+add_subdirectory(src)
 
 # --- Executable ---
 add_executable(dithr src/main.c)
@@ -405,4 +352,9 @@ option(DTR_BUILD_TESTS "Build tests" ON)
 if (DTR_BUILD_TESTS)
     enable_testing()
     add_subdirectory(tests)
+endif()
+
+# --- Fuzz harnesses ---
+if (DTR_BUILD_FUZZ)
+    add_subdirectory(tests/fuzz)
 endif()

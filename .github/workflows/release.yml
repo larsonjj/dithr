@@ -70,8 +70,32 @@ jobs:
                   name: dithr-linux-x64
                   path: dithr-linux-x64.tar.gz
 
+    build-macos:
+        runs-on: macos-latest
+        steps:
+            - uses: actions/checkout@v6
+
+            - name: Configure
+              run: cmake --preset release
+
+            - name: Build
+              run: cmake --build build/release --config Release
+
+            - name: Package
+              run: |
+                  mkdir dist
+                  cp build/release/dithr dist/
+                  cp LICENSE README.md dist/
+                  tar czf dithr-macos-arm64.tar.gz -C dist .
+
+            - name: Upload artifact
+              uses: actions/upload-artifact@v7
+              with:
+                  name: dithr-macos-arm64
+                  path: dithr-macos-arm64.tar.gz
+
     release:
-        needs: [build-windows, build-linux]
+        needs: [build-windows, build-linux, build-macos]
         runs-on: ubuntu-latest
         steps:
             - uses: actions/download-artifact@v8
@@ -85,3 +109,4 @@ jobs:
                   files: |
                       dithr-windows-x64.zip
                       dithr-linux-x64.tar.gz
+                      dithr-macos-arm64.tar.gz

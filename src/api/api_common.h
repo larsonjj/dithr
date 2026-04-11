@@ -40,6 +40,15 @@ dtr_api_opt_int(JSContext *ctx, int argc, JSValueConst *argv, int idx, int32_t d
 }
 
 /**
+ * \brief           Read an optional uint8 argument (masks to 0-255)
+ */
+static inline uint8_t
+dtr_api_opt_u8(JSContext *ctx, int argc, JSValueConst *argv, int idx, int32_t dflt)
+{
+    return (uint8_t)(dtr_api_opt_int(ctx, argc, argv, idx, dflt) & 0xFF);
+}
+
+/**
  * \brief           Read an optional float argument
  */
 static inline double

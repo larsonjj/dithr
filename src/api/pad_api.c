@@ -75,9 +75,9 @@ static JSValue js_pad_rumble(JSContext *ctx, JSValueConst this_val, int argc, JS
     (void)this_val;
     dtr_gamepad_rumble(PADS(ctx),
                        dtr_api_opt_int(ctx, argc, argv, 0, 0),
-                       (uint16_t)dtr_api_opt_int(ctx, argc, argv, 1, 0xFFFF),
-                       (uint16_t)dtr_api_opt_int(ctx, argc, argv, 2, 0xFFFF),
-                       (uint32_t)dtr_api_opt_int(ctx, argc, argv, 3, 200));
+                       (uint16_t)(dtr_api_opt_int(ctx, argc, argv, 1, 0xFFFF) & 0xFFFF),
+                       (uint16_t)(dtr_api_opt_int(ctx, argc, argv, 2, 0xFFFF) & 0xFFFF),
+                       (uint32_t)(dtr_api_opt_int(ctx, argc, argv, 3, 200) & 0x7FFFFFFF));
     return JS_UNDEFINED;
 }
 

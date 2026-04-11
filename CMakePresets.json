@@ -20,10 +20,11 @@
     {
       "name": "release",
       "displayName": "Release",
-      "description": "Optimised release build",
+      "description": "Optimised release build with LTO",
       "binaryDir": "${sourceDir}/build/release",
       "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Release"
+        "CMAKE_BUILD_TYPE": "Release",
+        "DTR_ENABLE_LTO": "ON"
       }
     },
     {
@@ -83,6 +84,58 @@
         "DTR_ENABLE_COVERAGE": "ON",
         "BUILD_SHARED_LIBS": "OFF"
       }
+    },
+    {
+      "name": "pgo-generate",
+      "displayName": "PGO Generate",
+      "description": "Release build that generates profile data (GCC/Clang only)",
+      "binaryDir": "${sourceDir}/build/pgo-generate",
+      "condition": {
+        "type": "notEquals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Windows"
+      },
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "DTR_ENABLE_PGO_GENERATE": "ON",
+        "DTR_ENABLE_LTO": "ON"
+      }
+    },
+    {
+      "name": "pgo-use",
+      "displayName": "PGO Use",
+      "description": "Release build that uses previously collected profile data (GCC/Clang only)",
+      "binaryDir": "${sourceDir}/build/pgo-use",
+      "condition": {
+        "type": "notEquals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Windows"
+      },
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "DTR_ENABLE_PGO_USE": "ON",
+        "DTR_PGO_PROFILE_DIR": "${sourceDir}/build/pgo-generate",
+        "DTR_ENABLE_LTO": "ON"
+      }
+    },
+    {
+      "name": "fuzz",
+      "displayName": "Fuzzing",
+      "description": "Build fuzz targets with libFuzzer (Clang only)",
+      "binaryDir": "${sourceDir}/build/fuzz",
+      "condition": {
+        "type": "notEquals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Windows"
+      },
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_C_COMPILER": "clang",
+        "DTR_BUILD_FUZZ": "ON",
+        "DTR_BUILD_TESTS": "OFF",
+        "DTR_BUILD_EXAMPLES": "OFF",
+        "BUILD_SHARED_LIBS": "OFF"
+      }
     }
   ],
   "buildPresets": [
@@ -109,6 +162,18 @@
     {
       "name": "coverage",
       "configurePreset": "coverage"
+    },
+    {
+      "name": "pgo-generate",
+      "configurePreset": "pgo-generate"
+    },
+    {
+      "name": "pgo-use",
+      "configurePreset": "pgo-use"
+    },
+    {
+      "name": "fuzz",
+      "configurePreset": "fuzz"
     }
   ],
   "testPresets": [

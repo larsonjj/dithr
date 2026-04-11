@@ -258,6 +258,23 @@ games).
 }
 ```
 
+```js
+/* Draw a scrollable map region */
+map.draw(cam.get().x, cam.get().y, 0, 0);
+
+/* Read and modify tiles */
+const id = map.get(10, 5); // tile at column 10, row 5
+map.set(10, 5, 0); // clear it
+
+/* Query objects placed in Tiled */
+const spawn = map.object("player_spawn");
+if (spawn) {
+    player.x = spawn.x;
+    player.y = spawn.y;
+}
+const coins = map.objectsWith("coin");
+```
+
 ---
 
 ## `key` — Keyboard
@@ -282,6 +299,18 @@ games).
 `key.PAGEUP` `key.PAGEDOWN` `key.LCTRL` `key.RCTRL` `key.LALT` `key.RALT`
 `key.LGUI` `key.RGUI` `key.LBRACKET` `key.RBRACKET` `key.MINUS` `key.EQUALS`
 
+```js
+/* Move a character with arrow keys */
+if (key.btn(key.LEFT)) player.x -= speed;
+if (key.btn(key.RIGHT)) player.x += speed;
+
+/* Jump on first press only */
+if (key.btnp(key.Z)) player.vy = -4;
+
+/* Text-style repeat for menu navigation */
+if (key.btnr(key.DOWN)) menu.next();
+```
+
 ---
 
 ## `mouse` — Mouse
@@ -301,6 +330,20 @@ games).
 ### Constants
 
 `mouse.LEFT` (0) &ensp; `mouse.MIDDLE` (1) &ensp; `mouse.RIGHT` (2)
+
+```js
+/* Draw a crosshair at the mouse position */
+gfx.circ(mouse.x(), mouse.y(), 3, 7);
+
+/* Detect click and drag */
+if (mouse.btnp()) {
+    drag.startX = mouse.x();
+    drag.startY = mouse.y();
+}
+if (mouse.btn()) {
+    gfx.line(drag.startX, drag.startY, mouse.x(), mouse.y(), 12);
+}
+```
 
 ---
 
@@ -324,6 +367,17 @@ selects which finger slot to query.
 ### Constants
 
 `touch.MAX_FINGERS` (10)
+
+```js
+/* Simple touch-drag movement */
+if (touch.active(0)) {
+    player.x += touch.dx(0);
+    player.y += touch.dy(0);
+}
+if (touch.pressed(0)) {
+    sys.log("finger down at " + touch.x(0) + "," + touch.y(0));
+}
+```
 
 ---
 
@@ -351,6 +405,19 @@ which pad to query.
 ### Axis constants
 
 `pad.LX` `pad.LY` `pad.RX` `pad.RY`
+
+```js
+/* Move with the left stick, jump with A */
+const lx = pad.axis(pad.LX);
+const ly = pad.axis(pad.LY);
+player.x += lx * speed;
+player.y += ly * speed;
+
+if (pad.btnp(pad.A)) player.vy = -4;
+
+/* Rumble on hit */
+pad.rumble(0, 30000, 60000, 150);
+```
 
 ---
 
@@ -418,6 +485,18 @@ evt.emit("coin_collected", { value: 10 });
 | `getVolume` | `channel?`              | `float` | Get channel volume                                  |
 | `playing`   | `channel?`              | `bool`  | Is the channel playing? (−1 = any)                  |
 
+```js
+/* Play a jump sound on channel 0 */
+sfx.play(0, 0);
+
+/* Loop an engine hum on channel 3, half volume */
+sfx.volume(0.5, 3);
+sfx.play(2, 3, -1);
+
+/* Stop all channels */
+sfx.stop(-1);
+```
+
 ---
 
 ## `mus` — Music
@@ -429,6 +508,18 @@ evt.emit("coin_collected", { value: 10 });
 | `volume`    | `vol?`                  | —       | Set music volume 0.0 – 1.0                                        |
 | `getVolume` |                         | `float` | Get current music volume                                          |
 | `playing`   |                         | `bool`  | Is music playing?                                                 |
+
+```js
+/* Start looping the title theme, then crossfade to gameplay music */
+mus.play(0); // loop track 0 forever
+mus.volume(0.8);
+
+/* Later, crossfade to track 1 */
+mus.play(1, 0, 500); // 500 ms fade
+
+/* Fade out */
+mus.stop(1000);
+```
 
 ---
 
@@ -463,6 +554,19 @@ All effects accept a `strength` parameter (0.0–1.0) controlling intensity.
 | `SCANLINES`  | Darkens every other row. Factor = 1 − strength × 0.4                                                |
 | `BLOOM`      | Brightens luminant pixels. Threshold = 200 − strength × 100; boost = 1 + strength × 0.3             |
 | `ABERRATION` | Chromatic aberration. Offset = floor(strength × 2 + 0.5) pixels; R shifts left, B shifts right      |
+
+```js
+/* Apply a CRT + scanline stack */
+postfx.stack(["CRT", "SCANLINES"]);
+
+/* Fine-tune parameters */
+postfx.use("CRT").set("strength", 0.6);
+
+/* Flash aberration on damage */
+postfx.push(postfx.ABERRATION, 1.0);
+// ... after a few frames:
+postfx.pop();
+```
 
 ---
 
@@ -531,6 +635,23 @@ values move downward in screen coordinates (Y-down).
 
 `math.PI` (3.14159…) &ensp; `math.TAU` (6.28318…) &ensp; `math.HUGE`
 (1e308)
+
+```js
+/* Random spawn position */
+const rx = math.rndInt(sys.width());
+const ry = math.rndInt(sys.height());
+
+/* Smooth camera follow */
+camX = math.lerp(camX, player.x, 0.1);
+
+/* Circular motion (turns-based trig, Y-down) */
+const t = sys.time() * 0.5; // half turn per second
+const ox = math.cos(t) * 40;
+const oy = math.sin(t) * 40; // positive = downward
+
+/* Clamp health */
+hp = math.clamp(hp - dmg, 0, maxHp);
+```
 
 ---
 
@@ -651,6 +772,39 @@ traversal are rejected with a `RangeError`.
 | `config` | `path?`    | `any`                        | Read cart config. Dot-separated path (e.g. `"display.width"`). No argument returns the full config object                                                                                                         |
 | `limit`  | `key`      | `int`                        | Compile-time limit. Keys: `"fb_width"`, `"fb_height"`, `"palette_size"`, `"max_sprites"`, `"max_maps"`, `"max_map_layers"`, `"max_map_objects"`, `"max_channels"`, `"js_heap_mb"`, `"js_stack_kb"`, `"targetFps"` |
 | `stat`   | `n`        | `float`, `string`, or `bool` | System stat query. `0` = memory, `1` = CPU, `7` = FPS, `32` = mouse X, `33` = mouse Y, `34` = mouse button mask, `36` = wheel, `90` = ticks                                                                       |
+
+### Profiling
+
+| Function    | Parameters | Returns                | Description                                                                                                |
+| ----------- | ---------- | ---------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `perf`      |            | `object`               | Returns `{cpu, update_ms, draw_ms, fps, frame, markers}`. `markers` is a label→ms map of user perf markers |
+| `perfBegin` | `label`    | —                      | Start timing a named section (up to 16 markers per frame)                                                  |
+| `perfEnd`   | `label`    | `float` or `undefined` | Stop timing, returns elapsed ms. Appears in `perf().markers`                                               |
+
+```js
+/* Show FPS and frame budget */\nconst p = sys.perf();
+sys.log("FPS: " + math.flr(p.fps) + "  CPU: " + math.flr(p.cpu * 100) + "%");
+
+/* Measure a custom section */
+sys.perfBegin("physics");
+updatePhysics();
+sys.perfEnd("physics");
+
+sys.perfBegin("ai");
+updateEnemies();
+const ai_ms = sys.perfEnd("ai");
+
+/* Read all markers */
+const m = sys.perf().markers;
+sys.log("physics=" + m.physics + " ai=" + m.ai);
+
+/* Toggle fullscreen */
+if (key.btnp(key.F)) sys.fullscreen(!sys.fullscreen());
+
+/* Save and load files */
+sys.writeFile("save.json", JSON.stringify(state));
+const data = sys.readFile("save.json");
+```
 
 ---
 

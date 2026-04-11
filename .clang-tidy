@@ -15,7 +15,7 @@ Checks: "-*,\
     -readability-uppercase-literal-suffix,\
     -readability-magic-numbers,\
     -readability-function-cognitive-complexity"
-WarningsAsErrors: ""
+WarningsAsErrors: "*"
 CheckOptions:
     - key: "bugprone-argument-comment.StrictMode"
       value: "true"

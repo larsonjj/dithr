@@ -77,6 +77,15 @@ typedef struct dtr_console {
     float update_ms;
     float draw_ms;
 
+    /* User perf markers (sys.perfBegin / sys.perfEnd) */
+    struct {
+        char     label[CONSOLE_PERF_LABEL_LEN];
+        uint64_t start;
+        float    elapsed_ms;
+        bool     active;
+    } perf_markers[CONSOLE_MAX_PERF_MARKERS];
+    int32_t perf_marker_count;
+
     /* Window dimensions (framebuffer * scale) */
     int32_t win_width;
     int32_t win_height;

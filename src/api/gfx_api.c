@@ -17,7 +17,7 @@
 static uint8_t prv_resolve_col(JSContext *ctx, int argc, JSValueConst *argv, int idx)
 {
     int32_t raw = dtr_api_opt_int(ctx, argc, argv, idx, -1);
-    return (raw < 0) ? GFX(ctx)->color : (uint8_t)raw;
+    return (raw < 0) ? GFX(ctx)->color : (uint8_t)(raw & 0xFF);
 }
 
 /* ---- Drawing ---------------------------------------------------------- */
@@ -25,7 +25,7 @@ static uint8_t prv_resolve_col(JSContext *ctx, int argc, JSValueConst *argv, int
 static JSValue js_gfx_cls(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
     (void)this_val;
-    dtr_gfx_cls(GFX(ctx), (uint8_t)dtr_api_opt_int(ctx, argc, argv, 0, 0));
+    dtr_gfx_cls(GFX(ctx), dtr_api_opt_u8(ctx, argc, argv, 0, 0));
     return JS_UNDEFINED;
 }
 
@@ -142,7 +142,7 @@ static JSValue js_gfx_tilemap(JSContext *ctx, JSValueConst this_val, int argc, J
         elem = JS_GetPropertyUint32(ctx, argv[0], (uint32_t)idx);
         JS_ToInt32(ctx, &val, elem);
         JS_FreeValue(ctx, elem);
-        tiles[idx] = (uint8_t)val;
+        tiles[idx] = (uint8_t)(val & 0xFF);
     }
 
     /* Read colors array */
@@ -167,7 +167,7 @@ static JSValue js_gfx_tilemap(JSContext *ctx, JSValueConst this_val, int argc, J
         elem = JS_GetPropertyUint32(ctx, argv[3], (uint32_t)idx);
         JS_ToInt32(ctx, &val, elem);
         JS_FreeValue(ctx, elem);
-        colors[idx] = (uint8_t)val;
+        colors[idx] = (uint8_t)(val & 0xFF);
     }
 
     dtr_gfx_tilemap(GFX(ctx), tiles, map_w, map_h, tile_w, tile_h, colors, col_cnt);
@@ -459,7 +459,7 @@ static JSValue js_gfx_fset(JSContext *ctx, JSValueConst this_val, int argc, JSVa
 
     if (argc <= 2) {
         /* fset(n, mask) — set the full 8-bit flag bitmask */
-        dtr_gfx_fset(GFX(ctx), idx, (uint8_t)dtr_api_opt_int(ctx, argc, argv, 1, 0));
+        dtr_gfx_fset(GFX(ctx), idx, dtr_api_opt_u8(ctx, argc, argv, 1, 0));
     } else {
         /* fset(n, bit, val) — set a single flag bit */
         dtr_gfx_fset_bit(GFX(ctx),
@@ -479,8 +479,8 @@ static JSValue js_gfx_pal(JSContext *ctx, JSValueConst this_val, int argc, JSVal
         dtr_gfx_pal_reset(GFX(ctx));
     } else {
         dtr_gfx_pal(GFX(ctx),
-                    (uint8_t)dtr_api_opt_int(ctx, argc, argv, 0, 0),
-                    (uint8_t)dtr_api_opt_int(ctx, argc, argv, 1, 0),
+                    dtr_api_opt_u8(ctx, argc, argv, 0, 0),
+                    dtr_api_opt_u8(ctx, argc, argv, 1, 0),
                     dtr_api_opt_int(ctx, argc, argv, 2, 0));
     }
     return JS_UNDEFINED;
@@ -493,7 +493,7 @@ static JSValue js_gfx_palt(JSContext *ctx, JSValueConst this_val, int argc, JSVa
         dtr_gfx_palt_reset(GFX(ctx));
     } else {
         dtr_gfx_palt(GFX(ctx),
-                     (uint8_t)dtr_api_opt_int(ctx, argc, argv, 0, 0),
+                     dtr_api_opt_u8(ctx, argc, argv, 0, 0),
                      dtr_api_opt_int(ctx, argc, argv, 1, 1) != 0);
     }
     return JS_UNDEFINED;
@@ -527,14 +527,14 @@ static JSValue js_gfx_clip(JSContext *ctx, JSValueConst this_val, int argc, JSVa
 static JSValue js_gfx_fillp(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
     (void)this_val;
-    dtr_gfx_fillp(GFX(ctx), (uint16_t)dtr_api_opt_int(ctx, argc, argv, 0, 0));
+    dtr_gfx_fillp(GFX(ctx), (uint16_t)(dtr_api_opt_int(ctx, argc, argv, 0, 0) & 0xFFFF));
     return JS_UNDEFINED;
 }
 
 static JSValue js_gfx_color(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
     (void)this_val;
-    dtr_gfx_color(GFX(ctx), (uint8_t)dtr_api_opt_int(ctx, argc, argv, 0, 7));
+    dtr_gfx_color(GFX(ctx), dtr_api_opt_u8(ctx, argc, argv, 0, 7));
     return JS_UNDEFINED;
 }
 
@@ -572,7 +572,7 @@ static JSValue js_gfx_fade(JSContext *ctx, JSValueConst this_val, int argc, JSVa
 {
     (void)this_val;
     dtr_gfx_fade(GFX(ctx),
-                 (uint8_t)dtr_api_opt_int(ctx, argc, argv, 0, 0),
+                 dtr_api_opt_u8(ctx, argc, argv, 0, 0),
                  dtr_api_opt_int(ctx, argc, argv, 1, 30));
     return JS_UNDEFINED;
 }
@@ -582,7 +582,7 @@ static JSValue js_gfx_wipe(JSContext *ctx, JSValueConst this_val, int argc, JSVa
     (void)this_val;
     dtr_gfx_wipe(GFX(ctx),
                  dtr_api_opt_int(ctx, argc, argv, 0, 0),
-                 (uint8_t)dtr_api_opt_int(ctx, argc, argv, 1, 0),
+                 dtr_api_opt_u8(ctx, argc, argv, 1, 0),
                  dtr_api_opt_int(ctx, argc, argv, 2, 30));
     return JS_UNDEFINED;
 }
@@ -591,7 +591,7 @@ static JSValue js_gfx_dissolve(JSContext *ctx, JSValueConst this_val, int argc, 
 {
     (void)this_val;
     dtr_gfx_dissolve(GFX(ctx),
-                     (uint8_t)dtr_api_opt_int(ctx, argc, argv, 0, 0),
+                     dtr_api_opt_u8(ctx, argc, argv, 0, 0),
                      dtr_api_opt_int(ctx, argc, argv, 1, 30));
     return JS_UNDEFINED;
 }

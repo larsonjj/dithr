@@ -457,6 +457,7 @@ static JSValue js_sys_perf(JSContext *ctx, JSValueConst this_val, int argc, JSVa
 {
     dtr_console_t *con;
     JSValue        obj;
+    JSValue        markers;
 
     (void)this_val;
     (void)argc;
@@ -471,7 +472,99 @@ static JSValue js_sys_perf(JSContext *ctx, JSValueConst this_val, int argc, JSVa
     JS_SetPropertyStr(
         ctx, obj, "fps", JS_NewFloat64(ctx, 1.0 / (con->delta > 0.0f ? con->delta : 0.016f)));
     JS_SetPropertyStr(ctx, obj, "frame", JS_NewFloat64(ctx, (double)con->frame_count));
+
+    markers = JS_NewObject(ctx);
+    for (int32_t i = 0; i < con->perf_marker_count; ++i) {
+        if (!con->perf_markers[i].active) {
+            JS_SetPropertyStr(
+                ctx, markers, con->perf_markers[i].label,
+                JS_NewFloat64(ctx, (double)con->perf_markers[i].elapsed_ms));
+        }
+    }
+    JS_SetPropertyStr(ctx, obj, "markers", markers);
     return obj;
+}
+
+/* ------------------------------------------------------------------ */
+/*  Perf markers                                                       */
+/* ------------------------------------------------------------------ */
+
+static JSValue
+js_sys_perf_begin(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+{
+    dtr_console_t *con;
+    const char    *label;
+    int32_t        idx;
+
+    (void)this_val;
+    if (argc < 1) {
+        return JS_UNDEFINED;
+    }
+
+    con   = dtr_api_get_console(ctx);
+    label = JS_ToCString(ctx, argv[0]);
+    if (label == NULL) {
+        return JS_UNDEFINED;
+    }
+
+    /* Reuse existing slot with the same label, or allocate a new one */
+    idx = -1;
+    for (int32_t i = 0; i < con->perf_marker_count; ++i) {
+        if (SDL_strcmp(con->perf_markers[i].label, label) == 0) {
+            idx = i;
+            break;
+        }
+    }
+    if (idx < 0) {
+        if (con->perf_marker_count >= CONSOLE_MAX_PERF_MARKERS) {
+            JS_FreeCString(ctx, label);
+            return JS_UNDEFINED;
+        }
+        idx = con->perf_marker_count++;
+        SDL_strlcpy(con->perf_markers[idx].label, label, CONSOLE_PERF_LABEL_LEN);
+    }
+    JS_FreeCString(ctx, label);
+
+    con->perf_markers[idx].start      = SDL_GetPerformanceCounter();
+    con->perf_markers[idx].elapsed_ms = 0.0f;
+    con->perf_markers[idx].active     = true;
+    return JS_UNDEFINED;
+}
+
+static JSValue
+js_sys_perf_end(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+{
+    dtr_console_t *con;
+    const char    *label;
+    uint64_t       now;
+    double         freq;
+
+    (void)this_val;
+    if (argc < 1) {
+        return JS_UNDEFINED;
+    }
+
+    con   = dtr_api_get_console(ctx);
+    label = JS_ToCString(ctx, argv[0]);
+    if (label == NULL) {
+        return JS_UNDEFINED;
+    }
+
+    now  = SDL_GetPerformanceCounter();
+    freq = (double)SDL_GetPerformanceFrequency();
+
+    for (int32_t i = 0; i < con->perf_marker_count; ++i) {
+        if (SDL_strcmp(con->perf_markers[i].label, label) == 0 && con->perf_markers[i].active) {
+            con->perf_markers[i].elapsed_ms =
+                (float)((double)(now - con->perf_markers[i].start) / freq * 1000.0);
+            con->perf_markers[i].active = false;
+            JS_FreeCString(ctx, label);
+            return JS_NewFloat64(ctx, (double)con->perf_markers[i].elapsed_ms);
+        }
+    }
+
+    JS_FreeCString(ctx, label);
+    return JS_UNDEFINED;
 }
 
 static JSValue
@@ -792,6 +885,8 @@ static const JSCFunctionListEntry js_sys_funcs[] = {
     JS_CFUNC_DEF("limit", 1, js_sys_limit),
     JS_CFUNC_DEF("stat", 1, js_sys_stat),
     JS_CFUNC_DEF("perf", 0, js_sys_perf),
+    JS_CFUNC_DEF("perfBegin", 1, js_sys_perf_begin),
+    JS_CFUNC_DEF("perfEnd", 1, js_sys_perf_end),
     JS_CFUNC_DEF("textInput", 1, js_sys_text_input),
     JS_CFUNC_DEF("volume", 1, js_sys_volume),
     JS_CFUNC_DEF("clipboardGet", 0, js_sys_clipboard_get),

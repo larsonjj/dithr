@@ -111,6 +111,12 @@
 #define CONSOLE_JS_MEM_MB CONSOLE_JS_HEAP_MB
 #endif
 
+/* Profiler */
+#ifndef CONSOLE_MAX_PERF_MARKERS
+#define CONSOLE_MAX_PERF_MARKERS 16
+#endif
+#define CONSOLE_PERF_LABEL_LEN 32
+
 /* Dev */
 #ifndef DEV_BUILD
 #define DEV_BUILD 0

@@ -14,7 +14,7 @@ static JSValue js_mus_play(JSContext *ctx, JSValueConst this_val, int argc, JSVa
     dtr_mus_play(AUD(ctx),
                  dtr_api_opt_int(ctx, argc, argv, 0, 0),
                  dtr_api_opt_int(ctx, argc, argv, 1, 0),
-                 (uint32_t)dtr_api_opt_int(ctx, argc, argv, 2, 0));
+                 (uint32_t)(dtr_api_opt_int(ctx, argc, argv, 2, 0) & 0x7FFFFFFF));
     return JS_UNDEFINED;
 }
 
