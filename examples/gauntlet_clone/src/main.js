@@ -69,8 +69,6 @@ const DEMON_HP = 20;
 // Map
 let tiles = [];
 let level = 1;
-let camX = 0;
-let camY = 0;
 
 // Attack cooldown
 let attackTimer = 0;
@@ -821,25 +819,17 @@ function updatePlay() {
     // Camera follow
     const targetX = player.x - SCREEN_W / 2 + player.w / 2;
     const targetY = player.y - (SCREEN_H - HUD_H) / 2 + player.h / 2;
-    const cdx = targetX - camX;
-    const cdy = targetY - camY;
-    camX += math.abs(cdx) < 0.5 ? cdx : cdx * 0.1;
-    camY += math.abs(cdy) < 0.5 ? cdy : cdy * 0.1;
+    cam.follow(targetX, targetY, 0.1);
 
+    // Clamp camera to map bounds
     const maxCx = MAP_W * TILE - SCREEN_W;
     const maxCy = MAP_H * TILE - (SCREEN_H - HUD_H);
-    if (camX < 0) {
-        camX = 0;
-    }
-    if (camY < 0) {
-        camY = 0;
-    }
-    if (camX > maxCx) {
-        camX = maxCx;
-    }
-    if (camY > maxCy) {
-        camY = maxCy;
-    }
+    let c = cam.get();
+    if (c.x < 0) cam.set(0, c.y);
+    if (c.y < 0) cam.set(cam.get().x, 0);
+    c = cam.get();
+    if (c.x > maxCx) cam.set(maxCx, c.y);
+    if (c.y > maxCy) cam.set(cam.get().x, maxCy);
 
     // Death check
     if (player.hp <= 0) {
@@ -853,13 +843,12 @@ function updatePlay() {
 function drawPlay() {
     gfx.cls(0);
 
-    const ox = math.flr(camX);
-    const oy = math.flr(camY);
-    gfx.camera(ox, oy - HUD_H);
+    const c = cam.get();
+    cam.set(c.x, c.y - HUD_H);
 
     // Visible tile range
-    let sx = math.flr(camX / TILE) - 1;
-    let sy = math.flr(camY / TILE) - 1;
+    let sx = math.flr(c.x / TILE) - 1;
+    let sy = math.flr(c.y / TILE) - 1;
     let ex = sx + math.flr(SCREEN_W / TILE) + 3;
     let ey = sy + math.flr(SCREEN_H / TILE) + 3;
     if (sx < 0) {
@@ -1033,7 +1022,7 @@ function drawPlay() {
     }
 
     // --- HUD ---
-    gfx.camera(0, 0);
+    cam.set(0, 0);
 
     // HUD background
     gfx.rectfill(0, 0, SCREEN_W - 1, HUD_H - 1, 0);
@@ -1079,6 +1068,9 @@ function drawPlay() {
     if (state === 'dead') {
         drawDeathOverlay();
     }
+
+    // Restore camera for next frame's cam.follow()
+    cam.set(c.x, c.y);
 }
 
 function drawDeathOverlay() {
@@ -1149,8 +1141,7 @@ function _save() {
         spawners,
         shots,
         level,
-        camX,
-        camY,
+        cam: cam.get(),
         attackTimer,
         drainTimer,
         potionActive,
@@ -1173,8 +1164,7 @@ function _restore(sav) {
     spawners = sav.spawners;
     shots = sav.shots;
     level = sav.level;
-    camX = sav.camX;
-    camY = sav.camY;
+    cam.set(sav.cam.x, sav.cam.y);
     attackTimer = sav.attackTimer;
     drainTimer = sav.drainTimer;
     potionActive = sav.potionActive;

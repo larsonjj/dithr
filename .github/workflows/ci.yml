@@ -112,113 +112,81 @@ jobs:
               run: ctest --output-on-failure --timeout 300 -C Debug
 
     # ---------------------------------------------------------------------------
-    #  Linux — GCC
+    #  Linux — GCC / Clang build matrix
     # ---------------------------------------------------------------------------
     linux:
         runs-on: ubuntu-latest
+        strategy:
+            fail-fast: false
+            matrix:
+                include:
+                    - name: GCC Debug
+                      cmake-args: >-
+                          -B build/debug -G Ninja
+                          -DCMAKE_BUILD_TYPE=Debug
+                          -DBUILD_SHARED_LIBS=OFF
+                      build-dir: build/debug
+                      cache-key: linux-deps
+                    - name: GCC Release
+                      cmake-args: --preset release -G Ninja
+                      build-dir: build/release
+                      cache-key: linux-release-deps
+                    - name: GCC ASan/UBSan
+                      cmake-args: --preset asan -G Ninja
+                      build-dir: build/asan
+                      cache-key: linux-asan-deps
+                    - name: Clang Debug
+                      cmake-args: >-
+                          -B build/debug -G Ninja
+                          -DCMAKE_BUILD_TYPE=Debug
+                          -DCMAKE_C_COMPILER=clang
+                          -DBUILD_SHARED_LIBS=OFF
+                      build-dir: build/debug
+                      cache-key: linux-clang-deps
+                      extra-packages: clang
+        name: Linux — ${{ matrix.name }}
+        env:
+            SDL_AUDIO_DRIVER: dummy
+            SDL_VIDEO_DRIVER: dummy
+            SDL_AUDIODRIVER: dummy
+            SDL_VIDEODRIVER: dummy
         steps:
             - uses: actions/checkout@v6
 
             - name: Cache build
               uses: actions/cache@v5
               with:
-                  path: build/debug/_deps
-                  key: linux-deps-${{ hashFiles('CMakeLists.txt') }}
-                  restore-keys: linux-deps-
+                  path: ${{ matrix.build-dir }}/_deps
+                  key: ${{ matrix.cache-key }}-${{ hashFiles('CMakeLists.txt') }}
+                  restore-keys: ${{ matrix.cache-key }}-
 
             - name: Install dependencies
               uses: ./.github/actions/install-linux-deps
-
-            - name: Configure
-              run: >
-                  cmake -B build/debug -G Ninja
-                  -DCMAKE_BUILD_TYPE=Debug
-                  -DBUILD_SHARED_LIBS=OFF
-
-            - name: Build
-              run: cmake --build build/debug
-
-            - name: Test
-              working-directory: build/debug
-              run: ctest --output-on-failure --timeout 300
-              env:
-                  SDL_AUDIO_DRIVER: dummy
-                  SDL_VIDEO_DRIVER: dummy
-                  SDL_AUDIODRIVER: dummy
-                  SDL_VIDEODRIVER: dummy
-
-    # ---------------------------------------------------------------------------
-    #  Linux — GCC (Release)
-    # ---------------------------------------------------------------------------
-    linux-release:
-        runs-on: ubuntu-latest
-        steps:
-            - uses: actions/checkout@v6
-
-            - name: Cache build
-              uses: actions/cache@v5
               with:
-                  path: build/release/_deps
-                  key: linux-release-deps-${{ hashFiles('CMakeLists.txt') }}
-                  restore-keys: linux-release-deps-
-
-            - name: Install dependencies
-              uses: ./.github/actions/install-linux-deps
+                  extra-packages: ${{ matrix.extra-packages || '' }}
 
             - name: Configure
-              run: cmake --preset release -G Ninja
+              run: cmake ${{ matrix.cmake-args }}
 
             - name: Build
-              run: cmake --build build/release
+              run: cmake --build ${{ matrix.build-dir }}
 
             - name: Test
-              working-directory: build/release
+              working-directory: ${{ matrix.build-dir }}
               run: ctest --output-on-failure --timeout 300
               env:
-                  SDL_AUDIO_DRIVER: dummy
-                  SDL_VIDEO_DRIVER: dummy
-                  SDL_AUDIODRIVER: dummy
-                  SDL_VIDEODRIVER: dummy
-
-    # ---------------------------------------------------------------------------
-    #  Linux — GCC + ASan / UBSan
-    # ---------------------------------------------------------------------------
-    linux-sanitizers:
-        runs-on: ubuntu-latest
-        steps:
-            - uses: actions/checkout@v6
-
-            - name: Cache build
-              uses: actions/cache@v5
-              with:
-                  path: build/asan/_deps
-                  key: linux-asan-deps-${{ hashFiles('CMakeLists.txt') }}
-                  restore-keys: linux-asan-deps-
-
-            - name: Install dependencies
-              uses: ./.github/actions/install-linux-deps
-
-            - name: Configure
-              run: cmake --preset asan -G Ninja
-
-            - name: Build
-              run: cmake --build build/asan
-
-            - name: Test
-              working-directory: build/asan
-              run: ctest --output-on-failure --timeout 300
-              env:
-                  LSAN_OPTIONS: suppressions=${{ github.workspace }}/tests/lsan_suppressions.txt
-                  SDL_AUDIO_DRIVER: dummy
-                  SDL_VIDEO_DRIVER: dummy
-                  SDL_AUDIODRIVER: dummy
-                  SDL_VIDEODRIVER: dummy
+                  LSAN_OPTIONS: ${{ matrix.name == 'GCC ASan/UBSan' && format('suppressions={0}/tests/lsan_suppressions.txt', github.workspace) || '' }}
 
     # ---------------------------------------------------------------------------
     #  Linux — GCC + Coverage (lcov)
     # ---------------------------------------------------------------------------
     coverage:
         runs-on: ubuntu-latest
+        env:
+            SDL_AUDIO_DRIVER: dummy
+            SDL_VIDEO_DRIVER: dummy
+            SDL_AUDIODRIVER: dummy
+            SDL_VIDEODRIVER: dummy
         steps:
             - uses: actions/checkout@v6
 
@@ -247,11 +215,6 @@ jobs:
             - name: Test
               working-directory: build/coverage
               run: ctest --output-on-failure --timeout 300
-              env:
-                  SDL_AUDIO_DRIVER: dummy
-                  SDL_VIDEO_DRIVER: dummy
-                  SDL_AUDIODRIVER: dummy
-                  SDL_VIDEODRIVER: dummy
 
             - name: Collect coverage
               run: |
@@ -279,106 +242,50 @@ jobs:
                   path: build/coverage-report/
 
     # ---------------------------------------------------------------------------
-    #  macOS — AppleClang
+    #  macOS — AppleClang build matrix
     # ---------------------------------------------------------------------------
     macos:
         runs-on: macos-latest
+        strategy:
+            fail-fast: false
+            matrix:
+                include:
+                    - name: Debug
+                      cmake-args: >-
+                          -B build/debug -G Ninja
+                          -DCMAKE_BUILD_TYPE=Debug
+                          -DBUILD_SHARED_LIBS=OFF
+                      build-dir: build/debug
+                      cache-key: macos-deps
+                    - name: ASan/UBSan
+                      cmake-args: --preset asan -G Ninja
+                      build-dir: build/asan
+                      cache-key: macos-asan-deps
+        name: macOS — ${{ matrix.name }}
+        env:
+            SDL_AUDIO_DRIVER: dummy
+            SDL_VIDEO_DRIVER: dummy
+            SDL_AUDIODRIVER: dummy
+            SDL_VIDEODRIVER: dummy
         steps:
             - uses: actions/checkout@v6
 
             - name: Cache build
               uses: actions/cache@v5
               with:
-                  path: build/debug/_deps
-                  key: macos-deps-${{ hashFiles('CMakeLists.txt') }}
-                  restore-keys: macos-deps-
+                  path: ${{ matrix.build-dir }}/_deps
+                  key: ${{ matrix.cache-key }}-${{ hashFiles('CMakeLists.txt') }}
+                  restore-keys: ${{ matrix.cache-key }}-
 
             - name: Configure
-              run: >
-                  cmake -B build/debug -G Ninja
-                  -DCMAKE_BUILD_TYPE=Debug
-                  -DBUILD_SHARED_LIBS=OFF
+              run: cmake ${{ matrix.cmake-args }}
 
             - name: Build
-              run: cmake --build build/debug
+              run: cmake --build ${{ matrix.build-dir }}
 
             - name: Test
-              working-directory: build/debug
+              working-directory: ${{ matrix.build-dir }}
               run: ctest --output-on-failure --timeout 300
-              env:
-                  SDL_AUDIO_DRIVER: dummy
-                  SDL_VIDEO_DRIVER: dummy
-                  SDL_AUDIODRIVER: dummy
-                  SDL_VIDEODRIVER: dummy
-
-    # ---------------------------------------------------------------------------
-    #  macOS — AppleClang + ASan / UBSan
-    # ---------------------------------------------------------------------------
-    macos-sanitizers:
-        runs-on: macos-latest
-        steps:
-            - uses: actions/checkout@v6
-
-            - name: Cache build
-              uses: actions/cache@v5
-              with:
-                  path: build/asan/_deps
-                  key: macos-asan-deps-${{ hashFiles('CMakeLists.txt') }}
-                  restore-keys: macos-asan-deps-
-
-            - name: Configure
-              run: cmake --preset asan -G Ninja
-
-            - name: Build
-              run: cmake --build build/asan
-
-            - name: Test
-              working-directory: build/asan
-              run: ctest --output-on-failure --timeout 300
-              env:
-                  SDL_AUDIO_DRIVER: dummy
-                  SDL_VIDEO_DRIVER: dummy
-                  SDL_AUDIODRIVER: dummy
-                  SDL_VIDEODRIVER: dummy
-
-    # ---------------------------------------------------------------------------
-    #  Linux — Clang
-    # ---------------------------------------------------------------------------
-    linux-clang:
-        runs-on: ubuntu-latest
-        steps:
-            - uses: actions/checkout@v6
-
-            - name: Cache build
-              uses: actions/cache@v5
-              with:
-                  path: build/debug/_deps
-                  key: linux-clang-deps-${{ hashFiles('CMakeLists.txt') }}
-                  restore-keys: linux-clang-deps-
-
-            - name: Install dependencies
-              uses: ./.github/actions/install-linux-deps
-              with:
-                  extra-packages: clang
-
-            - name: Configure
-              run: >
-                  cmake -B build/debug -G Ninja
-                  -DCMAKE_BUILD_TYPE=Debug
-                  -DCMAKE_C_COMPILER=clang
-                  -DBUILD_SHARED_LIBS=OFF
-
-            - name: Build
-              run: cmake --build build/debug
-
-            - name: Test
-              working-directory: build/debug
-              run: ctest --output-on-failure --timeout 300
-              env:
-                  SDL_AUDIO_DRIVER: dummy
-                  SDL_VIDEO_DRIVER: dummy
-                  SDL_AUDIODRIVER: dummy
-                  SDL_VIDEODRIVER: dummy
 
     # ---------------------------------------------------------------------------
     #  WASM — Emscripten build check
@@ -429,6 +336,15 @@ jobs:
             - name: Build
               run: cmake --build build/wasm
 
+            - name: Upload WASM build
+              uses: actions/upload-artifact@v7
+              with:
+                  name: wasm-build
+                  path: |
+                      build/wasm/dithr.*
+                      build/wasm/index.html
+                  retention-days: 1
+
             - name: Configure tests
               run: >
                   cmake -B build/wasm-test -G Ninja
@@ -455,46 +371,11 @@ jobs:
         steps:
             - uses: actions/checkout@v6
 
-            - name: Install Ninja
-              run: sudo apt-get update && sudo apt-get install -y ninja-build
-
-            - name: Cache emsdk
-              id: cache-emsdk
-              uses: actions/cache@v5
+            - name: Download WASM build
+              uses: actions/download-artifact@v4
               with:
-                  path: emsdk
-                  key: emsdk-${{ runner.os }}
-
-            - name: Setup Emscripten
-              if: steps.cache-emsdk.outputs.cache-hit != 'true'
-              run: |
-                  rm -rf emsdk
-                  git clone https://github.com/emscripten-core/emsdk.git --depth 1
-                  cd emsdk
-                  ./emsdk install latest
-                  ./emsdk activate latest
-
-            - name: Activate emsdk
-              run: |
-                  cd emsdk && ./emsdk activate latest
-                  echo "${{ github.workspace }}/emsdk" >> $GITHUB_PATH
-                  echo "${{ github.workspace }}/emsdk/upstream/emscripten" >> $GITHUB_PATH
-                  echo "EMSDK=${{ github.workspace }}/emsdk" >> $GITHUB_ENV
-
-            - name: Cache build
-              uses: actions/cache@v5
-              with:
-                  path: build/wasm/_deps
-                  key: wasm-ci-deps-${{ hashFiles('CMakeLists.txt') }}
-                  restore-keys: wasm-ci-deps-
-
-            - name: Configure WASM
-              run: >
-                  cmake --preset wasm
-                  -DDTR_WASM_CART_DIR=${{ github.workspace }}/examples/hello_world
-
-            - name: Build WASM
-              run: cmake --build build/wasm
+                  name: wasm-build
+                  path: build/wasm
 
             - name: Setup Node.js
               uses: actions/setup-node@v4
