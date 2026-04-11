@@ -401,6 +401,7 @@ jobs:
             - name: Setup Emscripten
               if: steps.cache-emsdk.outputs.cache-hit != 'true'
               run: |
+                  rm -rf emsdk
                   git clone https://github.com/emscripten-core/emsdk.git --depth 1
                   cd emsdk
                   ./emsdk install latest
@@ -467,6 +468,7 @@ jobs:
             - name: Setup Emscripten
               if: steps.cache-emsdk.outputs.cache-hit != 'true'
               run: |
+                  rm -rf emsdk
                   git clone https://github.com/emscripten-core/emsdk.git --depth 1
                   cd emsdk
                   ./emsdk install latest
