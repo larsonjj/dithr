@@ -19,6 +19,9 @@ conventions used in the project.
     ctest --output-on-failure -C Debug
     ```
 
+See [docs/testing.md](docs/testing.md) for details on writing tests, running
+sanitizers, and collecting code coverage.
+
 ## Code Style
 
 Follow the rules in [docs/code-style.md](docs/code-style.md). The key points:

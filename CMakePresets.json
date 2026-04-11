@@ -36,6 +36,7 @@
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
         "CMAKE_TOOLCHAIN_FILE": "$env{EMSDK}/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake",
+        "DTR_ENABLE_LTO": "ON",
         "DTR_BUILD_EXAMPLES": "OFF",
         "DTR_BUILD_TESTS": "OFF",
         "DTR_WASM_CART_DIR": "${sourceDir}/examples/hello_world"

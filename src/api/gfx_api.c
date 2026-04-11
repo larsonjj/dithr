@@ -105,7 +105,14 @@ static JSValue js_gfx_tilemap(JSContext *ctx, JSValueConst this_val, int argc, J
     JSValue  len_val;
 
     (void)this_val;
-    if (argc < 4 || !JS_IsArray(argv[0]) || !JS_IsArray(argv[3])) {
+    if (argc < 4) {
+        return JS_UNDEFINED;
+    }
+    /* Accept plain arrays or typed arrays (e.g. Uint8Array) for tiles/colors */
+    if (!JS_IsArray(argv[0]) && JS_GetTypedArrayType(argv[0]) < 0) {
+        return JS_UNDEFINED;
+    }
+    if (!JS_IsArray(argv[3]) && JS_GetTypedArrayType(argv[3]) < 0) {
         return JS_UNDEFINED;
     }
 
@@ -122,52 +129,85 @@ static JSValue js_gfx_tilemap(JSContext *ctx, JSValueConst this_val, int argc, J
     }
 
     /* Read tiles array into temp buffer */
-    len_val = JS_GetPropertyStr(ctx, argv[0], "length");
-    JS_ToInt32(ctx, &tile_cnt, len_val);
-    JS_FreeValue(ctx, len_val);
+    {
+        size_t   ta_size = 0;
+        uint8_t *ta_ptr  = JS_GetUint8Array(ctx, &ta_size, argv[0]);
 
-    if (tile_cnt < map_w * map_h) {
-        return JS_UNDEFINED;
-    }
+        if (ta_ptr != NULL && (int32_t)ta_size >= map_w * map_h) {
+            /* Fast path: Uint8Array — direct memcpy */
+            tiles = (uint8_t *)SDL_malloc((size_t)map_w * (size_t)map_h);
+            if (tiles == NULL) {
+                return JS_UNDEFINED;
+            }
+            SDL_memcpy(tiles, ta_ptr, (size_t)map_w * (size_t)map_h);
+        } else {
+            /* Slow path: plain JS array — per-element lookup */
+            len_val = JS_GetPropertyStr(ctx, argv[0], "length");
+            JS_ToInt32(ctx, &tile_cnt, len_val);
+            JS_FreeValue(ctx, len_val);
 
-    tiles = (uint8_t *)SDL_malloc((size_t)map_w * (size_t)map_h);
-    if (tiles == NULL) {
-        return JS_UNDEFINED;
-    }
+            if (tile_cnt < map_w * map_h) {
+                return JS_UNDEFINED;
+            }
 
-    for (int32_t idx = 0; idx < map_w * map_h; ++idx) {
-        JSValue elem;
-        int32_t val;
+            tiles = (uint8_t *)SDL_malloc((size_t)map_w * (size_t)map_h);
+            if (tiles == NULL) {
+                return JS_UNDEFINED;
+            }
 
-        elem = JS_GetPropertyUint32(ctx, argv[0], (uint32_t)idx);
-        JS_ToInt32(ctx, &val, elem);
-        JS_FreeValue(ctx, elem);
-        tiles[idx] = (uint8_t)(val & 0xFF);
+            for (int32_t idx = 0; idx < map_w * map_h; ++idx) {
+                JSValue elem;
+                int32_t val;
+
+                elem = JS_GetPropertyUint32(ctx, argv[0], (uint32_t)idx);
+                JS_ToInt32(ctx, &val, elem);
+                JS_FreeValue(ctx, elem);
+                tiles[idx] = (uint8_t)(val & 0xFF);
+            }
+        }
     }
 
     /* Read colors array */
-    len_val = JS_GetPropertyStr(ctx, argv[3], "length");
-    JS_ToInt32(ctx, &col_cnt, len_val);
-    JS_FreeValue(ctx, len_val);
+    {
+        size_t   ta_size = 0;
+        uint8_t *ta_ptr  = JS_GetUint8Array(ctx, &ta_size, argv[3]);
 
-    if (col_cnt > 256) {
-        col_cnt = 256;
-    }
+        if (ta_ptr != NULL) {
+            col_cnt = (int32_t)ta_size;
+            if (col_cnt > 256) {
+                col_cnt = 256;
+            }
+            colors = (uint8_t *)SDL_malloc((size_t)col_cnt);
+            if (colors == NULL) {
+                SDL_free(tiles);
+                return JS_UNDEFINED;
+            }
+            SDL_memcpy(colors, ta_ptr, (size_t)col_cnt);
+        } else {
+            len_val = JS_GetPropertyStr(ctx, argv[3], "length");
+            JS_ToInt32(ctx, &col_cnt, len_val);
+            JS_FreeValue(ctx, len_val);
 
-    colors = (uint8_t *)SDL_malloc((size_t)col_cnt);
-    if (colors == NULL) {
-        SDL_free(tiles);
-        return JS_UNDEFINED;
-    }
+            if (col_cnt > 256) {
+                col_cnt = 256;
+            }
 
-    for (int32_t idx = 0; idx < col_cnt; ++idx) {
-        JSValue elem;
-        int32_t val;
+            colors = (uint8_t *)SDL_malloc((size_t)col_cnt);
+            if (colors == NULL) {
+                SDL_free(tiles);
+                return JS_UNDEFINED;
+            }
 
-        elem = JS_GetPropertyUint32(ctx, argv[3], (uint32_t)idx);
-        JS_ToInt32(ctx, &val, elem);
-        JS_FreeValue(ctx, elem);
-        colors[idx] = (uint8_t)(val & 0xFF);
+            for (int32_t idx = 0; idx < col_cnt; ++idx) {
+                JSValue elem;
+                int32_t val;
+
+                elem = JS_GetPropertyUint32(ctx, argv[3], (uint32_t)idx);
+                JS_ToInt32(ctx, &val, elem);
+                JS_FreeValue(ctx, elem);
+                colors[idx] = (uint8_t)(val & 0xFF);
+            }
+        }
     }
 
     dtr_gfx_tilemap(GFX(ctx), tiles, map_w, map_h, tile_w, tile_h, colors, col_cnt);

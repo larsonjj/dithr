@@ -16,13 +16,69 @@
  * Pitch 1 = C-0 (16.35 Hz), pitch 96 = B-7 (3951.07 Hz).
  * Semitone formula: freq = 440 * 2^((pitch - 58) / 12)
  * where pitch 58 = A-4.
+ *
+ * Precomputed to avoid per-sample powf() calls in the render loop.
  */
+/* clang-format off */
+static const float prv_pitch_table[97] = {
+    0.0f,          /*  0: rest / invalid */
+    16.351598f,    /*  1: C-0  */   17.323914f,    /*  2: C#0  */
+    18.354048f,    /*  3: D-0  */   19.445436f,    /*  4: D#0  */
+    20.601722f,    /*  5: E-0  */   21.826764f,    /*  6: F-0  */
+    23.124651f,    /*  7: F#0  */   24.499714f,    /*  8: G-0  */
+    25.956543f,    /*  9: G#0  */   27.500000f,    /* 10: A-0  */
+    29.135235f,    /* 11: A#0  */   30.867706f,    /* 12: B-0  */
+    32.703196f,    /* 13: C-1  */   34.647827f,    /* 14: C#1  */
+    36.708096f,    /* 15: D-1  */   38.890873f,    /* 16: D#1  */
+    41.203445f,    /* 17: E-1  */   43.653528f,    /* 18: F-1  */
+    46.249302f,    /* 19: F#1  */   48.999429f,    /* 20: G-1  */
+    51.913086f,    /* 21: G#1  */   55.000000f,    /* 22: A-1  */
+    58.270470f,    /* 23: A#1  */   61.735413f,    /* 24: B-1  */
+    65.406391f,    /* 25: C-2  */   69.295654f,    /* 26: C#2  */
+    73.416191f,    /* 27: D-2  */   77.781746f,    /* 28: D#2  */
+    82.406889f,    /* 29: E-2  */   87.307057f,    /* 30: F-2  */
+    92.498604f,    /* 31: F#2  */   97.998857f,    /* 32: G-2  */
+    103.826172f,   /* 33: G#2  */  110.000000f,    /* 34: A-2  */
+    116.540940f,   /* 35: A#2  */  123.470825f,    /* 36: B-2  */
+    130.812783f,   /* 37: C-3  */  138.591309f,    /* 38: C#3  */
+    146.832382f,   /* 39: D-3  */  155.563492f,    /* 40: D#3  */
+    164.813778f,   /* 41: E-3  */  174.614113f,    /* 42: F-3  */
+    184.997208f,   /* 43: F#3  */  195.997714f,    /* 44: G-3  */
+    207.652344f,   /* 45: G#3  */  220.000000f,    /* 46: A-3  */
+    233.081879f,   /* 47: A#3  */  246.941650f,    /* 48: B-3  */
+    261.625565f,   /* 49: C-4  */  277.182617f,    /* 50: C#4  */
+    293.664764f,   /* 51: D-4  */  311.126984f,    /* 52: D#4  */
+    329.627557f,   /* 53: E-4  */  349.228226f,    /* 54: F-4  */
+    369.994415f,   /* 55: F#4  */  391.995428f,    /* 56: G-4  */
+    415.304688f,   /* 57: G#4  */  440.000000f,    /* 58: A-4  */
+    466.163757f,   /* 59: A#4  */  493.883301f,    /* 60: B-4  */
+    523.251130f,   /* 61: C-5  */  554.365234f,    /* 62: C#5  */
+    587.329529f,   /* 63: D-5  */  622.253967f,    /* 64: D#5  */
+    659.255115f,   /* 65: E-5  */  698.456452f,    /* 66: F-5  */
+    739.988831f,   /* 67: F#5  */  783.990856f,    /* 68: G-5  */
+    830.609375f,   /* 69: G#5  */  880.000000f,    /* 70: A-5  */
+    932.327515f,   /* 71: A#5  */  987.766602f,    /* 72: B-5  */
+    1046.502319f,  /* 73: C-6  */ 1108.730469f,    /* 74: C#6  */
+    1174.659058f,  /* 75: D-6  */ 1244.507935f,    /* 76: D#6  */
+    1318.510254f,  /* 77: E-6  */ 1396.912903f,    /* 78: F-6  */
+    1479.977661f,  /* 79: F#6  */ 1567.981689f,    /* 80: G-6  */
+    1661.218750f,  /* 81: G#6  */ 1760.000000f,    /* 82: A-6  */
+    1864.655029f,  /* 83: A#6  */ 1975.533203f,    /* 84: B-6  */
+    2093.004639f,  /* 85: C-7  */ 2217.460938f,    /* 86: C#7  */
+    2349.318115f,  /* 87: D-7  */ 2489.015869f,    /* 88: D#7  */
+    2637.020508f,  /* 89: E-7  */ 2793.825806f,    /* 90: F-7  */
+    2959.955322f,  /* 91: F#7  */ 3135.963379f,    /* 92: G-7  */
+    3322.437500f,  /* 93: G#7  */ 3520.000000f,    /* 94: A-7  */
+    3729.310059f,  /* 95: A#7  */ 3951.066406f,    /* 96: B-7  */
+};
+/* clang-format on */
+
 static float prv_pitch_freq(uint8_t pitch)
 {
-    if (pitch == 0 || pitch > 96) {
+    if (pitch > 96) {
         return 0.0f;
     }
-    return 440.0f * SDL_powf(2.0f, (float)(pitch - 58) / 12.0f);
+    return prv_pitch_table[pitch];
 }
 
 float dtr_synth_pitch_freq(uint8_t pitch)
@@ -68,14 +124,12 @@ const char *dtr_synth_note_name(uint8_t pitch)
 /*  Waveform generators (return -1.0 .. 1.0)                           */
 /* ------------------------------------------------------------------ */
 
-static uint32_t prv_noise_state = 0x12345678;
-
-static float prv_noise(void)
+static float prv_noise(uint32_t *state)
 {
-    prv_noise_state ^= prv_noise_state << 13;
-    prv_noise_state ^= prv_noise_state >> 17;
-    prv_noise_state ^= prv_noise_state << 5;
-    return (float)(int32_t)prv_noise_state / (float)INT32_MAX;
+    *state ^= *state << 13;
+    *state ^= *state >> 17;
+    *state ^= *state << 5;
+    return (float)(int32_t)*state / (float)INT32_MAX;
 }
 
 /* ------------------------------------------------------------------ */
@@ -100,7 +154,7 @@ static float prv_polyblep(float ttt, float dtp)
     return 0.0f;
 }
 
-static float prv_waveform(uint8_t wave, float phase)
+static float prv_waveform_ns(uint8_t wave, float phase, uint32_t *noise_state)
 {
     float val;
     float ret;
@@ -136,7 +190,7 @@ static float prv_waveform(uint8_t wave, float phase)
             return ret / 9.0f;
 
         case DTR_WAVE_NOISE:
-            return prv_noise() * 0.5f;
+            return prv_noise(noise_state) * 0.5f;
 
         case DTR_WAVE_PHASER:
             /* Two detuned triangles, peak ±0.50 */
@@ -151,17 +205,19 @@ static float prv_waveform(uint8_t wave, float phase)
 
 float dtr_synth_waveform(uint8_t wave, float phase)
 {
-    return prv_waveform(wave, phase);
+    static uint32_t pub_noise_state = 0x12345678;
+    return prv_waveform_ns(wave, phase, &pub_noise_state);
 }
 
 /**
  * Band-limited waveform: applies PolyBLEP correction to
  * discontinuous waveforms (square, pulse, saw) to reduce aliasing.
- * \param wave  DTR_WAVE_* type
- * \param phase 0..1 oscillator phase
- * \param dtp   Phase increment per sample (freq / sample_rate)
+ * \param wave        DTR_WAVE_* type
+ * \param phase       0..1 oscillator phase
+ * \param dtp         Phase increment per sample (freq / sample_rate)
+ * \param noise_state Noise PRNG state (passed through for noise waveform)
  */
-static float prv_waveform_bl(uint8_t wave, float phase, float dtp)
+static float prv_waveform_bl_ns(uint8_t wave, float phase, float dtp, uint32_t *noise_state)
 {
     float val;
     float blp;
@@ -197,13 +253,14 @@ static float prv_waveform_bl(uint8_t wave, float phase, float dtp)
 
         default:
             /* Triangle, tilted_saw, organ, noise, phaser — no discontinuity */
-            return prv_waveform(wave, phase);
+            return prv_waveform_ns(wave, phase, noise_state);
     }
 }
 
 float dtr_synth_waveform_bl(uint8_t wave, float phase, float dtp)
 {
-    return prv_waveform_bl(wave, phase, dtp);
+    static uint32_t pub_noise_state = 0x12345678;
+    return prv_waveform_bl_ns(wave, phase, dtp, &pub_noise_state);
 }
 
 /* ------------------------------------------------------------------ */
@@ -238,6 +295,7 @@ int16_t *dtr_synth_render(const dtr_synth_sfx_t *sfx, size_t *out_len)
     int32_t  idx;
     float    phase;
     float    freq;
+    uint32_t noise_state;
 
     if (sfx == NULL || out_len == NULL) {
         return NULL;
@@ -275,7 +333,7 @@ int16_t *dtr_synth_render(const dtr_synth_sfx_t *sfx, size_t *out_len)
     phase = 0.0f;
 
     /* Reset noise state for deterministic output */
-    prv_noise_state = 0x12345678;
+    noise_state = 0x12345678;
 
     {
         uint8_t prev_key = 49; /* C-4 (261.6 Hz) */
@@ -421,7 +479,8 @@ int16_t *dtr_synth_render(const dtr_synth_sfx_t *sfx, size_t *out_len)
 
                 /* Generate waveform sample (band-limited) */
                 cur_phase = phase;
-                sample    = prv_waveform_bl(wave, cur_phase, freq / (float)DTR_SYNTH_SAMPLE_RATE);
+                sample    = prv_waveform_bl_ns(
+                    wave, cur_phase, freq / (float)DTR_SYNTH_SAMPLE_RATE, &noise_state);
 
                 /* Apply volume and clamp */
                 sample *= sample_vol;

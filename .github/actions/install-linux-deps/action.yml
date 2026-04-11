@@ -1,0 +1,24 @@
+name: Install Linux build dependencies
+description: Install the apt packages required to build dithr on Ubuntu
+
+inputs:
+    extra-packages:
+        description: Additional apt packages to install (space-separated)
+        required: false
+        default: ""
+
+runs:
+    using: composite
+    steps:
+        - run: |
+              sudo apt-get update
+              sudo apt-get install -y ninja-build ${{ inputs.extra-packages }} \
+                libx11-dev libxext-dev libxcursor-dev libxi-dev \
+                libxfixes-dev libxrandr-dev libxrender-dev libxss-dev \
+                libxtst-dev libxxf86vm-dev \
+                libwayland-dev libxkbcommon-dev \
+                libdrm-dev libgbm-dev libgl1-mesa-dev libgles2-mesa-dev \
+                libegl1-mesa-dev libdbus-1-dev libudev-dev \
+                libasound2-dev libpulse-dev libpipewire-0.3-dev \
+                libdecor-0-dev
+          shell: bash

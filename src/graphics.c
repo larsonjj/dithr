@@ -410,6 +410,20 @@ void dtr_gfx_line(dtr_graphics_t *gfx, int32_t x0, int32_t y0, int32_t x1, int32
     int32_t sy_val;
     int32_t err;
 
+    /* Fast path for axis-aligned lines */
+    if (y0 == y1) {
+        int32_t lo = (x0 < x1) ? x0 : x1;
+        int32_t hi = (x0 > x1) ? x0 : x1;
+        prv_hline(gfx, lo, hi, y0, col);
+        return;
+    }
+    if (x0 == x1) {
+        int32_t lo = (y0 < y1) ? y0 : y1;
+        int32_t hi = (y0 > y1) ? y0 : y1;
+        prv_vline(gfx, x0, lo, hi, col);
+        return;
+    }
+
     dx_val = abs(x1 - x0);
     dy_val = -abs(y1 - y0);
     sx_val = (x0 < x1) ? 1 : -1;
@@ -2661,57 +2675,118 @@ bool dtr_gfx_load_sheet(dtr_graphics_t *gfx,
     }
     sht->pixels = new_pixels;
 
-    /* Quantise RGBA to nearest palette colour */
-    for (int32_t idx = 0; idx < total; ++idx) {
-        uint8_t src_r;
-        uint8_t src_g;
-        uint8_t src_b;
-        uint8_t src_a;
-        int32_t best;
-        int32_t best_dist;
+    /* Quantise RGBA to nearest palette colour.
+     * Build a 15-bit (5 bits per channel) colour-cube LUT for O(1) lookup.
+     * Most sprite sheets use exact palette colours, so the LUT hits ~99%
+     * of the time, avoiding the inner 256-entry brute-force loop. */
+    {
+        uint8_t *lut;
+        int32_t  lut_size = 32 * 32 * 32;
 
-        src_r = rgba[idx * 4 + 0];
-        src_g = rgba[idx * 4 + 1];
-        src_b = rgba[idx * 4 + 2];
-        src_a = rgba[idx * 4 + 3];
+        lut = DTR_MALLOC((size_t)lut_size);
+        if (lut != NULL) {
+            /* Populate LUT: for each 15-bit colour, find nearest palette entry */
+            for (int32_t ri = 0; ri < 32; ++ri) {
+                for (int32_t gi = 0; gi < 32; ++gi) {
+                    for (int32_t bi = 0; bi < 32; ++bi) {
+                        int32_t lr    = ri * 255 / 31;
+                        int32_t lg    = gi * 255 / 31;
+                        int32_t lb    = bi * 255 / 31;
+                        int32_t lbest = 0;
+                        int32_t ldist = 0x7FFFFFFF;
+                        int32_t lidx  = (ri << 10) | (gi << 5) | bi;
 
-        /* Fully transparent → palette 0 */
-        if (src_a < 128) {
-            sht->pixels[idx] = 0;
-            continue;
-        }
+                        for (int32_t pal = 0; pal < CONSOLE_PALETTE_SIZE; ++pal) {
+                            int32_t pr  = (int32_t)((gfx->colors[pal] >> 24) & 0xFF);
+                            int32_t pg  = (int32_t)((gfx->colors[pal] >> 16) & 0xFF);
+                            int32_t pb  = (int32_t)((gfx->colors[pal] >> 8) & 0xFF);
+                            int32_t ddr = lr - pr;
+                            int32_t ddg = lg - pg;
+                            int32_t ddb = lb - pb;
+                            int32_t dd  = ddr * ddr + ddg * ddg + ddb * ddb;
 
-        best      = 0;
-        best_dist = 0x7FFFFFFF;
-
-        for (int32_t pal = 0; pal < CONSOLE_PALETTE_SIZE; ++pal) {
-            int32_t pal_r;
-            int32_t pal_g;
-            int32_t pal_b;
-            int32_t dr_val;
-            int32_t dg_val;
-            int32_t db_val;
-            int32_t dist;
-
-            pal_r = (int32_t)((gfx->colors[pal] >> 24) & 0xFF);
-            pal_g = (int32_t)((gfx->colors[pal] >> 16) & 0xFF);
-            pal_b = (int32_t)((gfx->colors[pal] >> 8) & 0xFF);
-
-            dr_val = (int32_t)src_r - pal_r;
-            dg_val = (int32_t)src_g - pal_g;
-            db_val = (int32_t)src_b - pal_b;
-            dist   = dr_val * dr_val + dg_val * dg_val + db_val * db_val;
-
-            if (dist < best_dist) {
-                best_dist = dist;
-                best      = pal;
-                if (dist == 0) {
-                    break;
+                            if (dd < ldist) {
+                                ldist = dd;
+                                lbest = pal;
+                                if (dd == 0) {
+                                    break;
+                                }
+                            }
+                        }
+                        lut[lidx] = (uint8_t)lbest;
+                    }
                 }
             }
-        }
 
-        sht->pixels[idx] = (uint8_t)best;
+            /* Quantise using LUT */
+            for (int32_t idx = 0; idx < total; ++idx) {
+                uint8_t src_a;
+                int32_t key;
+
+                src_a = rgba[idx * 4 + 3];
+                if (src_a < 128) {
+                    sht->pixels[idx] = 0;
+                    continue;
+                }
+                key = ((int32_t)(rgba[idx * 4 + 0] >> 3) << 10) |
+                      ((int32_t)(rgba[idx * 4 + 1] >> 3) << 5) | (int32_t)(rgba[idx * 4 + 2] >> 3);
+                sht->pixels[idx] = lut[key];
+            }
+
+            DTR_FREE(lut);
+        } else {
+            /* Fallback: brute-force per-pixel quantisation */
+            for (int32_t idx = 0; idx < total; ++idx) {
+                uint8_t src_r;
+                uint8_t src_g;
+                uint8_t src_b;
+                uint8_t src_a;
+                int32_t best;
+                int32_t best_dist;
+
+                src_r = rgba[idx * 4 + 0];
+                src_g = rgba[idx * 4 + 1];
+                src_b = rgba[idx * 4 + 2];
+                src_a = rgba[idx * 4 + 3];
+
+                if (src_a < 128) {
+                    sht->pixels[idx] = 0;
+                    continue;
+                }
+
+                best      = 0;
+                best_dist = 0x7FFFFFFF;
+
+                for (int32_t pal = 0; pal < CONSOLE_PALETTE_SIZE; ++pal) {
+                    int32_t pal_r;
+                    int32_t pal_g;
+                    int32_t pal_b;
+                    int32_t dr_val;
+                    int32_t dg_val;
+                    int32_t db_val;
+                    int32_t dist;
+
+                    pal_r = (int32_t)((gfx->colors[pal] >> 24) & 0xFF);
+                    pal_g = (int32_t)((gfx->colors[pal] >> 16) & 0xFF);
+                    pal_b = (int32_t)((gfx->colors[pal] >> 8) & 0xFF);
+
+                    dr_val = (int32_t)src_r - pal_r;
+                    dg_val = (int32_t)src_g - pal_g;
+                    db_val = (int32_t)src_b - pal_b;
+                    dist   = dr_val * dr_val + dg_val * dg_val + db_val * db_val;
+
+                    if (dist < best_dist) {
+                        best_dist = dist;
+                        best      = pal;
+                        if (dist == 0) {
+                            break;
+                        }
+                    }
+                }
+
+                sht->pixels[idx] = (uint8_t)best;
+            }
+        }
     }
 
     sht->width  = width;

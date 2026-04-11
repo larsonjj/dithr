@@ -70,17 +70,9 @@ jobs:
                   restore-keys: linux-tidy-deps-
 
             - name: Install dependencies
-              run: |
-                  sudo apt-get update
-                  sudo apt-get install -y ninja-build clang-tidy \
-                    libx11-dev libxext-dev libxcursor-dev libxi-dev \
-                    libxfixes-dev libxrandr-dev libxrender-dev libxss-dev \
-                    libxtst-dev libxxf86vm-dev \
-                    libwayland-dev libxkbcommon-dev \
-                    libdrm-dev libgbm-dev libgl1-mesa-dev libgles2-mesa-dev \
-                    libegl1-mesa-dev libdbus-1-dev libudev-dev \
-                    libasound2-dev libpulse-dev libpipewire-0.3-dev \
-                    libdecor-0-dev
+              uses: ./.github/actions/install-linux-deps
+              with:
+                  extra-packages: clang-tidy
 
             - name: Configure
               run: >
@@ -135,17 +127,7 @@ jobs:
                   restore-keys: linux-deps-
 
             - name: Install dependencies
-              run: |
-                  sudo apt-get update
-                  sudo apt-get install -y ninja-build \
-                    libx11-dev libxext-dev libxcursor-dev libxi-dev \
-                    libxfixes-dev libxrandr-dev libxrender-dev libxss-dev \
-                    libxtst-dev libxxf86vm-dev \
-                    libwayland-dev libxkbcommon-dev \
-                    libdrm-dev libgbm-dev libgl1-mesa-dev libgles2-mesa-dev \
-                    libegl1-mesa-dev libdbus-1-dev libudev-dev \
-                    libasound2-dev libpulse-dev libpipewire-0.3-dev \
-                    libdecor-0-dev
+              uses: ./.github/actions/install-linux-deps
 
             - name: Configure
               run: >
@@ -181,17 +163,7 @@ jobs:
                   restore-keys: linux-release-deps-
 
             - name: Install dependencies
-              run: |
-                  sudo apt-get update
-                  sudo apt-get install -y ninja-build \
-                    libx11-dev libxext-dev libxcursor-dev libxi-dev \
-                    libxfixes-dev libxrandr-dev libxrender-dev libxss-dev \
-                    libxtst-dev libxxf86vm-dev \
-                    libwayland-dev libxkbcommon-dev \
-                    libdrm-dev libgbm-dev libgl1-mesa-dev libgles2-mesa-dev \
-                    libegl1-mesa-dev libdbus-1-dev libudev-dev \
-                    libasound2-dev libpulse-dev libpipewire-0.3-dev \
-                    libdecor-0-dev
+              uses: ./.github/actions/install-linux-deps
 
             - name: Configure
               run: cmake --preset release -G Ninja
@@ -224,17 +196,7 @@ jobs:
                   restore-keys: linux-asan-deps-
 
             - name: Install dependencies
-              run: |
-                  sudo apt-get update
-                  sudo apt-get install -y ninja-build \
-                    libx11-dev libxext-dev libxcursor-dev libxi-dev \
-                    libxfixes-dev libxrandr-dev libxrender-dev libxss-dev \
-                    libxtst-dev libxxf86vm-dev \
-                    libwayland-dev libxkbcommon-dev \
-                    libdrm-dev libgbm-dev libgl1-mesa-dev libgles2-mesa-dev \
-                    libegl1-mesa-dev libdbus-1-dev libudev-dev \
-                    libasound2-dev libpulse-dev libpipewire-0.3-dev \
-                    libdecor-0-dev
+              uses: ./.github/actions/install-linux-deps
 
             - name: Configure
               run: cmake --preset asan -G Ninja
@@ -268,17 +230,9 @@ jobs:
                   restore-keys: linux-cov-deps-
 
             - name: Install dependencies
-              run: |
-                  sudo apt-get update
-                  sudo apt-get install -y ninja-build lcov \
-                    libx11-dev libxext-dev libxcursor-dev libxi-dev \
-                    libxfixes-dev libxrandr-dev libxrender-dev libxss-dev \
-                    libxtst-dev libxxf86vm-dev \
-                    libwayland-dev libxkbcommon-dev \
-                    libdrm-dev libgbm-dev libgl1-mesa-dev libgles2-mesa-dev \
-                    libegl1-mesa-dev libdbus-1-dev libudev-dev \
-                    libasound2-dev libpulse-dev libpipewire-0.3-dev \
-                    libdecor-0-dev
+              uses: ./.github/actions/install-linux-deps
+              with:
+                  extra-packages: lcov
 
             - name: Configure
               run: >
@@ -403,17 +357,9 @@ jobs:
                   restore-keys: linux-clang-deps-
 
             - name: Install dependencies
-              run: |
-                  sudo apt-get update
-                  sudo apt-get install -y ninja-build clang \
-                    libx11-dev libxext-dev libxcursor-dev libxi-dev \
-                    libxfixes-dev libxrandr-dev libxrender-dev libxss-dev \
-                    libxtst-dev libxxf86vm-dev \
-                    libwayland-dev libxkbcommon-dev \
-                    libdrm-dev libgbm-dev libgl1-mesa-dev libgles2-mesa-dev \
-                    libegl1-mesa-dev libdbus-1-dev libudev-dev \
-                    libasound2-dev libpulse-dev libpipewire-0.3-dev \
-                    libdecor-0-dev
+              uses: ./.github/actions/install-linux-deps
+              with:
+                  extra-packages: clang
 
             - name: Configure
               run: >
@@ -445,12 +391,24 @@ jobs:
             - name: Install Ninja
               run: sudo apt-get update && sudo apt-get install -y ninja-build
 
+            - name: Cache emsdk
+              id: cache-emsdk
+              uses: actions/cache@v5
+              with:
+                  path: emsdk
+                  key: emsdk-${{ runner.os }}
+
             - name: Setup Emscripten
+              if: steps.cache-emsdk.outputs.cache-hit != 'true'
               run: |
                   git clone https://github.com/emscripten-core/emsdk.git --depth 1
                   cd emsdk
                   ./emsdk install latest
                   ./emsdk activate latest
+
+            - name: Activate emsdk
+              run: |
+                  cd emsdk && ./emsdk activate latest
                   echo "${{ github.workspace }}/emsdk" >> $GITHUB_PATH
                   echo "${{ github.workspace }}/emsdk/upstream/emscripten" >> $GITHUB_PATH
                   echo "EMSDK=${{ github.workspace }}/emsdk" >> $GITHUB_ENV
@@ -499,12 +457,24 @@ jobs:
             - name: Install Ninja
               run: sudo apt-get update && sudo apt-get install -y ninja-build
 
+            - name: Cache emsdk
+              id: cache-emsdk
+              uses: actions/cache@v5
+              with:
+                  path: emsdk
+                  key: emsdk-${{ runner.os }}
+
             - name: Setup Emscripten
+              if: steps.cache-emsdk.outputs.cache-hit != 'true'
               run: |
                   git clone https://github.com/emscripten-core/emsdk.git --depth 1
                   cd emsdk
                   ./emsdk install latest
                   ./emsdk activate latest
+
+            - name: Activate emsdk
+              run: |
+                  cd emsdk && ./emsdk activate latest
                   echo "${{ github.workspace }}/emsdk" >> $GITHUB_PATH
                   echo "${{ github.workspace }}/emsdk/upstream/emscripten" >> $GITHUB_PATH
                   echo "EMSDK=${{ github.workspace }}/emsdk" >> $GITHUB_ENV
