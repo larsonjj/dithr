@@ -1,8 +1,8 @@
 # JavaScript Code Style
 
 This document describes the JavaScript coding conventions for dithr cart source
-files (`src/**/*.js`). The style is enforced by **ESLint** (Airbnb base) and
-**Prettier**, both of which are scaffolded automatically by
+files (`src/**/*.js`). The style is enforced by **ESLint** (`@eslint/js`
+recommended) and **Prettier**, both of which are scaffolded automatically by
 `tools/create-cart.js`.
 
 ## Table of Contents
@@ -31,15 +31,11 @@ Every cart scaffolded with `create-cart.js` ships with a ready-to-use linting
 and formatting setup. Install dev-dependencies then run:
 
 ```bash
-npm install --legacy-peer-deps
+npm install
 npm run lint        # check for errors
 npm run lint:fix    # auto-fix what ESLint can
 npm run format      # format with Prettier
 ```
-
-> **Note:** `--legacy-peer-deps` is needed because `eslint-config-airbnb-base`
-> v15 declares a peer dependency on ESLint 7–8, while the project uses
-> ESLint 9.
 
 ## Prettier
 
@@ -88,51 +84,52 @@ indent_size = 4
 
 ### Base configuration
 
-Carts use an ESLint v9 **flat config** (`eslint.config.js`) built from three
+Carts use an ESLint v9 **flat config** (`eslint.config.js`) built from two
 layers:
 
 1. `@eslint/js` recommended rules
-2. `airbnb-base` (via `@eslint/eslintrc` FlatCompat)
-3. `eslint-config-prettier` (disables formatting rules that conflict with
+2. `eslint-config-prettier` (disables formatting rules that conflict with
    Prettier)
+
+A small set of quality rules (`no-var`, `prefer-const`, `prefer-template`,
+`camelcase`, `eqeqeq`) are enabled directly — no third-party style preset is
+needed.
 
 The language level is **ES2020** (`ecmaVersion: 2020`), matching the
 QuickJS-NG runtime.
 
 ### Engine globals
 
-All 18 dithr API namespaces are declared as `"readonly"` globals so ESLint
+All 19 dithr API namespaces are declared as `"readonly"` globals so ESLint
 does not flag them as undefined:
 
 ```
 cam  cart  col  evt  gfx  input  key  map  math  mouse
-mus  pad  postfx  sfx  synth  sys  tween  ui
+mus  pad  postfx  sfx  synth  sys  touch  tween  ui
 ```
 
 ### Rule overrides
 
-The following Airbnb rules are relaxed or customised for game code:
+The following rules are relaxed or customised for game code:
 
-| Rule                           | Setting                                                                 | Why                                                                                      |
-| ------------------------------ | ----------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
-| `no-underscore-dangle`         | `off`                                                                   | Engine callbacks are `_init`, `_update`, `_draw`, etc.                                   |
-| `no-unused-vars`               | `error` with `varsIgnorePattern: "^_"`, `argsIgnorePattern: "^_\|^dt$"` | Prefixing with `_` marks intentionally unused; `dt` is the standard delta-time parameter |
-| `no-use-before-define`         | `error` with `functions: false`                                         | Function declarations hoist safely; allows top-down reading                              |
-| `no-plusplus`                  | `off`                                                                   | `++`/`--` are idiomatic in loops and counters                                            |
-| `no-continue`                  | `off`                                                                   | `continue` is common in update/draw loops                                                |
-| `no-param-reassign`            | `off`                                                                   | Reassigning parameters is common in game math helpers                                    |
-| `no-nested-ternary`            | `off`                                                                   | Useful for compact conditional expressions                                               |
-| `no-bitwise`                   | `off`                                                                   | Bitwise ops are fundamental in graphics/palette code                                     |
-| `import/no-unresolved`         | `off`                                                                   | ESLint uses Node resolution; dithr uses QuickJS at runtime                               |
-| `import/extensions`            | `off`                                                                   | Same reason as above                                                                     |
-| `import/prefer-default-export` | `off`                                                                   | Named exports are preferred for clarity                                                  |
+| Rule                   | Setting                                                                 | Why                                                                                      |
+| ---------------------- | ----------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| `no-underscore-dangle` | `off`                                                                   | Engine callbacks are `_init`, `_update`, `_draw`, etc.                                   |
+| `no-unused-vars`       | `error` with `varsIgnorePattern: "^_"`, `argsIgnorePattern: "^_\|^dt$"` | Prefixing with `_` marks intentionally unused; `dt` is the standard delta-time parameter |
+| `no-use-before-define` | `error` with `functions: false`                                         | Function declarations hoist safely; allows top-down reading                              |
+| `no-plusplus`          | `off`                                                                   | `++`/`--` are idiomatic in loops and counters                                            |
+| `no-continue`          | `off`                                                                   | `continue` is common in update/draw loops                                                |
+| `no-param-reassign`    | `off`                                                                   | Reassigning parameters is common in game math helpers                                    |
+| `no-nested-ternary`    | `off`                                                                   | Useful for compact conditional expressions                                               |
+| `no-bitwise`           | `off`                                                                   | Bitwise ops are fundamental in graphics/palette code                                     |
 
-All other Airbnb rules remain **enabled**, including:
+The following quality rules are explicitly enabled:
 
 - `no-var` — use `let` or `const`
 - `prefer-const` — use `const` when the binding is never reassigned
 - `prefer-template` — use template literals instead of string concatenation
 - `camelcase` — use camelCase for variables, functions, and parameters
+- `eqeqeq` — always use `===` / `!==`
 
 ### Editor / multi-file carts
 

@@ -1,15 +1,8 @@
-const { FlatCompat } = require('@eslint/eslintrc');
 const js = require('@eslint/js');
 const prettierConfig = require('eslint-config-prettier');
 
-const compat = new FlatCompat({
-    baseDirectory: __dirname,
-    recommendedConfig: js.configs.recommended,
-});
-
 module.exports = [
     js.configs.recommended,
-    ...compat.extends('airbnb-base'),
     prettierConfig,
     {
         files: ['src/**/*.js'],
@@ -35,21 +28,24 @@ module.exports = [
                 synth: 'readonly',
                 sys: 'readonly',
                 tween: 'readonly',
+                touch: 'readonly',
                 ui: 'readonly',
             },
         },
         rules: {
+            // Airbnb-equivalent quality rules
+            'no-var': 'error',
+            'prefer-const': 'error',
+            'prefer-template': 'warn',
+            'camelcase': ['error', { properties: 'never' }],
+            'eqeqeq': ['error', 'always'],
+
             // Engine callbacks (_init, _update, _draw) are called by the runtime
             'no-underscore-dangle': 'off',
-            'no-unused-vars': ['error', { varsIgnorePattern: '^_', argsIgnorePattern: '^_|^dt$' }],
+            'no-unused-vars': ['error', { 'varsIgnorePattern': '^_', 'argsIgnorePattern': '^_|^dt$' }],
 
             // Function declarations hoist safely
-            'no-use-before-define': ['error', { functions: false }],
-
-            // No module system in dithr carts
-            'import/no-unresolved': 'off',
-            'import/extensions': 'off',
-            'import/prefer-default-export': 'off',
+            'no-use-before-define': ['error', { 'functions': false }],
 
             // Common in game code
             'no-plusplus': 'off',

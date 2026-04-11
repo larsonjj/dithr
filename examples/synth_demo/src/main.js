@@ -11,7 +11,7 @@
 
 const WAVE_NAMES = synth.waveNames();
 const FX_NAMES = synth.fxNames();
-const NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+const _NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
 const OCTAVE_NOTES = 12;
 const PIANO_START = 37; // C-3
 const PIANO_KEYS = 24; // two octaves
@@ -107,7 +107,7 @@ function prvShiftPresetPitch(delta) {
     synth.set(curPreset, p.notes, p.speed);
 }
 
-function drawLabel(x, y, label, value, col) {
+function _drawLabel(x, y, label, value, col) {
     gfx.print(label, x, y, 6);
     gfx.print(value, x + gfx.textWidth(label) + 2, y, col || 7);
 }
@@ -206,7 +206,7 @@ function drawNotePattern(x, y, sfxIdx) {
     const def = synth.get(sfxIdx);
     if (!def) return;
 
-    const noteH = 3;
+    const _noteH = 3;
     const noteW = 3;
     const maxNotes = 32;
 
