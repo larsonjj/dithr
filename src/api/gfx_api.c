@@ -571,9 +571,8 @@ static JSValue js_gfx_font(JSContext *ctx, JSValueConst this_val, int argc, JSVa
 static JSValue js_gfx_fade(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
     (void)this_val;
-    dtr_gfx_fade(GFX(ctx),
-                 dtr_api_opt_u8(ctx, argc, argv, 0, 0),
-                 dtr_api_opt_int(ctx, argc, argv, 1, 30));
+    dtr_gfx_fade(
+        GFX(ctx), dtr_api_opt_u8(ctx, argc, argv, 0, 0), dtr_api_opt_int(ctx, argc, argv, 1, 30));
     return JS_UNDEFINED;
 }
 
@@ -590,9 +589,8 @@ static JSValue js_gfx_wipe(JSContext *ctx, JSValueConst this_val, int argc, JSVa
 static JSValue js_gfx_dissolve(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
     (void)this_val;
-    dtr_gfx_dissolve(GFX(ctx),
-                     dtr_api_opt_u8(ctx, argc, argv, 0, 0),
-                     dtr_api_opt_int(ctx, argc, argv, 1, 30));
+    dtr_gfx_dissolve(
+        GFX(ctx), dtr_api_opt_u8(ctx, argc, argv, 0, 0), dtr_api_opt_int(ctx, argc, argv, 1, 30));
     return JS_UNDEFINED;
 }
 

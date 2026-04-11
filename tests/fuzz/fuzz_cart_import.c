@@ -9,19 +9,18 @@
 #include "cart.h"
 #include "console_defs.h"
 
+#include <SDL3/SDL.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-#include <SDL3/SDL.h>
-
 /* libFuzzer entry point */
 int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
 {
-    char     tmp_path[256];
-    FILE    *fp;
+    char        tmp_path[256];
+    FILE       *fp;
     dtr_cart_t *cart;
 
     /* Skip very large inputs to keep runs fast */

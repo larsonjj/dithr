@@ -6,14 +6,13 @@
  * runtime handles malformed input without crashing.
  */
 
-#include "runtime.h"
 #include "console_defs.h"
+#include "runtime.h"
 
+#include <SDL3/SDL.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <string.h>
-
-#include <SDL3/SDL.h>
 
 /* libFuzzer entry point */
 int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)

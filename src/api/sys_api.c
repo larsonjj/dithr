@@ -476,9 +476,10 @@ static JSValue js_sys_perf(JSContext *ctx, JSValueConst this_val, int argc, JSVa
     markers = JS_NewObject(ctx);
     for (int32_t i = 0; i < con->perf_marker_count; ++i) {
         if (!con->perf_markers[i].active) {
-            JS_SetPropertyStr(
-                ctx, markers, con->perf_markers[i].label,
-                JS_NewFloat64(ctx, (double)con->perf_markers[i].elapsed_ms));
+            JS_SetPropertyStr(ctx,
+                              markers,
+                              con->perf_markers[i].label,
+                              JS_NewFloat64(ctx, (double)con->perf_markers[i].elapsed_ms));
         }
     }
     JS_SetPropertyStr(ctx, obj, "markers", markers);
@@ -531,8 +532,7 @@ js_sys_perf_begin(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst 
     return JS_UNDEFINED;
 }
 
-static JSValue
-js_sys_perf_end(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+static JSValue js_sys_perf_end(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
     dtr_console_t *con;
     const char    *label;

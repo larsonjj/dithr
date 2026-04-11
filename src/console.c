@@ -768,7 +768,7 @@ void dtr_console_iterate(dtr_console_t *con)
     con->time += con->delta;
 
     /* Mark start of a new frame */
-    con->new_frame        = true;
+    con->new_frame         = true;
     con->perf_marker_count = 0;
 
     if (con->paused) {
