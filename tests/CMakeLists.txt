@@ -128,6 +128,11 @@ if (NOT EMSCRIPTEN)
     dtr_add_test(test_api_bridge test_api_bridge.c)
 endif()
 
+# --- API bridge tests that need a graphics context ---
+if (NOT EMSCRIPTEN)
+    dtr_add_test(test_api_bridge_gfx test_api_bridge_gfx.c)
+endif()
+
 # --- Console lifecycle tests (require SDL display subsystem) ---
 if (NOT EMSCRIPTEN)
     dtr_add_test(test_console test_console.c)

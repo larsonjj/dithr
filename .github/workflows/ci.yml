@@ -31,6 +31,30 @@ jobs:
                     | xargs clang-format-20 --dry-run --Werror
 
     # ---------------------------------------------------------------------------
+    #  JavaScript linting — ESLint (example carts)
+    # ---------------------------------------------------------------------------
+    js-lint:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v6
+
+            - uses: actions/setup-node@v4
+              with:
+                  node-version: 20
+
+            - name: Lint examples
+              run: |
+                  failed=0
+                  for dir in examples/*/; do
+                    if [ -f "$dir/package.json" ] && grep -q '"lint"' "$dir/package.json"; then
+                      echo "::group::$dir"
+                      (cd "$dir" && npm ci --ignore-scripts && npm run lint) || failed=1
+                      echo "::endgroup::"
+                    fi
+                  done
+                  exit $failed
+
+    # ---------------------------------------------------------------------------
     #  Static analysis — clang-tidy
     # ---------------------------------------------------------------------------
     clang-tidy:
@@ -135,6 +159,11 @@ jobs:
             - name: Test
               working-directory: build/debug
               run: ctest --output-on-failure --timeout 300
+              env:
+                  SDL_AUDIO_DRIVER: dummy
+                  SDL_VIDEO_DRIVER: dummy
+                  SDL_AUDIODRIVER: dummy
+                  SDL_VIDEODRIVER: dummy
 
     # ---------------------------------------------------------------------------
     #  Linux — GCC (Release)
@@ -173,6 +202,11 @@ jobs:
             - name: Test
               working-directory: build/release
               run: ctest --output-on-failure --timeout 300
+              env:
+                  SDL_AUDIO_DRIVER: dummy
+                  SDL_VIDEO_DRIVER: dummy
+                  SDL_AUDIODRIVER: dummy
+                  SDL_VIDEODRIVER: dummy
 
     # ---------------------------------------------------------------------------
     #  Linux — GCC + ASan / UBSan
@@ -213,6 +247,10 @@ jobs:
               run: ctest --output-on-failure --timeout 300
               env:
                   LSAN_OPTIONS: suppressions=${{ github.workspace }}/tests/lsan_suppressions.txt
+                  SDL_AUDIO_DRIVER: dummy
+                  SDL_VIDEO_DRIVER: dummy
+                  SDL_AUDIODRIVER: dummy
+                  SDL_VIDEODRIVER: dummy
 
     # ---------------------------------------------------------------------------
     #  Linux — GCC + Coverage (lcov)
@@ -255,6 +293,11 @@ jobs:
             - name: Test
               working-directory: build/coverage
               run: ctest --output-on-failure --timeout 300
+              env:
+                  SDL_AUDIO_DRIVER: dummy
+                  SDL_VIDEO_DRIVER: dummy
+                  SDL_AUDIODRIVER: dummy
+                  SDL_VIDEODRIVER: dummy
 
             - name: Collect coverage
               run: |
@@ -385,6 +428,11 @@ jobs:
             - name: Test
               working-directory: build/debug
               run: ctest --output-on-failure --timeout 300
+              env:
+                  SDL_AUDIO_DRIVER: dummy
+                  SDL_VIDEO_DRIVER: dummy
+                  SDL_AUDIODRIVER: dummy
+                  SDL_VIDEODRIVER: dummy
 
     # ---------------------------------------------------------------------------
     #  WASM — Emscripten build check

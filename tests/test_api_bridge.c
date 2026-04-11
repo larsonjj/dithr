@@ -1,19 +1,21 @@
 /**
  * \file            test_api_bridge.c
  * \brief           Unit tests for JS API bridge functions (math, key, evt,
- *                  input, col, pad, mouse)
+ *                  input, col, pad, mouse, touch, tween, sys, cart)
  *
  * Creates a minimal console stub + runtime, registers individual API
  * namespaces, and exercises them via JS_Eval.
  */
 
 #include "api/api_common.h"
+#include "cart.h"
 #include "event.h"
 #include "gamepad.h"
 #include "input.h"
 #include "mouse.h"
 #include "runtime.h"
 #include "test_harness.h"
+#include "touch.h"
 
 #include <math.h>
 #include <stdio.h>
@@ -38,16 +40,25 @@ static test_ctx_t *prv_setup(void)
     /* Deterministic RNG seed */
     tc->con.rng_state = 42;
 
+    /* Framebuffer dimensions (needed by sys.width/height and touch) */
+    tc->con.fb_width   = CONSOLE_FB_WIDTH;
+    tc->con.fb_height  = CONSOLE_FB_HEIGHT;
+    tc->con.target_fps = CONSOLE_TARGET_FPS;
+
     /* Create subsystems needed by APIs under test */
     tc->con.keys     = dtr_key_create();
     tc->con.mouse    = dtr_mouse_create();
     tc->con.gamepads = dtr_gamepad_create();
     tc->con.input    = dtr_input_create();
+    tc->con.touch    = dtr_touch_create(tc->con.fb_width, tc->con.fb_height);
+    tc->con.cart     = dtr_cart_create();
 
     DTR_ASSERT(tc->con.keys != NULL);
     DTR_ASSERT(tc->con.mouse != NULL);
     DTR_ASSERT(tc->con.gamepads != NULL);
     DTR_ASSERT(tc->con.input != NULL);
+    DTR_ASSERT(tc->con.touch != NULL);
+    DTR_ASSERT(tc->con.cart != NULL);
 
     /* Create runtime — sets JS_SetContextOpaque(ctx, &tc->con) */
     tc->rt = dtr_runtime_create(&tc->con, 8, 256);
@@ -64,8 +75,10 @@ static void prv_teardown(test_ctx_t *tc)
 {
     dtr_event_destroy(tc->con.events);
     dtr_runtime_destroy(tc->rt);
+    dtr_cart_destroy(tc->con.cart);
     dtr_input_destroy(tc->con.input);
     dtr_gamepad_destroy(tc->con.gamepads);
+    dtr_touch_destroy(tc->con.touch);
     dtr_mouse_destroy(tc->con.mouse);
     dtr_key_destroy(tc->con.keys);
     DTR_FREE(tc);
@@ -956,6 +969,246 @@ static void test_mouse_pos_set(void)
 }
 
 /* ================================================================== */
+/*  Touch API tests                                                    */
+/* ================================================================== */
+
+static void test_touch_count_default(void)
+{
+    test_ctx_t *tc = prv_setup();
+
+    prv_register(tc, dtr_touch_api_register);
+    DTR_ASSERT_EQ_INT(prv_eval_i32(tc, "touch.count()"), 0);
+    DTR_ASSERT_EQ_INT(prv_eval_i32(tc, "touch.MAX_FINGERS"), DTR_MAX_FINGERS);
+    prv_teardown(tc);
+    DTR_PASS();
+}
+
+static void test_touch_active_default(void)
+{
+    test_ctx_t *tc = prv_setup();
+
+    prv_register(tc, dtr_touch_api_register);
+    DTR_ASSERT(!prv_eval_bool(tc, "touch.active(0)"));
+    DTR_ASSERT(!prv_eval_bool(tc, "touch.pressed(0)"));
+    DTR_ASSERT(!prv_eval_bool(tc, "touch.released(0)"));
+    prv_teardown(tc);
+    DTR_PASS();
+}
+
+static void test_touch_finger_down(void)
+{
+    test_ctx_t *tc = prv_setup();
+
+    prv_register(tc, dtr_touch_api_register);
+    dtr_touch_on_down(tc->con.touch, 1, 0.5f, 0.5f, 0.8f);
+    DTR_ASSERT_EQ_INT(prv_eval_i32(tc, "touch.count()"), 1);
+    DTR_ASSERT(prv_eval_bool(tc, "touch.active(0)"));
+    DTR_ASSERT(prv_eval_bool(tc, "touch.pressed(0)"));
+    DTR_ASSERT(prv_eval_f64(tc, "touch.pressure(0)") > 0.0);
+    prv_teardown(tc);
+    DTR_PASS();
+}
+
+static void test_touch_position(void)
+{
+    test_ctx_t *tc = prv_setup();
+
+    prv_register(tc, dtr_touch_api_register);
+    /* Normalized 0.5,0.5 maps to center of framebuffer */
+    dtr_touch_on_down(tc->con.touch, 1, 0.5f, 0.5f, 1.0f);
+    DTR_ASSERT(prv_eval_f64(tc, "touch.x(0)") > 0.0);
+    DTR_ASSERT(prv_eval_f64(tc, "touch.y(0)") > 0.0);
+    prv_teardown(tc);
+    DTR_PASS();
+}
+
+static void test_touch_released(void)
+{
+    test_ctx_t *tc = prv_setup();
+
+    prv_register(tc, dtr_touch_api_register);
+    dtr_touch_on_down(tc->con.touch, 1, 0.5f, 0.5f, 1.0f);
+    dtr_touch_update(tc->con.touch);
+    dtr_touch_on_up(tc->con.touch, 1);
+    DTR_ASSERT(prv_eval_bool(tc, "touch.released(0)"));
+    DTR_ASSERT(!prv_eval_bool(tc, "touch.active(0)"));
+    prv_teardown(tc);
+    DTR_PASS();
+}
+
+/* ================================================================== */
+/*  Tween API tests                                                    */
+/* ================================================================== */
+
+static void test_tween_ease_linear(void)
+{
+    test_ctx_t *tc = prv_setup();
+
+    prv_register(tc, dtr_tween_api_register);
+    double val = prv_eval_f64(tc, "tween.ease(0.5, 'linear')");
+    DTR_ASSERT(fabs(val - 0.5) < 0.01);
+    prv_teardown(tc);
+    DTR_PASS();
+}
+
+static void test_tween_ease_endpoints(void)
+{
+    test_ctx_t *tc = prv_setup();
+
+    prv_register(tc, dtr_tween_api_register);
+    DTR_ASSERT(fabs(prv_eval_f64(tc, "tween.ease(0, 'linear')")) < 0.01);
+    DTR_ASSERT(fabs(prv_eval_f64(tc, "tween.ease(1, 'linear')") - 1.0) < 0.01);
+    DTR_ASSERT(fabs(prv_eval_f64(tc, "tween.ease(0, 'inQuad')")) < 0.01);
+    DTR_ASSERT(fabs(prv_eval_f64(tc, "tween.ease(1, 'outQuad')") - 1.0) < 0.01);
+    prv_teardown(tc);
+    DTR_PASS();
+}
+
+/* ================================================================== */
+/*  Sys API tests                                                      */
+/* ================================================================== */
+
+static void test_sys_dimensions(void)
+{
+    test_ctx_t *tc = prv_setup();
+
+    prv_register(tc, dtr_sys_api_register);
+    DTR_ASSERT_EQ_INT(prv_eval_i32(tc, "sys.width()"), CONSOLE_FB_WIDTH);
+    DTR_ASSERT_EQ_INT(prv_eval_i32(tc, "sys.height()"), CONSOLE_FB_HEIGHT);
+    prv_teardown(tc);
+    DTR_PASS();
+}
+
+static void test_sys_target_fps(void)
+{
+    test_ctx_t *tc = prv_setup();
+
+    prv_register(tc, dtr_sys_api_register);
+    DTR_ASSERT_EQ_INT(prv_eval_i32(tc, "sys.targetFps()"), CONSOLE_TARGET_FPS);
+    prv_eval_void(tc, "sys.setTargetFps(30)");
+    DTR_ASSERT_EQ_INT(prv_eval_i32(tc, "sys.targetFps()"), 30);
+    prv_teardown(tc);
+    DTR_PASS();
+}
+
+static void test_sys_version(void)
+{
+    test_ctx_t *tc = prv_setup();
+
+    prv_register(tc, dtr_sys_api_register);
+    /* version() should return a non-empty string */
+    DTR_ASSERT(prv_eval_bool(tc, "typeof sys.version() === 'string'"));
+    DTR_ASSERT(prv_eval_bool(tc, "sys.version().length > 0"));
+    prv_teardown(tc);
+    DTR_PASS();
+}
+
+static void test_sys_platform(void)
+{
+    test_ctx_t *tc = prv_setup();
+
+    prv_register(tc, dtr_sys_api_register);
+    DTR_ASSERT(prv_eval_bool(tc, "typeof sys.platform() === 'string'"));
+    DTR_ASSERT(prv_eval_bool(tc, "sys.platform().length > 0"));
+    prv_teardown(tc);
+    DTR_PASS();
+}
+
+static void test_sys_pause_resume(void)
+{
+    test_ctx_t *tc = prv_setup();
+
+    prv_register(tc, dtr_sys_api_register);
+    DTR_ASSERT(!prv_eval_bool(tc, "sys.paused()"));
+    prv_eval_void(tc, "sys.pause()");
+    DTR_ASSERT(prv_eval_bool(tc, "sys.paused()"));
+    prv_eval_void(tc, "sys.resume()");
+    DTR_ASSERT(!prv_eval_bool(tc, "sys.paused()"));
+    prv_teardown(tc);
+    DTR_PASS();
+}
+
+static void test_sys_time_delta(void)
+{
+    test_ctx_t *tc = prv_setup();
+
+    prv_register(tc, dtr_sys_api_register);
+    tc->con.time  = 1.5f;
+    tc->con.delta = 0.016f;
+    DTR_ASSERT(fabs(prv_eval_f64(tc, "sys.time()") - 1.5) < 0.01);
+    DTR_ASSERT(fabs(prv_eval_f64(tc, "sys.delta()") - 0.016) < 0.001);
+    prv_teardown(tc);
+    DTR_PASS();
+}
+
+static void test_sys_log_no_crash(void)
+{
+    test_ctx_t *tc = prv_setup();
+
+    prv_register(tc, dtr_sys_api_register);
+    /* Just assert these don't crash */
+    prv_eval_void(tc, "sys.log('test message')");
+    prv_eval_void(tc, "sys.warn('test warning')");
+    prv_eval_void(tc, "sys.error('test error')");
+    prv_teardown(tc);
+    DTR_PASS();
+}
+
+/* ================================================================== */
+/*  Cart API tests                                                     */
+/* ================================================================== */
+
+static void test_cart_dset_dget(void)
+{
+    test_ctx_t *tc = prv_setup();
+
+    prv_register(tc, dtr_cart_api_register);
+    prv_eval_void(tc, "cart.dset(0, 42.5)");
+    DTR_ASSERT(fabs(prv_eval_f64(tc, "cart.dget(0)") - 42.5) < 0.01);
+    prv_eval_void(tc, "cart.dset(63, -1.0)");
+    DTR_ASSERT(fabs(prv_eval_f64(tc, "cart.dget(63)") - (-1.0)) < 0.01);
+    prv_teardown(tc);
+    DTR_PASS();
+}
+
+static void test_cart_dget_default(void)
+{
+    test_ctx_t *tc = prv_setup();
+
+    prv_register(tc, dtr_cart_api_register);
+    DTR_ASSERT(fabs(prv_eval_f64(tc, "cart.dget(0)")) < 0.01);
+    prv_teardown(tc);
+    DTR_PASS();
+}
+
+static void test_cart_metadata(void)
+{
+    test_ctx_t *tc = prv_setup();
+
+    prv_register(tc, dtr_cart_api_register);
+    /* Default cart has empty metadata strings */
+    DTR_ASSERT(prv_eval_bool(tc, "typeof cart.title() === 'string'"));
+    DTR_ASSERT(prv_eval_bool(tc, "typeof cart.author() === 'string'"));
+    DTR_ASSERT(prv_eval_bool(tc, "typeof cart.version() === 'string'"));
+    prv_teardown(tc);
+    DTR_PASS();
+}
+
+static void test_cart_kv_roundtrip(void)
+{
+    test_ctx_t *tc = prv_setup();
+
+    prv_register(tc, dtr_cart_api_register);
+    prv_eval_void(tc, "cart.save('testkey', 'testval')");
+    DTR_ASSERT(prv_eval_bool(tc, "cart.has('testkey')"));
+    DTR_ASSERT(prv_eval_bool(tc, "cart.load('testkey') === 'testval'"));
+    prv_eval_void(tc, "cart.delete('testkey')");
+    DTR_ASSERT(!prv_eval_bool(tc, "cart.has('testkey')"));
+    prv_teardown(tc);
+    DTR_PASS();
+}
+
+/* ================================================================== */
 /*  API registration test                                              */
 /* ================================================================== */
 
@@ -971,6 +1224,10 @@ static void test_register_all_namespaces(void)
     prv_register(tc, dtr_col_api_register);
     prv_register(tc, dtr_pad_api_register);
     prv_register(tc, dtr_mouse_api_register);
+    prv_register(tc, dtr_touch_api_register);
+    prv_register(tc, dtr_tween_api_register);
+    prv_register(tc, dtr_sys_api_register);
+    prv_register(tc, dtr_cart_api_register);
 
     /* Verify all namespaces are accessible */
     DTR_ASSERT(prv_eval_bool(tc, "typeof math === 'object'"));
@@ -980,6 +1237,10 @@ static void test_register_all_namespaces(void)
     DTR_ASSERT(prv_eval_bool(tc, "typeof col === 'object'"));
     DTR_ASSERT(prv_eval_bool(tc, "typeof pad === 'object'"));
     DTR_ASSERT(prv_eval_bool(tc, "typeof mouse === 'object'"));
+    DTR_ASSERT(prv_eval_bool(tc, "typeof touch === 'object'"));
+    DTR_ASSERT(prv_eval_bool(tc, "typeof tween === 'object'"));
+    DTR_ASSERT(prv_eval_bool(tc, "typeof sys === 'object'"));
+    DTR_ASSERT(prv_eval_bool(tc, "typeof cart === 'object'"));
 
     prv_teardown(tc);
     DTR_PASS();
@@ -1062,6 +1323,32 @@ int main(void)
     DTR_RUN_TEST(test_mouse_btn_press);
     DTR_RUN_TEST(test_mouse_show_hide);
     DTR_RUN_TEST(test_mouse_pos_set);
+
+    /* Touch API — 5 tests */
+    DTR_RUN_TEST(test_touch_count_default);
+    DTR_RUN_TEST(test_touch_active_default);
+    DTR_RUN_TEST(test_touch_finger_down);
+    DTR_RUN_TEST(test_touch_position);
+    DTR_RUN_TEST(test_touch_released);
+
+    /* Tween API — 2 tests */
+    DTR_RUN_TEST(test_tween_ease_linear);
+    DTR_RUN_TEST(test_tween_ease_endpoints);
+
+    /* Sys API — 7 tests */
+    DTR_RUN_TEST(test_sys_dimensions);
+    DTR_RUN_TEST(test_sys_target_fps);
+    DTR_RUN_TEST(test_sys_version);
+    DTR_RUN_TEST(test_sys_platform);
+    DTR_RUN_TEST(test_sys_pause_resume);
+    DTR_RUN_TEST(test_sys_time_delta);
+    DTR_RUN_TEST(test_sys_log_no_crash);
+
+    /* Cart API — 4 tests */
+    DTR_RUN_TEST(test_cart_dset_dget);
+    DTR_RUN_TEST(test_cart_dget_default);
+    DTR_RUN_TEST(test_cart_metadata);
+    DTR_RUN_TEST(test_cart_kv_roundtrip);
 
     /* Registration — 1 test */
     DTR_RUN_TEST(test_register_all_namespaces);
