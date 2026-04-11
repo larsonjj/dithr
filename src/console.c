@@ -438,6 +438,13 @@ dtr_console_t *dtr_console_create(const char *cart_path)
     con->delta       = 0.0f;
     con->time_prev   = SDL_GetPerformanceCounter();
 
+    /* Initialise built-in FPS widget state */
+    con->fps_smooth   = 60.0f;
+    con->fps_hist_idx = 0;
+    for (int32_t fi = 0; fi < 50; ++fi) {
+        con->fps_history[fi] = 60.0f;
+    }
+
 #if DEV_BUILD
     /* Set up file watcher for the JS source directory */
     con->watch_dir[0]        = '\0';

@@ -16,16 +16,18 @@ extern "C" {
 #define DTR_EVENT_MAX_HANDLERS 128
 #define DTR_EVENT_MAX_QUEUED   64
 #define DTR_EVENT_NAME_LEN     48
+#define DTR_EVENT_HASH_BUCKETS 32
 
 /**
  * \brief           A single registered event handler
  */
 typedef struct dtr_event_handler {
     char    name[DTR_EVENT_NAME_LEN];
-    JSValue callback; /**< JS function (ref-counted) */
-    int32_t handle;   /**< Unique handle for off() */
-    bool    once;     /**< Auto-remove after first fire */
-    bool    active;   /**< Slot in use */
+    JSValue callback;  /**< JS function (ref-counted) */
+    int32_t handle;    /**< Unique handle for off() */
+    int32_t hash_next; /**< Next handler in same hash bucket, or -1 */
+    bool    once;      /**< Auto-remove after first fire */
+    bool    active;    /**< Slot in use */
 } dtr_event_handler_t;
 
 /**
@@ -41,6 +43,7 @@ typedef struct dtr_queued_event {
  */
 struct dtr_event_bus {
     dtr_event_handler_t handlers[DTR_EVENT_MAX_HANDLERS];
+    int32_t             hash_heads[DTR_EVENT_HASH_BUCKETS]; /**< -1 = empty */
     dtr_queued_event_t  queue[DTR_EVENT_MAX_QUEUED];
     int32_t             queue_count;
     int32_t             next_handle;

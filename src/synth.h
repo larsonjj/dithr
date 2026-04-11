@@ -114,6 +114,38 @@ float dtr_synth_waveform(uint8_t wave, float phase);
  */
 float dtr_synth_waveform_bl(uint8_t wave, float phase, float dtp);
 
+/* ------------------------------------------------------------------ */
+/*  Inline helpers (shared by synth.c and synth_api.c)                 */
+/* ------------------------------------------------------------------ */
+
+/**
+ * \brief           Xorshift PRNG for noise waveform (returns -1 .. 1)
+ */
+static inline float dtr_synth_noise(uint32_t *state)
+{
+    *state ^= *state << 13;
+    *state ^= *state >> 17;
+    *state ^= *state << 5;
+    return (float)(int32_t)*state / (float)INT32_MAX;
+}
+
+/**
+ * \brief           Compute samples-per-note from a speed value (1–32)
+ */
+static inline int32_t dtr_synth_samples_per_note(uint8_t speed)
+{
+    int32_t spd;
+
+    spd = speed;
+    if (spd < 1) {
+        spd = 1;
+    }
+    if (spd > 32) {
+        spd = 32;
+    }
+    return spd * (DTR_SYNTH_SAMPLE_RATE / 128);
+}
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

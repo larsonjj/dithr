@@ -111,34 +111,6 @@ static dtr_synth_store_t *prv_get_store(void)
 #define VOL_SMOOTH_COEFF 0.005f /* exponential smoothing (~4.5ms tau) */
 
 /**
- * Compute samples-per-note from speed value (higher = slower).
- */
-static int32_t prv_spn(uint8_t speed)
-{
-    int32_t spd;
-
-    spd = speed;
-    if (spd < 1) {
-        spd = 1;
-    }
-    if (spd > 32) {
-        spd = 32;
-    }
-    return spd * (DTR_SYNTH_SAMPLE_RATE / 128);
-}
-
-/**
- * Simple PRNG for noise waveform (matches synth.c).
- */
-static float prv_noise(uint32_t *state)
-{
-    *state ^= *state << 13;
-    *state ^= *state >> 17;
-    *state ^= *state << 5;
-    return (float)(int32_t)*state / (float)INT32_MAX;
-}
-
-/**
  * Generate one sample from the voice's current state, then advance.
  */
 static int16_t prv_voice_sample(dtr_synth_voice_t *v)
@@ -160,7 +132,7 @@ static int16_t prv_voice_sample(dtr_synth_voice_t *v)
         return 0;
     }
 
-    spn = prv_spn(sfx->speed);
+    spn = dtr_synth_samples_per_note(sfx->speed);
 
     /* Determine which note we're on */
     nti  = v->note_idx;
@@ -308,7 +280,7 @@ static int16_t prv_voice_sample(dtr_synth_voice_t *v)
 
         /* Generate waveform (band-limited to reduce aliasing) */
         if (note->waveform == DTR_WAVE_NOISE) {
-            sample = prv_noise(&v->noise_state);
+            sample = dtr_synth_noise(&v->noise_state);
         } else {
             sample = dtr_synth_waveform_bl(
                 note->waveform, v->phase, cur_freq / (float)DTR_SYNTH_SAMPLE_RATE);

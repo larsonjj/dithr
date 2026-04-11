@@ -107,9 +107,9 @@ static const char *prv_note_names[] = {
 
 const char *dtr_synth_note_name(uint8_t pitch)
 {
-    static char buf[5];
-    int32_t     note;
-    int32_t     octave;
+    static _Thread_local char buf[5];
+    int32_t                   note;
+    int32_t                   octave;
 
     if (pitch == 0 || pitch > 96) {
         return "---";
@@ -124,23 +124,6 @@ const char *dtr_synth_note_name(uint8_t pitch)
 /*  Waveform generators (return -1.0 .. 1.0)                           */
 /* ------------------------------------------------------------------ */
 
-static float prv_noise(uint32_t *state)
-{
-    *state ^= *state << 13;
-    *state ^= *state >> 17;
-    *state ^= *state << 5;
-    return (float)(int32_t)*state / (float)INT32_MAX;
-}
-
-/* ------------------------------------------------------------------ */
-/*  PolyBLEP anti-aliasing helper                                      */
-/* ------------------------------------------------------------------ */
-
-/**
- * Polynomial bandlimited step correction.
- * \param t   Phase position (0..1)
- * \param dtp Phase increment per sample (freq / sample_rate)
- */
 static float prv_polyblep(float ttt, float dtp)
 {
     if (ttt < dtp) {
@@ -190,7 +173,7 @@ static float prv_waveform_ns(uint8_t wave, float phase, uint32_t *noise_state)
             return ret / 9.0f;
 
         case DTR_WAVE_NOISE:
-            return prv_noise(noise_state) * 0.5f;
+            return dtr_synth_noise(noise_state) * 0.5f;
 
         case DTR_WAVE_PHASER:
             /* Two detuned triangles, peak ±0.50 */
@@ -267,25 +250,6 @@ float dtr_synth_waveform_bl(uint8_t wave, float phase, float dtp)
 /*  PCM rendering                                                      */
 /* ------------------------------------------------------------------ */
 
-/**
- * Speed value maps to samples per note (higher = slower):
- *   samples_per_note = speed * (sample_rate / 128)
- * Each speed unit = 1/128 second. UI range: 1-32, clamped internally.
- */
-static int32_t prv_samples_per_note(uint8_t speed)
-{
-    int32_t spd;
-
-    spd = speed;
-    if (spd < 1) {
-        spd = 1;
-    }
-    if (spd > 32) {
-        spd = 32;
-    }
-    return spd * (DTR_SYNTH_SAMPLE_RATE / 128);
-}
-
 int16_t *dtr_synth_render(const dtr_synth_sfx_t *sfx, size_t *out_len)
 {
     int32_t  spn;        /* samples per note */
@@ -301,7 +265,7 @@ int16_t *dtr_synth_render(const dtr_synth_sfx_t *sfx, size_t *out_len)
         return NULL;
     }
 
-    spn = prv_samples_per_note(sfx->speed);
+    spn = dtr_synth_samples_per_note(sfx->speed);
 
     /*
      * If looping is active, render many cycles of the loop region

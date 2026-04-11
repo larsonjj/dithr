@@ -5,6 +5,7 @@
 
 #include "../audio.h"
 #include "../cart.h"
+#include "../graphics.h"
 #include "../mouse.h"
 #include "api_common.h"
 
@@ -860,6 +861,101 @@ static JSValue js_sys_list_dirs(JSContext *ctx, JSValueConst this_val, int argc,
     return ld.arr;
 }
 
+/* ------------------------------------------------------------------ */
+/*  Built-in FPS widget                                                */
+/* ------------------------------------------------------------------ */
+
+#define FPS_HIST_LEN 50
+
+static JSValue js_sys_draw_fps(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+{
+    dtr_console_t  *con;
+    dtr_graphics_t *g;
+    float           cur_fps;
+    float           target;
+    int32_t         wx;
+    int32_t         wy;
+    int32_t         ww;
+    int32_t         gh;
+    int32_t         save_cam_x;
+    int32_t         save_cam_y;
+    char            buf[16];
+
+    (void)this_val;
+    (void)argc;
+    (void)argv;
+    con = dtr_api_get_console(ctx);
+    g   = con->graphics;
+
+    /* Update smoothed FPS */
+    cur_fps = con->delta > 0.0f ? 1.0f / con->delta : 60.0f;
+    con->fps_smooth += (cur_fps - con->fps_smooth) * 0.05f;
+    con->fps_history[con->fps_hist_idx] = con->fps_smooth;
+    con->fps_hist_idx                   = (con->fps_hist_idx + 1) % FPS_HIST_LEN;
+
+    /* Save and reset camera for screen-space drawing */
+    save_cam_x  = g->camera_x;
+    save_cam_y  = g->camera_y;
+    g->camera_x = 0;
+    g->camera_y = 0;
+
+    target = (float)con->target_fps;
+    wx     = con->fb_width - FPS_HIST_LEN - 4;
+    wy     = 0;
+    ww     = FPS_HIST_LEN + 4;
+    gh     = 16;
+
+    /* Background */
+    dtr_gfx_rectfill(g, wx, wy, wx + ww - 1, wy + 8 + gh + 1, 0);
+
+    /* FPS label */
+    SDL_snprintf(buf, sizeof(buf), "%d FPS", (int32_t)con->fps_smooth);
+    dtr_gfx_print(g, buf, wx + 2, wy + 1, 7);
+
+    /* Graph border */
+    dtr_gfx_rect(g, wx + 1, wy + 8, wx + ww - 2, wy + 8 + gh, 5);
+
+    /* Graph lines */
+    for (int32_t idx = 1; idx < FPS_HIST_LEN; ++idx) {
+        int32_t i0;
+        int32_t i1;
+        float   v0;
+        float   v1;
+        int32_t y0;
+        int32_t y1;
+        uint8_t clr;
+
+        i0 = (con->fps_hist_idx + idx - 1) % FPS_HIST_LEN;
+        i1 = (con->fps_hist_idx + idx) % FPS_HIST_LEN;
+
+        v0 = con->fps_history[i0] / target;
+        v1 = con->fps_history[i1] / target;
+        if (v0 < 0.0f) {
+            v0 = 0.0f;
+        }
+        if (v0 > 1.0f) {
+            v0 = 1.0f;
+        }
+        if (v1 < 0.0f) {
+            v1 = 0.0f;
+        }
+        if (v1 > 1.0f) {
+            v1 = 1.0f;
+        }
+
+        y0  = wy + 8 + gh - 1 - (int32_t)(v0 * (float)(gh - 2));
+        y1  = wy + 8 + gh - 1 - (int32_t)(v1 * (float)(gh - 2));
+        clr = v1 > 0.9f ? 11 : v1 > 0.5f ? 9 : 8;
+        dtr_gfx_line(g, wx + 2 + idx - 1, y0, wx + 2 + idx, y1, clr);
+    }
+
+    /* Restore camera */
+    g->camera_x = save_cam_x;
+    g->camera_y = save_cam_y;
+
+    return JS_UNDEFINED;
+}
+
 static const JSCFunctionListEntry js_sys_funcs[] = {
     JS_CFUNC_DEF("time", 0, js_sys_time),
     JS_CFUNC_DEF("delta", 0, js_sys_delta),
@@ -895,6 +991,7 @@ static const JSCFunctionListEntry js_sys_funcs[] = {
     JS_CFUNC_DEF("writeFile", 2, js_sys_write_file),
     JS_CFUNC_DEF("listFiles", 1, js_sys_list_files),
     JS_CFUNC_DEF("listDirs", 1, js_sys_list_dirs),
+    JS_CFUNC_DEF("drawFps", 0, js_sys_draw_fps),
 };
 
 void dtr_sys_api_register(JSContext *ctx, JSValue global)

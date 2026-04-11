@@ -92,6 +92,33 @@
 #define DTR_PASS() printf("  PASS %s\n", __func__)
 
 /* ------------------------------------------------------------------ */
+/*  Graphics test helper — create / destroy boilerplate                */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Declare a graphics test function that creates a \c dtr_graphics_t*
+ * named \c gfx with the given dimensions, runs the test body, then
+ * destroys it.  Usage:
+ *
+ *     DTR_GFX_TEST(my_test, 16, 16)
+ *     {
+ *         dtr_gfx_cls(gfx, 0);
+ *         DTR_ASSERT_EQ_INT(dtr_gfx_pget(gfx, 0, 0), 0);
+ *         DTR_PASS();
+ *     }
+ */
+#define DTR_GFX_TEST(name, w, h)                                                                   \
+    static void name##_body(dtr_graphics_t *gfx);                                                  \
+    static void name(void)                                                                         \
+    {                                                                                              \
+        dtr_graphics_t *gfx = dtr_gfx_create((w), (h));                                            \
+        DTR_ASSERT_NOT_NULL(gfx);                                                                  \
+        name##_body(gfx);                                                                          \
+        dtr_gfx_destroy(gfx);                                                                      \
+    }                                                                                              \
+    static void name##_body(dtr_graphics_t *gfx)
+
+/* ------------------------------------------------------------------ */
 /*  Test runner helpers — optional counter / summary                    */
 /* ------------------------------------------------------------------ */
 

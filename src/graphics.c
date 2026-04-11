@@ -1411,6 +1411,172 @@ void dtr_gfx_sspr(dtr_graphics_t *gfx,
     }
 }
 
+/**
+ * Shared affine sprite transform.
+ *
+ * Both spr_rot and spr_affine use the same structure:
+ *   Forward:  dx = fwd_a * rx - fwd_b * ry,  dy = fwd_b * rx + fwd_a * ry
+ *   Inverse:  sx = inv_a * dx + inv_b * dy + ox,  sy = -inv_b * dx + inv_a * dy + oy
+ */
+static void prv_spr_xform(dtr_graphics_t *gfx,
+                          int32_t         sx0,
+                          int32_t         sy0,
+                          int32_t         tile_w,
+                          int32_t         tile_h,
+                          int32_t         x,
+                          int32_t         y,
+                          float           fwd_a,
+                          float           fwd_b,
+                          float           inv_a,
+                          float           inv_b,
+                          float           ox,
+                          float           oy)
+{
+    int32_t        sht_w;
+    int32_t        cam_x;
+    int32_t        cam_y;
+    int32_t        clip_l;
+    int32_t        clip_t;
+    int32_t        clip_r;
+    int32_t        clip_b;
+    int32_t        fb_w;
+    uint16_t       pat;
+    const bool    *transp;
+    const uint8_t *dpal;
+    float          min_dx;
+    float          max_dx;
+    float          min_dy;
+    float          max_dy;
+    int32_t        d_x0;
+    int32_t        d_x1;
+    int32_t        d_y0;
+    int32_t        d_y1;
+    int32_t        vis_x0;
+    int32_t        vis_y0;
+    int32_t        vis_x1;
+    int32_t        vis_y1;
+
+    sht_w  = gfx->sheet.width;
+    cam_x  = gfx->camera_x;
+    cam_y  = gfx->camera_y;
+    clip_l = gfx->clip_x;
+    clip_t = gfx->clip_y;
+    clip_r = clip_l + gfx->clip_w - 1;
+    clip_b = clip_t + gfx->clip_h - 1;
+    fb_w   = gfx->width;
+    pat    = gfx->fill_pattern;
+    transp = gfx->transparent;
+    dpal   = gfx->draw_pal;
+
+    /* Forward-transform the 4 source corners to find output AABB */
+    min_dx = 1e9f;
+    max_dx = -1e9f;
+    min_dy = 1e9f;
+    max_dy = -1e9f;
+
+    for (int32_t c = 0; c < 4; ++c) {
+        float rx;
+        float ry;
+        float od_x;
+        float od_y;
+        float sx_f;
+        float sy_f;
+
+        sx_f = (c & 1) ? (float)(tile_w - 1) : 0.0f;
+        sy_f = (c & 2) ? (float)(tile_h - 1) : 0.0f;
+        rx   = sx_f - ox;
+        ry   = sy_f - oy;
+        od_x = fwd_a * rx - fwd_b * ry;
+        od_y = fwd_b * rx + fwd_a * ry;
+
+        if (od_x < min_dx) {
+            min_dx = od_x;
+        }
+        if (od_x > max_dx) {
+            max_dx = od_x;
+        }
+        if (od_y < min_dy) {
+            min_dy = od_y;
+        }
+        if (od_y > max_dy) {
+            max_dy = od_y;
+        }
+    }
+
+    d_x0 = (int32_t)floorf(min_dx);
+    d_x1 = (int32_t)ceilf(max_dx);
+    d_y0 = (int32_t)floorf(min_dy);
+    d_y1 = (int32_t)ceilf(max_dy);
+
+    /* Clip to screen */
+    vis_x0 = x + d_x0 - cam_x;
+    vis_y0 = y + d_y0 - cam_y;
+    vis_x1 = x + d_x1 - cam_x;
+    vis_y1 = y + d_y1 - cam_y;
+
+    if (vis_x1 < clip_l || vis_x0 > clip_r || vis_y1 < clip_t || vis_y0 > clip_b) {
+        return;
+    }
+
+    if (vis_x0 < clip_l) {
+        d_x0 += clip_l - vis_x0;
+    }
+    if (vis_y0 < clip_t) {
+        d_y0 += clip_t - vis_y0;
+    }
+    if (vis_x1 > clip_r) {
+        d_x1 -= vis_x1 - clip_r;
+    }
+    if (vis_y1 > clip_b) {
+        d_y1 -= vis_y1 - clip_b;
+    }
+
+    for (int32_t dy_val = d_y0; dy_val <= d_y1; ++dy_val) {
+        int32_t  scr_y;
+        uint8_t *dst_row;
+        uint16_t row_pat;
+        float    base_fx;
+        float    base_fy;
+
+        scr_y   = y + dy_val - cam_y;
+        dst_row = &gfx->framebuffer[(ptrdiff_t)scr_y * fb_w];
+        row_pat = (pat != 0) ? (uint16_t)((pat >> ((scr_y & 3) * 4)) & 0xF) : 0;
+
+        /* Precompute the dy_val contribution to the inverse transform */
+        base_fx = inv_b * (float)dy_val + ox;
+        base_fy = inv_a * (float)dy_val + oy;
+
+        for (int32_t dx_val = d_x0; dx_val <= d_x1; ++dx_val) {
+            int32_t src_x;
+            int32_t src_y;
+            uint8_t col;
+            float   fx;
+            float   fy;
+            int32_t scr_x;
+
+            fx = inv_a * (float)dx_val + base_fx;
+            fy = -inv_b * (float)dx_val + base_fy;
+
+            src_x = (int32_t)fx;
+            src_y = (int32_t)fy;
+
+            if (src_x < 0 || src_x >= tile_w || src_y < 0 || src_y >= tile_h) {
+                continue;
+            }
+
+            col = gfx->sheet.pixels[(sy0 + src_y) * sht_w + (sx0 + src_x)];
+            if (transp[col]) {
+                continue;
+            }
+
+            scr_x = x + dx_val - cam_x;
+            if (pat == 0 || (row_pat & (1 << (scr_x & 3)))) {
+                dst_row[scr_x] = dpal[col];
+            }
+        }
+    }
+}
+
 void dtr_gfx_spr_rot(dtr_graphics_t *gfx,
                      int32_t         idx,
                      int32_t         x,
@@ -1420,8 +1586,6 @@ void dtr_gfx_spr_rot(dtr_graphics_t *gfx,
                      int32_t         cy)
 {
     dtr_sprite_sheet_t *sht;
-    int32_t             sx0;
-    int32_t             sy0;
     int32_t             tile_w;
     int32_t             tile_h;
     float               cos_a;
@@ -1434,161 +1598,23 @@ void dtr_gfx_spr_rot(dtr_graphics_t *gfx,
 
     tile_w = sht->tile_w;
     tile_h = sht->tile_h;
-    sx0    = (idx % sht->cols) * tile_w;
-    sy0    = (idx / sht->cols) * tile_h;
     cos_a  = cosf(angle);
     sin_a  = sinf(angle);
 
-    /* Compute tight rotated AABB from sprite corners */
-    {
-        int32_t        sht_w;
-        int32_t        cam_x;
-        int32_t        cam_y;
-        int32_t        clip_l;
-        int32_t        clip_t;
-        int32_t        clip_r;
-        int32_t        clip_b;
-        int32_t        fb_w;
-        uint16_t       pat;
-        const bool    *transp;
-        const uint8_t *dpal;
-        float          cx_f;
-        float          cy_f;
-        float          min_dx;
-        float          max_dx;
-        float          min_dy;
-        float          max_dy;
-        int32_t        d_x0;
-        int32_t        d_x1;
-        int32_t        d_y0;
-        int32_t        d_y1;
-        int32_t        vis_x0;
-        int32_t        vis_y0;
-        int32_t        vis_x1;
-        int32_t        vis_y1;
-
-        sht_w  = sht->width;
-        cam_x  = gfx->camera_x;
-        cam_y  = gfx->camera_y;
-        clip_l = gfx->clip_x;
-        clip_t = gfx->clip_y;
-        clip_r = clip_l + gfx->clip_w - 1;
-        clip_b = clip_t + gfx->clip_h - 1;
-        fb_w   = gfx->width;
-        pat    = gfx->fill_pattern;
-        transp = gfx->transparent;
-        dpal   = gfx->draw_pal;
-        cx_f   = (float)cx;
-        cy_f   = (float)cy;
-
-        /* Forward-rotate the 4 source corners to find output AABB */
-        min_dx = 1e9f;
-        max_dx = -1e9f;
-        min_dy = 1e9f;
-        max_dy = -1e9f;
-
-        for (int32_t c = 0; c < 4; ++c) {
-            float rx;
-            float ry;
-            float od_x;
-            float od_y;
-            float sx_f;
-            float sy_f;
-
-            sx_f = (c & 1) ? (float)(tile_w - 1) : 0.0f;
-            sy_f = (c & 2) ? (float)(tile_h - 1) : 0.0f;
-            rx   = sx_f - cx_f;
-            ry   = sy_f - cy_f;
-            od_x = cos_a * rx - sin_a * ry;
-            od_y = sin_a * rx + cos_a * ry;
-
-            if (od_x < min_dx) {
-                min_dx = od_x;
-            }
-            if (od_x > max_dx) {
-                max_dx = od_x;
-            }
-            if (od_y < min_dy) {
-                min_dy = od_y;
-            }
-            if (od_y > max_dy) {
-                max_dy = od_y;
-            }
-        }
-
-        d_x0 = (int32_t)floorf(min_dx);
-        d_x1 = (int32_t)ceilf(max_dx);
-        d_y0 = (int32_t)floorf(min_dy);
-        d_y1 = (int32_t)ceilf(max_dy);
-
-        /* Clip to screen */
-        vis_x0 = x + d_x0 - cam_x;
-        vis_y0 = y + d_y0 - cam_y;
-        vis_x1 = x + d_x1 - cam_x;
-        vis_y1 = y + d_y1 - cam_y;
-
-        if (vis_x1 < clip_l || vis_x0 > clip_r || vis_y1 < clip_t || vis_y0 > clip_b) {
-            return;
-        }
-
-        if (vis_x0 < clip_l) {
-            d_x0 += clip_l - vis_x0;
-        }
-        if (vis_y0 < clip_t) {
-            d_y0 += clip_t - vis_y0;
-        }
-        if (vis_x1 > clip_r) {
-            d_x1 -= vis_x1 - clip_r;
-        }
-        if (vis_y1 > clip_b) {
-            d_y1 -= vis_y1 - clip_b;
-        }
-
-        for (int32_t dy_val = d_y0; dy_val <= d_y1; ++dy_val) {
-            int32_t  scr_y;
-            uint8_t *dst_row;
-            uint16_t row_pat;
-            float    base_fx;
-            float    base_fy;
-
-            scr_y   = y + dy_val - cam_y;
-            dst_row = &gfx->framebuffer[(ptrdiff_t)scr_y * fb_w];
-            row_pat = (pat != 0) ? (uint16_t)((pat >> ((scr_y & 3) * 4)) & 0xF) : 0;
-
-            /* Precompute the dy_val contribution to the inverse rotation */
-            base_fx = sin_a * (float)dy_val + cx_f;
-            base_fy = cos_a * (float)dy_val + cy_f;
-
-            for (int32_t dx_val = d_x0; dx_val <= d_x1; ++dx_val) {
-                int32_t src_x;
-                int32_t src_y;
-                uint8_t col;
-                float   fx;
-                float   fy;
-                int32_t scr_x;
-
-                fx = cos_a * (float)dx_val + base_fx;
-                fy = -sin_a * (float)dx_val + base_fy;
-
-                src_x = (int32_t)fx;
-                src_y = (int32_t)fy;
-
-                if (src_x < 0 || src_x >= tile_w || src_y < 0 || src_y >= tile_h) {
-                    continue;
-                }
-
-                col = sht->pixels[(sy0 + src_y) * sht_w + (sx0 + src_x)];
-                if (transp[col]) {
-                    continue;
-                }
-
-                scr_x = x + dx_val - cam_x;
-                if (pat == 0 || (row_pat & (1 << (scr_x & 3)))) {
-                    dst_row[scr_x] = dpal[col];
-                }
-            }
-        }
-    }
+    /* Rotation is orthonormal: forward = (cos, sin), inverse = (cos, sin) */
+    prv_spr_xform(gfx,
+                  (idx % sht->cols) * tile_w,
+                  (idx / sht->cols) * tile_h,
+                  tile_w,
+                  tile_h,
+                  x,
+                  y,
+                  cos_a,
+                  sin_a,
+                  cos_a,
+                  sin_a,
+                  (float)cx,
+                  (float)cy);
 }
 
 void dtr_gfx_spr_affine(dtr_graphics_t *gfx,
@@ -1600,13 +1626,11 @@ void dtr_gfx_spr_affine(dtr_graphics_t *gfx,
                         float           rot_x,
                         float           rot_y)
 {
-    /* Simplified affine: rot_x/rot_y define the 2D rotation basis */
     dtr_sprite_sheet_t *sht;
-    int32_t             sx0;
-    int32_t             sy0;
     int32_t             tile_w;
     int32_t             tile_h;
     float               det;
+    float               inv_det;
 
     sht = &gfx->sheet;
     if (sht->pixels == NULL || idx < 0 || idx >= sht->count) {
@@ -1618,163 +1642,24 @@ void dtr_gfx_spr_affine(dtr_graphics_t *gfx,
         return;
     }
 
-    tile_w = sht->tile_w;
-    tile_h = sht->tile_h;
-    sx0    = (idx % sht->cols) * tile_w;
-    sy0    = (idx / sht->cols) * tile_h;
+    tile_w  = sht->tile_w;
+    tile_h  = sht->tile_h;
+    inv_det = 1.0f / det;
 
-    /* Compute tight AABB from forward-transformed sprite corners */
-    {
-        int32_t        sht_w;
-        int32_t        cam_x;
-        int32_t        cam_y;
-        int32_t        clip_l;
-        int32_t        clip_t;
-        int32_t        clip_r;
-        int32_t        clip_b;
-        int32_t        fb_w;
-        uint16_t       pat;
-        const bool    *transp;
-        const uint8_t *dpal;
-        float          min_dx;
-        float          max_dx;
-        float          min_dy;
-        float          max_dy;
-        float          inv_det;
-        int32_t        d_x0;
-        int32_t        d_x1;
-        int32_t        d_y0;
-        int32_t        d_y1;
-        int32_t        vis_x0;
-        int32_t        vis_y0;
-        int32_t        vis_x1;
-        int32_t        vis_y1;
-
-        sht_w   = sht->width;
-        cam_x   = gfx->camera_x;
-        cam_y   = gfx->camera_y;
-        clip_l  = gfx->clip_x;
-        clip_t  = gfx->clip_y;
-        clip_r  = clip_l + gfx->clip_w - 1;
-        clip_b  = clip_t + gfx->clip_h - 1;
-        fb_w    = gfx->width;
-        pat     = gfx->fill_pattern;
-        transp  = gfx->transparent;
-        dpal    = gfx->draw_pal;
-        inv_det = 1.0f / det;
-
-        /*
-         * Forward transform: source (sx,sy) relative to origin →
-         *   dx = rot_x * (sx - ox) - rot_y * (sy - oy)
-         *   dy = rot_y * (sx - ox) + rot_x * (sy - oy)
-         */
-        min_dx = 1e9f;
-        max_dx = -1e9f;
-        min_dy = 1e9f;
-        max_dy = -1e9f;
-
-        for (int32_t c = 0; c < 4; ++c) {
-            float rx;
-            float ry;
-            float od_x;
-            float od_y;
-            float sx_f;
-            float sy_f;
-
-            sx_f = (c & 1) ? (float)(tile_w - 1) : 0.0f;
-            sy_f = (c & 2) ? (float)(tile_h - 1) : 0.0f;
-            rx   = sx_f - origin_x;
-            ry   = sy_f - origin_y;
-            od_x = rot_x * rx - rot_y * ry;
-            od_y = rot_y * rx + rot_x * ry;
-
-            if (od_x < min_dx) {
-                min_dx = od_x;
-            }
-            if (od_x > max_dx) {
-                max_dx = od_x;
-            }
-            if (od_y < min_dy) {
-                min_dy = od_y;
-            }
-            if (od_y > max_dy) {
-                max_dy = od_y;
-            }
-        }
-
-        d_x0 = (int32_t)floorf(min_dx);
-        d_x1 = (int32_t)ceilf(max_dx);
-        d_y0 = (int32_t)floorf(min_dy);
-        d_y1 = (int32_t)ceilf(max_dy);
-
-        /* Clip to screen */
-        vis_x0 = x + d_x0 - cam_x;
-        vis_y0 = y + d_y0 - cam_y;
-        vis_x1 = x + d_x1 - cam_x;
-        vis_y1 = y + d_y1 - cam_y;
-
-        if (vis_x1 < clip_l || vis_x0 > clip_r || vis_y1 < clip_t || vis_y0 > clip_b) {
-            return;
-        }
-
-        if (vis_x0 < clip_l) {
-            d_x0 += clip_l - vis_x0;
-        }
-        if (vis_y0 < clip_t) {
-            d_y0 += clip_t - vis_y0;
-        }
-        if (vis_x1 > clip_r) {
-            d_x1 -= vis_x1 - clip_r;
-        }
-        if (vis_y1 > clip_b) {
-            d_y1 -= vis_y1 - clip_b;
-        }
-
-        for (int32_t dy_val = d_y0; dy_val <= d_y1; ++dy_val) {
-            int32_t  scr_y;
-            uint8_t *dst_row;
-            uint16_t row_pat;
-            float    base_fx;
-            float    base_fy;
-
-            scr_y   = y + dy_val - cam_y;
-            dst_row = &gfx->framebuffer[(ptrdiff_t)scr_y * fb_w];
-            row_pat = (pat != 0) ? (uint16_t)((pat >> ((scr_y & 3) * 4)) & 0xF) : 0;
-
-            /* Precompute the dy_val contribution to the inverse transform */
-            base_fx = (rot_y * (float)dy_val) * inv_det + origin_x;
-            base_fy = (rot_x * (float)dy_val) * inv_det + origin_y;
-
-            for (int32_t dx_val = d_x0; dx_val <= d_x1; ++dx_val) {
-                int32_t src_x;
-                int32_t src_y;
-                uint8_t col;
-                float   fx;
-                float   fy;
-                int32_t scr_x;
-
-                fx = (rot_x * (float)dx_val) * inv_det + base_fx;
-                fy = (-rot_y * (float)dx_val) * inv_det + base_fy;
-
-                src_x = (int32_t)fx;
-                src_y = (int32_t)fy;
-
-                if (src_x < 0 || src_x >= tile_w || src_y < 0 || src_y >= tile_h) {
-                    continue;
-                }
-
-                col = sht->pixels[(sy0 + src_y) * sht_w + (sx0 + src_x)];
-                if (transp[col]) {
-                    continue;
-                }
-
-                scr_x = x + dx_val - cam_x;
-                if (pat == 0 || (row_pat & (1 << (scr_x & 3)))) {
-                    dst_row[scr_x] = dpal[col];
-                }
-            }
-        }
-    }
+    /* Affine: forward = (rot_x, rot_y), inverse = (rot_x/det, rot_y/det) */
+    prv_spr_xform(gfx,
+                  (idx % sht->cols) * tile_w,
+                  (idx / sht->cols) * tile_h,
+                  tile_w,
+                  tile_h,
+                  x,
+                  y,
+                  rot_x,
+                  rot_y,
+                  rot_x * inv_det,
+                  rot_y * inv_det,
+                  origin_x,
+                  origin_y);
 }
 
 /* ------------------------------------------------------------------ */

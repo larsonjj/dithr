@@ -22,8 +22,8 @@ and uses SDL3 for windowing, rendering, input, and audio.
            ┌────────────┘  │  │  └────────────┐
            ▼               ▼  ▼               ▼
       ┌─────────┐   ┌─────────────┐   ┌───────────┐
-      │ Runtime  │   │  Graphics   │   │   Audio   │
-      │ (QuickJS)│   │ (Software)  │   │ (SDL_mixer)│
+      │Runtime  │   │  Graphics   │   │   Audio   │
+      │(QuickJS)│   │ (Software)  │   │(SDL_mixer)│
       └─────────┘   └─────────────┘   └───────────┘
            │               │
       ┌────┴────┐    ┌─────┴──────┐

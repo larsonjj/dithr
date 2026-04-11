@@ -77,6 +77,11 @@ typedef struct dtr_console {
     float update_ms;
     float draw_ms;
 
+    /* Built-in FPS widget state (sys.drawFps) */
+    float   fps_smooth;
+    float   fps_history[50];
+    int32_t fps_hist_idx;
+
     /* User perf markers (sys.perfBegin / sys.perfEnd) */
     struct {
         char     label[CONSOLE_PERF_LABEL_LEN];
