@@ -821,8 +821,10 @@ function updatePlay() {
     // Camera follow
     const targetX = player.x - SCREEN_W / 2 + player.w / 2;
     const targetY = player.y - (SCREEN_H - HUD_H) / 2 + player.h / 2;
-    camX += (targetX - camX) * 0.1;
-    camY += (targetY - camY) * 0.1;
+    const cdx = targetX - camX;
+    const cdy = targetY - camY;
+    camX += math.abs(cdx) < 0.5 ? cdx : cdx * 0.1;
+    camY += math.abs(cdy) < 0.5 ? cdy : cdy * 0.1;
 
     const maxCx = MAP_W * TILE - SCREEN_W;
     const maxCy = MAP_H * TILE - (SCREEN_H - HUD_H);
