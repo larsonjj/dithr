@@ -17,9 +17,9 @@ test.beforeAll(async () => {
     const { spawn } = require("node:child_process");
     const path = require("node:path");
 
-    server = spawn("node", [path.resolve(__dirname, "../tools/serve-wasm.js"), String(PORT)], {
+    server = spawn("node", [path.resolve(__dirname, "../../tools/serve-wasm.js"), String(PORT)], {
         stdio: "pipe",
-        cwd: path.resolve(__dirname, ".."),
+        cwd: path.resolve(__dirname, "../.."),
     });
 
     // Wait for the server to start listening

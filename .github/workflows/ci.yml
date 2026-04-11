@@ -502,10 +502,11 @@ jobs:
                   node-version: 20
 
             - name: Install Playwright
+              working-directory: tests/wasm-browser
               run: |
-                  npm init -y
-                  npm install @playwright/test
+                  npm ci
                   npx playwright install --with-deps chromium
 
             - name: Run browser smoke test
+              working-directory: tests/wasm-browser
               run: npx playwright test
