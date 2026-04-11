@@ -250,9 +250,8 @@ function _draw() {
             if (!touch.active(ti)) continue;
             const tx = math.flr(touch.x(ti));
             const ty = math.flr(touch.y(ti));
-            // Draw crosshair at touch point
-            gfx.line(tx - 4, ty, tx + 4, ty, 12);
-            gfx.line(tx, ty - 4, tx, ty + 4, 12);
+            // Draw filled circle at touch point
+            gfx.circfill(tx, ty, 4, 12);
             gfx.print(`${ti}`, tx + 6, ty - 3, 12);
         }
     } else {
