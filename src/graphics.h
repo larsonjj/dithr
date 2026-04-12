@@ -60,10 +60,13 @@ typedef enum dtr_wipe_dir {
  */
 typedef struct dtr_transition {
     dtr_transition_type_t type;
-    int32_t               frame;     /**< Current frame of the transition */
-    int32_t               duration;  /**< Total frames for the transition */
-    uint8_t               color;     /**< Target colour for fade/dissolve */
-    dtr_wipe_dir_t        direction; /**< Wipe direction */
+    int32_t               frame;          /**< Current frame of the transition */
+    int32_t               duration;       /**< Total frames for the transition */
+    uint8_t               color;          /**< Target colour for fade/dissolve */
+    dtr_wipe_dir_t        direction;      /**< Wipe direction */
+    uint32_t             *dissolve_order; /**< Pre-sorted pixel offsets */
+    int32_t               dissolve_count; /**< Total pixels in order table */
+    int32_t               dissolve_done;  /**< Pixels filled so far */
 } dtr_transition_t;
 
 /* ------------------------------------------------------------------------ */

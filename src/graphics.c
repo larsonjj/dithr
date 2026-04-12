@@ -96,6 +96,9 @@ void dtr_gfx_destroy(dtr_graphics_t *gfx)
     if (gfx->sheet.pixels != NULL) {
         DTR_FREE(gfx->sheet.pixels);
     }
+    if (gfx->transition.dissolve_order != NULL) {
+        DTR_FREE(gfx->transition.dissolve_order);
+    }
     DTR_FREE(gfx->framebuffer);
     DTR_FREE(gfx->pixels);
     DTR_FREE(gfx);
@@ -103,6 +106,12 @@ void dtr_gfx_destroy(dtr_graphics_t *gfx)
 
 void dtr_gfx_reset(dtr_graphics_t *gfx)
 {
+    if (gfx->transition.dissolve_order != NULL) {
+        DTR_FREE(gfx->transition.dissolve_order);
+        gfx->transition.dissolve_order = NULL;
+    }
+    gfx->transition.type = DTR_TRANS_NONE;
+
     gfx->color        = 7;
     gfx->cursor_x     = 0;
     gfx->cursor_y     = 0;
@@ -298,9 +307,9 @@ static uint16_t prv_row_pattern(uint16_t fill_pattern, int32_t scr_y)
 
 /**
  * \brief           Blit a source span with transparency check and palette
- *                  remap using a 4-wide unrolled scalar loop.
+ *                  remap using an 8-wide unrolled loop for better pipelining.
  *
- * Only compiled when DTR_HAS_SIMD is true.
+ * Only compiled when DTR_HAS_SIMD is true (fast-path guard).
  */
 #if DTR_HAS_SIMD
 static void prv_blit_span(uint8_t       *dst_row,
@@ -310,33 +319,55 @@ static void prv_blit_span(uint8_t       *dst_row,
                           const bool    *transp,
                           const uint8_t *dpal)
 {
-    int32_t done;
+    int32_t  done;
+    uint8_t *dst;
 
     done = 0;
+    dst  = dst_row + scr_x;
 
-    /* 4-wide: load 4 palette indices, check transparency, remap, write */
-    for (; done + 3 < span; done += 4) {
-        int32_t s_0;
-        int32_t s_1;
-        int32_t s_2;
-        int32_t s_3;
+    /* 8-wide: load 8 indices, remap, write non-transparent */
+    for (; done + 7 < span; done += 8) {
+        uint8_t i_0;
+        uint8_t i_1;
+        uint8_t i_2;
+        uint8_t i_3;
+        uint8_t i_4;
+        uint8_t i_5;
+        uint8_t i_6;
+        uint8_t i_7;
 
-        s_0 = (int32_t)src_ptr[done];
-        s_1 = (int32_t)src_ptr[done + 1];
-        s_2 = (int32_t)src_ptr[done + 2];
-        s_3 = (int32_t)src_ptr[done + 3];
+        i_0 = src_ptr[done];
+        i_1 = src_ptr[done + 1];
+        i_2 = src_ptr[done + 2];
+        i_3 = src_ptr[done + 3];
+        i_4 = src_ptr[done + 4];
+        i_5 = src_ptr[done + 5];
+        i_6 = src_ptr[done + 6];
+        i_7 = src_ptr[done + 7];
 
-        if (!transp[s_0]) {
-            dst_row[scr_x + done] = dpal[s_0];
+        if (!transp[i_0]) {
+            dst[done] = dpal[i_0];
         }
-        if (!transp[s_1]) {
-            dst_row[scr_x + done + 1] = dpal[s_1];
+        if (!transp[i_1]) {
+            dst[done + 1] = dpal[i_1];
         }
-        if (!transp[s_2]) {
-            dst_row[scr_x + done + 2] = dpal[s_2];
+        if (!transp[i_2]) {
+            dst[done + 2] = dpal[i_2];
         }
-        if (!transp[s_3]) {
-            dst_row[scr_x + done + 3] = dpal[s_3];
+        if (!transp[i_3]) {
+            dst[done + 3] = dpal[i_3];
+        }
+        if (!transp[i_4]) {
+            dst[done + 4] = dpal[i_4];
+        }
+        if (!transp[i_5]) {
+            dst[done + 5] = dpal[i_5];
+        }
+        if (!transp[i_6]) {
+            dst[done + 6] = dpal[i_6];
+        }
+        if (!transp[i_7]) {
+            dst[done + 7] = dpal[i_7];
         }
     }
 
@@ -346,7 +377,7 @@ static void prv_blit_span(uint8_t       *dst_row,
 
         col = src_ptr[done];
         if (!transp[col]) {
-            dst_row[scr_x + done] = dpal[col];
+            dst[done] = dpal[col];
         }
     }
 }
@@ -2102,6 +2133,19 @@ void dtr_gfx_fade(dtr_graphics_t *gfx, uint8_t color, int32_t frames)
     gfx->transition.frame    = 0;
 }
 
+/**
+ * \\brief  Simple pseudo-random hash for dissolve pixel selection
+ */
+static uint32_t prv_hash_pixel(int32_t x, int32_t y, int32_t seed)
+{
+    uint32_t h;
+
+    h = (uint32_t)(x * 374761393 + y * 668265263 + seed * 2147483647);
+    h = (h ^ (h >> 13)) * 1274126177;
+    h = h ^ (h >> 16);
+    return h;
+}
+
 void dtr_gfx_wipe(dtr_graphics_t *gfx, int32_t direction, uint8_t color, int32_t frames)
 {
     if (frames < 1) {
@@ -2116,31 +2160,56 @@ void dtr_gfx_wipe(dtr_graphics_t *gfx, int32_t direction, uint8_t color, int32_t
 
 void dtr_gfx_dissolve(dtr_graphics_t *gfx, uint8_t color, int32_t frames)
 {
+    int32_t   total;
+    uint32_t *order;
+
     if (frames < 1) {
         frames = 1;
     }
-    gfx->transition.type     = DTR_TRANS_DISSOLVE;
-    gfx->transition.color    = color;
-    gfx->transition.duration = frames;
-    gfx->transition.frame    = 0;
+
+    /* Free any previous dissolve table */
+    if (gfx->transition.dissolve_order != NULL) {
+        DTR_FREE(gfx->transition.dissolve_order);
+        gfx->transition.dissolve_order = NULL;
+    }
+
+    total = gfx->width * gfx->height;
+    order = (uint32_t *)DTR_MALLOC((size_t)total * sizeof(uint32_t));
+    if (order != NULL) {
+        /* Fill with pixel offsets then sort by hash so the random
+         * dissolve pattern is computed once instead of every frame. */
+        for (int32_t i = 0; i < total; ++i) {
+            order[i] = (uint32_t)i;
+        }
+
+        /* Fisher-Yates shuffle seeded by the per-pixel hash gives a
+         * uniform random order with O(n) work and no comparator
+         * overhead from qsort. */
+        for (int32_t i = total - 1; i > 0; --i) {
+            uint32_t h_val;
+            uint32_t j_idx;
+            uint32_t tmp;
+
+            h_val        = prv_hash_pixel(i % gfx->width, i / gfx->width, 42);
+            j_idx        = h_val % ((uint32_t)i + 1);
+            tmp          = order[i];
+            order[i]     = order[j_idx];
+            order[j_idx] = tmp;
+        }
+    }
+
+    gfx->transition.type           = DTR_TRANS_DISSOLVE;
+    gfx->transition.color          = color;
+    gfx->transition.duration       = frames;
+    gfx->transition.frame          = 0;
+    gfx->transition.dissolve_order = order;
+    gfx->transition.dissolve_count = total;
+    gfx->transition.dissolve_done  = 0;
 }
 
 bool dtr_gfx_transitioning(dtr_graphics_t *gfx)
 {
     return gfx->transition.type != DTR_TRANS_NONE;
-}
-
-/**
- * \\brief  Simple pseudo-random hash for dissolve pixel selection
- */
-static uint32_t prv_hash_pixel(int32_t x, int32_t y, int32_t seed)
-{
-    uint32_t h;
-
-    h = (uint32_t)(x * 374761393 + y * 668265263 + seed * 2147483647);
-    h = (h ^ (h >> 13)) * 1274126177;
-    h = h ^ (h >> 16);
-    return h;
 }
 
 void dtr_gfx_transition_update_buf(dtr_graphics_t *gfx, uint32_t *pixels)
@@ -2163,59 +2232,50 @@ void dtr_gfx_transition_update_buf(dtr_graphics_t *gfx, uint32_t *pixels)
         case DTR_TRANS_FADE: {
             /* Blend already-flipped RGBA pixels towards target colour */
             uint32_t target_rgba;
-            int32_t  tr_val;
-            int32_t  tg_val;
-            int32_t  tb_val;
             int32_t  total;
 
             target_rgba = gfx->colors[tr->color];
-            tr_val      = (int32_t)((target_rgba >> 24) & 0xFF);
-            tg_val      = (int32_t)((target_rgba >> 16) & 0xFF);
-            tb_val      = (int32_t)((target_rgba >> 8) & 0xFF);
 
             total = gfx->width * gfx->height;
 
-#if DTR_HAS_SIMD
             {
-                /* SIMD: lerp RGB channels 4 pixels at a time via float math */
-                dtr_v4i target = dtr_v4i_set(tr_val, tg_val, tb_val, 0xFF);
-                dtr_v4f vt     = dtr_v4f_splat(t);
-                dtr_v4f one_mt = dtr_v4f_splat(1.0f - t);
+                /* Fixed-point 8-bit lerp: result = (src*(256-t) + tgt*t) >> 8
+                 * Processes even/odd byte channels in parallel.  The
+                 * weighted-sum formulation avoids unsigned underflow that
+                 * would occur with (tgt - src) when tgt < src. */
+                uint32_t t256;
+                uint32_t inv;
+                uint32_t tgt_rb; /* target odd bytes (R, B) */
+                uint32_t tgt_ga; /* target even bytes (G, A) */
 
-                dtr_v4f tgt_f = dtr_v4i_to_v4f(target);
-                dtr_v4f tgt_t = dtr_v4f_mul(tgt_f, vt);
+                t256 = (uint32_t)(t * 256.0f);
+                if (t256 > 256) {
+                    t256 = 256;
+                }
+                inv    = 256 - t256;
+                tgt_rb = (target_rgba >> 8) & 0x00FF00FFu;
+                tgt_ga = target_rgba & 0x00FF00FFu;
 
                 for (int32_t idx = 0; idx < total; ++idx) {
-                    dtr_v4i src_i  = dtr_v4i_unpack_rgba(pixels[idx]);
-                    dtr_v4f src_f  = dtr_v4i_to_v4f(src_i);
-                    dtr_v4f result = dtr_v4f_add(dtr_v4f_mul(src_f, one_mt), tgt_t);
-                    dtr_v4i out    = dtr_v4f_to_v4i(result);
-                    pixels[idx]    = dtr_v4i_pack_rgba(out);
+                    uint32_t src_px;
+                    uint32_t s_rb;
+                    uint32_t s_ga;
+                    uint32_t r_rb;
+                    uint32_t r_ga;
+
+                    src_px = pixels[idx];
+
+                    /* High bytes of each 16-bit pair: R (bit 31-24), B (bit 15-8) */
+                    s_rb = (src_px >> 8) & 0x00FF00FFu;
+                    r_rb = (s_rb * inv + tgt_rb * t256) & 0xFF00FF00u;
+
+                    /* Low bytes of each 16-bit pair: G (bit 23-16), A (bit 7-0) */
+                    s_ga = src_px & 0x00FF00FFu;
+                    r_ga = ((s_ga * inv + tgt_ga * t256) >> 8) & 0x00FF00FFu;
+
+                    pixels[idx] = r_rb | r_ga;
                 }
             }
-#else
-            for (int32_t idx = 0; idx < total; ++idx) {
-                uint32_t src;
-                int32_t  sr;
-                int32_t  sg;
-                int32_t  sb;
-                int32_t  rr;
-                int32_t  rg;
-                int32_t  rb;
-
-                src = pixels[idx];
-                sr  = (int32_t)((src >> 24) & 0xFF);
-                sg  = (int32_t)((src >> 16) & 0xFF);
-                sb  = (int32_t)((src >> 8) & 0xFF);
-
-                rr = sr + (int32_t)((float)(tr_val - sr) * t);
-                rg = sg + (int32_t)((float)(tg_val - sg) * t);
-                rb = sb + (int32_t)((float)(tb_val - sb) * t);
-
-                pixels[idx] =
-                    ((uint32_t)rr << 24) | ((uint32_t)rg << 16) | ((uint32_t)rb << 8) | 0xFF;
-            }
-#endif
             break;
         }
 
@@ -2264,17 +2324,32 @@ void dtr_gfx_transition_update_buf(dtr_graphics_t *gfx, uint32_t *pixels)
         }
 
         case DTR_TRANS_DISSOLVE: {
-            /* Random pixel replacement over flipped pixels */
+            /* Incremental dissolve using pre-sorted permutation table.
+             * Each frame only writes the newly-revealed pixels. */
             uint32_t col_rgba;
-            uint32_t threshold;
+            int32_t  target;
 
-            col_rgba  = gfx->colors[tr->color];
-            threshold = (uint32_t)(t * 4294967295.0f);
+            col_rgba = gfx->colors[tr->color];
+            target   = (int32_t)((float)tr->dissolve_count * t);
+            if (target > tr->dissolve_count) {
+                target = tr->dissolve_count;
+            }
 
-            for (int32_t y = 0; y < gfx->height; ++y) {
-                for (int32_t x = 0; x < gfx->width; ++x) {
-                    if (prv_hash_pixel(x, y, 42) <= threshold) {
-                        pixels[y * gfx->width + x] = col_rgba;
+            if (tr->dissolve_order != NULL) {
+                for (int32_t i = tr->dissolve_done; i < target; ++i) {
+                    pixels[tr->dissolve_order[i]] = col_rgba;
+                }
+                tr->dissolve_done = target;
+            } else {
+                /* Fallback: no table (malloc failed) — use hash */
+                uint32_t threshold;
+
+                threshold = (uint32_t)(t * 4294967295.0f);
+                for (int32_t y_px = 0; y_px < gfx->height; ++y_px) {
+                    for (int32_t x_px = 0; x_px < gfx->width; ++x_px) {
+                        if (prv_hash_pixel(x_px, y_px, 42) <= threshold) {
+                            pixels[y_px * gfx->width + x_px] = col_rgba;
+                        }
                     }
                 }
             }
@@ -2288,6 +2363,10 @@ void dtr_gfx_transition_update_buf(dtr_graphics_t *gfx, uint32_t *pixels)
     /* Complete when done */
     if (tr->frame >= tr->duration) {
         tr->type = DTR_TRANS_NONE;
+        if (tr->dissolve_order != NULL) {
+            DTR_FREE(tr->dissolve_order);
+            tr->dissolve_order = NULL;
+        }
     }
 }
 
@@ -2437,16 +2516,71 @@ void dtr_gfx_dl_spr_affine(dtr_graphics_t *gfx,
 
 void dtr_gfx_dl_end(dtr_graphics_t *gfx)
 {
+    int32_t cnt;
+
     gfx->draw_list.active = false;
-    if (gfx->draw_list.count == 0) {
+    cnt                   = gfx->draw_list.count;
+    if (cnt == 0) {
         return;
     }
 
-    /* Sort by layer then insertion order */
-    qsort(gfx->draw_list.cmds,
-          (size_t)gfx->draw_list.count,
-          sizeof(dtr_draw_cmd_t),
-          prv_draw_cmd_cmp);
+    /* Stable counting sort by layer.
+     * Items with the same layer keep their insertion order because the
+     * counting sort scans forward. */
+    {
+        int32_t         min_l;
+        int32_t         max_l;
+        int32_t         range;
+        dtr_draw_cmd_t *cmds;
+
+        cmds  = gfx->draw_list.cmds;
+        min_l = cmds[0].layer;
+        max_l = cmds[0].layer;
+
+        for (int32_t i = 1; i < cnt; ++i) {
+            if (cmds[i].layer < min_l) {
+                min_l = cmds[i].layer;
+            }
+            if (cmds[i].layer > max_l) {
+                max_l = cmds[i].layer;
+            }
+        }
+
+        range = max_l - min_l + 1;
+
+        if (range == 1) {
+            /* All on same layer — already in insertion order, no sort needed */
+        } else if (range <= 512) {
+            /* Small range: counting sort into a static scratch buffer */
+            int32_t               counts[512];
+            static dtr_draw_cmd_t scratch[CONSOLE_MAX_DRAW_CMDS];
+
+            memset(counts, 0, (size_t)range * sizeof(int32_t));
+
+            /* Count */
+            for (int32_t i = 0; i < cnt; ++i) {
+                ++counts[cmds[i].layer - min_l];
+            }
+
+            /* Prefix sum */
+            for (int32_t i = 1; i < range; ++i) {
+                counts[i] += counts[i - 1];
+            }
+
+            /* Place in reverse to maintain stability */
+            for (int32_t i = cnt - 1; i >= 0; --i) {
+                int32_t bucket;
+
+                bucket                    = cmds[i].layer - min_l;
+                scratch[--counts[bucket]] = cmds[i];
+            }
+
+            memcpy(cmds, scratch, (size_t)cnt * sizeof(dtr_draw_cmd_t));
+        } else {
+            /* Wide range: fallback to qsort */
+            qsort(cmds, (size_t)cnt, sizeof(dtr_draw_cmd_t), prv_draw_cmd_cmp);
+        }
+    }
 
     /* Flush all commands */
     for (int32_t i = 0; i < gfx->draw_list.count; ++i) {
