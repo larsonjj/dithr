@@ -482,6 +482,122 @@ static void test_input_clear_action_preserves_others(void)
 }
 
 /* ------------------------------------------------------------------ */
+/*  Key repeat (btnr) tests                                            */
+/* ------------------------------------------------------------------ */
+
+static void test_key_btnr_initial_press(void)
+{
+    dtr_key_state_t *keys;
+
+    keys = dtr_key_create();
+
+    /* Initial press should fire btnr */
+    dtr_key_set(keys, DTR_KEY_Z, true);
+    DTR_ASSERT(dtr_key_btnr(keys, DTR_KEY_Z));
+
+    dtr_key_destroy(keys);
+    DTR_PASS();
+}
+
+static void test_key_btnr_no_repeat_before_delay(void)
+{
+    dtr_key_state_t *keys;
+
+    keys = dtr_key_create();
+
+    /* Press the key */
+    dtr_key_set(keys, DTR_KEY_Z, true);
+
+    /* Advance time but stay under the repeat delay (0.35s) */
+    dtr_key_update(keys, 0.016f); /* 16ms — frame 1 */
+    DTR_ASSERT(!dtr_key_btnr(keys, DTR_KEY_Z));
+
+    dtr_key_update(keys, 0.016f); /* 32ms — frame 2 */
+    DTR_ASSERT(!dtr_key_btnr(keys, DTR_KEY_Z));
+
+    /* Accumulate to just under the delay */
+    dtr_key_update(keys, 0.300f); /* 332ms total — still under 350ms */
+    DTR_ASSERT(!dtr_key_btnr(keys, DTR_KEY_Z));
+
+    dtr_key_destroy(keys);
+    DTR_PASS();
+}
+
+static void test_key_btnr_fires_after_delay(void)
+{
+    dtr_key_state_t *keys;
+
+    keys = dtr_key_create();
+
+    /* Press the key */
+    dtr_key_set(keys, DTR_KEY_Z, true);
+
+    /* First update starts hold_time */
+    dtr_key_update(keys, 0.016f);
+
+    /* Cross the delay threshold */
+    dtr_key_update(keys, DTR_KEY_REPEAT_DELAY);
+    DTR_ASSERT(dtr_key_btnr(keys, DTR_KEY_Z));
+
+    dtr_key_destroy(keys);
+    DTR_PASS();
+}
+
+static void test_key_btnr_repeats_at_interval(void)
+{
+    dtr_key_state_t *keys;
+
+    keys = dtr_key_create();
+
+    /* Press and pass the delay */
+    dtr_key_set(keys, DTR_KEY_Z, true);
+    dtr_key_update(keys, DTR_KEY_REPEAT_DELAY + 0.01f);
+    DTR_ASSERT(dtr_key_btnr(keys, DTR_KEY_Z));
+
+    /* Advance by less than one interval — should not repeat */
+    dtr_key_update(keys, DTR_KEY_REPEAT_INTERVAL * 0.5f);
+    DTR_ASSERT(!dtr_key_btnr(keys, DTR_KEY_Z));
+
+    /* Cross the next interval boundary — should repeat */
+    dtr_key_update(keys, DTR_KEY_REPEAT_INTERVAL);
+    DTR_ASSERT(dtr_key_btnr(keys, DTR_KEY_Z));
+
+    dtr_key_destroy(keys);
+    DTR_PASS();
+}
+
+static void test_key_btnr_stops_on_release(void)
+{
+    dtr_key_state_t *keys;
+
+    keys = dtr_key_create();
+
+    /* Press, pass delay */
+    dtr_key_set(keys, DTR_KEY_Z, true);
+    dtr_key_update(keys, DTR_KEY_REPEAT_DELAY + 0.01f);
+    DTR_ASSERT(dtr_key_btnr(keys, DTR_KEY_Z));
+
+    /* Release the key */
+    dtr_key_set(keys, DTR_KEY_Z, false);
+    dtr_key_update(keys, DTR_KEY_REPEAT_INTERVAL * 2.0f);
+    DTR_ASSERT(!dtr_key_btnr(keys, DTR_KEY_Z));
+
+    dtr_key_destroy(keys);
+    DTR_PASS();
+}
+
+static void test_key_btnr_out_of_range(void)
+{
+    dtr_key_state_t *keys;
+
+    keys = dtr_key_create();
+    DTR_ASSERT(!dtr_key_btnr(keys, DTR_KEY_NONE));
+    DTR_ASSERT(!dtr_key_btnr(keys, DTR_KEY_COUNT));
+    dtr_key_destroy(keys);
+    DTR_PASS();
+}
+
+/* ------------------------------------------------------------------ */
 /*  Main                                                               */
 /* ------------------------------------------------------------------ */
 
@@ -516,6 +632,14 @@ int main(int argc, char *argv[])
     DTR_RUN_TEST(test_input_pad_button_binding);
     DTR_RUN_TEST(test_input_multiple_bindings);
     DTR_RUN_TEST(test_input_clear_action_preserves_others);
+
+    /* Key repeat */
+    DTR_RUN_TEST(test_key_btnr_initial_press);
+    DTR_RUN_TEST(test_key_btnr_no_repeat_before_delay);
+    DTR_RUN_TEST(test_key_btnr_fires_after_delay);
+    DTR_RUN_TEST(test_key_btnr_repeats_at_interval);
+    DTR_RUN_TEST(test_key_btnr_stops_on_release);
+    DTR_RUN_TEST(test_key_btnr_out_of_range);
 
     DTR_TEST_END();
 }

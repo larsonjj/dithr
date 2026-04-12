@@ -374,6 +374,79 @@ static void test_event_fifo_order(void)
 }
 
 /* ------------------------------------------------------------------ */
+/*  clear — resets handlers and queue, rebinds context                  */
+/* ------------------------------------------------------------------ */
+
+static void test_event_clear_resets_handlers(void)
+{
+    dtr_event_bus_t *bus;
+
+    prv_setup();
+    bus = dtr_event_create(s_ctx);
+
+    /* Queue an event without any handler */
+    dtr_event_emit(bus, "test:clear", JS_UNDEFINED);
+    DTR_ASSERT_EQ_INT(bus->queue_count, 1);
+
+    /* Clear should remove the queued event */
+    dtr_event_clear(bus, s_ctx);
+    DTR_ASSERT_EQ_INT(bus->queue_count, 0);
+
+    /* Verify no active handlers remain */
+    for (int32_t i = 0; i < DTR_EVENT_MAX_HANDLERS; ++i) {
+        DTR_ASSERT(!bus->handlers[i].active);
+    }
+
+    dtr_event_destroy(bus);
+    prv_teardown();
+    DTR_PASS();
+}
+
+static void test_event_clear_with_handler(void)
+{
+    dtr_event_bus_t *bus;
+    JSValue          handler;
+    int32_t          handle;
+    /* Use a no-op handler without closure references to avoid GC cycle issues */
+    static const char *NOOP_SRC = "globalThis.__noop = function() {};\n";
+
+    prv_setup();
+    bus = dtr_event_create(s_ctx);
+
+    /* Register a handler */
+    {
+        JSValue r = JS_Eval(s_ctx, NOOP_SRC, strlen(NOOP_SRC), "<test>", JS_EVAL_TYPE_GLOBAL);
+        JS_FreeValue(s_ctx, r);
+    }
+    {
+        JSValue global = JS_GetGlobalObject(s_ctx);
+        handler        = JS_GetPropertyStr(s_ctx, global, "__noop");
+        JS_FreeValue(s_ctx, global);
+    }
+    handle = dtr_event_on(bus, "test:clear", handler);
+    JS_FreeValue(s_ctx, handler);
+    DTR_ASSERT(handle >= 0);
+
+    /* Clear should deactivate all handlers */
+    dtr_event_clear(bus, s_ctx);
+
+    for (int32_t i = 0; i < DTR_EVENT_MAX_HANDLERS; ++i) {
+        DTR_ASSERT(!bus->handlers[i].active);
+    }
+
+    dtr_event_destroy(bus);
+    prv_teardown();
+    DTR_PASS();
+}
+
+static void test_event_clear_null_safe(void)
+{
+    /* Passing NULL should not crash */
+    dtr_event_clear(NULL, NULL);
+    DTR_PASS();
+}
+
+/* ------------------------------------------------------------------ */
 /*  Main                                                               */
 /* ------------------------------------------------------------------ */
 
@@ -394,6 +467,9 @@ int main(int argc, char *argv[])
     DTR_RUN_TEST(test_event_handler_overflow);
     DTR_RUN_TEST(test_event_destroy_null);
     DTR_RUN_TEST(test_event_fifo_order);
+    DTR_RUN_TEST(test_event_clear_resets_handlers);
+    DTR_RUN_TEST(test_event_clear_with_handler);
+    DTR_RUN_TEST(test_event_clear_null_safe);
 
     DTR_TEST_END();
 }

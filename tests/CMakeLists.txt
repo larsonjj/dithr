@@ -155,7 +155,7 @@ set(DTR_TEST_TARGETS
 if (NOT EMSCRIPTEN)
     list(APPEND DTR_TEST_TARGETS
         test_cart test_event test_runtime test_cart_import test_console
-        test_api_bridge
+        test_api_bridge test_api_bridge_gfx test_editor_js
     )
 endif()
 set_tests_properties(${DTR_TEST_TARGETS}

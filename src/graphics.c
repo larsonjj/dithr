@@ -285,6 +285,11 @@ prv_hline(dtr_graphics_t *gfx, int32_t raw_x0, int32_t raw_x1, int32_t raw_y, ui
         return;
     }
 
+    /* Safety check: left must be non-negative after clipping */
+    if (left < 0) {
+        return;
+    }
+
     /* Remap colour once */
     col = gfx->draw_pal[col];
 
@@ -2028,6 +2033,27 @@ void dtr_gfx_camera(dtr_graphics_t *gfx, int32_t x, int32_t y)
 
 void dtr_gfx_clip(dtr_graphics_t *gfx, int32_t x, int32_t y, int32_t w, int32_t h)
 {
+    /* Clamp to framebuffer bounds */
+    if (x < 0) {
+        w += x;
+        x = 0;
+    }
+    if (y < 0) {
+        h += y;
+        y = 0;
+    }
+    if (w < 0) {
+        w = 0;
+    }
+    if (h < 0) {
+        h = 0;
+    }
+    if (x + w > gfx->width) {
+        w = gfx->width - x;
+    }
+    if (y + h > gfx->height) {
+        h = gfx->height - y;
+    }
     gfx->clip_x = x;
     gfx->clip_y = y;
     gfx->clip_w = w;

@@ -30,6 +30,16 @@
         }                                                                                          \
     } while (0)
 
+/** Assert a pointer IS NULL, printing the expression on failure. */
+#define DTR_ASSERT_NULL(ptr)                                                                       \
+    do {                                                                                           \
+        if ((ptr) != NULL) {                                                                       \
+            fprintf(stderr, "  FAIL %s:%d: %s != NULL\n", __FILE__, __LINE__, #ptr);               \
+            fflush(stderr);                                                                        \
+            abort();                                                                               \
+        }                                                                                          \
+    } while (0)
+
 /** Convenience: assert two ints are equal, printing both on failure. */
 #define DTR_ASSERT_EQ_INT(a, b)                                                                    \
     do {                                                                                           \

@@ -501,6 +501,84 @@ static void test_gfx_sprite_flags_oob(void)
 }
 
 /* ------------------------------------------------------------------ */
+/*  Spritesheet pixel access (sget / sset)                             */
+/* ------------------------------------------------------------------ */
+
+DTR_GFX_TEST(test_gfx_sget_sset_basic, TW, TH)
+{
+    uint8_t sheet_data[8 * 8];
+
+    memset(sheet_data, 0, sizeof(sheet_data));
+    gfx->sheet.pixels = sheet_data;
+    gfx->sheet.width  = 8;
+    gfx->sheet.height = 8;
+
+    /* Default pixel should be 0 */
+    DTR_ASSERT_EQ_INT(dtr_gfx_sget(gfx, 0, 0), 0);
+
+    /* Set and get a pixel */
+    dtr_gfx_sset(gfx, 3, 4, 7);
+    DTR_ASSERT_EQ_INT(dtr_gfx_sget(gfx, 3, 4), 7);
+
+    /* Other pixels unchanged */
+    DTR_ASSERT_EQ_INT(dtr_gfx_sget(gfx, 0, 0), 0);
+
+    gfx->sheet.pixels = NULL;
+    DTR_PASS();
+}
+
+DTR_GFX_TEST(test_gfx_sget_oob, TW, TH)
+{
+    uint8_t sheet_data[8 * 8];
+
+    memset(sheet_data, 5, sizeof(sheet_data));
+    gfx->sheet.pixels = sheet_data;
+    gfx->sheet.width  = 8;
+    gfx->sheet.height = 8;
+
+    /* Out-of-bounds reads return 0 */
+    DTR_ASSERT_EQ_INT(dtr_gfx_sget(gfx, -1, 0), 0);
+    DTR_ASSERT_EQ_INT(dtr_gfx_sget(gfx, 0, -1), 0);
+    DTR_ASSERT_EQ_INT(dtr_gfx_sget(gfx, 8, 0), 0);
+    DTR_ASSERT_EQ_INT(dtr_gfx_sget(gfx, 0, 8), 0);
+
+    gfx->sheet.pixels = NULL;
+    DTR_PASS();
+}
+
+DTR_GFX_TEST(test_gfx_sset_oob, TW, TH)
+{
+    uint8_t sheet_data[8 * 8];
+
+    memset(sheet_data, 0, sizeof(sheet_data));
+    gfx->sheet.pixels = sheet_data;
+    gfx->sheet.width  = 8;
+    gfx->sheet.height = 8;
+
+    /* Out-of-bounds writes should not crash or corrupt memory */
+    dtr_gfx_sset(gfx, -1, 0, 5);
+    dtr_gfx_sset(gfx, 0, -1, 5);
+    dtr_gfx_sset(gfx, 8, 0, 5);
+    dtr_gfx_sset(gfx, 0, 8, 5);
+
+    /* All pixels should still be 0 */
+    for (int i = 0; i < 8 * 8; ++i) {
+        DTR_ASSERT_EQ_INT(sheet_data[i], 0);
+    }
+
+    gfx->sheet.pixels = NULL;
+    DTR_PASS();
+}
+
+DTR_GFX_TEST(test_gfx_sget_null_sheet, TW, TH)
+{
+    /* With no sheet loaded, sget returns 0 and sset doesn't crash */
+    DTR_ASSERT_EQ_INT(dtr_gfx_sget(gfx, 0, 0), 0);
+    dtr_gfx_sset(gfx, 0, 0, 5);
+    DTR_PASS();
+}
+
+/* ------------------------------------------------------------------ */
 /*  Fill pattern                                                       */
 /* ------------------------------------------------------------------ */
 
@@ -2474,6 +2552,10 @@ int main(int argc, char *argv[])
     DTR_RUN_TEST(test_gfx_rect_fully_outside);
     DTR_RUN_TEST(test_gfx_sprite_flags);
     DTR_RUN_TEST(test_gfx_sprite_flags_oob);
+    DTR_RUN_TEST(test_gfx_sget_sset_basic);
+    DTR_RUN_TEST(test_gfx_sget_oob);
+    DTR_RUN_TEST(test_gfx_sset_oob);
+    DTR_RUN_TEST(test_gfx_sget_null_sheet);
     DTR_RUN_TEST(test_gfx_fill_pattern);
     DTR_RUN_TEST(test_gfx_flip);
     DTR_RUN_TEST(test_gfx_reset);

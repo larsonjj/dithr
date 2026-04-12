@@ -200,6 +200,9 @@ dtr_key_state_t *dtr_key_create(void)
     dtr_key_state_t *keys;
 
     keys = DTR_CALLOC(1, sizeof(dtr_key_state_t));
+    if (keys == NULL) {
+        return NULL;
+    }
     return keys;
 }
 

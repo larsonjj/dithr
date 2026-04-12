@@ -4,6 +4,8 @@
  */
 
 #include "console.h"
+#include "input.h"
+#include "mouse.h"
 #include "test_harness.h"
 
 #include <SDL3/SDL.h>
@@ -134,6 +136,148 @@ static void test_console_reload_assets_empty(void)
 }
 
 /* ------------------------------------------------------------------ */
+/*  event: key down sets key state                                     */
+/* ------------------------------------------------------------------ */
+
+static void test_console_event_key_down(void)
+{
+    dtr_console_t *con;
+    SDL_Event      ev;
+
+    con = dtr_console_create("__nonexistent_cart__.json");
+    DTR_ASSERT(con != NULL);
+
+    SDL_memset(&ev, 0, sizeof(ev));
+    ev.type         = SDL_EVENT_KEY_DOWN;
+    ev.key.scancode = SDL_SCANCODE_Z;
+    ev.key.repeat   = false;
+    dtr_console_event(con, &ev);
+
+    /* The key should now be pressed */
+    DTR_ASSERT(dtr_key_btn(con->keys, DTR_KEY_Z));
+
+    dtr_console_destroy(con);
+    DTR_PASS();
+}
+
+/* ------------------------------------------------------------------ */
+/*  event: key up clears key state                                     */
+/* ------------------------------------------------------------------ */
+
+static void test_console_event_key_up(void)
+{
+    dtr_console_t *con;
+    SDL_Event      ev;
+
+    con = dtr_console_create("__nonexistent_cart__.json");
+    DTR_ASSERT(con != NULL);
+
+    /* Press */
+    SDL_memset(&ev, 0, sizeof(ev));
+    ev.type         = SDL_EVENT_KEY_DOWN;
+    ev.key.scancode = SDL_SCANCODE_Z;
+    ev.key.repeat   = false;
+    dtr_console_event(con, &ev);
+    DTR_ASSERT(dtr_key_btn(con->keys, DTR_KEY_Z));
+
+    /* Release */
+    SDL_memset(&ev, 0, sizeof(ev));
+    ev.type         = SDL_EVENT_KEY_UP;
+    ev.key.scancode = SDL_SCANCODE_Z;
+    dtr_console_event(con, &ev);
+    DTR_ASSERT(!dtr_key_btn(con->keys, DTR_KEY_Z));
+
+    dtr_console_destroy(con);
+    DTR_PASS();
+}
+
+/* ------------------------------------------------------------------ */
+/*  event: escape toggles pause                                        */
+/* ------------------------------------------------------------------ */
+
+static void test_console_event_escape_pause(void)
+{
+    dtr_console_t *con;
+    SDL_Event      ev;
+
+    con = dtr_console_create("__nonexistent_cart__.json");
+    DTR_ASSERT(con != NULL);
+
+    DTR_ASSERT(!con->paused);
+
+    SDL_memset(&ev, 0, sizeof(ev));
+    ev.type         = SDL_EVENT_KEY_DOWN;
+    ev.key.scancode = SDL_SCANCODE_ESCAPE;
+    ev.key.repeat   = false;
+    dtr_console_event(con, &ev);
+
+    DTR_ASSERT(con->paused);
+
+    /* Pressing escape again unpauses */
+    dtr_console_event(con, &ev);
+    DTR_ASSERT(!con->paused);
+
+    dtr_console_destroy(con);
+    DTR_PASS();
+}
+
+/* ------------------------------------------------------------------ */
+/*  event: mouse button events                                         */
+/* ------------------------------------------------------------------ */
+
+static void test_console_event_mouse_button(void)
+{
+    dtr_console_t *con;
+    SDL_Event      ev;
+
+    con = dtr_console_create("__nonexistent_cart__.json");
+    DTR_ASSERT(con != NULL);
+
+    /* Press left mouse button */
+    SDL_memset(&ev, 0, sizeof(ev));
+    ev.type          = SDL_EVENT_MOUSE_BUTTON_DOWN;
+    ev.button.button = SDL_BUTTON_LEFT;
+    ev.button.x      = 10.0f;
+    ev.button.y      = 20.0f;
+    dtr_console_event(con, &ev);
+
+    DTR_ASSERT(dtr_mouse_btn(con->mouse, DTR_MOUSE_LEFT));
+
+    /* Release left mouse button */
+    SDL_memset(&ev, 0, sizeof(ev));
+    ev.type          = SDL_EVENT_MOUSE_BUTTON_UP;
+    ev.button.button = SDL_BUTTON_LEFT;
+    dtr_console_event(con, &ev);
+
+    DTR_ASSERT(!dtr_mouse_btn(con->mouse, DTR_MOUSE_LEFT));
+
+    dtr_console_destroy(con);
+    DTR_PASS();
+}
+
+/* ------------------------------------------------------------------ */
+/*  iterate: multiple frames advance frame count                       */
+/* ------------------------------------------------------------------ */
+
+static void test_console_iterate_multi_frame(void)
+{
+    dtr_console_t *con;
+
+    con = dtr_console_create("__nonexistent_cart__.json");
+    DTR_ASSERT(con != NULL);
+
+    con->running = true;
+    dtr_console_iterate(con);
+    dtr_console_iterate(con);
+    dtr_console_iterate(con);
+
+    DTR_ASSERT(con->frame_count >= 3);
+
+    dtr_console_destroy(con);
+    DTR_PASS();
+}
+
+/* ------------------------------------------------------------------ */
 /*  Main                                                               */
 /* ------------------------------------------------------------------ */
 
@@ -156,6 +300,11 @@ int main(void)
     DTR_RUN_TEST(test_console_iterate_once);
     DTR_RUN_TEST(test_console_event_quit);
     DTR_RUN_TEST(test_console_reload_assets_empty);
+    DTR_RUN_TEST(test_console_event_key_down);
+    DTR_RUN_TEST(test_console_event_key_up);
+    DTR_RUN_TEST(test_console_event_escape_pause);
+    DTR_RUN_TEST(test_console_event_mouse_button);
+    DTR_RUN_TEST(test_console_iterate_multi_frame);
 
     SDL_Quit();
     DTR_TEST_END();

@@ -245,8 +245,14 @@ bool dtr_cart_parse(dtr_cart_t *cart, JSContext *ctx, const char *json, size_t l
         int32_t mem_mb;
         int32_t stack_kb;
 
-        mem_mb                    = prv_json_int(ctx, sub, "memoryLimitMB", CONSOLE_JS_MEM_MB);
-        stack_kb                  = prv_json_int(ctx, sub, "stackLimitKB", CONSOLE_JS_STACK_KB);
+        mem_mb   = prv_json_int(ctx, sub, "memoryLimitMB", CONSOLE_JS_MEM_MB);
+        stack_kb = prv_json_int(ctx, sub, "stackLimitKB", CONSOLE_JS_STACK_KB);
+        if (mem_mb < 1) {
+            mem_mb = CONSOLE_JS_MEM_MB;
+        }
+        if (stack_kb < 1) {
+            stack_kb = CONSOLE_JS_STACK_KB;
+        }
         cart->runtime.mem_limit   = (uint32_t)mem_mb * 1024u * 1024u;
         cart->runtime.stack_limit = (uint32_t)stack_kb * 1024u;
     }
