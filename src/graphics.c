@@ -243,6 +243,116 @@ static void prv_put_pixel(dtr_graphics_t *gfx, int32_t raw_x, int32_t raw_y, uin
 }
 
 /* ------------------------------------------------------------------ */
+/*  Internal: shared micro-helpers                                     */
+/* ------------------------------------------------------------------ */
+
+/**
+ * \brief           Convert a hex ASCII character to its 0–15 nibble value.
+ * \return          true on success, false if \p chr is not a hex digit.
+ */
+static bool prv_hex_nibble(uint8_t chr, int *out)
+{
+    if (chr >= '0' && chr <= '9') {
+        *out = chr - '0';
+        return true;
+    }
+    if (chr >= 'a' && chr <= 'f') {
+        *out = chr - 'a' + 10;
+        return true;
+    }
+    if (chr >= 'A' && chr <= 'F') {
+        *out = chr - 'A' + 10;
+        return true;
+    }
+    return false;
+}
+
+/**
+ * \brief           Compute the four clip-rect edges from a graphics context.
+ */
+static void prv_get_clip_bounds(const dtr_graphics_t *gfx,
+                                int32_t              *out_l,
+                                int32_t              *out_t,
+                                int32_t              *out_r,
+                                int32_t              *out_b)
+{
+    *out_l = gfx->clip_x;
+    *out_t = gfx->clip_y;
+    *out_r = gfx->clip_x + gfx->clip_w - 1;
+    *out_b = gfx->clip_y + gfx->clip_h - 1;
+}
+
+/**
+ * \brief           Extract the 4-bit row mask for a given scanline from
+ *                  the 16-bit fill pattern.
+ * \return          0 when \p fill_pattern is zero (solid), else the 4-bit
+ *                  mask for row \p scr_y.
+ */
+static uint16_t prv_row_pattern(uint16_t fill_pattern, int32_t scr_y)
+{
+    if (fill_pattern == 0) {
+        return 0;
+    }
+    return (uint16_t)((fill_pattern >> ((scr_y & 3) * 4)) & 0xF);
+}
+
+/**
+ * \brief           Blit a source span with transparency check and palette
+ *                  remap using a 4-wide unrolled scalar loop.
+ *
+ * Only compiled when DTR_HAS_SIMD is true.
+ */
+#if DTR_HAS_SIMD
+static void prv_blit_span(uint8_t       *dst_row,
+                          const uint8_t *src_ptr,
+                          int32_t        scr_x,
+                          int32_t        span,
+                          const bool    *transp,
+                          const uint8_t *dpal)
+{
+    int32_t done;
+
+    done = 0;
+
+    /* 4-wide: load 4 palette indices, check transparency, remap, write */
+    for (; done + 3 < span; done += 4) {
+        int32_t s_0;
+        int32_t s_1;
+        int32_t s_2;
+        int32_t s_3;
+
+        s_0 = (int32_t)src_ptr[done];
+        s_1 = (int32_t)src_ptr[done + 1];
+        s_2 = (int32_t)src_ptr[done + 2];
+        s_3 = (int32_t)src_ptr[done + 3];
+
+        if (!transp[s_0]) {
+            dst_row[scr_x + done] = dpal[s_0];
+        }
+        if (!transp[s_1]) {
+            dst_row[scr_x + done + 1] = dpal[s_1];
+        }
+        if (!transp[s_2]) {
+            dst_row[scr_x + done + 2] = dpal[s_2];
+        }
+        if (!transp[s_3]) {
+            dst_row[scr_x + done + 3] = dpal[s_3];
+        }
+    }
+
+    /* Scalar tail */
+    for (; done < span; ++done) {
+        uint8_t col;
+
+        col = src_ptr[done];
+        if (!transp[col]) {
+            dst_row[scr_x + done] = dpal[col];
+        }
+    }
+}
+#endif /* DTR_HAS_SIMD */
+
+/* ------------------------------------------------------------------ */
 /*  Internal: fast horizontal span (pre-clipped scanline)              */
 /* ------------------------------------------------------------------ */
 
@@ -798,12 +908,9 @@ prv_print_custom_char(dtr_graphics_t *gfx, uint8_t chr, int32_t x, int32_t y, ui
     gx = font->sx + (glyph_idx % font->cols) * font->char_w;
     gy = font->sy + (glyph_idx / font->cols) * font->char_h;
 
-    cam_x  = gfx->camera_x;
-    cam_y  = gfx->camera_y;
-    clip_l = gfx->clip_x;
-    clip_t = gfx->clip_y;
-    clip_r = clip_l + gfx->clip_w - 1;
-    clip_b = clip_t + gfx->clip_h - 1;
+    cam_x = gfx->camera_x;
+    cam_y = gfx->camera_y;
+    prv_get_clip_bounds(gfx, &clip_l, &clip_t, &clip_r, &clip_b);
 
     /* Early reject entire glyph */
     {
@@ -835,7 +942,7 @@ prv_print_custom_char(dtr_graphics_t *gfx, uint8_t chr, int32_t x, int32_t y, ui
 
             {
                 uint8_t *dst_row = &gfx->framebuffer[(ptrdiff_t)scr_y * fb_w];
-                uint16_t row_pat = (pat != 0) ? (uint16_t)((pat >> ((scr_y & 3) * 4)) & 0xF) : 0;
+                uint16_t row_pat = prv_row_pattern(pat, scr_y);
 
                 for (int32_t px = 0; px < font->char_w; ++px) {
                     int32_t src_x;
@@ -882,15 +989,12 @@ int32_t dtr_gfx_print(dtr_graphics_t *gfx, const char *str, int32_t x, int32_t y
     uint16_t    pat;
     uint8_t     mapped_col;
 
-    ox         = x;
-    cw         = gfx->custom_font.active ? gfx->custom_font.char_w : DTR_FONT_W;
-    ch         = gfx->custom_font.active ? gfx->custom_font.char_h : DTR_FONT_H;
-    cam_x      = gfx->camera_x;
-    cam_y      = gfx->camera_y;
-    clip_l     = gfx->clip_x;
-    clip_t     = gfx->clip_y;
-    clip_r     = clip_l + gfx->clip_w - 1;
-    clip_b     = clip_t + gfx->clip_h - 1;
+    ox    = x;
+    cw    = gfx->custom_font.active ? gfx->custom_font.char_w : DTR_FONT_W;
+    ch    = gfx->custom_font.active ? gfx->custom_font.char_h : DTR_FONT_H;
+    cam_x = gfx->camera_x;
+    cam_y = gfx->camera_y;
+    prv_get_clip_bounds(gfx, &clip_l, &clip_t, &clip_r, &clip_b);
     fb_w       = gfx->width;
     pat        = gfx->fill_pattern;
     mapped_col = gfx->draw_pal[col];
@@ -950,7 +1054,7 @@ int32_t dtr_gfx_print(dtr_graphics_t *gfx, const char *str, int32_t x, int32_t y
                     }
 
                     dst_row = &gfx->framebuffer[(ptrdiff_t)scr_y * fb_w];
-                    row_pat = (pat != 0) ? (uint16_t)((pat >> ((scr_y & 3) * 4)) & 0xF) : 0;
+                    row_pat = prv_row_pattern(pat, scr_y);
 
                     for (int32_t bit = 0; bit < DTR_FONT_W; ++bit) {
                         int32_t scr_x;
@@ -1132,10 +1236,7 @@ void dtr_gfx_spr(dtr_graphics_t *gfx,
     dst_y1 = dst_y0 + px_h - 1;
 
     /* Clip rect bounds */
-    clip_l = gfx->clip_x;
-    clip_t = gfx->clip_y;
-    clip_r = clip_l + gfx->clip_w - 1;
-    clip_b = clip_t + gfx->clip_h - 1;
+    prv_get_clip_bounds(gfx, &clip_l, &clip_t, &clip_r, &clip_b);
 
     /* Early reject: sprite entirely outside clip rect */
     if (dst_x1 < clip_l || dst_x0 > clip_r || dst_y1 < clip_t || dst_y0 > clip_b) {
@@ -1197,45 +1298,7 @@ void dtr_gfx_spr(dtr_graphics_t *gfx,
                     scr_x     = vis_x0;
                     span      = vis_x1 - vis_x0 + 1;
 
-                    {
-                        int32_t done = 0;
-
-                        /* 4-wide: load 4 palette indices, check transparency,
-                         * remap in-register, write non-transparent pixels */
-                        for (; done + 3 < span; done += 4) {
-                            int32_t s0;
-                            int32_t s1;
-                            int32_t s2;
-                            int32_t s3;
-
-                            s0 = (int32_t)src_ptr[done];
-                            s1 = (int32_t)src_ptr[done + 1];
-                            s2 = (int32_t)src_ptr[done + 2];
-                            s3 = (int32_t)src_ptr[done + 3];
-
-                            if (!transp[s0]) {
-                                dst_row[scr_x + done] = dpal[s0];
-                            }
-                            if (!transp[s1]) {
-                                dst_row[scr_x + done + 1] = dpal[s1];
-                            }
-                            if (!transp[s2]) {
-                                dst_row[scr_x + done + 2] = dpal[s2];
-                            }
-                            if (!transp[s3]) {
-                                dst_row[scr_x + done + 3] = dpal[s3];
-                            }
-                        }
-                        /* Scalar tail */
-                        for (; done < span; ++done) {
-                            uint8_t col;
-
-                            col = src_ptr[done];
-                            if (!transp[col]) {
-                                dst_row[scr_x + done] = dpal[col];
-                            }
-                        }
-                    }
+                    prv_blit_span(dst_row, src_ptr, scr_x, span, transp, dpal);
                 } else
 #endif /* DTR_HAS_SIMD */
                 {
@@ -1275,7 +1338,7 @@ void dtr_gfx_spr(dtr_graphics_t *gfx,
             dst_row = &gfx->framebuffer[(ptrdiff_t)scr_y * fb_w];
 
             /* Pre-shift pattern row once per scanline */
-            row_pat = (pat != 0) ? (uint16_t)((pat >> ((scr_y & 3) * 4)) & 0xF) : 0;
+            row_pat = prv_row_pattern(pat, scr_y);
 
             for (int32_t scr_x = vis_x0; scr_x <= vis_x1; ++scr_x) {
                 int32_t col_idx;
@@ -1356,10 +1419,7 @@ void dtr_gfx_sspr(dtr_graphics_t *gfx,
         dst_x1 = dst_x0 + dw - 1;
         dst_y1 = dst_y0 + dh - 1;
 
-        clip_l = gfx->clip_x;
-        clip_t = gfx->clip_y;
-        clip_r = clip_l + gfx->clip_w - 1;
-        clip_b = clip_t + gfx->clip_h - 1;
+        prv_get_clip_bounds(gfx, &clip_l, &clip_t, &clip_r, &clip_b);
 
         if (dst_x1 < clip_l || dst_x0 > clip_r || dst_y1 < clip_t || dst_y0 > clip_b) {
             return;
@@ -1394,7 +1454,7 @@ void dtr_gfx_sspr(dtr_graphics_t *gfx,
 
             src_row_ptr = sht->pixels + (ptrdiff_t)src_y * sht->width;
             dst_row     = &gfx->framebuffer[(ptrdiff_t)scr_y * fb_w];
-            row_pat     = (pat != 0) ? (uint16_t)((pat >> ((scr_y & 3) * 4)) & 0xF) : 0;
+            row_pat     = prv_row_pattern(pat, scr_y);
             x_acc       = (vis_x0 - dst_x0) * step_x;
 
             for (int32_t scr_x = vis_x0; scr_x <= vis_x1; ++scr_x) {
@@ -1461,13 +1521,10 @@ static void prv_spr_xform(dtr_graphics_t *gfx,
     int32_t        vis_x1;
     int32_t        vis_y1;
 
-    sht_w  = gfx->sheet.width;
-    cam_x  = gfx->camera_x;
-    cam_y  = gfx->camera_y;
-    clip_l = gfx->clip_x;
-    clip_t = gfx->clip_y;
-    clip_r = clip_l + gfx->clip_w - 1;
-    clip_b = clip_t + gfx->clip_h - 1;
+    sht_w = gfx->sheet.width;
+    cam_x = gfx->camera_x;
+    cam_y = gfx->camera_y;
+    prv_get_clip_bounds(gfx, &clip_l, &clip_t, &clip_r, &clip_b);
     fb_w   = gfx->width;
     pat    = gfx->fill_pattern;
     transp = gfx->transparent;
@@ -1545,7 +1602,7 @@ static void prv_spr_xform(dtr_graphics_t *gfx,
 
         scr_y   = y + dy_val - cam_y;
         dst_row = &gfx->framebuffer[(ptrdiff_t)scr_y * fb_w];
-        row_pat = (pat != 0) ? (uint16_t)((pat >> ((scr_y & 3) * 4)) & 0xF) : 0;
+        row_pat = prv_row_pattern(pat, scr_y);
 
         /* Precompute the dy_val contribution to the inverse transform */
         base_fx = inv_b * (float)dy_val + ox;
@@ -1714,15 +1771,12 @@ void dtr_gfx_map_draw(dtr_graphics_t *gfx,
     sht_count = sht->count;
     cam_x     = gfx->camera_x;
     cam_y     = gfx->camera_y;
-    clip_l    = gfx->clip_x;
-    clip_t    = gfx->clip_y;
-    clip_r    = clip_l + gfx->clip_w - 1;
-    clip_b    = clip_t + gfx->clip_h - 1;
-    fb_w      = gfx->width;
-    pat       = gfx->fill_pattern;
-    transp    = gfx->transparent;
-    dpal      = gfx->draw_pal;
-    sheet     = sht->pixels;
+    prv_get_clip_bounds(gfx, &clip_l, &clip_t, &clip_r, &clip_b);
+    fb_w   = gfx->width;
+    pat    = gfx->fill_pattern;
+    transp = gfx->transparent;
+    dpal   = gfx->draw_pal;
+    sheet  = sht->pixels;
 
     for (int32_t ty = 0; ty < num_h; ++ty) {
         int32_t my;
@@ -1800,7 +1854,7 @@ void dtr_gfx_map_draw(dtr_graphics_t *gfx,
                 src_row = scr_y - tile_dy;
                 row_off = (sy0 + src_row) * sht_w + sx0;
                 dst_row = &gfx->framebuffer[(ptrdiff_t)scr_y * fb_w];
-                row_pat = (pat != 0) ? (uint16_t)((pat >> ((scr_y & 3) * 4)) & 0xF) : 0;
+                row_pat = prv_row_pattern(pat, scr_y);
 
 #if DTR_HAS_SIMD
                 if (pat == 0) {
@@ -1812,42 +1866,7 @@ void dtr_gfx_map_draw(dtr_graphics_t *gfx,
                     scr_x     = vis_x0;
                     span      = vis_x1 - vis_x0 + 1;
 
-                    {
-                        int32_t done = 0;
-
-                        for (; done + 3 < span; done += 4) {
-                            int32_t s0;
-                            int32_t s1;
-                            int32_t s2;
-                            int32_t s3;
-
-                            s0 = (int32_t)src_ptr[done];
-                            s1 = (int32_t)src_ptr[done + 1];
-                            s2 = (int32_t)src_ptr[done + 2];
-                            s3 = (int32_t)src_ptr[done + 3];
-
-                            if (!transp[s0]) {
-                                dst_row[scr_x + done] = dpal[s0];
-                            }
-                            if (!transp[s1]) {
-                                dst_row[scr_x + done + 1] = dpal[s1];
-                            }
-                            if (!transp[s2]) {
-                                dst_row[scr_x + done + 2] = dpal[s2];
-                            }
-                            if (!transp[s3]) {
-                                dst_row[scr_x + done + 3] = dpal[s3];
-                            }
-                        }
-                        for (; done < span; ++done) {
-                            uint8_t col;
-
-                            col = src_ptr[done];
-                            if (!transp[col]) {
-                                dst_row[scr_x + done] = dpal[col];
-                            }
-                        }
-                    }
+                    prv_blit_span(dst_row, src_ptr, scr_x, span, transp, dpal);
                 } else
 #endif /* DTR_HAS_SIMD */
                 {
@@ -1936,23 +1955,7 @@ bool dtr_gfx_load_flags_hex(dtr_graphics_t *gfx, const char *hex, size_t hex_len
         chi = (uint8_t)hex[(size_t)idx * 2];
         clo = (uint8_t)hex[(size_t)idx * 2 + 1];
 
-        if (chi >= '0' && chi <= '9') {
-            hic = chi - '0';
-        } else if (chi >= 'a' && chi <= 'f') {
-            hic = chi - 'a' + 10;
-        } else if (chi >= 'A' && chi <= 'F') {
-            hic = chi - 'A' + 10;
-        } else {
-            return false;
-        }
-
-        if (clo >= '0' && clo <= '9') {
-            loc = clo - '0';
-        } else if (clo >= 'a' && clo <= 'f') {
-            loc = clo - 'a' + 10;
-        } else if (clo >= 'A' && clo <= 'F') {
-            loc = clo - 'A' + 10;
-        } else {
+        if (!prv_hex_nibble(chi, &hic) || !prv_hex_nibble(clo, &loc)) {
             return false;
         }
 
@@ -2761,25 +2764,7 @@ bool dtr_gfx_load_sheet_hex(dtr_graphics_t *gfx,
         chi = (uint8_t)hex[(size_t)idx * 2];
         clo = (uint8_t)hex[(size_t)idx * 2 + 1];
 
-        /* Convert hex char to nibble */
-        if (chi >= '0' && chi <= '9') {
-            hic = chi - '0';
-        } else if (chi >= 'a' && chi <= 'f') {
-            hic = chi - 'a' + 10;
-        } else if (chi >= 'A' && chi <= 'F') {
-            hic = chi - 'A' + 10;
-        } else {
-            DTR_FREE(new_pixels);
-            return false;
-        }
-
-        if (clo >= '0' && clo <= '9') {
-            loc = clo - '0';
-        } else if (clo >= 'a' && clo <= 'f') {
-            loc = clo - 'a' + 10;
-        } else if (clo >= 'A' && clo <= 'F') {
-            loc = clo - 'A' + 10;
-        } else {
+        if (!prv_hex_nibble(chi, &hic) || !prv_hex_nibble(clo, &loc)) {
             DTR_FREE(new_pixels);
             return false;
         }
