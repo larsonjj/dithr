@@ -11,6 +11,9 @@ runs:
     using: composite
     steps:
         - run: |
+              # Remove broken Microsoft repos pre-installed on GitHub runners
+              sudo rm -f /etc/apt/sources.list.d/microsoft-prod.list \
+                         /etc/apt/sources.list.d/azure-cli.list
               sudo apt-get update
               sudo apt-get install -y ninja-build ${{ inputs.extra-packages }} \
                 libx11-dev libxext-dev libxcursor-dev libxi-dev \

@@ -22,6 +22,7 @@ jobs:
                   echo "deb [signed-by=/usr/share/keyrings/llvm.gpg] \
                     http://apt.llvm.org/noble/ llvm-toolchain-noble-20 main" \
                     | sudo tee /etc/apt/sources.list.d/llvm-20.list
+                  sudo rm -f /etc/apt/sources.list.d/microsoft-prod.list /etc/apt/sources.list.d/azure-cli.list
                   sudo apt-get update
                   sudo apt-get install -y clang-format-20
 
@@ -38,9 +39,9 @@ jobs:
         steps:
             - uses: actions/checkout@v6
 
-            - uses: actions/setup-node@v4
+            - uses: actions/setup-node@v6
               with:
-                  node-version: 20
+                  node-version: 22
 
             - name: Lint examples
               run: |
@@ -378,9 +379,9 @@ jobs:
                   path: build/wasm
 
             - name: Setup Node.js
-              uses: actions/setup-node@v4
+              uses: actions/setup-node@v6
               with:
-                  node-version: 20
+                  node-version: 22
 
             - name: Install Playwright
               working-directory: tests/wasm-browser
