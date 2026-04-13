@@ -64,6 +64,14 @@ function patternHasData(p) {
     return p.ch[0] >= 0 || p.ch[1] >= 0 || p.ch[2] >= 0 || p.ch[3] >= 0;
 }
 
+/** Play an SFX on a channel only if the SFX slot contains data. */
+function safeSynthPlay(sfxIdx, channel) {
+    const data = synth.get(sfxIdx);
+    if (!data) return false;
+    synth.play(sfxIdx, channel);
+    return true;
+}
+
 // ─── Undo / Redo ─────────────────────────────────────────────────────────────
 
 const MAX_MUS_UNDO = 50;
@@ -152,8 +160,7 @@ function startMusic() {
     for (let c = 0; c < NUM_CHANNELS; c++) {
         synth.stop(c);
         if (pat.ch[c] >= 0 && !st.musMute[c]) {
-            synth.play(pat.ch[c], c);
-            anyPlaying = true;
+            if (safeSynthPlay(pat.ch[c], c)) anyPlaying = true;
         }
     }
     if (!anyPlaying) {
@@ -202,8 +209,7 @@ function playPattern(row) {
     for (let c = 0; c < NUM_CHANNELS; c++) {
         synth.stop(c);
         if (pat.ch[c] >= 0 && !st.musMute[c]) {
-            synth.play(pat.ch[c], c);
-            anyPlaying = true;
+            if (safeSynthPlay(pat.ch[c], c)) anyPlaying = true;
         }
     }
     if (!anyPlaying) {
@@ -425,7 +431,7 @@ export function updateMusicEditor(dt) {
         if (sfxIdx >= 0) {
             // Stop all voices, then play just this SFX on channel 0
             for (let c = 0; c < NUM_CHANNELS; c++) synth.stop(c);
-            synth.play(sfxIdx, 0);
+            safeSynthPlay(sfxIdx, 0);
             status(`Preview SFX ${sfxIdx < 10 ? '0' : ''}${sfxIdx}`);
         }
         return;
@@ -439,7 +445,7 @@ export function updateMusicEditor(dt) {
                 synth.stop(st.musCol);
             } else {
                 const pat = st.musPatterns[st.musPlayRow];
-                if (pat.ch[st.musCol] >= 0) synth.play(pat.ch[st.musCol], st.musCol);
+                if (pat.ch[st.musCol] >= 0) safeSynthPlay(pat.ch[st.musCol], st.musCol);
             }
         }
         status(`CH${st.musCol}${st.musMute[st.musCol] ? ' muted' : ' unmuted'}`);
@@ -461,7 +467,7 @@ export function updateMusicEditor(dt) {
                 st.musMute[c] = false;
                 if (st.musPlaying) {
                     const pat = st.musPatterns[st.musPlayRow];
-                    if (pat.ch[c] >= 0) synth.play(pat.ch[c], c);
+                    if (pat.ch[c] >= 0) safeSynthPlay(pat.ch[c], c);
                 }
             }
             status('All channels unmuted');
@@ -472,7 +478,7 @@ export function updateMusicEditor(dt) {
                     st.musMute[c] = false;
                     if (st.musPlaying) {
                         const pat = st.musPatterns[st.musPlayRow];
-                        if (pat.ch[c] >= 0) synth.play(pat.ch[c], c);
+                        if (pat.ch[c] >= 0) safeSynthPlay(pat.ch[c], c);
                     }
                 } else {
                     st.musMute[c] = true;

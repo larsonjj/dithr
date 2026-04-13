@@ -129,9 +129,8 @@ function markSfxHasData(idx, knownTrue) {
 function loadSfx(idx) {
     const data = synth.get(idx);
     if (data) {
-        // Default speed to 16 when C struct is zero-initialized
-        if (!data.speed) data.speed = 16;
-        if (data.speed > 32) data.speed = 32;
+        // Clamp speed to valid range (C struct may be zero-initialized)
+        data.speed = clamp(data.speed || 16, 1, 32);
         return data;
     }
     // Return default empty SFX

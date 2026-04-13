@@ -107,6 +107,30 @@ function onTextInput(ch) {
     resetBlink();
 }
 
+// ─── Editor preference persistence ───────────────────────────────────────────
+
+function loadEditorPrefs() {
+    const raw = sys.readFile('editor-prefs.json');
+    if (!raw) return;
+    try {
+        const p = JSON.parse(raw);
+        if (p.vim !== undefined) st.vimEnabled = !!p.vim;
+        if (p.find) st.lastFindText = p.find;
+        if (p.tab !== undefined) st.activeTab = p.tab;
+    } catch {
+        // ignore corrupt prefs
+    }
+}
+
+function saveEditorPrefs() {
+    const prefs = {
+        vim: st.vimEnabled,
+        find: st.lastFindText || '',
+        tab: st.activeTab,
+    };
+    sys.writeFile('editor-prefs.json', JSON.stringify(prefs));
+}
+
 // ─── Lifecycle ───────────────────────────────────────────────────────────────
 
 export function _init() {
@@ -127,6 +151,7 @@ export function _init() {
         loadSfxFromDisk();
         loadMusFromDisk();
         loadMapFromDisk();
+        loadEditorPrefs();
         openFile('src/main.js');
     }
     st.restored = false;
@@ -335,6 +360,7 @@ export function _update(dt) {
         saveMapToDisk();
         saveSfxToDisk();
         saveMusToDisk();
+        saveEditorPrefs();
         status('All saved');
         return;
     }

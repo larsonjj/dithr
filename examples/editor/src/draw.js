@@ -51,6 +51,29 @@ import { clamp, ensureCaches, getCachedBracketMatch } from './helpers.js';
 import { tokenize } from './tokenizer.js';
 import { selOrdered, switchToFile, closeFile } from './buffer.js';
 
+// ─── Find match cache ────────────────────────────────────────────────────────
+let findCacheVersion = -1;
+let findCacheText = '';
+let findCacheMatches = []; // per-line array of match start indices
+
+function ensureFindCache(text) {
+    if (findCacheVersion === st._bufVersion && findCacheText === text) return;
+    findCacheVersion = st._bufVersion;
+    findCacheText = text;
+    findCacheMatches = [];
+    if (!text) return;
+    for (let i = 0; i < st.buf.length; i++) {
+        const line = st.buf[i];
+        const hits = [];
+        let idx = line.indexOf(text);
+        while (idx >= 0) {
+            hits.push(idx);
+            idx = line.indexOf(text, idx + 1);
+        }
+        findCacheMatches[i] = hits;
+    }
+}
+
 export function drawTabBar() {
     gfx.rectfill(0, 0, FB_W - 1, TAB_H - 1, TABBG);
     const mx = mouse.x();
@@ -186,17 +209,19 @@ export function drawEditor() {
         // Find match highlighting (persistent: use lastFindText when not in findMode)
         const highlightText = st.findMode ? st.findText : st.lastFindText;
         if (highlightText) {
-            const line = st.buf[li];
-            let idx = line.indexOf(highlightText);
-            while (idx >= 0) {
-                let x0 = gutterPx + (idx - st.ox) * CW;
-                let x1 = gutterPx + (idx + highlightText.length - st.ox) * CW - 1;
-                x0 = clamp(x0, gutterPx, FB_W - 1);
-                x1 = clamp(x1, gutterPx, FB_W - 1);
-                if (x1 >= x0 && idx + highlightText.length > st.ox && idx < st.ox + ECOLS) {
-                    gfx.rectfill(x0, py, x1, py + LINE_H - 1, MATCHBG);
+            ensureFindCache(highlightText);
+            const hits = findCacheMatches[li];
+            if (hits) {
+                for (let hi = 0; hi < hits.length; hi++) {
+                    const idx = hits[hi];
+                    let x0 = gutterPx + (idx - st.ox) * CW;
+                    let x1 = gutterPx + (idx + highlightText.length - st.ox) * CW - 1;
+                    x0 = clamp(x0, gutterPx, FB_W - 1);
+                    x1 = clamp(x1, gutterPx, FB_W - 1);
+                    if (x1 >= x0 && idx + highlightText.length > st.ox && idx < st.ox + ECOLS) {
+                        gfx.rectfill(x0, py, x1, py + LINE_H - 1, MATCHBG);
+                    }
                 }
-                idx = line.indexOf(highlightText, idx + 1);
             }
         }
 

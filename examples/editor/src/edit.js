@@ -27,6 +27,36 @@ import {
 } from './buffer.js';
 import { updateVimKeys } from './vim.js';
 
+// ─── Autocomplete word cache ─────────────────────────────────────────────────
+let acWordCacheVersion = -1;
+let acWordCache = []; // sorted unique words from the entire buffer
+
+function rebuildWordCache() {
+    if (acWordCacheVersion === st._bufVersion) return;
+    acWordCacheVersion = st._bufVersion;
+    const seen = {};
+    const words = [];
+    for (let i = 0; i < st.buf.length; i++) {
+        const ln = st.buf[i];
+        let j = 0;
+        while (j < ln.length) {
+            if (isWordChar(ln[j])) {
+                const ws = j;
+                while (j < ln.length && isWordChar(ln[j])) j++;
+                const w = ln.slice(ws, j);
+                if (w.length > 1 && !seen[w]) {
+                    seen[w] = true;
+                    words.push(w);
+                }
+            } else {
+                j++;
+            }
+        }
+    }
+    words.sort();
+    acWordCache = words;
+}
+
 export function updateEdit() {
     const ctrl = modKey();
     const shift = key.btn(key.LSHIFT) || key.btn(key.RSHIFT);
@@ -204,41 +234,23 @@ export function updateEdit() {
             return;
         }
         if (key.btnp(key.SPACE)) {
-            // Autocomplete: collect words from buffer matching prefix at cursor
+            // Autocomplete: find cached words matching prefix at cursor
             const line = st.buf[st.cy];
             const end = st.cx;
             let start = end;
             while (start > 0 && isWordChar(line[start - 1])) start--;
             const prefix = line.slice(start, end);
             if (prefix.length > 0) {
-                const seen = {};
+                rebuildWordCache();
                 const items = [];
-                for (let i = 0; i < st.buf.length; i++) {
-                    const ln = st.buf[i];
-                    let j = 0;
-                    while (j < ln.length) {
-                        if (isWordChar(ln[j])) {
-                            const ws = j;
-                            while (j < ln.length && isWordChar(ln[j])) j++;
-                            const w = ln.slice(ws, j);
-                            if (
-                                w.length > prefix.length &&
-                                w.slice(0, prefix.length) === prefix &&
-                                !seen[w]
-                            ) {
-                                if (!(i === st.cy && ws === start)) {
-                                    seen[w] = true;
-                                    items.push(w);
-                                }
-                            }
-                        } else {
-                            j++;
-                        }
+                for (let i = 0; i < acWordCache.length; i++) {
+                    const w = acWordCache[i];
+                    if (w.length > prefix.length && w.slice(0, prefix.length) === prefix) {
+                        items.push(w);
+                        if (items.length >= 10) break;
                     }
                 }
                 if (items.length > 0) {
-                    items.sort();
-                    if (items.length > 10) items.length = 10;
                     st.acActive = true;
                     st.acItems = items;
                     st.acIdx = 0;

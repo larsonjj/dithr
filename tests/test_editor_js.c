@@ -135,6 +135,30 @@ static void test_sfx_editor(void)
     DTR_PASS();
 }
 
+static void test_tokenizer(void)
+{
+    prv_run_js_test("test_tokenizer.js");
+    DTR_PASS();
+}
+
+static void test_find_replace(void)
+{
+    prv_run_js_test("test_find_replace.js");
+    DTR_PASS();
+}
+
+static void test_vim_motions(void)
+{
+    prv_run_js_test("test_vim_motions.js");
+    DTR_PASS();
+}
+
+static void test_map_autotile(void)
+{
+    prv_run_js_test("test_map_autotile.js");
+    DTR_PASS();
+}
+
 /* ------------------------------------------------------------------ */
 /*  Main                                                               */
 /* ------------------------------------------------------------------ */
@@ -148,6 +172,10 @@ int main(void)
     DTR_RUN_TEST(test_sprite_algo);
     DTR_RUN_TEST(test_music_editor);
     DTR_RUN_TEST(test_sfx_editor);
+    DTR_RUN_TEST(test_tokenizer);
+    DTR_RUN_TEST(test_find_replace);
+    DTR_RUN_TEST(test_vim_motions);
+    DTR_RUN_TEST(test_map_autotile);
 
     DTR_TEST_END();
 }

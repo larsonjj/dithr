@@ -85,12 +85,23 @@ const DITHER_PATTERNS = [
 ];
 const DITHER_NAMES = ['OFF', '50%', '25%', 'X', '75%'];
 
+// Pre-computed 4×4 dither lookup tables (one per pattern).
+// DITHER_LUT[pattern][row & 3][col & 3] → 0 or 1.
+const DITHER_LUT = DITHER_PATTERNS.map((mask) => {
+    const tbl = [];
+    for (let y = 0; y < 4; y++) {
+        const row = [];
+        for (let x = 0; x < 4; x++) {
+            row.push((mask >> (15 - (y * 4 + x))) & 1);
+        }
+        tbl.push(row);
+    }
+    return tbl;
+});
+
 // Returns true if the pixel at (px,py) should be drawn for the current dither pattern.
 function ditherCheck(px, py) {
-    if (st.sprDither === 0) return true;
-    const mask = DITHER_PATTERNS[st.sprDither];
-    const bit = (py & 3) * 4 + (px & 3);
-    return (mask >> (15 - bit)) & 1;
+    return DITHER_LUT[st.sprDither][py & 3][px & 3];
 }
 
 // ─── Geometry helpers ────────────────────────────────────────────────────────
