@@ -100,7 +100,7 @@ dithr cart.json
 
 | Document                               | Description                                              |
 | -------------------------------------- | -------------------------------------------------------- |
-| [API Reference](docs/api-reference.md) | All 17 JS namespaces with every function and constant    |
+| [API Reference](docs/api-reference.md) | All 19 JS namespaces with every function and constant    |
 | [Cart Format](docs/cart-format.md)     | `cart.json` schema and asset conventions                 |
 | [Architecture](docs/architecture.md)   | Engine lifecycle, subsystem overview, design decisions   |
 | [Building](docs/building.md)           | Build presets, CMake variables, WASM workflow            |

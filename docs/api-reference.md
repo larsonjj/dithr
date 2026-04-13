@@ -70,12 +70,12 @@ gfx.print("HP: 100", 2, 5, 7);
 
 ### Text
 
-| Function     | Parameters                                   | Returns | Description                                                                                           |
-| ------------ | -------------------------------------------- | ------- | ----------------------------------------------------------------------------------------------------- |
-| `print`      | `text, x?, y?, col?`                         | —       | Print a string. If `x`,`y` are omitted the cursor position is used and advances down by one line      |
-| `textWidth`  | `text`                                       | `int`   | Pixel width of a string (widest line if multi-line)                                                   |
-| `textHeight` | `text`                                       | `int`   | Pixel height of a string (all lines)                                                                  |
-| `font`       | `sx?, sy?, char_w?, char_h?, first?, count?` | —       | Set a custom monospaced font from a sprite sheet region. No arguments resets to the built-in 4×6 font |
+| Function     | Parameters                                   | Returns | Description                                                                                                                                                                                                                                                                                        |
+| ------------ | -------------------------------------------- | ------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `print`      | `text, x?, y?, col?`                         | —       | Print a string. If `x`,`y` are omitted the cursor position is used and advances down by one line                                                                                                                                                                                                   |
+| `textWidth`  | `text`                                       | `int`   | Pixel width of a string (widest line if multi-line)                                                                                                                                                                                                                                                |
+| `textHeight` | `text`                                       | `int`   | Pixel height of a string (all lines)                                                                                                                                                                                                                                                               |
+| `font`       | `sx?, sy?, char_w?, char_h?, first?, count?` | —       | Set a custom monospaced font from a sprite sheet region. Characters are laid out left-to-right in the sheet, wrapping to the next row after `(sheet_width - sx) / char_w` columns. `first` is the ASCII code of the first glyph (default 32 = space). No arguments resets to the built-in 4×6 font |
 
 ```js
 /* Centre a label on screen */
@@ -501,21 +501,21 @@ sfx.stop(-1);
 
 ## `mus` — Music
 
-| Function    | Parameters              | Returns | Description                                                       |
-| ----------- | ----------------------- | ------- | ----------------------------------------------------------------- |
-| `play`      | `id?, loops?, fade_ms?` | —       | Play a music track. `loops` 0 = infinite. `fade_ms` for crossfade |
-| `stop`      | `fade_ms?`              | —       | Stop music with optional fade-out                                 |
-| `volume`    | `vol?`                  | —       | Set music volume 0.0 – 1.0                                        |
-| `getVolume` |                         | `float` | Get current music volume                                          |
-| `playing`   |                         | `bool`  | Is music playing?                                                 |
+| Function    | Parameters                     | Returns | Description                                                                                           |
+| ----------- | ------------------------------ | ------- | ----------------------------------------------------------------------------------------------------- |
+| `play`      | `id?, fade_ms?, channel_mask?` | —       | Play a music track. `fade_ms` for crossfade. `channel_mask` selects output channels (default 0 = all) |
+| `stop`      | `fade_ms?`                     | —       | Stop music with optional fade-out (default 0 = immediate)                                             |
+| `volume`    | `vol?`                         | —       | Set music volume 0.0 – 1.0                                                                            |
+| `getVolume` |                                | `float` | Get current music volume                                                                              |
+| `playing`   |                                | `bool`  | Is music playing?                                                                                     |
 
 ```js
 /* Start looping the title theme, then crossfade to gameplay music */
-mus.play(0); // loop track 0 forever
+mus.play(0); // play track 0
 mus.volume(0.8);
 
 /* Later, crossfade to track 1 */
-mus.play(1, 0, 500); // 500 ms fade
+mus.play(1, 500); // 500 ms fade
 
 /* Fade out */
 mus.stop(1000);
@@ -689,6 +689,12 @@ if (score > hi) {
 | `title`   |            | `string` | Cart title from `cart.json` |
 | `author`  |            | `string` | Cart author                 |
 | `version` |            | `string` | Cart version                |
+
+### Asset management
+
+| Function       | Parameters | Returns | Description                                                                                |
+| -------------- | ---------- | ------- | ------------------------------------------------------------------------------------------ |
+| `reloadAssets` |            | `bool`  | Reload cart assets from disk. Returns `true` on success. Fires `sys:assets_reloaded` event |
 
 ---
 
