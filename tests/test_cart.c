@@ -844,6 +844,147 @@ static void test_cart_parse_unknown_keys(void)
 }
 
 /* ------------------------------------------------------------------ */
+/*  Persist round-trip — dslots and KV survive save/load               */
+/* ------------------------------------------------------------------ */
+
+static void test_cart_persist_round_trip(void)
+{
+    dtr_cart_t *cart;
+    dtr_cart_t *cart2;
+    bool        ok;
+
+    /* Save cart with data */
+    cart = dtr_cart_create();
+    SDL_strlcpy(cart->meta.title, "dithr_test_persist", sizeof(cart->meta.title));
+
+    dtr_cart_dset(cart, 0, 42.5);
+    dtr_cart_dset(cart, 63, -100.0);
+    dtr_cart_save(cart, "score", "9999");
+    dtr_cart_save(cart, "name", "test");
+
+    ok = dtr_cart_persist_save(cart);
+    DTR_ASSERT(ok);
+    dtr_cart_destroy(cart);
+
+    /* Load into a fresh cart */
+    cart2 = dtr_cart_create();
+    SDL_strlcpy(cart2->meta.title, "dithr_test_persist", sizeof(cart2->meta.title));
+
+    ok = dtr_cart_persist_load(cart2);
+    DTR_ASSERT(ok);
+
+    /* Verify dslots restored */
+    DTR_ASSERT_NEAR(dtr_cart_dget(cart2, 0), 42.5, 0.001);
+    DTR_ASSERT_NEAR(dtr_cart_dget(cart2, 63), -100.0, 0.001);
+    DTR_ASSERT_NEAR(dtr_cart_dget(cart2, 1), 0.0, 0.001);
+
+    /* Verify KV restored */
+    DTR_ASSERT(dtr_cart_has_key(cart2, "score"));
+    DTR_ASSERT_EQ_STR(dtr_cart_load_key(cart2, "score"), "9999");
+    DTR_ASSERT(dtr_cart_has_key(cart2, "name"));
+    DTR_ASSERT_EQ_STR(dtr_cart_load_key(cart2, "name"), "test");
+
+    dtr_cart_destroy(cart2);
+    DTR_PASS();
+}
+
+/* ------------------------------------------------------------------ */
+/*  Persist — empty data round-trip                                    */
+/* ------------------------------------------------------------------ */
+
+static void test_cart_persist_empty(void)
+{
+    dtr_cart_t *cart;
+    dtr_cart_t *cart2;
+    bool        ok;
+
+    /* Save cart with no data at all */
+    cart = dtr_cart_create();
+    SDL_strlcpy(cart->meta.title, "dithr_test_empty", sizeof(cart->meta.title));
+
+    ok = dtr_cart_persist_save(cart);
+    DTR_ASSERT(ok);
+    dtr_cart_destroy(cart);
+
+    /* Load into fresh cart */
+    cart2 = dtr_cart_create();
+    SDL_strlcpy(cart2->meta.title, "dithr_test_empty", sizeof(cart2->meta.title));
+
+    ok = dtr_cart_persist_load(cart2);
+    DTR_ASSERT(ok);
+
+    /* All slots should still be zero */
+    for (int32_t i = 0; i < DTR_CART_MAX_DSLOTS; ++i) {
+        DTR_ASSERT_NEAR(dtr_cart_dget(cart2, i), 0.0, 0.001);
+    }
+    DTR_ASSERT_EQ_INT(cart2->kv_count, 0);
+
+    dtr_cart_destroy(cart2);
+    DTR_PASS();
+}
+
+/* ------------------------------------------------------------------ */
+/*  Persist load — missing file returns true (not an error)            */
+/* ------------------------------------------------------------------ */
+
+static void test_cart_persist_load_missing(void)
+{
+    dtr_cart_t *cart;
+    bool        ok;
+
+    cart = dtr_cart_create();
+    /* Use a title that has no save file */
+    SDL_strlcpy(cart->meta.title, "dithr_test_nosuchgame_xyz", sizeof(cart->meta.title));
+
+    ok = dtr_cart_persist_load(cart);
+    /* Missing file is not an error */
+    DTR_ASSERT(ok);
+
+    dtr_cart_destroy(cart);
+    DTR_PASS();
+}
+
+/* ------------------------------------------------------------------ */
+/*  Persist — overwrite existing save                                  */
+/* ------------------------------------------------------------------ */
+
+static void test_cart_persist_overwrite(void)
+{
+    dtr_cart_t *cart;
+    dtr_cart_t *cart2;
+    bool        ok;
+
+    /* First save */
+    cart = dtr_cart_create();
+    SDL_strlcpy(cart->meta.title, "dithr_test_overwrite", sizeof(cart->meta.title));
+    dtr_cart_dset(cart, 0, 1.0);
+    ok = dtr_cart_persist_save(cart);
+    DTR_ASSERT(ok);
+    dtr_cart_destroy(cart);
+
+    /* Overwrite with different data */
+    cart = dtr_cart_create();
+    SDL_strlcpy(cart->meta.title, "dithr_test_overwrite", sizeof(cart->meta.title));
+    dtr_cart_dset(cart, 0, 999.0);
+    dtr_cart_save(cart, "key", "val");
+    ok = dtr_cart_persist_save(cart);
+    DTR_ASSERT(ok);
+    dtr_cart_destroy(cart);
+
+    /* Load and verify latest data */
+    cart2 = dtr_cart_create();
+    SDL_strlcpy(cart2->meta.title, "dithr_test_overwrite", sizeof(cart2->meta.title));
+    ok = dtr_cart_persist_load(cart2);
+    DTR_ASSERT(ok);
+    DTR_ASSERT_NEAR(dtr_cart_dget(cart2, 0), 999.0, 0.001);
+    DTR_ASSERT(dtr_cart_has_key(cart2, "key"));
+    DTR_ASSERT_EQ_STR(dtr_cart_load_key(cart2, "key"), "val");
+
+    dtr_cart_destroy(cart2);
+    DTR_PASS();
+}
+
+/* ------------------------------------------------------------------ */
 /*  Main                                                               */
 /* ------------------------------------------------------------------ */
 
@@ -888,6 +1029,10 @@ int main(int argc, char *argv[])
     DTR_RUN_TEST(test_cart_parse_huge_runtime);
     DTR_RUN_TEST(test_cart_parse_empty_strings);
     DTR_RUN_TEST(test_cart_parse_unknown_keys);
+    DTR_RUN_TEST(test_cart_persist_round_trip);
+    DTR_RUN_TEST(test_cart_persist_empty);
+    DTR_RUN_TEST(test_cart_persist_load_missing);
+    DTR_RUN_TEST(test_cart_persist_overwrite);
 
     DTR_TEST_END();
 }

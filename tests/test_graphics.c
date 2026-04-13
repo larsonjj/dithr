@@ -3,6 +3,7 @@
  * \brief           Unit tests for the graphics subsystem
  */
 
+#include "font.h"
 #include "graphics.h"
 #include "test_harness.h"
 
@@ -2516,6 +2517,313 @@ static void test_gfx_print_with_pattern(void)
 }
 
 /* ------------------------------------------------------------------ */
+/*  Print — custom font actually renders pixels                        */
+/* ------------------------------------------------------------------ */
+
+static void test_gfx_print_custom_font_draws(void)
+{
+    dtr_graphics_t *gfx = dtr_gfx_create(TW, TH);
+    uint8_t         sheet_data[16 * 8];
+    int32_t         count;
+
+    dtr_gfx_cls(gfx, 0);
+
+    /* Build a 16×8 sheet with two 8×8 character cells.
+     * Cell 0 = space (blank), Cell 1 = 'A' (filled). */
+    memset(sheet_data, 0, sizeof(sheet_data));
+    /* Fill the second cell (columns 8-15) with colour 5 */
+    for (int32_t row = 0; row < 8; ++row) {
+        for (int32_t col = 8; col < 16; ++col) {
+            sheet_data[row * 16 + col] = 5;
+        }
+    }
+
+    gfx->sheet.pixels = sheet_data;
+    gfx->sheet.width  = 16;
+    gfx->sheet.height = 8;
+    gfx->sheet.tile_w = 8;
+    gfx->sheet.tile_h = 8;
+    gfx->sheet.cols   = 2;
+    gfx->sheet.rows   = 1;
+    gfx->sheet.count  = 2;
+
+    /* Custom font: 8×8, starting at ASCII ' ' (32), 2 chars */
+    dtr_gfx_font(gfx, 0, 0, 8, 8, ' ', 2);
+
+    /* Print '!' which is font index 1 → the filled cell */
+    dtr_gfx_print(gfx, "!", 0, 0, 5);
+
+    count = 0;
+    for (int32_t i = 0; i < TW * TH; ++i) {
+        if (gfx->framebuffer[i] == 5) {
+            ++count;
+        }
+    }
+    DTR_ASSERT(count > 0);
+
+    dtr_gfx_font_reset(gfx);
+    gfx->sheet.pixels = NULL;
+    dtr_gfx_destroy(gfx);
+    DTR_PASS();
+}
+
+/* ------------------------------------------------------------------ */
+/*  Print — out-of-range characters produce no pixels                  */
+/* ------------------------------------------------------------------ */
+
+static void test_gfx_print_special_chars(void)
+{
+    dtr_graphics_t *gfx = dtr_gfx_create(TW, TH);
+
+    dtr_gfx_cls(gfx, 0);
+
+    /* Characters outside printable ASCII (DEL=127, tab=9) should be skipped */
+    dtr_gfx_print(gfx, "\x7F\x01\x09", 0, 0, 7);
+
+    for (int32_t i = 0; i < TW * TH; ++i) {
+        DTR_ASSERT_EQ_INT(gfx->framebuffer[i], 0);
+    }
+
+    dtr_gfx_destroy(gfx);
+    DTR_PASS();
+}
+
+/* ------------------------------------------------------------------ */
+/*  Print — draw palette remap applies to text colour                  */
+/* ------------------------------------------------------------------ */
+
+static void test_gfx_print_pal_remap(void)
+{
+    dtr_graphics_t *gfx = dtr_gfx_create(TW, TH);
+    int32_t         col7;
+    int32_t         col3;
+
+    dtr_gfx_cls(gfx, 0);
+
+    /* Remap colour 7 → 3 for drawing */
+    dtr_gfx_pal(gfx, 7, 3, false);
+    dtr_gfx_print(gfx, "A", 0, 0, 7);
+
+    col7 = 0;
+    col3 = 0;
+    for (int32_t i = 0; i < TW * TH; ++i) {
+        if (gfx->framebuffer[i] == 7) {
+            ++col7;
+        }
+        if (gfx->framebuffer[i] == 3) {
+            ++col3;
+        }
+    }
+    /* Colour 7 should NOT appear; colour 3 should have the glyph pixels */
+    DTR_ASSERT_EQ_INT(col7, 0);
+    DTR_ASSERT(col3 > 0);
+
+    /* Reset palette */
+    dtr_gfx_pal(gfx, 7, 7, false);
+    dtr_gfx_destroy(gfx);
+    DTR_PASS();
+}
+
+/* ------------------------------------------------------------------ */
+/*  Print — text wrapping at framebuffer right edge                    */
+/* ------------------------------------------------------------------ */
+
+static void test_gfx_print_right_edge(void)
+{
+    /* FB width = 16; built-in font is 4px wide + 1px gap = 5px per char.
+     * Printing 4 characters = 20px total → last char extends past edge.
+     * Characters that start off-screen should be clipped but not crash. */
+    dtr_graphics_t *gfx = dtr_gfx_create(TW, TH);
+    int32_t         adv;
+    int32_t         count;
+
+    dtr_gfx_cls(gfx, 0);
+    adv = dtr_gfx_print(gfx, "AAAA", 0, 0, 7);
+
+    DTR_ASSERT(adv > 0);
+
+    count = 0;
+    for (int32_t i = 0; i < TW * TH; ++i) {
+        if (gfx->framebuffer[i] == 7) {
+            ++count;
+        }
+    }
+    /* Some pixels drawn, but not all 4 chars fully visible */
+    DTR_ASSERT(count > 0);
+
+    dtr_gfx_destroy(gfx);
+    DTR_PASS();
+}
+
+/* ------------------------------------------------------------------ */
+/*  Print — very long multi-line string                                */
+/* ------------------------------------------------------------------ */
+
+static void test_gfx_print_multiline_stress(void)
+{
+    dtr_graphics_t *gfx = dtr_gfx_create(TW, TH);
+    int32_t         count;
+
+    dtr_gfx_cls(gfx, 0);
+    dtr_gfx_print(gfx, "A\nB\nC\nD\nE\nF", 0, 0, 7);
+
+    /* 6 lines × DTR_FONT_H=6 = 36px; FB height=16 → last lines clipped */
+    count = 0;
+    for (int32_t i = 0; i < TW * TH; ++i) {
+        if (gfx->framebuffer[i] == 7) {
+            ++count;
+        }
+    }
+    /* At least some pixels visible */
+    DTR_ASSERT(count > 0);
+    /* cursor_y should have advanced through all lines */
+    DTR_ASSERT(gfx->cursor_y > TH);
+
+    dtr_gfx_destroy(gfx);
+    DTR_PASS();
+}
+
+/* ------------------------------------------------------------------ */
+/*  Map draw — viewport offset (src_x/src_y > 0)                      */
+/* ------------------------------------------------------------------ */
+
+static void test_gfx_map_draw_viewport_offset(void)
+{
+    dtr_graphics_t *gfx = dtr_gfx_create(TW, TH);
+    uint8_t         sheet_data[16 * 8]; /* 2×1 tiles, each 8×8 */
+
+    /* Tile 0 (cols 0-7) = colour 2, Tile 1 (cols 8-15) = colour 5 */
+    for (int32_t row = 0; row < 8; ++row) {
+        for (int32_t col = 0; col < 8; ++col) {
+            sheet_data[row * 16 + col] = 2;
+        }
+        for (int32_t col = 8; col < 16; ++col) {
+            sheet_data[row * 16 + col] = 5;
+        }
+    }
+
+    gfx->sheet.pixels = sheet_data;
+    gfx->sheet.width  = 16;
+    gfx->sheet.height = 8;
+    gfx->sheet.tile_w = 8;
+    gfx->sheet.tile_h = 8;
+    gfx->sheet.cols   = 2;
+    gfx->sheet.rows   = 1;
+    gfx->sheet.count  = 2;
+
+    /* 3×1 map: [tile1, tile2, tile1] (1-based tile IDs) */
+    int32_t tiles[] = {1, 2, 1};
+
+    dtr_gfx_cls(gfx, 0);
+
+    /* Draw starting from tile column 1 (skip first tile), 2 tiles wide */
+    dtr_gfx_map_draw(gfx, tiles, 3, 1, 1, 0, 2, 1, 0, 0, 8, 8);
+
+    /* First visible tile should be tile 2 (colour 5) */
+    DTR_ASSERT_EQ_INT(dtr_gfx_pget(gfx, 4, 4), 5);
+    /* Second visible tile should be tile 1 (colour 2) */
+    DTR_ASSERT_EQ_INT(dtr_gfx_pget(gfx, 12, 4), 2);
+
+    gfx->sheet.pixels = NULL;
+    dtr_gfx_destroy(gfx);
+    DTR_PASS();
+}
+
+/* ------------------------------------------------------------------ */
+/*  Map draw — non-square tiles (tile_pw != tile_ph)                   */
+/* ------------------------------------------------------------------ */
+
+static void test_gfx_map_draw_nonsquare_tiles(void)
+{
+    dtr_graphics_t *gfx = dtr_gfx_create(TW, TH);
+    uint8_t         sheet_data[16 * 4]; /* 16×4 sheet */
+
+    /* Single 16×4 tile filled with colour 3 */
+    memset(sheet_data, 3, sizeof(sheet_data));
+
+    gfx->sheet.pixels = sheet_data;
+    gfx->sheet.width  = 16;
+    gfx->sheet.height = 4;
+    gfx->sheet.tile_w = 16;
+    gfx->sheet.tile_h = 4;
+    gfx->sheet.cols   = 1;
+    gfx->sheet.rows   = 1;
+    gfx->sheet.count  = 1;
+
+    int32_t tiles[] = {1};
+
+    dtr_gfx_cls(gfx, 0);
+    dtr_gfx_map_draw(gfx, tiles, 1, 1, 0, 0, 1, 1, 0, 0, 16, 4);
+
+    /* Pixels inside the tile area should be drawn */
+    DTR_ASSERT_EQ_INT(dtr_gfx_pget(gfx, 0, 0), 3);
+    DTR_ASSERT_EQ_INT(dtr_gfx_pget(gfx, 15, 3), 3);
+
+    /* Pixel below the tile (row 4) should still be background */
+    DTR_ASSERT_EQ_INT(dtr_gfx_pget(gfx, 0, 4), 0);
+
+    gfx->sheet.pixels = NULL;
+    dtr_gfx_destroy(gfx);
+    DTR_PASS();
+}
+
+/* ------------------------------------------------------------------ */
+/*  Zero-size framebuffer                                              */
+/* ------------------------------------------------------------------ */
+
+static void test_gfx_create_zero_size(void)
+{
+    dtr_graphics_t *gfx;
+
+    /* Zero dimensions — should either return NULL or handle gracefully */
+    gfx = dtr_gfx_create(0, 0);
+    if (gfx != NULL) {
+        dtr_gfx_destroy(gfx);
+    }
+    /* No crash is the assertion */
+    DTR_PASS();
+}
+
+/* ------------------------------------------------------------------ */
+/*  Text measurement                                                   */
+/* ------------------------------------------------------------------ */
+
+static void test_gfx_text_width_and_height(void)
+{
+    dtr_graphics_t *gfx = dtr_gfx_create(TW, TH);
+    int32_t         w;
+    int32_t         h;
+
+    /* Single character: 4px wide (no trailing spacing) */
+    w = dtr_gfx_text_width(gfx, "A");
+    DTR_ASSERT_EQ_INT(w, DTR_FONT_W);
+
+    /* Two characters: 4 + 1 + 4 = 9 */
+    w = dtr_gfx_text_width(gfx, "AB");
+    DTR_ASSERT_EQ_INT(w, DTR_FONT_W * 2 + 1);
+
+    /* Multi-line: widest line wins */
+    w = dtr_gfx_text_width(gfx, "AB\nC");
+    DTR_ASSERT_EQ_INT(w, DTR_FONT_W * 2 + 1);
+
+    /* Height: 1 line = DTR_FONT_H, 2 lines = 2*DTR_FONT_H */
+    h = dtr_gfx_text_height(gfx, "A");
+    DTR_ASSERT_EQ_INT(h, DTR_FONT_H);
+
+    h = dtr_gfx_text_height(gfx, "A\nB");
+    DTR_ASSERT_EQ_INT(h, DTR_FONT_H * 2);
+
+    /* Empty: width = 0, height = 1 line */
+    w = dtr_gfx_text_width(gfx, "");
+    DTR_ASSERT_EQ_INT(w, 0);
+    h = dtr_gfx_text_height(gfx, "");
+    DTR_ASSERT_EQ_INT(h, DTR_FONT_H);
+
+    dtr_gfx_destroy(gfx);
+    DTR_PASS();
+}
+
+/* ------------------------------------------------------------------ */
 /*  Main                                                               */
 /* ------------------------------------------------------------------ */
 
@@ -2626,6 +2934,15 @@ int main(int argc, char *argv[])
     DTR_RUN_TEST(test_gfx_print_with_camera);
     DTR_RUN_TEST(test_gfx_print_offscreen);
     DTR_RUN_TEST(test_gfx_print_with_pattern);
+    DTR_RUN_TEST(test_gfx_print_custom_font_draws);
+    DTR_RUN_TEST(test_gfx_print_special_chars);
+    DTR_RUN_TEST(test_gfx_print_pal_remap);
+    DTR_RUN_TEST(test_gfx_print_right_edge);
+    DTR_RUN_TEST(test_gfx_print_multiline_stress);
+    DTR_RUN_TEST(test_gfx_map_draw_viewport_offset);
+    DTR_RUN_TEST(test_gfx_map_draw_nonsquare_tiles);
+    DTR_RUN_TEST(test_gfx_create_zero_size);
+    DTR_RUN_TEST(test_gfx_text_width_and_height);
 
     DTR_TEST_END();
 }

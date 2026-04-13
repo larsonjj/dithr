@@ -549,6 +549,28 @@ static void test_png_missing_file(void)
 }
 
 /* ------------------------------------------------------------------ */
+/*  PNG importer (corrupt file → graceful failure)                     */
+/* ------------------------------------------------------------------ */
+
+static void test_png_corrupt_file(void)
+{
+    int32_t     w = -1;
+    int32_t     h = -1;
+    uint8_t    *pixels;
+    const char *path = "_test_corrupt.png";
+
+    DTR_ASSERT(prv_write_file(path, "this is not a PNG file"));
+    pixels = dtr_import_png(path, &w, &h);
+    remove(path);
+
+    DTR_ASSERT(pixels == NULL);
+    DTR_ASSERT_EQ_INT(w, 0);
+    DTR_ASSERT_EQ_INT(h, 0);
+
+    DTR_PASS();
+}
+
+/* ------------------------------------------------------------------ */
 /*  Main                                                               */
 /* ------------------------------------------------------------------ */
 
@@ -582,6 +604,7 @@ int main(int argc, char *argv[])
 
     /* PNG */
     DTR_RUN_TEST(test_png_missing_file);
+    DTR_RUN_TEST(test_png_corrupt_file);
 
     DTR_TEST_END();
 }

@@ -244,6 +244,59 @@ static void test_col_circ_rect_circle_contains_rect(void)
 }
 
 /* ------------------------------------------------------------------ */
+/*  Rect — large coordinates (near INT_MAX/2 to avoid overflow)        */
+/* ------------------------------------------------------------------ */
+
+static void test_col_rect_large_coords(void)
+{
+    int half = 1000000000;
+
+    /* Two rects far apart — no overlap */
+    DTR_ASSERT(!col_rect(-half, -half, 10, 10, half, half, 10, 10));
+    /* Two rects at same large position — overlap */
+    DTR_ASSERT(col_rect(half, half, 10, 10, half + 5, half + 5, 10, 10));
+    DTR_PASS();
+}
+
+/* ------------------------------------------------------------------ */
+/*  Circle — negative radius treated as zero                           */
+/* ------------------------------------------------------------------ */
+
+static void test_col_circ_negative_radius(void)
+{
+    /* Negative radius: sum of radii = -5+(-5) = -10 → dist² > rad_sum² always
+     * unless implementation squares the sum (100), but we're far apart anyway */
+    DTR_ASSERT(!col_circ(0, 0, -5, 100, 100, -5));
+    /* Same spot with negative radius: dist²=0, (-5+-5)²=100 → 0<=100 → true */
+    DTR_ASSERT(col_circ(5, 5, -3, 5, 5, -3));
+    DTR_PASS();
+}
+
+/* ------------------------------------------------------------------ */
+/*  Point in zero-size rect                                            */
+/* ------------------------------------------------------------------ */
+
+static void test_col_point_rect_zero_size(void)
+{
+    /* Zero-size rect at (5,5): point exactly there → false (exclusive) */
+    DTR_ASSERT(!col_point_rect(5, 5, 5, 5, 0, 0));
+    DTR_PASS();
+}
+
+/* ------------------------------------------------------------------ */
+/*  Circle vs rect — zero-size rect                                    */
+/* ------------------------------------------------------------------ */
+
+static void test_col_circ_rect_zero_rect(void)
+{
+    /* Circle at the same point as a zero-size rect */
+    DTR_ASSERT(col_circ_rect(5, 5, 1, 5, 5, 0, 0));
+    /* Circle far from zero-size rect */
+    DTR_ASSERT(!col_circ_rect(50, 50, 1, 5, 5, 0, 0));
+    DTR_PASS();
+}
+
+/* ------------------------------------------------------------------ */
 /*  Main                                                               */
 /* ------------------------------------------------------------------ */
 
@@ -284,6 +337,12 @@ int main(void)
     DTR_RUN_TEST(test_col_circ_rect_touching_edge);
     DTR_RUN_TEST(test_col_circ_rect_corner);
     DTR_RUN_TEST(test_col_circ_rect_circle_contains_rect);
+
+    /* edge cases */
+    DTR_RUN_TEST(test_col_rect_large_coords);
+    DTR_RUN_TEST(test_col_circ_negative_radius);
+    DTR_RUN_TEST(test_col_point_rect_zero_size);
+    DTR_RUN_TEST(test_col_circ_rect_zero_rect);
 
     DTR_TEST_END();
 }
