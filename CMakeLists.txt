@@ -190,7 +190,7 @@ FetchContent_MakeAvailable(SDL3_image)
 FetchContent_Declare(
     quickjs
     GIT_REPOSITORY https://github.com/quickjs-ng/quickjs.git
-    GIT_TAG v0.13.0
+    GIT_TAG v0.14.0
     GIT_SHALLOW TRUE
 )
 FetchContent_GetProperties(quickjs)
