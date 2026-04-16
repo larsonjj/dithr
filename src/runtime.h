@@ -20,13 +20,14 @@ extern "C" {
  * \brief           JS runtime wrapper
  */
 struct dtr_runtime {
-    JSRuntime     *rt;
-    JSContext     *ctx;
+    JSRuntime *    rt;
+    JSContext *    ctx;
     dtr_console_t *console;
 
     /* Cached global function atoms */
     JSAtom atom_init;
     JSAtom atom_update;
+    JSAtom atom_fixed_update;
     JSAtom atom_draw;
     JSAtom atom_save;
     JSAtom atom_restore;

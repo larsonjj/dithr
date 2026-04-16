@@ -6,22 +6,55 @@ strategies for dithr carts.
 ## Frame Budget
 
 At the default 60 FPS target the engine has **16.67 ms** per frame split
-across three phases:
+across four phases:
 
-| Phase  | What runs                       |
-| ------ | ------------------------------- |
-| Update | `_update(dt)` — game logic, AI  |
-| Draw   | `_draw()` — all rendering calls |
-| Flip   | Palette lookup + texture upload |
+| Phase        | What runs                                         |
+| ------------ | ------------------------------------------------- |
+| Fixed Update | `_fixedUpdate(dt)` — physics, deterministic logic |
+| Update       | `_update(dt)` — game logic, AI                    |
+| Draw         | `_draw()` — all rendering calls                   |
+| Flip         | Palette lookup + texture upload                   |
 
 Use `sys.perf()` to inspect per-frame timings:
 
 ```js
 const p = sys.perf();
-// p.update_ms  — time in _update
-// p.draw_ms    — time in _draw
-// p.cpu        — 0.0–1.0 total budget usage
-// p.markers    — custom perfBegin/perfEnd sections
+// p.fixed_update_ms — time in _fixedUpdate (sum of all ticks)
+// p.update_ms       — time in _update
+// p.draw_ms         — time in _draw
+// p.cpu             — 0.0–1.0 total budget usage
+// p.markers         — custom perfBegin/perfEnd sections
+```
+
+## Fixed vs Variable Update
+
+The engine provides two update callbacks with different timing
+characteristics:
+
+| Callback           | Delta                   | When to use                           |
+| ------------------ | ----------------------- | ------------------------------------- |
+| `_fixedUpdate(dt)` | Constant (1 / `ups`)    | Physics, collision, deterministic sim |
+| `_update(dt)`      | Variable (real elapsed) | Input handling, camera, animations    |
+
+`_fixedUpdate` fires 0–N times per frame at a fixed rate set by
+`timing.ups` in `cart.json` (default 60). The accumulator is capped at
+8 ticks to prevent a spiral of death after long pauses.
+
+```js
+// cart.json: { "timing": { "fps": 60, "ups": 50 } }
+
+function _fixedUpdate(dt) {
+    // dt is always 1/50 = 0.02 seconds
+    vy += GRAVITY * dt;
+    py += vy * dt;
+    resolveCollisions();
+}
+
+function _update(dt) {
+    // dt varies with actual frame time
+    if (key.btnp("jump")) vy = JUMP_FORCE;
+    cam.pos(px, py);
+}
 ```
 
 ## Custom Profiling

@@ -42,6 +42,7 @@ my-game/
     // --- Timing ---
     "timing": {
         "fps": 60, // target frames per second (default 60)
+        "ups": 60, // fixed updates per second (default 60)
     },
 
     // --- Sprites ---
@@ -90,6 +91,7 @@ my-game/
 | `display.scale`          | int    | 3           | Initial window = framebuffer × scale                     |
 | `display.scaleMode`      | string | `"integer"` | `"integer"`, `"letterbox"`, `"stretch"`, or `"overscan"` |
 | `timing.fps`             | int    | 60          | Target frames per second                                 |
+| `timing.ups`             | int    | 60          | Fixed updates per second (`_fixedUpdate` tick rate)      |
 | `sprites.sheet`          | string | —           | Path to sprite sheet PNG (relative to cart.json)         |
 | `sprites.tileW`          | int    | 8           | Sprite tile width                                        |
 | `sprites.tileH`          | int    | 8           | Sprite tile height                                       |

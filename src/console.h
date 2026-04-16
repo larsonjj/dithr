@@ -35,21 +35,21 @@ extern "C" {
  * \brief           Top-level console state that owns every subsystem
  */
 typedef struct dtr_console {
-    SDL_Window   *window;
+    SDL_Window *  window;
     SDL_Renderer *renderer;
-    SDL_Texture  *screen_tex;
+    SDL_Texture * screen_tex;
 
-    dtr_runtime_t       *runtime;
-    dtr_graphics_t      *graphics;
-    dtr_audio_t         *audio;
-    dtr_key_state_t     *keys;
-    dtr_mouse_state_t   *mouse;
+    dtr_runtime_t *      runtime;
+    dtr_graphics_t *     graphics;
+    dtr_audio_t *        audio;
+    dtr_key_state_t *    keys;
+    dtr_mouse_state_t *  mouse;
     dtr_gamepad_state_t *gamepads;
-    dtr_touch_state_t   *touch;
-    dtr_input_state_t   *input;
-    dtr_event_bus_t     *events;
-    dtr_cart_t          *cart;
-    dtr_postfx_t        *postfx;
+    dtr_touch_state_t *  touch;
+    dtr_input_state_t *  input;
+    dtr_event_bus_t *    events;
+    dtr_cart_t *         cart;
+    dtr_postfx_t *       postfx;
     dtr_tween_t          tween;
 
     /* Math PRNG state (xorshift64, per-console instance) */
@@ -73,7 +73,12 @@ typedef struct dtr_console {
     float    delta;
     int32_t  target_fps;
 
+    /* Fixed-update accumulator */
+    float fixed_acc; /**< Accumulated time for fixed-step loop */
+    float fixed_dt;  /**< Fixed step size (1.0 / ups) */
+
     /* Per-frame profiling (populated by iterate) */
+    float fixed_update_ms;
     float update_ms;
     float draw_ms;
 
@@ -115,7 +120,7 @@ typedef struct dtr_console {
     uint64_t reload_detect_time;  /**< Time the first change was detected */
 
     /* Undo: previous code buffer for one-step revert */
-    char  *prev_code;     /**< Previous JS code before last reload */
+    char * prev_code;     /**< Previous JS code before last reload */
     size_t prev_code_len; /**< Length of prev_code */
 #endif
 } dtr_console_t;

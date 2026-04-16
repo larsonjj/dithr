@@ -87,6 +87,8 @@ Each frame proceeds as:
    system handles letterbox mapping via `SDL_ConvertEventToRenderCoordinates`.
 2. **Iterate phase** — `dtr_console_iterate()`:
     - Copies current input state to previous (for `btnp` detection).
+    - Runs the fixed-update accumulator: calls `_fixedUpdate(dt)` 0–N times
+      at a constant step size determined by `timing.ups`.
     - Calls the JS `_update(dt)` callback.
     - Calls the JS `_draw()` callback.
     - Applies post-processing (if any effects are active).

@@ -1,45 +1,32 @@
 {
-  "title": "Platformer",
-  "author": "dithr",
-  "version": "1.0.0",
-  "description": "A simple platformer with gravity, collision, coins, and enemies",
-  "display": {
-    "width": 320,
-    "height": 180,
-    "scale": 3
-  },
-  "timing": {
-    "fps": 60
-  },
-  "sprites": {
-    "sheet": "assets/sprites/spritesheet.png",
-    "tileW": 8,
-    "tileH": 8
-  },
-  "audio": {
-    "channels": 8
-  },
-  "input": {
-    "default_mappings": {
-      "left": [
-        "KEY_LEFT",
-        "KEY_A",
-        "PAD_LEFT"
-      ],
-      "right": [
-        "KEY_RIGHT",
-        "KEY_D",
-        "PAD_RIGHT"
-      ],
-      "jump": [
-        "KEY_Z",
-        "KEY_SPACE",
-        "KEY_UP",
-        "KEY_W",
-        "PAD_A"
-      ]
-    }
-  },
-  "code": "src/main.js",
-  "maps": []
+    "title": "Platformer",
+    "author": "dithr",
+    "version": "1.0.0",
+    "description": "A simple platformer with gravity, collision, coins, and enemies",
+    "display": {
+        "width": 320,
+        "height": 180,
+        "scale": 3
+    },
+    "timing": {
+        "fps": 60,
+        "ups": 60
+    },
+    "sprites": {
+        "sheet": "assets/sprites/spritesheet.png",
+        "tileW": 8,
+        "tileH": 8
+    },
+    "audio": {
+        "channels": 8
+    },
+    "input": {
+        "default_mappings": {
+            "left": ["KEY_LEFT", "KEY_A", "PAD_LEFT"],
+            "right": ["KEY_RIGHT", "KEY_D", "PAD_RIGHT"],
+            "jump": ["KEY_Z", "KEY_SPACE", "KEY_UP", "KEY_W", "PAD_A"]
+        }
+    },
+    "code": "src/main.js",
+    "maps": []
 }

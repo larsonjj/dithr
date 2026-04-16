@@ -101,7 +101,6 @@ let flashTick = 0;
 
 // Smoothed FPS (exponential moving average)
 
-
 // --- Tile helpers ----------------------------------------------------
 
 function tileAt(cx, cy) {
@@ -442,13 +441,17 @@ function _init() {
     selectCursor = 0;
 }
 
+function _fixedUpdate(dt) {
+    if (state === 'play') {
+        fixedUpdatePlay();
+    }
+}
+
 function _update(dt) {
     flashTick += 1;
 
     if (state === 'select') {
         updateSelect();
-    } else if (state === 'play') {
-        updatePlay();
     } else if (state === 'dead') {
         updateDead();
     } else if (state === 'level_clear') {
@@ -530,7 +533,7 @@ function drawSelect() {
 
 // --- Main gameplay ---------------------------------------------------
 
-function updatePlay() {
+function fixedUpdatePlay() {
     // Attack cooldowns
     if (attackTimer > 0) {
         --attackTimer;

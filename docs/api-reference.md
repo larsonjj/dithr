@@ -5,11 +5,20 @@ available as globals on their namespace object (e.g. `gfx.cls()`).
 
 The engine calls three optional global callbacks each frame:
 
-| Callback      | Signature                      | Description                          |
-| ------------- | ------------------------------ | ------------------------------------ |
-| `_init()`     | —                              | Called once after the cart is loaded |
-| `_update(dt)` | `dt`: seconds since last frame | Called every frame before draw       |
-| `_draw()`     | —                              | Called every frame for rendering     |
+| Callback           | Signature                        | Description                                             |
+| ------------------ | -------------------------------- | ------------------------------------------------------- |
+| `_init()`          | —                                | Called once after the cart is loaded                    |
+| `_fixedUpdate(dt)` | `dt`: fixed step size in seconds | Called 0–N times per frame at a fixed tick rate (`ups`) |
+| `_update(dt)`      | `dt`: seconds since last frame   | Called every frame before draw                          |
+| `_draw()`          | —                                | Called every frame for rendering                        |
+
+`_fixedUpdate(dt)` runs in an accumulator loop. Each frame, the elapsed
+time is added to an internal accumulator and the callback fires
+repeatedly with a constant `dt` (= 1 / `timing.ups`) until the
+accumulator is drained. The accumulator is capped at 8× the step size
+to prevent a spiral of death after long pauses. Input state is **not**
+updated between fixed ticks; read input in `_update` and apply forces
+in `_fixedUpdate`.
 
 ### Hot-reload callbacks (DEV_BUILD only)
 
@@ -710,6 +719,9 @@ if (score > hi) {
 | `fps`          |            | `float` | Current FPS (1 / delta)        |
 | `targetFps`    |            | `int`   | Configured target FPS          |
 | `setTargetFps` | `fps`      | —       | Set target FPS (clamped 1–240) |
+| `fixedDelta`   |            | `float` | Fixed-update step size (1/ups) |
+| `targetUps`    |            | `int`   | Configured updates per second  |
+| `setTargetUps` | `ups`      | —       | Set UPS (clamped 15–240)       |
 
 ### Audio
 

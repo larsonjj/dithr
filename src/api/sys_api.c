@@ -75,6 +75,48 @@ js_sys_set_target_fps(JSContext *ctx, JSValueConst this_val, int argc, JSValueCo
 }
 
 /* ------------------------------------------------------------------ */
+/*  Fixed-update timing                                                */
+/* ------------------------------------------------------------------ */
+
+static JSValue
+js_sys_fixed_delta(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+{
+    (void)this_val;
+    (void)argc;
+    (void)argv;
+    return JS_NewFloat64(ctx, (double)dtr_api_get_console(ctx)->fixed_dt);
+}
+
+static JSValue
+js_sys_target_ups(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+{
+    dtr_console_t *con;
+
+    (void)this_val;
+    (void)argc;
+    (void)argv;
+    con = dtr_api_get_console(ctx);
+    return JS_NewInt32(ctx, (int32_t)(1.0f / con->fixed_dt + 0.5f));
+}
+
+static JSValue
+js_sys_set_target_ups(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+{
+    int32_t ups;
+
+    (void)this_val;
+    ups = dtr_api_opt_int(ctx, argc, argv, 0, CONSOLE_TARGET_FPS);
+    if (ups < 15) {
+        ups = 15;
+    }
+    if (ups > 240) {
+        ups = 240;
+    }
+    dtr_api_get_console(ctx)->fixed_dt = 1.0f / (float)ups;
+    return JS_UNDEFINED;
+}
+
+/* ------------------------------------------------------------------ */
 /*  Display info                                                       */
 /* ------------------------------------------------------------------ */
 
@@ -468,6 +510,8 @@ static JSValue js_sys_perf(JSContext *ctx, JSValueConst this_val, int argc, JSVa
     obj = JS_NewObject(ctx);
     JS_SetPropertyStr(
         ctx, obj, "cpu", JS_NewFloat64(ctx, (double)(con->delta * (float)con->target_fps)));
+    JS_SetPropertyStr(
+        ctx, obj, "fixed_update_ms", JS_NewFloat64(ctx, (double)con->fixed_update_ms));
     JS_SetPropertyStr(ctx, obj, "update_ms", JS_NewFloat64(ctx, (double)con->update_ms));
     JS_SetPropertyStr(ctx, obj, "draw_ms", JS_NewFloat64(ctx, (double)con->draw_ms));
     JS_SetPropertyStr(
@@ -495,7 +539,7 @@ static JSValue
 js_sys_perf_begin(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
     dtr_console_t *con;
-    const char    *label;
+    const char *   label;
     int32_t        idx;
 
     (void)this_val;
@@ -536,7 +580,7 @@ js_sys_perf_begin(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst 
 static JSValue js_sys_perf_end(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
     dtr_console_t *con;
-    const char    *label;
+    const char *   label;
     uint64_t       now;
     double         freq;
 
@@ -593,7 +637,7 @@ js_sys_text_input(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst 
 static JSValue
 js_sys_clipboard_get(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
-    char   *text;
+    char *  text;
     JSValue result;
 
     (void)this_val;
@@ -637,10 +681,10 @@ js_sys_clipboard_set(JSContext *ctx, JSValueConst this_val, int argc, JSValueCon
 static bool prv_resolve_sandboxed(JSContext *ctx, const char *rel, char *full, size_t full_size)
 {
     dtr_console_t *con;
-    const char    *base;
+    const char *   base;
     char           norm_base[1024];
     size_t         base_len;
-    char          *pos;
+    char *         pos;
 
     con  = dtr_api_get_console(ctx);
     base = con->cart->base_path;
@@ -683,7 +727,7 @@ static JSValue js_sys_read_file(JSContext *ctx, JSValueConst this_val, int argc,
 {
     const char *rel;
     char        full[1024];
-    void       *data;
+    void *      data;
     size_t      len;
     JSValue     result;
 
@@ -755,7 +799,7 @@ js_sys_list_files(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst 
     const char *rel;
     char        full[1024];
     int32_t     count;
-    char      **files;
+    char **     files;
     JSValue     arr;
 
     (void)this_val;
@@ -798,7 +842,7 @@ js_sys_list_files(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst 
 /* ------------------------------------------------------------------ */
 
 typedef struct {
-    JSContext  *ctx;
+    JSContext * ctx;
     JSValue     arr;
     uint32_t    idx;
     const char *base;
@@ -824,7 +868,7 @@ prv_list_dirs_cb(void *userdata, const char *dirname, const char *fname)
 
 static JSValue js_sys_list_dirs(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
-    const char         *rel;
+    const char *        rel;
     char                full[1024];
     prv_list_dirs_ctx_t ld;
 
@@ -869,7 +913,7 @@ static JSValue js_sys_list_dirs(JSContext *ctx, JSValueConst this_val, int argc,
 
 static JSValue js_sys_draw_fps(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
-    dtr_console_t  *con;
+    dtr_console_t * con;
     dtr_graphics_t *g;
     float           cur_fps;
     float           target;
@@ -963,6 +1007,9 @@ static const JSCFunctionListEntry js_sys_funcs[] = {
     JS_CFUNC_DEF("fps", 0, js_sys_fps),
     JS_CFUNC_DEF("targetFps", 0, js_sys_target_fps),
     JS_CFUNC_DEF("setTargetFps", 1, js_sys_set_target_fps),
+    JS_CFUNC_DEF("fixedDelta", 0, js_sys_fixed_delta),
+    JS_CFUNC_DEF("targetUps", 0, js_sys_target_ups),
+    JS_CFUNC_DEF("setTargetUps", 1, js_sys_set_target_ups),
     JS_CFUNC_DEF("width", 0, js_sys_width),
     JS_CFUNC_DEF("height", 0, js_sys_height),
     JS_CFUNC_DEF("version", 0, js_sys_version),

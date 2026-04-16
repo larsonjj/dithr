@@ -91,7 +91,7 @@ prv_module_normalize(JSContext *ctx, const char *base_name, const char *name, vo
     const char *sep;
     int         base_len;
     int         cap;
-    char       *result;
+    char *      result;
 
     sep = strrchr(base_name, '/');
     if (sep != NULL) {
@@ -157,9 +157,9 @@ static JSModuleDef *prv_module_loader(JSContext *ctx, const char *module_name, v
     dtr_console_t *con;
     char           path[1024];
     size_t         buf_len;
-    char          *buf;
+    char *         buf;
     JSValue        func_val;
-    JSModuleDef   *mod;
+    JSModuleDef *  mod;
 
     con = (dtr_console_t *)opaque;
 
@@ -287,11 +287,12 @@ dtr_runtime_t *dtr_runtime_create(dtr_console_t *con, int32_t heap_mb, int32_t s
     JS_SetModuleLoaderFunc(rt->rt, prv_module_normalize, prv_module_loader, con);
 
     /* Cache frequently used atoms */
-    rt->atom_init    = JS_NewAtom(rt->ctx, "_init");
-    rt->atom_update  = JS_NewAtom(rt->ctx, "_update");
-    rt->atom_draw    = JS_NewAtom(rt->ctx, "_draw");
-    rt->atom_save    = JS_NewAtom(rt->ctx, "_save");
-    rt->atom_restore = JS_NewAtom(rt->ctx, "_restore");
+    rt->atom_init         = JS_NewAtom(rt->ctx, "_init");
+    rt->atom_update       = JS_NewAtom(rt->ctx, "_update");
+    rt->atom_fixed_update = JS_NewAtom(rt->ctx, "_fixedUpdate");
+    rt->atom_draw         = JS_NewAtom(rt->ctx, "_draw");
+    rt->atom_save         = JS_NewAtom(rt->ctx, "_save");
+    rt->atom_restore      = JS_NewAtom(rt->ctx, "_restore");
 
     rt->error_active = false;
     rt->error_line   = 0;
@@ -309,6 +310,7 @@ void dtr_runtime_destroy(dtr_runtime_t *rt)
     if (rt->ctx != NULL) {
         JS_FreeAtom(rt->ctx, rt->atom_init);
         JS_FreeAtom(rt->ctx, rt->atom_update);
+        JS_FreeAtom(rt->ctx, rt->atom_fixed_update);
         JS_FreeAtom(rt->ctx, rt->atom_draw);
         JS_FreeAtom(rt->ctx, rt->atom_save);
         JS_FreeAtom(rt->ctx, rt->atom_restore);

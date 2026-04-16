@@ -493,6 +493,36 @@ static void test_cart_validate_clamp_fps_upper(void)
 }
 
 /* ------------------------------------------------------------------ */
+/*  Validate — ups clamped                                             */
+/* ------------------------------------------------------------------ */
+
+static void test_cart_validate_clamp_ups_lower(void)
+{
+    dtr_cart_t *cart;
+
+    cart             = dtr_cart_create();
+    cart->timing.ups = 1;
+    dtr_cart_validate(cart);
+    DTR_ASSERT_EQ_INT(cart->timing.ups, 15);
+
+    dtr_cart_destroy(cart);
+    DTR_PASS();
+}
+
+static void test_cart_validate_clamp_ups_upper(void)
+{
+    dtr_cart_t *cart;
+
+    cart             = dtr_cart_create();
+    cart->timing.ups = 999;
+    dtr_cart_validate(cart);
+    DTR_ASSERT_EQ_INT(cart->timing.ups, 240);
+
+    dtr_cart_destroy(cart);
+    DTR_PASS();
+}
+
+/* ------------------------------------------------------------------ */
 /*  Validate — audio channels                                          */
 /* ------------------------------------------------------------------ */
 
@@ -1015,6 +1045,8 @@ int main(int argc, char *argv[])
     DTR_RUN_TEST(test_cart_parse_audio);
     DTR_RUN_TEST(test_cart_validate_clamp_scale);
     DTR_RUN_TEST(test_cart_validate_clamp_fps_upper);
+    DTR_RUN_TEST(test_cart_validate_clamp_ups_lower);
+    DTR_RUN_TEST(test_cart_validate_clamp_ups_upper);
     DTR_RUN_TEST(test_cart_validate_clamp_audio_channels);
     DTR_RUN_TEST(test_cart_validate_clamp_audio_freq);
     DTR_RUN_TEST(test_cart_validate_clamp_audio_buffer);

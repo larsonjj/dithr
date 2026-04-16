@@ -16,10 +16,10 @@
 const TILE = 8;
 const MAP_W = 60; // level width in tiles
 const MAP_H = 23; // level height in tiles (fits 180px)
-const GRAVITY = 0.35;
-const JUMP = -5.5;
-const MOVE = 1.8;
-const FRICTION = 0.85;
+const GRAVITY = 0.25;
+const JUMP = -3.8;
+const MOVE = 0.14;
+const FRICTION = 0.82;
 
 // Tile types
 const T_EMPTY = 0;
@@ -135,7 +135,7 @@ function spawnEnemies() {
         enemies.push({
             x: ex,
             y: ey,
-            vx: 0.5 * (math.rnd() > 0.5 ? 1 : -1),
+            vx: 0.3 * (math.rnd() > 0.5 ? 1 : -1),
             w: 6,
             h: 7,
             alive: true,
@@ -201,8 +201,6 @@ function resetPlayer() {
     player.alive = true;
 }
 
-
-
 // --- Callbacks -------------------------------------------------------
 
 function _init() {
@@ -211,18 +209,8 @@ function _init() {
     highScore = cart.dget(0) || 0;
 }
 
-function _update(dt) {
-    if (!player.alive) {
-        if (input.btnp('jump')) {
-            if (player.score > highScore) {
-                highScore = player.score;
-                cart.dset(0, highScore);
-            }
-            player.score = 0;
-            resetPlayer();
-        }
-        return;
-    }
+function _fixedUpdate(dt) {
+    if (!player.alive) return;
 
     // Horizontal movement
     if (input.btn('left')) {
@@ -297,6 +285,25 @@ function _update(dt) {
         }
     }
 
+    // Fell off bottom
+    if (player.y > MAP_H * TILE + 16) {
+        player.alive = false;
+    }
+}
+
+function _update(dt) {
+    if (!player.alive) {
+        if (input.btnp('jump')) {
+            if (player.score > highScore) {
+                highScore = player.score;
+                cart.dset(0, highScore);
+            }
+            player.score = 0;
+            resetPlayer();
+        }
+        return;
+    }
+
     // Camera follow
     const targetX = player.x - 160 + player.w / 2;
     const targetY = player.y - 90;
@@ -309,11 +316,6 @@ function _update(dt) {
     if (camY < 0) camY = 0;
     if (camX > maxCx) camX = maxCx;
     if (camY > maxCy) camY = maxCy;
-
-    // Fell off bottom
-    if (player.y > MAP_H * TILE + 16) {
-        player.alive = false;
-    }
 }
 
 function _draw() {

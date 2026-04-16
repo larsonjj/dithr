@@ -71,12 +71,7 @@ function _init() {
     spawn(SPAWN_COUNT);
 }
 
-function _update(dt) {
-    // Spawn more on click or space
-    if (mouse.btnp() || key.btnp(key.SPACE)) {
-        spawn(SPAWN_COUNT);
-    }
-
+function _fixedUpdate(dt) {
     // Physics (SOA — flat array access, no property hash lookups)
     const right = SCREEN_W - TILE_SIZE;
     const bottom = SCREEN_H - TILE_SIZE;
@@ -105,6 +100,13 @@ function _update(dt) {
             spY[i] = 0;
             spVy[i] = -spVy[i];
         }
+    }
+}
+
+function _update(dt) {
+    // Spawn more on click or space
+    if (mouse.btnp() || key.btnp(key.SPACE)) {
+        spawn(SPAWN_COUNT);
     }
 }
 
