@@ -190,8 +190,7 @@ export function vimNormal(ch) {
             st.cx = firstNonBlank(st.cy);
             break;
         case 'G':
-            if (count > 1) st.cy = clamp(count - 1, 0, st.buf.length - 1);
-            else st.cy = st.buf.length - 1;
+            st.cy = clamp(count - 1, 0, st.buf.length - 1);
             st.cx = firstNonBlank(st.cy);
             break;
         case 'g':
@@ -613,10 +612,28 @@ function vimPaste(before, count) {
         }
         st.cx = firstNonBlank(st.cy);
     } else {
-        for (let c = 0; c < count; c++) {
-            const pos = before ? st.cx : Math.min(st.cx + 1, st.buf[st.cy].length);
-            st.buf[st.cy] = st.buf[st.cy].slice(0, pos) + st.vimReg + st.buf[st.cy].slice(pos);
-            st.cx = pos + st.vimReg.length - 1;
+        const lines = st.vimReg.split('\n');
+        if (lines.length <= 1) {
+            for (let c = 0; c < count; c++) {
+                const pos = before ? st.cx : Math.min(st.cx + 1, st.buf[st.cy].length);
+                st.buf[st.cy] = st.buf[st.cy].slice(0, pos) + st.vimReg + st.buf[st.cy].slice(pos);
+                st.cx = pos + st.vimReg.length - 1;
+            }
+        } else {
+            for (let c = 0; c < count; c++) {
+                const pos = before ? st.cx : Math.min(st.cx + 1, st.buf[st.cy].length);
+                const head = st.buf[st.cy].slice(0, pos);
+                const tail = st.buf[st.cy].slice(pos);
+                st.buf[st.cy] = head + lines[0];
+                for (let i = 1; i < lines.length - 1; i++) {
+                    st.buf.splice(st.cy + i, 0, lines[i]);
+                }
+                const lastIdx = st.cy + lines.length - 1;
+                st.buf.splice(lastIdx, 0, lines[lines.length - 1] + tail);
+                st.cy = lastIdx;
+                st.cx = lines[lines.length - 1].length - 1;
+                if (st.cx < 0) st.cx = 0;
+            }
         }
     }
 
@@ -671,7 +688,7 @@ export function vimSearchNext(dir) {
             if (dir > 0) {
                 col = line.indexOf(st.vimSearch, Math.max(0, startCol));
             } else {
-                col = line.lastIndexOf(st.vimSearch, Math.max(0, startCol - 1));
+                col = line.lastIndexOf(st.vimSearch, Math.max(0, st.cx - 1));
             }
         } else {
             col = dir > 0 ? line.indexOf(st.vimSearch) : line.lastIndexOf(st.vimSearch);

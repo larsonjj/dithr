@@ -145,7 +145,7 @@ export const KEYWORDS = new Set([
     'try',
     'typeof',
     'undefined',
-    'let',
+    'var',
     'void',
     'while',
     'with',

@@ -240,3 +240,58 @@ function makePatterns(count) {
     v = numberEntry(v, 3); // → 23
     assertEq(v, 23, "1 → 12 → 23");
 })();
+
+// ─── Insert / Delete row aliasing tests ──────────────────────────────────────
+
+function clonePattern(p) {
+    return { ch: [p.ch[0], p.ch[1], p.ch[2], p.ch[3]], flags: p.flags };
+}
+
+function insertRow(patterns, sel) {
+    for (var i = 63; i > sel; i--) {
+        var src = patterns[i - 1];
+        patterns[i] = { ch: [src.ch[0], src.ch[1], src.ch[2], src.ch[3]], flags: src.flags };
+    }
+    patterns[sel] = { ch: [-1, -1, -1, -1], flags: FLAG_NONE };
+}
+
+function deleteRow(patterns, sel) {
+    for (var i = sel; i < 63; i++) {
+        var src = patterns[i + 1];
+        patterns[i] = { ch: [src.ch[0], src.ch[1], src.ch[2], src.ch[3]], flags: src.flags };
+    }
+    patterns[63] = { ch: [-1, -1, -1, -1], flags: FLAG_NONE };
+}
+
+// Insert should not share object references between rows
+(function test_insert_no_aliasing() {
+    var pats = makePatterns();
+    pats[0].ch = [1, 2, 3, 4];
+    pats[0].flags = FLAG_LOOP_START;
+    insertRow(pats, 0);
+    // Row 0 should be blank, row 1 should have the original data
+    assertEq(pats[0].ch[0], -1, "inserted row should be blank");
+    assertEq(pats[1].ch[0], 1, "shifted row should preserve ch[0]");
+    assertEq(pats[1].ch[3], 4, "shifted row should preserve ch[3]");
+    assertEq(pats[1].flags, FLAG_LOOP_START, "shifted row should preserve flags");
+    // Modifying row 1 should NOT affect row 2 (no aliasing)
+    pats[1].ch[0] = 99;
+    assert(pats[2].ch[0] !== 99, "rows should not be aliased after insert");
+})();
+
+// Delete should not share object references between rows
+(function test_delete_no_aliasing() {
+    var pats = makePatterns();
+    pats[0].ch = [10, 20, 30, 40];
+    pats[1].ch = [11, 21, 31, 41];
+    pats[2].ch = [12, 22, 32, 42];
+    deleteRow(pats, 0);
+    // Row 0 should now have row 1's old data
+    assertEq(pats[0].ch[0], 11, "row 0 should have old row 1 data");
+    assertEq(pats[1].ch[0], 12, "row 1 should have old row 2 data");
+    // Modifying row 0 should NOT affect row 1 (no aliasing)
+    pats[0].ch[0] = 99;
+    assert(pats[1].ch[0] !== 99, "rows should not be aliased after delete");
+    // Last row should be blank
+    assertEq(pats[63].ch[0], -1, "last row should be blank after delete");
+})();

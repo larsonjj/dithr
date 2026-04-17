@@ -117,22 +117,32 @@ function floodFill(sx, sy, replacement) {
     const target = map.get(sx, sy, st.mapLayer);
     if (target === replacement) return;
 
-    const stack = [[sx, sy]];
-    const visited = new Set();
-    while (stack.length > 0) {
-        const pt = stack.pop();
-        const px = pt[0];
-        const py = pt[1];
-        if (px < 0 || px >= mw || py < 0 || py >= mh) continue;
-        const kk = py * mw + px;
-        if (visited.has(kk)) continue;
-        visited.add(kk);
+    // Flat queue of interleaved x,y pairs to avoid per-pixel array allocation
+    const queue = [sx, sy];
+    let head = 0;
+    const visited = new Uint8Array(mw * mh);
+    visited[sy * mw + sx] = 1;
+    while (head < queue.length) {
+        const px = queue[head++];
+        const py = queue[head++];
         if (map.get(px, py, st.mapLayer) !== target) continue;
         paintTile(px, py, replacement);
-        stack.push([px - 1, py]);
-        stack.push([px + 1, py]);
-        stack.push([px, py - 1]);
-        stack.push([px, py + 1]);
+        if (px > 0 && !visited[py * mw + px - 1]) {
+            visited[py * mw + px - 1] = 1;
+            queue.push(px - 1, py);
+        }
+        if (px < mw - 1 && !visited[py * mw + px + 1]) {
+            visited[py * mw + px + 1] = 1;
+            queue.push(px + 1, py);
+        }
+        if (py > 0 && !visited[(py - 1) * mw + px]) {
+            visited[(py - 1) * mw + px] = 1;
+            queue.push(px, py - 1);
+        }
+        if (py < mh - 1 && !visited[(py + 1) * mw + px]) {
+            visited[(py + 1) * mw + px] = 1;
+            queue.push(px, py + 1);
+        }
     }
 }
 
@@ -271,11 +281,9 @@ function paintAutoTile(tx, ty, sprIdx) {
         return;
     }
     const prev = map.get(tx, ty, st.mapLayer);
-    // Place tile so neighbor lookups include it
-    let mask = autoTileMask(tx, ty, base);
-    map.set(tx, ty, sprToTile(base + mask), st.mapLayer);
-    // Recompute now that the tile is placed
-    mask = autoTileMask(tx, ty, base);
+    // Place tile and compute final mask with it in place
+    map.set(tx, ty, sprToTile(base), st.mapLayer);
+    const mask = autoTileMask(tx, ty, base);
     const want = sprToTile(base + mask);
     map.set(tx, ty, want, st.mapLayer);
     // Record single undo op

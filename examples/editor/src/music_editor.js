@@ -138,7 +138,13 @@ export function saveMusToDisk() {
 export function loadMusFromDisk() {
     const json = sys.readFile('music.json');
     if (!json) return;
-    const all = JSON.parse(json);
+    let all;
+    try {
+        all = JSON.parse(json);
+    } catch {
+        status('Bad music.json');
+        return;
+    }
     if (!all || !all.length) return;
     ensurePatterns();
     for (let si = 0; si < all.length; si++) {
@@ -205,19 +211,11 @@ function playPattern(row) {
         stopMusic();
         return;
     }
-    let anyPlaying = false;
     for (let c = 0; c < NUM_CHANNELS; c++) {
         synth.stop(c);
         if (pat.ch[c] >= 0 && !st.musMute[c]) {
-            if (safeSynthPlay(pat.ch[c], c)) anyPlaying = true;
+            safeSynthPlay(pat.ch[c], c);
         }
-    }
-    if (!anyPlaying) {
-        // All channels muted — still advance time so pattern isn't stuck
-        st.musPlayRow = row;
-        st.musPlayStart = sys.time();
-        ensurePlayRowVisible();
-        return;
     }
     st.musPlayRow = row;
     st.musPlayStart = sys.time();
@@ -384,8 +382,12 @@ export function updateMusicEditor(dt) {
     }
     if (key.btnp(key.MINUS)) {
         pushMusUndo();
-        let cur = st.musPatterns[st.musSel].ch[st.musCol];
-        if (cur < 0) cur = 0;
+        const cur = st.musPatterns[st.musSel].ch[st.musCol];
+        if (cur < 0) {
+            // Already empty — clear the undo push and do nothing
+            st.musUndoStack.pop();
+            return;
+        }
         st.musPatterns[st.musSel].ch[st.musCol] = clamp(cur - 1, 0, 63);
         st.musDirty = true;
         return;
@@ -505,7 +507,11 @@ export function updateMusicEditor(dt) {
     if (ctrl && shift && key.btnp(key.I)) {
         pushMusUndo();
         for (let i = 63; i > st.musSel; i--) {
-            st.musPatterns[i] = st.musPatterns[i - 1];
+            const src = st.musPatterns[i - 1];
+            st.musPatterns[i] = {
+                ch: [src.ch[0], src.ch[1], src.ch[2], src.ch[3]],
+                flags: src.flags,
+            };
         }
         st.musPatterns[st.musSel] = { ch: [-1, -1, -1, -1], flags: FLAG_NONE };
         st.musDirty = true;
@@ -517,7 +523,11 @@ export function updateMusicEditor(dt) {
     if (ctrl && shift && (key.btnp(key.DELETE) || key.btnp(key.BACKSPACE))) {
         pushMusUndo();
         for (let i = st.musSel; i < 63; i++) {
-            st.musPatterns[i] = st.musPatterns[i + 1];
+            const src = st.musPatterns[i + 1];
+            st.musPatterns[i] = {
+                ch: [src.ch[0], src.ch[1], src.ch[2], src.ch[3]],
+                flags: src.flags,
+            };
         }
         st.musPatterns[63] = { ch: [-1, -1, -1, -1], flags: FLAG_NONE };
         st.musDirty = true;

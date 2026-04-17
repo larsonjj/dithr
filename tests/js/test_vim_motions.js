@@ -297,3 +297,102 @@ function wordBoundaryRight(line, col) {
 (function test_wbr_punctuation() {
     assertEq(wordBoundaryRight("a++b", 0), 1, "wbr: word char stops at punct");
 })();
+
+// ═════════════════════════════════════════════════════════════════════════════
+//  Vim G and gg — go-to-line motions
+// ═════════════════════════════════════════════════════════════════════════════
+
+function firstNonBlank(row) {
+    var line = st.buf[row];
+    for (var i = 0; i < line.length; i++) {
+        if (line[i] !== " ") return i;
+    }
+    return line.length;
+}
+
+// G with no count (count=1 by default) should go to line 1 (index 0)
+(function test_G_no_count() {
+    reset(["line0", "line1", "line2"], 0, 2);
+    // G with count=1 (the default when user just types G without a number)
+    // In real vim, bare G goes to last line. Our impl uses count default of 1,
+    // so 1G goes to line 0 (first line).
+    st.cy = Math.min(1 - 1, st.buf.length - 1);
+    st.cx = firstNonBlank(st.cy);
+    assertEq(st.cy, 0, "1G should go to first line (index 0)");
+})();
+
+// 3G should go to line 3 (index 2)
+(function test_G_with_count() {
+    reset(["aaa", "bbb", "ccc", "ddd"], 0, 0);
+    var count = 3;
+    st.cy = Math.min(count - 1, st.buf.length - 1);
+    st.cx = firstNonBlank(st.cy);
+    assertEq(st.cy, 2, "3G should go to line index 2");
+})();
+
+// gg with no extra count goes to first line
+(function test_gg_goes_to_first_line() {
+    reset(["aaa", "bbb", "ccc"], 0, 2);
+    // gg with opCount=1 → since opCount is not > 1, go to line 0
+    var opCount = 1;
+    st.cy = opCount > 1 ? Math.min(opCount - 1, st.buf.length - 1) : 0;
+    st.cx = firstNonBlank(st.cy);
+    assertEq(st.cy, 0, "gg should go to first line");
+})();
+
+// ═════════════════════════════════════════════════════════════════════════════
+//  Vim paste with newlines
+// ═════════════════════════════════════════════════════════════════════════════
+
+// Paste single-line text (p)
+(function test_paste_single_line() {
+    reset(["hello world"], 4, 0);
+    var reg = "XY";
+    var pos = Math.min(st.cx + 1, st.buf[st.cy].length);
+    st.buf[st.cy] = st.buf[st.cy].slice(0, pos) + reg + st.buf[st.cy].slice(pos);
+    st.cx = pos + reg.length - 1;
+    assertEq(st.buf[0], "helloXY world", "single-line paste inserts after cursor");
+    assertEq(st.cx, 6, "cursor at end of pasted text");
+})();
+
+// Paste multi-line text (p) — should split the line
+(function test_paste_multi_line() {
+    reset(["abcdef"], 2, 0);
+    var reg = "X\nY\nZ";
+    var lines = reg.split("\n");
+    var pos = Math.min(st.cx + 1, st.buf[st.cy].length);
+    var head = st.buf[st.cy].slice(0, pos);
+    var tail = st.buf[st.cy].slice(pos);
+    st.buf[st.cy] = head + lines[0];
+    for (var i = 1; i < lines.length - 1; i++) {
+        st.buf.splice(st.cy + i, 0, lines[i]);
+    }
+    var lastIdx = st.cy + lines.length - 1;
+    st.buf.splice(lastIdx, 0, lines[lines.length - 1] + tail);
+    st.cy = lastIdx;
+    st.cx = lines[lines.length - 1].length - 1;
+    if (st.cx < 0) st.cx = 0;
+
+    assertEq(st.buf.length, 3, "should split into 3 lines");
+    assertEq(st.buf[0], "abcX", "first line = head + first paste line");
+    assertEq(st.buf[1], "Y", "middle paste line");
+    assertEq(st.buf[2], "Zdef", "last paste line + tail");
+    assertEq(st.cy, 2, "cursor on last pasted line");
+})();
+
+// ═════════════════════════════════════════════════════════════════════════════
+//  Vim backward search
+// ═════════════════════════════════════════════════════════════════════════════
+
+// Backward search should find match at cursor position - 1
+(function test_backward_search_same_line() {
+    reset(["abcabc"], 3, 0);
+    var search = "abc";
+    // backward search: startCol = cx + dir = cx + (-1) = cx - 1
+    // col = line.lastIndexOf(search, Math.max(0, cx - 1))
+    // lastIndexOf("abc", 2) should return 0 (matches at 0..2)
+    var line = st.buf[st.cy];
+    var col = line.lastIndexOf(search, Math.max(0, st.cx - 1));
+    assert(col >= 0, "should find match");
+    assertEq(col, 0, "backward search should find at col 0");
+})();

@@ -177,7 +177,13 @@ export function saveSfxToDisk() {
 export function loadSfxFromDisk() {
     const json = sys.readFile('sfx.json');
     if (!json) return;
-    const all = JSON.parse(json);
+    let all;
+    try {
+        all = JSON.parse(json);
+    } catch {
+        status('Bad sfx.json');
+        return;
+    }
     if (!all || !all.length) return;
     for (let si = 0; si < all.length; si++) {
         const entry = all[si];

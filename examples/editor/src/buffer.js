@@ -77,7 +77,6 @@ export function doRedo() {
         status('Nothing to redo');
         return;
     }
-    st.invalidateCaches();
     st.undoStack.push(snapshot());
     const s = st.redoStack.pop();
     st.buf = s.buf;
@@ -85,6 +84,7 @@ export function doRedo() {
     st.cy = s.cy;
     st.anchor = null;
     st.dirty = true;
+    st.invalidateCaches();
     ensureVisible();
     resetBlink();
 }

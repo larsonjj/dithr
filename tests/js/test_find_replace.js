@@ -260,3 +260,44 @@ function replaceCurrent() {
     assert(!r, "selection does not match findText");
     assertEq(st.buf[0], "hello world", "unchanged");
 })();
+
+// ═════════════════════════════════════════════════════════════════════════════
+//  replaceAll cursor clamping
+// ═════════════════════════════════════════════════════════════════════════════
+
+// Inlined replaceAll with cursor clamping (matches fixed find.js)
+function replaceAllClamped() {
+    if (!st.findText) return 0;
+    var count = 0;
+    for (var i = 0; i < st.buf.length; i++) {
+        var parts = st.buf[i].split(st.findText);
+        if (parts.length > 1) {
+            count += parts.length - 1;
+            st.buf[i] = parts.join(st.replaceText);
+        }
+    }
+    st.anchor = null;
+    // Clamp cursor to valid range after replacements
+    if (st.cy >= st.buf.length) st.cy = st.buf.length - 1;
+    if (st.cx > st.buf[st.cy].length) st.cx = st.buf[st.cy].length;
+    if (count) st.dirty = true;
+    return count;
+}
+
+// Cursor beyond line end after replacing with shorter text
+(function test_replace_all_cursor_clamp() {
+    resetState(["aaaaaa"], 6, 0, "aa", "");
+    var count = replaceAllClamped();
+    assertEq(count, 3, "3 pairs of aa");
+    assertEq(st.buf[0], "", "all removed");
+    assert(st.cx <= st.buf[0].length, "cursor should be clamped to line length");
+})();
+
+// Cursor on line 0 with valid position — no change needed
+(function test_replace_all_cursor_stays_valid() {
+    resetState(["hello world"], 0, 0, "world", "x");
+    var count = replaceAllClamped();
+    assertEq(count, 1);
+    assertEq(st.buf[0], "hello x");
+    assertEq(st.cx, 0, "cursor stays at 0");
+})();

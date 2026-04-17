@@ -104,6 +104,8 @@ export function replaceAll() {
         }
     }
     st.anchor = null;
+    st.cy = clamp(st.cy, 0, st.buf.length - 1);
+    st.cx = clamp(st.cx, 0, Math.max(0, st.buf[st.cy].length));
     if (count) {
         st.dirty = true;
         status(`Replaced ${count} occurrences`);
