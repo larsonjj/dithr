@@ -95,7 +95,7 @@ prints a summary and returns 0.
 
 ## Coverage
 
-CI enforces a minimum line-coverage threshold (currently 55%). To collect
+CI enforces a minimum line-coverage threshold (currently 60%). To collect
 coverage locally:
 
 ```bash

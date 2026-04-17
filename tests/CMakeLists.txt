@@ -131,6 +131,7 @@ endif()
 # --- API bridge tests that need a graphics context ---
 if (NOT EMSCRIPTEN)
     dtr_add_test(test_api_bridge_gfx test_api_bridge_gfx.c)
+    dtr_add_test(test_api_bridge_map test_api_bridge_map.c)
 endif()
 
 # --- Console lifecycle tests (require SDL display subsystem) ---
