@@ -16,10 +16,10 @@
 const TILE = 8;
 const MAP_W = 60; // level width in tiles
 const MAP_H = 23; // level height in tiles (fits 180px)
-const GRAVITY = 0.25;
-const JUMP = -3.8;
-const MOVE = 0.14;
-const FRICTION = 0.82;
+const GRAVITY = 0.3;
+const JUMP = -4.5;
+const MOVE = 0.6;
+const FRICTION = 0.85;
 
 // Tile types
 const T_EMPTY = 0;
@@ -203,6 +203,8 @@ function resetPlayer() {
 
 // --- Callbacks -------------------------------------------------------
 
+let jumpBuffer = 0; // ticks remaining in jump buffer window
+
 function _init() {
     generateLevel();
     spawnEnemies();
@@ -223,11 +225,6 @@ function _fixedUpdate(dt) {
     }
     player.vx *= FRICTION;
 
-    // Jump
-    if (player.grounded && input.btnp('jump')) {
-        player.vy = JUMP;
-    }
-
     // Gravity
     player.vy += GRAVITY;
 
@@ -236,6 +233,15 @@ function _fixedUpdate(dt) {
     collideX(player);
     player.y += player.vy;
     collideY(player);
+
+    // Jump — buffer keeps the press alive for a few ticks so it
+    // survives the _fixedUpdate-before-_update ordering and brief
+    // airborne moments when stepping off edges.
+    if (jumpBuffer > 0) jumpBuffer--;
+    if (player.grounded && jumpBuffer > 0) {
+        player.vy = JUMP;
+        jumpBuffer = 0;
+    }
 
     // Collect coins
     const pcx1 = math.flr(player.x / TILE);
@@ -292,8 +298,14 @@ function _fixedUpdate(dt) {
 }
 
 function _update(dt) {
+    // Buffer edge-triggered input here — _update runs every frame,
+    // _fixedUpdate may skip ticks due to accumulator jitter.
+    // Give the press a 6-tick (~100ms) window to land.
+    if (input.btnp('jump')) jumpBuffer = 6;
+
     if (!player.alive) {
-        if (input.btnp('jump')) {
+        if (jumpBuffer > 0) {
+            jumpBuffer = 0;
             if (player.score > highScore) {
                 highScore = player.score;
                 cart.dset(0, highScore);

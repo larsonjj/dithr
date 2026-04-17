@@ -1,7 +1,5 @@
 # dithr (Game Toolkit)
 
-[![CI](https://github.com/larsonjj/dithr/actions/workflows/ci.yml/badge.svg)](https://github.com/larsonjj/dithr/actions/workflows/ci.yml)
-
 | Platform | Compiler / Toolchain    | Build                                                                                                                                                                                | Notes                               |
 | -------- | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------- |
 | Windows  | MSVC (latest)           | [![windows](https://img.shields.io/github/actions/workflow/status/larsonjj/dithr/ci.yml?branch=main&label=build)](https://github.com/larsonjj/dithr/actions/workflows/ci.yml)        | Native (multi-config)               |
