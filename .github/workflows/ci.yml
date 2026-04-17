@@ -15,21 +15,21 @@ jobs:
         steps:
             - uses: actions/checkout@v6
 
-            - name: Install clang-format-20
+            - name: Install clang-format-22
               run: |
                   wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key \
                     | sudo gpg --dearmor -o /usr/share/keyrings/llvm.gpg
                   echo "deb [signed-by=/usr/share/keyrings/llvm.gpg] \
-                    http://apt.llvm.org/noble/ llvm-toolchain-noble-20 main" \
-                    | sudo tee /etc/apt/sources.list.d/llvm-20.list
+                    http://apt.llvm.org/noble/ llvm-toolchain-noble-22 main" \
+                    | sudo tee /etc/apt/sources.list.d/llvm-22.list
                   sudo rm -f /etc/apt/sources.list.d/microsoft-prod.list /etc/apt/sources.list.d/azure-cli.list
                   sudo apt-get update
-                  sudo apt-get install -y clang-format-20
+                  sudo apt-get install -y clang-format-22
 
             - name: Check formatting
               run: |
                   find src/ tests/ -name '*.c' -o -name '*.h' \
-                    | xargs clang-format-20 --dry-run --Werror
+                    | xargs clang-format-22 --dry-run --Werror
 
     # ---------------------------------------------------------------------------
     #  JavaScript linting — ESLint (example carts)
