@@ -5,7 +5,6 @@
 
 // --- FPS widget ----------------------------------------------------------
 
-
 // -------------------------------------------------------------------------
 // Game state — a tiny coin-collecting game driven entirely by events
 // -------------------------------------------------------------------------
@@ -19,7 +18,7 @@ const SPEED = 80;
 
 // Event log displayed on screen
 const eventLog = [];
-const MAX_LOG = 12;
+const MAX_LOG = 6;
 let handleScore = -1;
 let _handleSpawn = -1;
 let combo = 0;
@@ -45,8 +44,13 @@ function _init() {
     // Score handler — persistent
     handleScore = evt.on('coin:collect', (e) => {
         score += e.value;
+        logEvent(`coin:collect  score=${score}`);
+    });
+
+    // Combo handler — always active, separate from score
+    evt.on('coin:collect', () => {
         combo++;
-        logEvent(`coin:collect  score=${score} combo=${combo}`);
+        logEvent(`combo=${combo}`);
     });
 
     // Coin respawn — persistent
@@ -95,7 +99,6 @@ function _init() {
 let comboTimer = 0;
 
 function _update(dt) {
-
     // Age log entries
     for (let i = 0; i < eventLog.length; ++i) {
         eventLog[i].age += dt;
@@ -141,8 +144,7 @@ function _update(dt) {
         if (handleScore < 0) {
             handleScore = evt.on('coin:collect', (e) => {
                 score += e.value;
-                combo++;
-                logEvent(`coin:collect  score=${score} combo=${combo}`);
+                logEvent(`coin:collect  score=${score}`);
             });
             logEvent('Re-registered score handler');
         }
@@ -169,7 +171,7 @@ function _draw() {
     // Event log panel
     const lx = 1;
     const ly = 180 - MAX_LOG * 7 - 2;
-    gfx.rectfill(0, ly - 1, 200, 179, 0);
+    gfx.rectfill(0, ly - 9, 200, 179, 0);
     gfx.print('-- event log --', lx, ly - 8, 6);
     for (let i = 0; i < eventLog.length; ++i) {
         const entry = eventLog[i];

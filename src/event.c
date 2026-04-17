@@ -204,12 +204,18 @@ void dtr_event_emit(dtr_event_bus_t *bus, const char *name, JSValue payload)
 
 void dtr_event_flush(dtr_event_bus_t *bus)
 {
-    int32_t count;
+    int32_t qi;
 
-    count            = bus->queue_count;
-    bus->queue_count = 0;
-
-    for (int32_t qi = 0; qi < count; ++qi) {
+    /*
+     * Walk the queue with a running index instead of snapshotting
+     * queue_count and resetting it to 0.  If a handler calls evt.emit()
+     * the new event is appended at bus->queue[bus->queue_count] (after
+     * the events we're already processing), and the while-loop
+     * naturally picks it up.  DTR_EVENT_MAX_QUEUED caps the chain
+     * length so an infinite re-emit loop is bounded.
+     */
+    qi = 0;
+    while (qi < bus->queue_count) {
         dtr_queued_event_t *ev;
         uint32_t            bucket;
         int32_t            *prev;
@@ -262,5 +268,8 @@ void dtr_event_flush(dtr_event_bus_t *bus)
         }
 
         JS_FreeValue(bus->ctx, ev->payload);
+        ++qi;
     }
+
+    bus->queue_count = 0;
 }
