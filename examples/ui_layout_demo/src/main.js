@@ -21,10 +21,10 @@ function _init() {
 }
 
 function _update() {
-    if (key.pressed('right') || key.pressed('d')) {
+    if (key.btnp(key.RIGHT) || key.btnp(key.D)) {
         page = (page + 1) % PAGE_COUNT;
     }
-    if (key.pressed('left') || key.pressed('a')) {
+    if (key.btnp(key.LEFT) || key.btnp(key.A)) {
         page = (page - 1 + PAGE_COUNT) % PAGE_COUNT;
     }
 }
