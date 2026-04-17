@@ -89,7 +89,7 @@ static void test_eval_runtime_error(void)
 {
     dtr_runtime_t *rt;
     bool           ok;
-    const char *   code = "undefined_var.foo;";
+    const char    *code = "undefined_var.foo;";
 
     rt = prv_make_rt();
     ok = dtr_runtime_eval(rt, code, strlen(code), "<test>");
@@ -107,7 +107,7 @@ static void test_call_existing(void)
 {
     dtr_runtime_t *rt;
     bool           ok;
-    const char *   code = "globalThis.__val = 0; function _init() { globalThis.__val = 1; }";
+    const char    *code = "globalThis.__val = 0; function _init() { globalThis.__val = 1; }";
 
     rt = prv_make_rt();
     ok = dtr_runtime_eval(rt, code, strlen(code), "<test>");
@@ -153,7 +153,7 @@ static void test_call_throwing_function(void)
 {
     dtr_runtime_t *rt;
     bool           ok;
-    const char *   code = "function _update() { throw new Error('boom'); }";
+    const char    *code = "function _update() { throw new Error('boom'); }";
 
     rt = prv_make_rt();
     ok = dtr_runtime_eval(rt, code, strlen(code), "<test>");
@@ -171,8 +171,8 @@ static void test_call_blocked_after_error(void)
 {
     dtr_runtime_t *rt;
     bool           ok;
-    const char *   code = "function _update() { throw new Error('fail'); }\n"
-                       "function _draw() { globalThis.__draw_ran = 1; }";
+    const char    *code = "function _update() { throw new Error('fail'); }\n"
+                          "function _draw() { globalThis.__draw_ran = 1; }";
 
     rt = prv_make_rt();
     dtr_runtime_eval(rt, code, strlen(code), "<test>");
@@ -197,7 +197,7 @@ static void test_call_blocked_after_error(void)
 static void test_clear_error(void)
 {
     dtr_runtime_t *rt;
-    const char *   code = "function _update() { throw new Error('oops'); }";
+    const char    *code = "function _update() { throw new Error('oops'); }";
 
     rt = prv_make_rt();
     dtr_runtime_eval(rt, code, strlen(code), "<test>");
@@ -223,7 +223,7 @@ static void test_parse_json_valid(void)
     JSValue        val;
     JSValue        prop;
     int32_t        num;
-    const char *   json = "{\"x\":42}";
+    const char    *json = "{\"x\":42}";
 
     rt  = prv_make_rt();
     val = dtr_runtime_parse_json(rt, json, strlen(json));
@@ -263,8 +263,8 @@ static void test_drain_jobs(void)
 {
     dtr_runtime_t *rt;
     bool           ok;
-    const char *   code = "globalThis.__resolved = 0;\n"
-                       "Promise.resolve().then(() => { globalThis.__resolved = 1; });\n";
+    const char    *code = "globalThis.__resolved = 0;\n"
+                          "Promise.resolve().then(() => { globalThis.__resolved = 1; });\n";
 
     rt = prv_make_rt();
     ok = dtr_runtime_eval(rt, code, strlen(code), "<test>");
@@ -299,9 +299,9 @@ static void test_call_argv_existing(void)
 {
     dtr_runtime_t *rt;
     bool           ok;
-    const char *   code = "globalThis.__sum = 0;\n"
-                       "function _init(a) { globalThis.__sum = a; }\n";
-    JSValue argv[1];
+    const char    *code = "globalThis.__sum = 0;\n"
+                          "function _init(a) { globalThis.__sum = a; }\n";
+    JSValue        argv[1];
 
     rt = prv_make_rt();
     ok = dtr_runtime_eval(rt, code, strlen(code), "<test>");
@@ -348,7 +348,7 @@ static void test_call_argv_throwing(void)
 {
     dtr_runtime_t *rt;
     bool           ok;
-    const char *   code = "function _init(x) { throw new Error('arg_fail'); }";
+    const char    *code = "function _init(x) { throw new Error('arg_fail'); }";
     JSValue        argv[1];
 
     rt = prv_make_rt();
@@ -371,7 +371,7 @@ static void test_call_argv_blocked_after_error(void)
 {
     dtr_runtime_t *rt;
     bool           ok;
-    const char *   code = "function _init() { throw new Error('e'); }";
+    const char    *code = "function _init() { throw new Error('e'); }";
 
     rt = prv_make_rt();
     dtr_runtime_eval(rt, code, strlen(code), "<test>");
@@ -395,8 +395,8 @@ static void test_call_fixed_update(void)
     dtr_runtime_t *rt;
     bool           ok;
     JSValue        argv[1];
-    const char *   code = "globalThis.__fu_dt = 0;"
-                       "function _fixedUpdate(dt) { globalThis.__fu_dt = dt; }";
+    const char    *code = "globalThis.__fu_dt = 0;"
+                          "function _fixedUpdate(dt) { globalThis.__fu_dt = dt; }";
 
     rt = prv_make_rt();
     ok = dtr_runtime_eval(rt, code, strlen(code), "<test>");
@@ -445,7 +445,7 @@ static void test_call_fixed_update_throwing(void)
     dtr_runtime_t *rt;
     bool           ok;
     JSValue        argv[1];
-    const char *   code = "function _fixedUpdate(dt) { throw new Error('boom'); }";
+    const char    *code = "function _fixedUpdate(dt) { throw new Error('boom'); }";
 
     rt = prv_make_rt();
     ok = dtr_runtime_eval(rt, code, strlen(code), "<test>");
@@ -522,7 +522,7 @@ static void test_eval_no_module_keywords(void)
 {
     dtr_runtime_t *rt;
     bool           ok;
-    const char *   code = "globalThis.__plain = 99;";
+    const char    *code = "globalThis.__plain = 99;";
 
     rt = prv_make_rt();
     ok = dtr_runtime_eval(rt, code, strlen(code), "<test>");
@@ -574,9 +574,9 @@ static void test_eval_module_multiple_exports(void)
 {
     dtr_runtime_t *rt;
     bool           ok;
-    const char *   code = "export function _init()   { globalThis.__mi = 10; }\n"
-                       "export function _update() { globalThis.__mu = 20; }\n"
-                       "export function _draw()   { globalThis.__md = 30; }\n";
+    const char    *code = "export function _init()   { globalThis.__mi = 10; }\n"
+                          "export function _update() { globalThis.__mu = 20; }\n"
+                          "export function _draw()   { globalThis.__md = 30; }\n";
 
     rt = prv_make_rt();
     ok = dtr_runtime_eval(rt, code, strlen(code), "<test>");
@@ -612,7 +612,7 @@ static void test_eval_module_runtime_error(void)
 {
     dtr_runtime_t *rt;
     bool           ok;
-    const char *   code = "export function _init() { throw new Error('mod_boom'); }";
+    const char    *code = "export function _init() { throw new Error('mod_boom'); }";
 
     rt = prv_make_rt();
     ok = dtr_runtime_eval(rt, code, strlen(code), "<test>");

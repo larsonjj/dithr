@@ -539,7 +539,7 @@ static JSValue
 js_sys_perf_begin(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
     dtr_console_t *con;
-    const char *   label;
+    const char    *label;
     int32_t        idx;
 
     (void)this_val;
@@ -580,7 +580,7 @@ js_sys_perf_begin(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst 
 static JSValue js_sys_perf_end(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
     dtr_console_t *con;
-    const char *   label;
+    const char    *label;
     uint64_t       now;
     double         freq;
 
@@ -637,7 +637,7 @@ js_sys_text_input(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst 
 static JSValue
 js_sys_clipboard_get(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
-    char *  text;
+    char   *text;
     JSValue result;
 
     (void)this_val;
@@ -681,10 +681,10 @@ js_sys_clipboard_set(JSContext *ctx, JSValueConst this_val, int argc, JSValueCon
 static bool prv_resolve_sandboxed(JSContext *ctx, const char *rel, char *full, size_t full_size)
 {
     dtr_console_t *con;
-    const char *   base;
+    const char    *base;
     char           norm_base[1024];
     size_t         base_len;
-    char *         pos;
+    char          *pos;
 
     con  = dtr_api_get_console(ctx);
     base = con->cart->base_path;
@@ -727,7 +727,7 @@ static JSValue js_sys_read_file(JSContext *ctx, JSValueConst this_val, int argc,
 {
     const char *rel;
     char        full[1024];
-    void *      data;
+    void       *data;
     size_t      len;
     JSValue     result;
 
@@ -799,7 +799,7 @@ js_sys_list_files(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst 
     const char *rel;
     char        full[1024];
     int32_t     count;
-    char **     files;
+    char      **files;
     JSValue     arr;
 
     (void)this_val;
@@ -842,7 +842,7 @@ js_sys_list_files(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst 
 /* ------------------------------------------------------------------ */
 
 typedef struct {
-    JSContext * ctx;
+    JSContext  *ctx;
     JSValue     arr;
     uint32_t    idx;
     const char *base;
@@ -868,7 +868,7 @@ prv_list_dirs_cb(void *userdata, const char *dirname, const char *fname)
 
 static JSValue js_sys_list_dirs(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
-    const char *        rel;
+    const char         *rel;
     char                full[1024];
     prv_list_dirs_ctx_t ld;
 
@@ -913,7 +913,7 @@ static JSValue js_sys_list_dirs(JSContext *ctx, JSValueConst this_val, int argc,
 
 static JSValue js_sys_draw_fps(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
-    dtr_console_t * con;
+    dtr_console_t  *con;
     dtr_graphics_t *g;
     float           cur_fps;
     float           target;

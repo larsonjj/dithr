@@ -20,8 +20,8 @@ extern "C" {
  * \brief           JS runtime wrapper
  */
 struct dtr_runtime {
-    JSRuntime *    rt;
-    JSContext *    ctx;
+    JSRuntime     *rt;
+    JSContext     *ctx;
     dtr_console_t *console;
 
     /* Cached global function atoms */

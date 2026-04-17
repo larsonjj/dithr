@@ -80,12 +80,12 @@ typedef struct {
     int64_t     max_mtime;
 } prv_dir_scan_t;
 
-static SDL_EnumerationResult SDLCALL prv_scan_js_cb(void *      userdata,
+static SDL_EnumerationResult SDLCALL prv_scan_js_cb(void       *userdata,
                                                     const char *dirname,
                                                     const char *fname)
 {
     prv_dir_scan_t *scan;
-    const char *    ext;
+    const char     *ext;
     char            full[1024];
     SDL_PathInfo    info;
 
@@ -205,7 +205,7 @@ static void prv_poll_file_changes(dtr_console_t *con)
 dtr_console_t *dtr_console_create(const char *cart_path)
 {
     dtr_console_t *con;
-    char *         json_data;
+    char          *json_data;
     size_t         json_len;
 
     con = DTR_CALLOC(1, sizeof(dtr_console_t));
@@ -594,7 +594,7 @@ void dtr_console_event(dtr_console_t *con, SDL_Event *event)
             if (event->key.scancode == SDL_SCANCODE_F4) {
                 if (con->prev_code != NULL) {
                     /* Swap current and previous code, then force a reload */
-                    char * tmp_code;
+                    char  *tmp_code;
                     size_t tmp_len;
 
                     tmp_code = con->cart->code;
@@ -889,7 +889,7 @@ void dtr_console_iterate(dtr_console_t *con)
 
     /* Flip + transition + postfx directly into the streaming texture */
     {
-        void *  locked;
+        void   *locked;
         int     pitch;
         int32_t row_bytes;
 
@@ -956,8 +956,8 @@ void dtr_console_iterate(dtr_console_t *con)
 
 bool dtr_console_reload(dtr_console_t *con)
 {
-    char *         saved_json = NULL;
-    char *         new_code   = NULL;
+    char          *saved_json = NULL;
+    char          *new_code   = NULL;
     size_t         new_len    = 0;
     char           code_full[1024];
     dtr_runtime_t *new_rt = NULL;
@@ -1311,7 +1311,7 @@ static bool prv_load_cart_assets(dtr_console_t *con)
         if (path_len > 4 && SDL_strcmp(cart->sprite_sheet_path + path_len - 4, ".hex") == 0) {
             /* Hex-encoded palette-indexed sheet */
             size_t hex_len = 0;
-            char * hex     = (char *)SDL_LoadFile(path_buf, &hex_len);
+            char  *hex     = (char *)SDL_LoadFile(path_buf, &hex_len);
 
             if (hex != NULL) {
                 dtr_gfx_load_sheet_hex(con->graphics,
@@ -1348,7 +1348,7 @@ static bool prv_load_cart_assets(dtr_console_t *con)
     /* Sprite flags: load from hex if configured */
     if (cart->sprite_flags_path[0] != '\0') {
         size_t flags_len = 0;
-        char * flags_hex;
+        char  *flags_hex;
 
         SDL_snprintf(path_buf, sizeof(path_buf), "%s%s", cart->base_path, cart->sprite_flags_path);
         flags_hex = (char *)SDL_LoadFile(path_buf, &flags_len);
@@ -1499,7 +1499,7 @@ static void prv_render_pause_overlay(dtr_console_t *con)
 
     /* Upload to screen */
     {
-        void *  locked;
+        void   *locked;
         int     pitch;
         int32_t row_bytes;
 
@@ -1530,7 +1530,7 @@ static void prv_render_error_overlay(dtr_console_t *con)
 {
     dtr_graphics_t *gfx;
     char            line_buf[64];
-    const char *    msg;
+    const char     *msg;
     int32_t         y_pos;
     int32_t         max_chars;
 
@@ -1606,7 +1606,7 @@ static void prv_render_error_overlay(dtr_console_t *con)
 #endif
 
     {
-        void *  locked;
+        void   *locked;
         int     pitch;
         int32_t row_bytes;
 

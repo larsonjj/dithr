@@ -91,7 +91,7 @@ prv_module_normalize(JSContext *ctx, const char *base_name, const char *name, vo
     const char *sep;
     int         base_len;
     int         cap;
-    char *      result;
+    char       *result;
 
     sep = strrchr(base_name, '/');
     if (sep != NULL) {
@@ -157,9 +157,9 @@ static JSModuleDef *prv_module_loader(JSContext *ctx, const char *module_name, v
     dtr_console_t *con;
     char           path[1024];
     size_t         buf_len;
-    char *         buf;
+    char          *buf;
     JSValue        func_val;
-    JSModuleDef *  mod;
+    JSModuleDef   *mod;
 
     con = (dtr_console_t *)opaque;
 

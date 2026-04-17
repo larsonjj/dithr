@@ -94,10 +94,10 @@ static int32_t prv_json_int(JSContext *ctx, JSValue obj, const char *key, int32_
 /**
  * \brief           Read a string from a JSON object property
  */
-static void prv_json_str(JSContext * ctx,
+static void prv_json_str(JSContext  *ctx,
                          JSValue     obj,
                          const char *key,
-                         char *      out,
+                         char       *out,
                          size_t      out_sz,
                          const char *dflt)
 {
@@ -397,7 +397,7 @@ bool dtr_cart_parse(dtr_cart_t *cart, JSContext *ctx, const char *json, size_t l
                 for (uint32_t pi = 0;
                      pi < prop_count && cart->input.mapping_count < DTR_CART_MAX_INPUT_ACTIONS;
                      ++pi) {
-                    const char *              action_name;
+                    const char               *action_name;
                     JSValue                   bindings_arr;
                     dtr_cart_input_mapping_t *mapping;
 
@@ -571,7 +571,7 @@ bool dtr_cart_validate(dtr_cart_t *cart)
 
 bool dtr_cart_load(dtr_cart_t *cart, JSContext *ctx, const char *path)
 {
-    char * json;
+    char  *json;
     size_t len;
     bool   result;
     char   dir[512];
@@ -622,7 +622,7 @@ bool dtr_cart_load(dtr_cart_t *cart, JSContext *ctx, const char *path)
 char *dtr_cart_load_code(dtr_cart_t *cart)
 {
     char   full_path[1024];
-    char * code;
+    char  *code;
     size_t len;
 
     if (cart->code_path[0] == '\0') {
@@ -743,7 +743,7 @@ double dtr_cart_dget(dtr_cart_t *cart, int32_t slot)
 static bool prv_save_path(dtr_cart_t *cart, char *out, size_t out_sz)
 {
     const char *title;
-    char *      pref;
+    char       *pref;
 
     out[0] = '\0';
 
@@ -765,7 +765,7 @@ static bool prv_save_path(dtr_cart_t *cart, char *out, size_t out_sz)
 bool dtr_cart_persist_save(dtr_cart_t *cart)
 {
     char    path[512];
-    char *  buf;
+    char   *buf;
     size_t  cap;
     size_t  pos;
     int32_t idx;
@@ -837,7 +837,7 @@ bool dtr_cart_persist_save(dtr_cart_t *cart)
 bool dtr_cart_persist_load(dtr_cart_t *cart)
 {
     char       path[512];
-    char *     json;
+    char      *json;
     size_t     len;
     JSContext *ctx;
     JSRuntime *jrt;
