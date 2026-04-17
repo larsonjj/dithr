@@ -2,6 +2,21 @@
 
 [![CI](https://github.com/larsonjj/dithr/actions/workflows/ci.yml/badge.svg)](https://github.com/larsonjj/dithr/actions/workflows/ci.yml)
 
+| Platform | Compiler / Toolchain    | Build                                                                                                                                                                                | Notes                               |
+| -------- | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------- |
+| Windows  | MSVC (latest)           | [![windows](https://img.shields.io/github/actions/workflow/status/larsonjj/dithr/ci.yml?branch=main&label=build)](https://github.com/larsonjj/dithr/actions/workflows/ci.yml)        | Native (multi-config)               |
+| Linux    | GCC (Debug)             | [![linux-gcc-dbg](https://img.shields.io/github/actions/workflow/status/larsonjj/dithr/ci.yml?branch=main&label=build)](https://github.com/larsonjj/dithr/actions/workflows/ci.yml)  | Ninja, shared libs off              |
+| Linux    | GCC (Release)           | [![linux-gcc-rel](https://img.shields.io/github/actions/workflow/status/larsonjj/dithr/ci.yml?branch=main&label=build)](https://github.com/larsonjj/dithr/actions/workflows/ci.yml)  | Ninja                               |
+| Linux    | GCC (ASan/UBSan)        | [![linux-gcc-asan](https://img.shields.io/github/actions/workflow/status/larsonjj/dithr/ci.yml?branch=main&label=build)](https://github.com/larsonjj/dithr/actions/workflows/ci.yml) | Address + UB sanitizers             |
+| Linux    | Clang (Debug)           | [![linux-clang](https://img.shields.io/github/actions/workflow/status/larsonjj/dithr/ci.yml?branch=main&label=build)](https://github.com/larsonjj/dithr/actions/workflows/ci.yml)    | Ninja, shared libs off              |
+| Linux    | GCC + lcov              | [![coverage](https://img.shields.io/github/actions/workflow/status/larsonjj/dithr/ci.yml?branch=main&label=coverage)](https://github.com/larsonjj/dithr/actions/workflows/ci.yml)    | Line coverage ≥ 55 %                |
+| macOS    | AppleClang (Debug)      | [![macos-dbg](https://img.shields.io/github/actions/workflow/status/larsonjj/dithr/ci.yml?branch=main&label=build)](https://github.com/larsonjj/dithr/actions/workflows/ci.yml)      | Ninja, shared libs off              |
+| macOS    | AppleClang (ASan/UBSan) | [![macos-asan](https://img.shields.io/github/actions/workflow/status/larsonjj/dithr/ci.yml?branch=main&label=build)](https://github.com/larsonjj/dithr/actions/workflows/ci.yml)     | Address + UB sanitizers             |
+| WASM     | Emscripten (latest)     | [![wasm](https://img.shields.io/github/actions/workflow/status/larsonjj/dithr/ci.yml?branch=main&label=build)](https://github.com/larsonjj/dithr/actions/workflows/ci.yml)           | + Playwright browser smoke test     |
+| —        | clang-format-20         | [![fmt](https://img.shields.io/github/actions/workflow/status/larsonjj/dithr/ci.yml?branch=main&label=format)](https://github.com/larsonjj/dithr/actions/workflows/ci.yml)           | C/H formatting check                |
+| —        | clang-tidy              | [![tidy](https://img.shields.io/github/actions/workflow/status/larsonjj/dithr/ci.yml?branch=main&label=tidy)](https://github.com/larsonjj/dithr/actions/workflows/ci.yml)            | Static analysis, warnings as errors |
+| —        | ESLint + Prettier       | [![jslint](https://img.shields.io/github/actions/workflow/status/larsonjj/dithr/ci.yml?branch=main&label=lint)](https://github.com/larsonjj/dithr/actions/workflows/ci.yml)          | Example cart JS linting             |
+
 A fantasy console engine for building retro games. Write game logic in
 JavaScript, and the engine handles rendering, audio, input, and tilemaps
 through a concise built-in API. Runs natively on Windows, macOS and Linux, or

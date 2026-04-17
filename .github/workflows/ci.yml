@@ -66,7 +66,9 @@ jobs:
             - name: Cache build
               uses: actions/cache@v5
               with:
-                  path: build/debug/_deps
+                  path: |
+                      build/debug/_deps
+                      ~/.cmake/packages
                   key: linux-tidy-deps-${{ hashFiles('CMakeLists.txt') }}
                   restore-keys: linux-tidy-deps-
 
@@ -98,7 +100,9 @@ jobs:
             - name: Cache build
               uses: actions/cache@v5
               with:
-                  path: build/debug/_deps
+                  path: |
+                      build/debug/_deps
+                      ~\AppData\Local\CMake\packages
                   key: win-deps-${{ hashFiles('CMakeLists.txt') }}
                   restore-keys: win-deps-
 
@@ -157,7 +161,9 @@ jobs:
             - name: Cache build
               uses: actions/cache@v5
               with:
-                  path: ${{ matrix.build-dir }}/_deps
+                  path: |
+                      ${{ matrix.build-dir }}/_deps
+                      ~/.cmake/packages
                   key: ${{ matrix.cache-key }}-${{ hashFiles('CMakeLists.txt') }}
                   restore-keys: ${{ matrix.cache-key }}-
 
@@ -194,7 +200,9 @@ jobs:
             - name: Cache build
               uses: actions/cache@v5
               with:
-                  path: build/coverage/_deps
+                  path: |
+                      build/coverage/_deps
+                      ~/.cmake/packages
                   key: linux-cov-deps-${{ hashFiles('CMakeLists.txt') }}
                   restore-keys: linux-cov-deps-
 
@@ -274,7 +282,9 @@ jobs:
             - name: Cache build
               uses: actions/cache@v5
               with:
-                  path: ${{ matrix.build-dir }}/_deps
+                  path: |
+                      ${{ matrix.build-dir }}/_deps
+                      ~/.cmake/packages
                   key: ${{ matrix.cache-key }}-${{ hashFiles('CMakeLists.txt') }}
                   restore-keys: ${{ matrix.cache-key }}-
 
@@ -325,7 +335,9 @@ jobs:
             - name: Cache build
               uses: actions/cache@v5
               with:
-                  path: build/wasm/_deps
+                  path: |
+                      build/wasm/_deps
+                      ~/.cmake/packages
                   key: wasm-ci-deps-${{ hashFiles('CMakeLists.txt') }}
                   restore-keys: wasm-ci-deps-
 
