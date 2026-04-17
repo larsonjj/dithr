@@ -29,6 +29,56 @@ static void prv_render_pause_overlay(dtr_console_t *con);
 static void prv_render_error_overlay(dtr_console_t *con);
 
 /**
+ * \brief           Validate that a relative asset path stays within the cart
+ *                  base directory.  Rejects absolute paths, ".." traversal,
+ *                  and any resolved result that escapes \p base.
+ * \param[in]       rel: Relative path from cart.json
+ * \param[in]       base: Cart base directory (must end with '/' or '\\')
+ * \param[out]      full: Buffer to receive the resolved path
+ * \param[in]       full_size: Size of \p full buffer
+ * \return          true if the path is safe; \p full is populated
+ */
+static bool prv_validate_asset_path(const char *rel, const char *base, char *full, size_t full_size)
+{
+    char   norm_base[1024];
+    size_t base_len;
+    char  *pos;
+
+    /* Reject absolute paths and explicit traversal */
+    if (rel[0] == '/' || rel[0] == '\\') {
+        return false;
+    }
+    if (SDL_strstr(rel, "..") != NULL) {
+        return false;
+    }
+
+    SDL_snprintf(full, full_size, "%s%s", base, rel);
+
+    /* Normalise backslashes to forward slashes */
+    for (pos = full; *pos != '\0'; ++pos) {
+        if (*pos == '\\') {
+            *pos = '/';
+        }
+    }
+
+    /* Normalise base_path the same way for comparison */
+    SDL_strlcpy(norm_base, base, sizeof(norm_base));
+    for (pos = norm_base; *pos != '\0'; ++pos) {
+        if (*pos == '\\') {
+            *pos = '/';
+        }
+    }
+
+    /* Final check: resolved path must start with base_path */
+    base_len = SDL_strlen(norm_base);
+    if (SDL_strncmp(full, norm_base, base_len) != 0) {
+        return false;
+    }
+
+    return true;
+}
+
+/**
  * \brief           Free all subsystem resources without event emission or
  *                  persistence save.  Safe to call when any subset of fields
  *                  is still NULL (e.g. during a partially-constructed console).
@@ -1319,7 +1369,13 @@ static bool prv_load_cart_assets(dtr_console_t *con)
     if (cart->sprite_sheet_path[0] != '\0') {
         size_t path_len;
 
-        SDL_snprintf(path_buf, sizeof(path_buf), "%s%s", cart->base_path, cart->sprite_sheet_path);
+        if (!prv_validate_asset_path(
+                cart->sprite_sheet_path, cart->base_path, path_buf, sizeof(path_buf))) {
+            SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
+                         "Rejected sprite sheet path: %s",
+                         cart->sprite_sheet_path);
+            goto skip_sprites;
+        }
         path_len = SDL_strlen(cart->sprite_sheet_path);
 
         if (path_len > 4 && SDL_strcmp(cart->sprite_sheet_path + path_len - 4, ".hex") == 0) {
@@ -1359,18 +1415,28 @@ static bool prv_load_cart_assets(dtr_console_t *con)
         }
     }
 
+skip_sprites:
+
     /* Sprite flags: load from hex if configured */
     if (cart->sprite_flags_path[0] != '\0') {
         size_t flags_len = 0;
         char  *flags_hex;
 
-        SDL_snprintf(path_buf, sizeof(path_buf), "%s%s", cart->base_path, cart->sprite_flags_path);
+        if (!prv_validate_asset_path(
+                cart->sprite_flags_path, cart->base_path, path_buf, sizeof(path_buf))) {
+            SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
+                         "Rejected sprite flags path: %s",
+                         cart->sprite_flags_path);
+            goto skip_flags;
+        }
         flags_hex = (char *)SDL_LoadFile(path_buf, &flags_len);
         if (flags_hex != NULL) {
             dtr_gfx_load_flags_hex(con->graphics, flags_hex, flags_len);
             SDL_free(flags_hex);
         }
     }
+
+skip_flags:
 
     /* Maps: already parsed during cart_parse for baked carts */
     /* For dev carts, import from source files */
@@ -1382,8 +1448,11 @@ static bool prv_load_cart_assets(dtr_console_t *con)
             src     = cart->map_paths[idx];
             src_len = SDL_strlen(src);
 
-            /* Build full path */
-            SDL_snprintf(path_buf, sizeof(path_buf), "%s%s", cart->base_path, src);
+            /* Validate and build full path */
+            if (!prv_validate_asset_path(src, cart->base_path, path_buf, sizeof(path_buf))) {
+                SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Rejected map path: %s", src);
+                continue;
+            }
 
             /* Detect format by extension */
             if (src_len > 4 && SDL_strcmp(src + src_len - 4, ".tmj") == 0) {
@@ -1400,7 +1469,12 @@ static bool prv_load_cart_assets(dtr_console_t *con)
             size_t   len;
             uint8_t *data;
 
-            SDL_snprintf(path_buf, sizeof(path_buf), "%s%s", cart->base_path, cart->sfx_paths[idx]);
+            if (!prv_validate_asset_path(
+                    cart->sfx_paths[idx], cart->base_path, path_buf, sizeof(path_buf))) {
+                SDL_LogError(
+                    SDL_LOG_CATEGORY_APPLICATION, "Rejected sfx path: %s", cart->sfx_paths[idx]);
+                continue;
+            }
             data = (uint8_t *)SDL_LoadFile(path_buf, &len);
             if (data != NULL) {
                 dtr_audio_load_sfx(con->audio, data, len);
@@ -1417,8 +1491,13 @@ static bool prv_load_cart_assets(dtr_console_t *con)
             size_t   len;
             uint8_t *data;
 
-            SDL_snprintf(
-                path_buf, sizeof(path_buf), "%s%s", cart->base_path, cart->music_paths[idx]);
+            if (!prv_validate_asset_path(
+                    cart->music_paths[idx], cart->base_path, path_buf, sizeof(path_buf))) {
+                SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
+                             "Rejected music path: %s",
+                             cart->music_paths[idx]);
+                continue;
+            }
             data = (uint8_t *)SDL_LoadFile(path_buf, &len);
             if (data != NULL) {
                 dtr_audio_load_music(con->audio, data, len);
@@ -1433,7 +1512,11 @@ static bool prv_load_cart_assets(dtr_console_t *con)
     if (cart->code == NULL && cart->code_path[0] != '\0') {
         size_t len;
 
-        SDL_snprintf(path_buf, sizeof(path_buf), "%s%s", cart->base_path, cart->code_path);
+        if (!prv_validate_asset_path(
+                cart->code_path, cart->base_path, path_buf, sizeof(path_buf))) {
+            SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Rejected code path: %s", cart->code_path);
+            return true;
+        }
         cart->code = (char *)SDL_LoadFile(path_buf, &len);
         if (cart->code != NULL) {
             cart->code_len = len;

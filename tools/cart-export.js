@@ -137,7 +137,10 @@ canvas { display: block; margin: auto; image-rendering: pixelated; }
 window.DITHR_CART = ${JSON.stringify(exportCart)};
 </script>
 <script>
-// Placeholder: load dithr WASM runtime here
+// WIP: WASM runtime loading is not yet implemented.
+// To make this work, build the WASM target (cmake --preset wasm)
+// and include the resulting dithr.js + dithr.wasm here.
+// See tools/serve-wasm.js for the development server approach.
 console.log("dithr cart loaded. WASM runtime required to run.");
 console.log("Cart:", window.DITHR_CART.meta);
 </script>

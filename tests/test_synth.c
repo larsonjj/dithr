@@ -899,6 +899,93 @@ static void test_effect_vibrato_modulation(void)
 }
 
 /* ------------------------------------------------------------------ */
+/*  Multi-note sequence                                                */
+/* ------------------------------------------------------------------ */
+
+static void test_render_multi_note(void)
+{
+    dtr_synth_sfx_t sfx = {0};
+    size_t          len;
+    int16_t        *buf;
+
+    sfx.speed             = 4;
+    sfx.notes[0].pitch    = 49; /* C-4 */
+    sfx.notes[0].waveform = DTR_WAVE_SQUARE;
+    sfx.notes[0].volume   = 7;
+    sfx.notes[1].pitch    = 58; /* A-4 */
+    sfx.notes[1].waveform = DTR_WAVE_TRIANGLE;
+    sfx.notes[1].volume   = 5;
+    sfx.notes[2].pitch    = 61; /* C-5 */
+    sfx.notes[2].waveform = DTR_WAVE_SAW;
+    sfx.notes[2].volume   = 7;
+
+    buf = dtr_synth_render(&sfx, &len);
+    DTR_ASSERT_NOT_NULL(buf);
+    DTR_ASSERT(len > 0);
+
+    /* Audio should contain non-zero samples */
+    {
+        int32_t has_audio = 0;
+        for (size_t i = 0; i < len && !has_audio; ++i) {
+            if (buf[i] != 0) {
+                has_audio = 1;
+            }
+        }
+        DTR_ASSERT(has_audio);
+    }
+    free(buf);
+    DTR_PASS();
+}
+
+/* ------------------------------------------------------------------ */
+/*  ADSR: volume envelope                                              */
+/* ------------------------------------------------------------------ */
+
+static void test_render_adsr_envelope(void)
+{
+    dtr_synth_sfx_t sfx = {0};
+    size_t          len;
+    int16_t        *buf;
+    int32_t         spn;
+    int32_t         max_start;
+    int32_t         max_end;
+
+    /* A single loud note then silence — check amplitude decay */
+    sfx.speed             = 8;
+    sfx.notes[0].pitch    = 49; /* C-4 */
+    sfx.notes[0].waveform = DTR_WAVE_SQUARE;
+    sfx.notes[0].volume   = 7;
+    sfx.notes[0].effect   = DTR_FX_FADE_OUT;
+
+    buf = dtr_synth_render(&sfx, &len);
+    DTR_ASSERT_NOT_NULL(buf);
+
+    spn = 8 * (DTR_SYNTH_SAMPLE_RATE / 128);
+
+    /* Measure peak amplitude in the first quarter vs last quarter */
+    max_start = 0;
+    max_end   = 0;
+    for (int32_t i = 0; i < spn / 4; ++i) {
+        int32_t absval = buf[i] < 0 ? -buf[i] : buf[i];
+        if (absval > max_start) {
+            max_start = absval;
+        }
+    }
+    for (int32_t i = spn * 3 / 4; i < spn; ++i) {
+        int32_t absval = buf[i] < 0 ? -buf[i] : buf[i];
+        if (absval > max_end) {
+            max_end = absval;
+        }
+    }
+
+    /* Start should be louder than end (fade out) */
+    DTR_ASSERT(max_start > max_end);
+
+    free(buf);
+    DTR_PASS();
+}
+
+/* ------------------------------------------------------------------ */
 /*  Main                                                               */
 /* ------------------------------------------------------------------ */
 
@@ -968,6 +1055,10 @@ int main(void)
     /* Comprehensive */
     DTR_RUN_TEST(test_render_all_waveforms);
     DTR_RUN_TEST(test_render_all_effects);
+
+    /* Multi-note / envelope */
+    DTR_RUN_TEST(test_render_multi_note);
+    DTR_RUN_TEST(test_render_adsr_envelope);
 
     DTR_TEST_END();
 }

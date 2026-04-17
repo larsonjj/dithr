@@ -36,7 +36,8 @@ try {
     if (cartJson.code) {
         ENTRY_JS = cartJson.code.replace(/\\/g, "/");
     }
-} catch (_) {
+} catch (err) {
+    console.warn("Failed to parse cart.json:", err.message);
     /* cart.json missing or unparseable — fall back to treating all .js as entry */
 }
 

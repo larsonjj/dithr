@@ -177,10 +177,10 @@ static void test_map_get(void)
     DTR_ASSERT(prv_eval_i32(tc, "map.get(1, 0)") == 2);
     /* Tile at (0,1) should be 5 (row 1, col 0 = 4*1+0+1) */
     DTR_ASSERT(prv_eval_i32(tc, "map.get(0, 1)") == 5);
-    /* Out of bounds returns 0 */
-    DTR_ASSERT(prv_eval_i32(tc, "map.get(99, 99)") == 0);
-    /* Negative coords return 0 */
-    DTR_ASSERT(prv_eval_i32(tc, "map.get(-1, 0)") == 0);
+    /* Out of bounds returns undefined */
+    DTR_ASSERT(prv_eval_bool(tc, "map.get(99, 99) === undefined"));
+    /* Negative coords return undefined */
+    DTR_ASSERT(prv_eval_bool(tc, "map.get(-1, 0) === undefined"));
 
     prv_teardown(tc);
     DTR_PASS();
@@ -198,7 +198,7 @@ static void test_map_set(void)
 
     /* Out of bounds set is a no-op */
     prv_eval_void(tc, "map.set(99, 99, 7)");
-    DTR_ASSERT(prv_eval_i32(tc, "map.get(99, 99)") == 0);
+    DTR_ASSERT(prv_eval_bool(tc, "map.get(99, 99) === undefined"));
 
     prv_teardown(tc);
     DTR_PASS();
@@ -758,8 +758,8 @@ static void test_map_no_map_fallback(void)
     tc = prv_setup(); /* No map created */
     prv_register(tc, dtr_map_api_register);
 
-    /* All should return 0 / empty / false without crashing */
-    DTR_ASSERT(prv_eval_i32(tc, "map.get(0, 0)") == 0);
+    /* All should return undefined / 0 / empty / false without crashing */
+    DTR_ASSERT(prv_eval_bool(tc, "map.get(0, 0) === undefined"));
     DTR_ASSERT(prv_eval_i32(tc, "map.width()") == 0);
     DTR_ASSERT(prv_eval_i32(tc, "map.height()") == 0);
     DTR_ASSERT(prv_eval_i32(tc, "map.layers().length") == 0);

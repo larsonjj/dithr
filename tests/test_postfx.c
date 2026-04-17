@@ -383,6 +383,27 @@ static void test_postfx_apply_crt_low_strength(void)
 }
 
 /* ------------------------------------------------------------------ */
+/*  Edge cases                                                         */
+/* ------------------------------------------------------------------ */
+
+static void test_postfx_apply_1x1(void)
+{
+    dtr_postfx_t *pfx   = dtr_postfx_create(1, 1);
+    uint32_t      pixel = 0xFF8040FFu;
+
+    dtr_postfx_push(pfx, DTR_POSTFX_SCANLINES, 1.0f);
+    dtr_postfx_push(pfx, DTR_POSTFX_BLOOM, 1.0f);
+    dtr_postfx_push(pfx, DTR_POSTFX_ABERRATION, 0.5f);
+    dtr_postfx_push(pfx, DTR_POSTFX_CRT, 0.5f);
+
+    /* Apply all four effects on a 1×1 framebuffer — must not crash */
+    dtr_postfx_apply(pfx, &pixel, 1, 1);
+
+    dtr_postfx_destroy(pfx);
+    DTR_PASS();
+}
+
+/* ------------------------------------------------------------------ */
 /*  Runner                                                             */
 /* ------------------------------------------------------------------ */
 
@@ -419,6 +440,9 @@ int main(void)
     DTR_RUN_TEST(test_postfx_apply_bloom_below_threshold);
     DTR_RUN_TEST(test_postfx_apply_multiple_stacked);
     DTR_RUN_TEST(test_postfx_apply_crt_low_strength);
+
+    /* Edge cases */
+    DTR_RUN_TEST(test_postfx_apply_1x1);
 
     DTR_TEST_END();
 }

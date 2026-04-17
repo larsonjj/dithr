@@ -1,0 +1,23 @@
+{
+    "title": "Touch Demo",
+    "author": "dithr",
+    "version": "1.0.0",
+    "description": "Demonstrates multi-touch input: position, pressure, gestures",
+    "display": {
+        "width": 320,
+        "height": 180,
+        "scale": 3
+    },
+    "timing": {
+        "fps": 60
+    },
+    "sprites": {
+        "tileW": 8,
+        "tileH": 8
+    },
+    "audio": {
+        "channels": 8
+    },
+    "code": "src/main.js",
+    "maps": []
+}

@@ -99,6 +99,9 @@ void dtr_gfx_destroy(dtr_graphics_t *gfx)
     if (gfx->transition.dissolve_order != NULL) {
         DTR_FREE(gfx->transition.dissolve_order);
     }
+    if (gfx->pal_lut != NULL) {
+        DTR_FREE(gfx->pal_lut);
+    }
     DTR_FREE(gfx->framebuffer);
     DTR_FREE(gfx->pixels);
     DTR_FREE(gfx);
@@ -2712,7 +2715,7 @@ bool dtr_gfx_load_sheet(dtr_graphics_t *gfx,
     sht = &gfx->sheet;
 
     total      = width * height;
-    alloc_sz   = (size_t)total;
+    alloc_sz   = (size_t)width * (size_t)height;
     new_pixels = DTR_MALLOC(alloc_sz);
     if (new_pixels == NULL) {
         return false;
@@ -2726,12 +2729,16 @@ bool dtr_gfx_load_sheet(dtr_graphics_t *gfx,
     /* Quantise RGBA to nearest palette colour.
      * Build a 15-bit (5 bits per channel) colour-cube LUT for O(1) lookup.
      * Most sprite sheets use exact palette colours, so the LUT hits ~99%
-     * of the time, avoiding the inner 256-entry brute-force loop. */
+     * of the time, avoiding the inner 256-entry brute-force loop.
+     * The LUT is cached in gfx->pal_lut and reused across sheet loads. */
     {
         uint8_t *lut;
         int32_t  lut_size = 32 * 32 * 32;
 
-        lut = DTR_MALLOC((size_t)lut_size);
+        if (gfx->pal_lut == NULL) {
+            gfx->pal_lut = DTR_MALLOC((size_t)lut_size);
+        }
+        lut = gfx->pal_lut;
         if (lut != NULL) {
             /* Populate LUT: for each 15-bit colour, find nearest palette entry */
             for (int32_t ri = 0; ri < 32; ++ri) {
@@ -2780,8 +2787,6 @@ bool dtr_gfx_load_sheet(dtr_graphics_t *gfx,
                       ((int32_t)(rgba[idx * 4 + 1] >> 3) << 5) | (int32_t)(rgba[idx * 4 + 2] >> 3);
                 sht->pixels[idx] = lut[key];
             }
-
-            DTR_FREE(lut);
         } else {
             /* Fallback: brute-force per-pixel quantisation */
             for (int32_t idx = 0; idx < total; ++idx) {
@@ -2870,7 +2875,7 @@ bool dtr_gfx_load_sheet_hex(dtr_graphics_t *gfx,
     }
 
     total    = width * height;
-    alloc_sz = (size_t)total;
+    alloc_sz = (size_t)width * (size_t)height;
 
     /* Strip trailing whitespace (newlines, spaces) that text editors may add */
     while (hex_len > 0 && (hex[hex_len - 1] == '\n' || hex[hex_len - 1] == '\r' ||

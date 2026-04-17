@@ -627,6 +627,50 @@ static void test_eval_module_runtime_error(void)
 }
 
 /* ================================================================== */
+/*  Memory & stack limits                                              */
+/* ================================================================== */
+
+static void test_memory_limit(void)
+{
+    dtr_runtime_t *rt;
+    bool           ok;
+
+    /* Create a tiny 1 MB runtime */
+    rt = dtr_runtime_create(NULL, 1, TEST_STACK_KB);
+    DTR_ASSERT_NOT_NULL(rt);
+
+    /* Try to allocate a huge array — should exceed the 1 MB heap limit */
+    const char *code = "var arr = new Uint8Array(8 * 1024 * 1024);";
+    ok               = dtr_runtime_eval(rt, code, strlen(code), "<test>");
+
+    /* Allocation should fail, producing an error */
+    DTR_ASSERT(!ok);
+    DTR_ASSERT(rt->error_active);
+
+    dtr_runtime_destroy(rt);
+    DTR_PASS();
+}
+
+static void test_stack_overflow(void)
+{
+    dtr_runtime_t *rt;
+    bool           ok;
+
+    rt = prv_make_rt();
+    DTR_ASSERT_NOT_NULL(rt);
+
+    /* Infinite recursion — should hit stack limit */
+    const char *code = "function boom() { return boom(); } boom();";
+    ok               = dtr_runtime_eval(rt, code, strlen(code), "<test>");
+
+    DTR_ASSERT(!ok);
+    DTR_ASSERT(rt->error_active);
+
+    dtr_runtime_destroy(rt);
+    DTR_PASS();
+}
+
+/* ================================================================== */
 /*  Main                                                               */
 /* ================================================================== */
 
@@ -682,6 +726,10 @@ int main(int argc, char *argv[])
     DTR_RUN_TEST(test_eval_module_multiple_exports);
     DTR_RUN_TEST(test_eval_module_syntax_error);
     DTR_RUN_TEST(test_eval_module_runtime_error);
+
+    /* Memory & stack limits */
+    DTR_RUN_TEST(test_memory_limit);
+    DTR_RUN_TEST(test_stack_overflow);
 
     DTR_TEST_END();
 }

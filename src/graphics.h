@@ -194,6 +194,9 @@ struct dtr_graphics {
     /* Draw list (sprite batch) */
     dtr_draw_list_t draw_list;
 
+    /* Cached 15-bit colour-cube LUT for palette quantisation (32*32*32) */
+    uint8_t *pal_lut;
+
     /* Framebuffer dimensions (may be overridden by cart) */
     int32_t width;
     int32_t height;

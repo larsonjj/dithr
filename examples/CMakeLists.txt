@@ -26,6 +26,8 @@
 #   sys_explorer       - System introspection, file I/O & clipboard
 #   tween_showcase     - Tweening, easing & runtime input remapping
 #   synth_demo         - Procedural sound synthesis with the synth API
+#   touch_demo         - Multi-touch input: position, pressure, gestures
+#   ui_layout_demo     - UI layout helpers: rect, split, stack, anchor, place
 
 # Install example carts alongside the executable
 install(DIRECTORY

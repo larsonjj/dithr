@@ -40,7 +40,7 @@ static JSValue js_map_get(JSContext *ctx, JSValueConst this_val, int argc, JSVal
 
     level = prv_get_level(ctx, argc, argv, 3);
     if (level == NULL) {
-        return JS_NewInt32(ctx, 0);
+        return JS_UNDEFINED;
     }
 
     x         = dtr_api_opt_int(ctx, argc, argv, 0, 0);
@@ -48,7 +48,7 @@ static JSValue js_map_get(JSContext *ctx, JSValueConst this_val, int argc, JSVal
     layer_idx = dtr_api_opt_int(ctx, argc, argv, 2, 0);
 
     if (layer_idx < 0 || layer_idx >= level->layer_count) {
-        return JS_NewInt32(ctx, 0);
+        return JS_UNDEFINED;
     }
 
     {
@@ -56,10 +56,10 @@ static JSValue js_map_get(JSContext *ctx, JSValueConst this_val, int argc, JSVal
 
         layer = &level->layers[layer_idx];
         if (!layer->is_tile_layer || layer->tiles == NULL) {
-            return JS_NewInt32(ctx, 0);
+            return JS_UNDEFINED;
         }
         if (x < 0 || x >= layer->width || y < 0 || y >= layer->height) {
-            return JS_NewInt32(ctx, 0);
+            return JS_UNDEFINED;
         }
         return JS_NewInt32(ctx, layer->tiles[y * layer->width + x]);
     }
@@ -658,7 +658,7 @@ static JSValue js_map_create(JSContext *ctx, JSValueConst this_val, int argc, JS
     layer->width         = wid;
     layer->height        = hgt;
     SDL_strlcpy(layer->name, "Layer 1", sizeof(layer->name));
-    layer->tiles = DTR_CALLOC((size_t)(wid * hgt), sizeof(int32_t));
+    layer->tiles = DTR_CALLOC((size_t)wid * (size_t)hgt, sizeof(int32_t));
     if (layer->tiles == NULL) {
         DTR_FREE(level->layers);
         DTR_FREE(level);
@@ -719,7 +719,7 @@ static JSValue js_map_resize(JSContext *ctx, JSValueConst this_val, int argc, JS
             continue;
         }
 
-        new_tiles = DTR_CALLOC((size_t)(new_w * new_h), sizeof(int32_t));
+        new_tiles = DTR_CALLOC((size_t)new_w * (size_t)new_h, sizeof(int32_t));
         if (new_tiles == NULL) {
             return JS_FALSE;
         }
