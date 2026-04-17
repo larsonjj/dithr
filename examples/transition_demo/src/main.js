@@ -4,7 +4,6 @@
 
 // --- FPS widget ----------------------------------------------------------
 
-
 // -------------------------------------------------------------------------
 // Scenes
 // -------------------------------------------------------------------------
@@ -20,11 +19,12 @@ let sceneIdx = 0;
 let sceneTimer = 0;
 let transitionType = 0; // 0=fade, 1=wipe(L), 2=wipe(R), 3=wipe(U), 4=wipe(D), 5=dissolve
 const TRANSITION_NAMES = ['fade', 'wipe left', 'wipe right', 'wipe up', 'wipe down', 'dissolve'];
-const TRANS_FRAMES = 120;
+const TRANS_DURATION = 2.0; // seconds
 const HOLD_TIME = 0.3; // seconds to pause on black between out and in
 let phase = 'idle'; // "idle", "out", "hold", "in"
 let queuedScene = -1;
-let inFrame = 0; // manual counter for the "in" phase
+let transFrames = 0; // frame count for both out and in phases
+let inFrame = 0; // render-frame counter for the "in" phase
 let holdTimer = 0;
 let stars = [];
 
@@ -38,14 +38,6 @@ function buildStars() {
             col: math.rnd(1) > 0.5 ? 7 : 6,
         });
     }
-}
-
-// Simple hash for dissolve pixel selection (matches engine algorithm)
-function hashPixel(x, y) {
-    let h = (x * 374761393 + y * 668265263 + 42 * 2147483647) | 0;
-    h = Math.imul((h ^ (h >>> 13)) | 0, 1274126177);
-    h = (h ^ (h >>> 16)) >>> 0;
-    return h;
 }
 
 function fireTransitionOut(frames) {
@@ -78,7 +70,8 @@ function startTransition(targetScene) {
     if (phase !== 'idle') return;
     queuedScene = targetScene;
     phase = 'out';
-    fireTransitionOut(TRANS_FRAMES);
+    transFrames = math.flr(TRANS_DURATION * sys.targetFps());
+    fireTransitionOut(transFrames);
 }
 
 function _init() {
@@ -86,7 +79,6 @@ function _init() {
 }
 
 function _update(dt) {
-
     // Move stars
     for (let i = 0; i < stars.length; ++i) {
         stars[i].x -= stars[i].spd;
@@ -107,9 +99,6 @@ function _update(dt) {
             phase = 'in';
             inFrame = 0;
         }
-    } else if (phase === 'in') {
-        inFrame++;
-        if (inFrame >= TRANS_FRAMES) phase = 'idle';
     }
 
     if (phase !== 'idle') return;
@@ -181,15 +170,19 @@ function _draw() {
 
     // Manual "in" overlay — draw shrinking black mask over the new scene
     if (phase === 'in') {
-        const t = inFrame / TRANS_FRAMES; // 0→1 = fully black → fully clear
+        inFrame++;
+        const t = math.min(inFrame / transFrames, 1.0); // 0→1 = fully black → fully clear
+        if (inFrame >= transFrames) phase = 'idle';
 
-        if (transitionType === 0) {
-            // ── Fade in: dithered overlay that thins out ──
-            // NOTE: 0x0000 is excluded — the engine treats fillp(0) as solid fill
-            const patterns = [
-                0xffff, 0x7fff, 0x7fbf, 0x7baf, 0x5aaf, 0x5aa5, 0x5a25, 0x5224, 0x5024, 0x4024,
-                0x4020, 0x0020, 0x0400,
-            ];
+        // Dithered pattern table: each entry is a fill pattern with decreasing
+        // coverage, used for fade-in and dissolve-in alike.
+        const patterns = [
+            0xffff, 0x7fff, 0x7fbf, 0x7baf, 0x5aaf, 0x5aa5, 0x5a25, 0x5224, 0x5024, 0x4024, 0x4020,
+            0x0020, 0x0400,
+        ];
+
+        if (transitionType === 0 || transitionType === 5) {
+            // ── Fade / Dissolve in: dithered overlay that thins out ──
             const level = math.flr(t * (patterns.length + 1));
             if (level < patterns.length) {
                 gfx.fillp(patterns[level]);
@@ -222,18 +215,6 @@ function _draw() {
                 const lim = math.flr(180 * remain);
                 if (lim > 0) gfx.rectfill(0, 0, 319, lim - 1, 0);
             }
-        } else if (transitionType === 5) {
-            // ── Dissolve in: pixel-by-pixel reveal using same hash ──
-            // At t=0 all pixels are black; at t=1 all are revealed.
-            // We draw black on pixels whose hash is ABOVE the threshold.
-            const threshold = (t * 4294967295) >>> 0;
-            for (let py = 0; py < 180; py += 2) {
-                for (let px = 0; px < 320; px += 2) {
-                    if (hashPixel(px, py) > threshold) {
-                        gfx.rectfill(px, py, px + 1, py + 1, 0);
-                    }
-                }
-            }
         }
     }
 }
@@ -243,6 +224,7 @@ function _save() {
         sceneIdx,
         transitionType,
         phase,
+        transFrames,
         inFrame,
         holdTimer,
     };
@@ -252,6 +234,7 @@ function _restore(s) {
     sceneIdx = s.sceneIdx;
     transitionType = s.transitionType;
     phase = s.phase || 'idle';
+    transFrames = s.transFrames || 0;
     inFrame = s.inFrame || 0;
     holdTimer = s.holdTimer || 0;
 }

@@ -134,9 +134,7 @@
         "${workspaceFolder}/examples/collision_demo",
         "${workspaceFolder}/examples/sys_explorer",
         "${workspaceFolder}/examples/tween_showcase",
-        "${workspaceFolder}/examples/synth_demo",
-        "${workspaceFolder}/examples/touch_demo",
-        "${workspaceFolder}/examples/ui_layout_demo"
+        "${workspaceFolder}/examples/synth_demo"
       ],
       "default": "examples/hello_world"
     },
@@ -166,9 +164,7 @@
         "${workspaceFolder}/examples/collision_demo/cart.json",
         "${workspaceFolder}/examples/sys_explorer/cart.json",
         "${workspaceFolder}/examples/tween_showcase/cart.json",
-        "${workspaceFolder}/examples/synth_demo/cart.json",
-        "${workspaceFolder}/examples/touch_demo/cart.json",
-        "${workspaceFolder}/examples/ui_layout_demo/cart.json"
+        "${workspaceFolder}/examples/synth_demo/cart.json"
       ],
       "default": "${workspaceFolder}/examples/hello_world/cart.json"
     }
