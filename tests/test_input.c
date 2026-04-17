@@ -482,6 +482,135 @@ static void test_input_clear_action_preserves_others(void)
 }
 
 /* ------------------------------------------------------------------ */
+/*  Frame-stable btnp tests                                            */
+/* ------------------------------------------------------------------ */
+
+static void test_key_btnp_frame_stable(void)
+{
+    dtr_key_state_t *keys;
+
+    keys = dtr_key_create();
+
+    /* Press Z — btnp should return true for multiple reads in same frame */
+    dtr_key_set(keys, DTR_KEY_Z, true);
+    DTR_ASSERT(dtr_key_btnp(keys, DTR_KEY_Z));
+    DTR_ASSERT(dtr_key_btnp(keys, DTR_KEY_Z)); /* stable: still true */
+
+    /* Advance frame — btnp should expire */
+    dtr_key_update(keys, 0.016f);
+    DTR_ASSERT(!dtr_key_btnp(keys, DTR_KEY_Z));
+
+    dtr_key_destroy(keys);
+    DTR_PASS();
+}
+
+static void test_input_btnp_frame_stable(void)
+{
+    dtr_input_state_t *inp;
+    dtr_key_state_t   *keys;
+    dtr_binding_t      binds[1];
+
+    inp  = dtr_input_create();
+    keys = dtr_key_create();
+
+    binds[0].type      = DTR_BIND_KEY;
+    binds[0].code      = DTR_KEY_Z;
+    binds[0].threshold = 0.0f;
+    dtr_input_map(inp, "jump", binds, 1);
+
+    /* Press key and update virtual input */
+    dtr_key_set(keys, DTR_KEY_Z, true);
+    dtr_input_update(inp, keys, NULL, NULL, NULL);
+    DTR_ASSERT(dtr_input_btnp(inp, "jump"));
+    DTR_ASSERT(dtr_input_btnp(inp, "jump")); /* stable: still true */
+
+    /* Advance key frame, update virtual input — btnp should expire */
+    dtr_key_update(keys, 0.016f);
+    dtr_input_update(inp, keys, NULL, NULL, NULL);
+    DTR_ASSERT(dtr_input_btn(inp, "jump"));   /* still held */
+    DTR_ASSERT(!dtr_input_btnp(inp, "jump")); /* not just pressed */
+
+    dtr_input_destroy(inp);
+    dtr_key_destroy(keys);
+    DTR_PASS();
+}
+
+/* ------------------------------------------------------------------ */
+/*  Fixed-update pending press tests                                   */
+/* ------------------------------------------------------------------ */
+
+static void test_key_btnp_pending_survives_frame(void)
+{
+    dtr_key_state_t *keys;
+
+    keys = dtr_key_create();
+
+    /* Press Z */
+    dtr_key_set(keys, DTR_KEY_Z, true);
+
+    /* Without in_fixed_update, btnp returns true (frame-counter path) */
+    DTR_ASSERT(dtr_key_btnp(keys, DTR_KEY_Z));
+
+    /* Advance frame (simulates end-of-frame update, no fixedUpdate ran) */
+    dtr_key_update(keys, 0.016f);
+
+    /* Frame-counter btnp expires */
+    DTR_ASSERT(!dtr_key_btnp(keys, DTR_KEY_Z));
+
+    /* But in fixedUpdate context, pending_press persists */
+    keys->in_fixed_update = true;
+    DTR_ASSERT(dtr_key_btnp(keys, DTR_KEY_Z));
+
+    /* Consume clears it */
+    dtr_key_consume_presses(keys);
+    DTR_ASSERT(!dtr_key_btnp(keys, DTR_KEY_Z));
+
+    keys->in_fixed_update = false;
+    dtr_key_destroy(keys);
+    DTR_PASS();
+}
+
+static void test_input_btnp_pending_survives_frame(void)
+{
+    dtr_input_state_t *inp;
+    dtr_key_state_t   *keys;
+    dtr_binding_t      binds[1];
+
+    inp  = dtr_input_create();
+    keys = dtr_key_create();
+
+    binds[0].type      = DTR_BIND_KEY;
+    binds[0].code      = DTR_KEY_Z;
+    binds[0].threshold = 0.0f;
+    dtr_input_map(inp, "jump", binds, 1);
+
+    /* Frame 1: press key, fixedUpdate does NOT run (0 ticks) */
+    dtr_key_set(keys, DTR_KEY_Z, true);
+    dtr_input_update(inp, keys, NULL, NULL, NULL);
+    DTR_ASSERT(dtr_input_btnp(inp, "jump")); /* visible in _update */
+
+    /* Frame 2: key still held, fixedUpdate runs this time */
+    dtr_key_update(keys, 0.016f);
+    dtr_input_update(inp, keys, NULL, NULL, NULL);
+
+    /* Normal (non-fixed) btnp expired — press was last frame */
+    DTR_ASSERT(!dtr_input_btnp(inp, "jump"));
+
+    /* In fixedUpdate context, pending_press is still live */
+    inp->in_fixed_update = true;
+    DTR_ASSERT(dtr_input_btnp(inp, "jump"));
+
+    /* After consuming, second tick should NOT see it */
+    dtr_input_consume_presses(inp);
+    DTR_ASSERT(!dtr_input_btnp(inp, "jump"));
+
+    inp->in_fixed_update = false;
+    dtr_input_destroy(inp);
+    dtr_key_destroy(keys);
+    DTR_PASS();
+}
+
+/* ------------------------------------------------------------------ */
 /*  Key repeat (btnr) tests                                            */
 /* ------------------------------------------------------------------ */
 
@@ -632,6 +761,14 @@ int main(int argc, char *argv[])
     DTR_RUN_TEST(test_input_pad_button_binding);
     DTR_RUN_TEST(test_input_multiple_bindings);
     DTR_RUN_TEST(test_input_clear_action_preserves_others);
+
+    /* Frame-stable btnp */
+    DTR_RUN_TEST(test_key_btnp_frame_stable);
+    DTR_RUN_TEST(test_input_btnp_frame_stable);
+
+    /* Fixed-update pending press */
+    DTR_RUN_TEST(test_key_btnp_pending_survives_frame);
+    DTR_RUN_TEST(test_input_btnp_pending_survives_frame);
 
     /* Key repeat */
     DTR_RUN_TEST(test_key_btnr_initial_press);

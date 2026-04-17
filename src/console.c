@@ -806,6 +806,11 @@ void dtr_console_iterate(dtr_console_t *con)
     /* Event bus flush */
     dtr_event_flush(con->events);
 
+    /* Virtual input update — runs BEFORE JS callbacks so that
+       input.btnp() is frame-stable across _fixedUpdate / _update / _draw.
+       Raw key/mouse/gamepad state is already current (set by SDL events). */
+    dtr_input_update(con->input, con->keys, con->gamepads, con->mouse, con->touch);
+
     /* JS _fixedUpdate(fixed_dt) — fixed-timestep accumulator loop */
     {
         uint64_t t0 = SDL_GetPerformanceCounter();
@@ -817,6 +822,9 @@ void dtr_console_iterate(dtr_console_t *con)
             con->fixed_acc = con->fixed_dt * 8.0f;
         }
 
+        con->keys->in_fixed_update  = true;
+        con->input->in_fixed_update = true;
+
         while (con->fixed_acc >= con->fixed_dt) {
             JSValue fdt_arg;
 
@@ -824,7 +832,14 @@ void dtr_console_iterate(dtr_console_t *con)
             fdt_arg = JS_NewFloat64(con->runtime->ctx, (double)con->fixed_dt);
             dtr_runtime_call_argv(con->runtime, con->runtime->atom_fixed_update, 1, &fdt_arg);
             JS_FreeValue(con->runtime->ctx, fdt_arg);
+
+            /* Consume pending presses so the next tick won't see them again */
+            dtr_key_consume_presses(con->keys);
+            dtr_input_consume_presses(con->input);
         }
+
+        con->keys->in_fixed_update  = false;
+        con->input->in_fixed_update = false;
 
         con->fixed_update_ms =
             (float)((double)(SDL_GetPerformanceCounter() - t0) / (double)freq * 1000.0);
@@ -940,7 +955,6 @@ void dtr_console_iterate(dtr_console_t *con)
     con->mouse->wheel   = 0.0f;
     dtr_touch_update(con->touch);
     dtr_gamepad_update(con->gamepads);
-    dtr_input_update(con->input, con->keys, con->gamepads, con->mouse, con->touch);
 
     ++con->frame_count;
 

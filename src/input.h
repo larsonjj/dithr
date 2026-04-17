@@ -144,10 +144,14 @@ typedef enum dtr_mouse_btn {
 #define DTR_KEY_REPEAT_INTERVAL 0.04f
 
 struct dtr_key_state {
-    bool  current[DTR_KEY_COUNT];
-    bool  previous[DTR_KEY_COUNT];
-    float hold_time[DTR_KEY_COUNT];
-    bool  repeat_fired[DTR_KEY_COUNT];
+    bool     current[DTR_KEY_COUNT];
+    bool     previous[DTR_KEY_COUNT];
+    float    hold_time[DTR_KEY_COUNT];
+    bool     repeat_fired[DTR_KEY_COUNT];
+    uint64_t press_frame[DTR_KEY_COUNT];   /**< Frame when key was pressed */
+    bool     pending_press[DTR_KEY_COUNT]; /**< Press waiting for fixedUpdate */
+    uint64_t frame;                        /**< Current frame counter */
+    bool     in_fixed_update;              /**< True during fixedUpdate ticks */
 };
 
 dtr_key_state_t *dtr_key_create(void);
@@ -158,6 +162,7 @@ bool             dtr_key_btn(dtr_key_state_t *keys, dtr_key_t key);
 bool             dtr_key_btnp(dtr_key_state_t *keys, dtr_key_t key);
 bool             dtr_key_btnr(dtr_key_state_t *keys, dtr_key_t key);
 const char      *dtr_key_name(dtr_key_t key);
+void             dtr_key_consume_presses(dtr_key_state_t *keys);
 
 /**
  * \brief           Map an SDL scancode to our dtr_key_t enum
@@ -194,11 +199,15 @@ typedef struct dtr_input_action {
     bool          current;
     bool          previous;
     float         axis_value;
+    uint64_t      press_frame;   /**< Frame when action was pressed */
+    bool          pending_press; /**< Press waiting for fixedUpdate */
 } dtr_input_action_t;
 
 struct dtr_input_state {
     dtr_input_action_t actions[DTR_INPUT_MAX_ACTIONS];
     int32_t            action_count;
+    uint64_t           frame;           /**< Current frame counter */
+    bool               in_fixed_update; /**< True during fixedUpdate ticks */
 };
 
 dtr_input_state_t *dtr_input_create(void);
@@ -221,6 +230,7 @@ void               dtr_input_clear_all(dtr_input_state_t *inp);
 bool               dtr_input_btn(dtr_input_state_t *inp, const char *action);
 bool               dtr_input_btnp(dtr_input_state_t *inp, const char *action);
 float              dtr_input_axis(dtr_input_state_t *inp, const char *action);
+void               dtr_input_consume_presses(dtr_input_state_t *inp);
 
 /**
  * \brief           Parse a binding string like "KEY_LEFT", "PAD_A", "MOUSE_LEFT"

@@ -203,6 +203,7 @@ dtr_key_state_t *dtr_key_create(void)
     if (keys == NULL) {
         return NULL;
     }
+    keys->frame = 1; /* Start at 1 so zero-initialised press_frame won't match */
     return keys;
 }
 
@@ -213,6 +214,7 @@ void dtr_key_destroy(dtr_key_state_t *keys)
 
 void dtr_key_update(dtr_key_state_t *keys, float delta)
 {
+    ++keys->frame; /* Advance frame — previous presses expire */
     SDL_memcpy(keys->previous, keys->current, sizeof(keys->current));
     SDL_memset(keys->repeat_fired, 0, sizeof(keys->repeat_fired));
 
@@ -248,6 +250,10 @@ void dtr_key_update(dtr_key_state_t *keys, float delta)
 void dtr_key_set(dtr_key_state_t *keys, dtr_key_t key, bool down)
 {
     if (key > DTR_KEY_NONE && key < DTR_KEY_COUNT) {
+        if (down && !keys->current[key]) {
+            keys->press_frame[key]   = keys->frame; /* Stamp rising edge */
+            keys->pending_press[key] = true;
+        }
         keys->current[key] = down;
     }
 }
@@ -263,7 +269,10 @@ bool dtr_key_btn(dtr_key_state_t *keys, dtr_key_t key)
 bool dtr_key_btnp(dtr_key_state_t *keys, dtr_key_t key)
 {
     if (key > DTR_KEY_NONE && key < DTR_KEY_COUNT) {
-        return keys->current[key] && !keys->previous[key];
+        if (keys->in_fixed_update) {
+            return keys->pending_press[key];
+        }
+        return keys->press_frame[key] == keys->frame;
     }
     return false;
 }
@@ -271,12 +280,24 @@ bool dtr_key_btnp(dtr_key_state_t *keys, dtr_key_t key)
 bool dtr_key_btnr(dtr_key_state_t *keys, dtr_key_t key)
 {
     if (key > DTR_KEY_NONE && key < DTR_KEY_COUNT) {
-        if (keys->current[key] && !keys->previous[key]) {
-            return true; /* initial press */
+        bool initial;
+
+        if (keys->in_fixed_update) {
+            initial = keys->pending_press[key];
+        } else {
+            initial = keys->press_frame[key] == keys->frame;
+        }
+        if (initial) {
+            return true;
         }
         return keys->repeat_fired[key];
     }
     return false;
+}
+
+void dtr_key_consume_presses(dtr_key_state_t *keys)
+{
+    SDL_memset(keys->pending_press, 0, sizeof(keys->pending_press));
 }
 
 const char *dtr_key_name(dtr_key_t key)
@@ -296,6 +317,9 @@ dtr_input_state_t *dtr_input_create(void)
     dtr_input_state_t *inp;
 
     inp = DTR_CALLOC(1, sizeof(dtr_input_state_t));
+    if (inp != NULL) {
+        inp->frame = 1; /* Start at 1 so zero-initialised press_frame won't match */
+    }
     return inp;
 }
 
@@ -367,6 +391,8 @@ void dtr_input_update(dtr_input_state_t   *inp,
                       dtr_mouse_state_t   *mouse,
                       dtr_touch_state_t   *touch)
 {
+    ++inp->frame; /* Advance frame — previous presses expire */
+
     for (int32_t idx = 0; idx < inp->action_count; ++idx) {
         dtr_input_action_t *act;
         bool                pressed;
@@ -426,6 +452,12 @@ void dtr_input_update(dtr_input_state_t   *inp,
 
         act->current    = pressed;
         act->axis_value = axis_val;
+
+        /* Stamp frame and latch pending press on rising edge */
+        if (pressed && !act->previous) {
+            act->press_frame   = inp->frame;
+            act->pending_press = true;
+        }
     }
 }
 
@@ -446,7 +478,10 @@ bool dtr_input_btnp(dtr_input_state_t *inp, const char *action)
 
     act = prv_find_action(inp, action);
     if (act != NULL) {
-        return act->current && !act->previous;
+        if (inp->in_fixed_update) {
+            return act->pending_press;
+        }
+        return act->press_frame == inp->frame;
     }
     return false;
 }
@@ -460,6 +495,13 @@ float dtr_input_axis(dtr_input_state_t *inp, const char *action)
         return act->axis_value;
     }
     return 0.0f;
+}
+
+void dtr_input_consume_presses(dtr_input_state_t *inp)
+{
+    for (int32_t idx = 0; idx < inp->action_count; ++idx) {
+        inp->actions[idx].pending_press = false;
+    }
 }
 
 /* ------------------------------------------------------------------ */

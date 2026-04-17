@@ -24,7 +24,8 @@
         "default_mappings": {
             "left": ["KEY_LEFT", "KEY_A", "PAD_LEFT"],
             "right": ["KEY_RIGHT", "KEY_D", "PAD_RIGHT"],
-            "jump": ["KEY_Z", "KEY_SPACE", "KEY_UP", "KEY_W", "PAD_A"]
+            "jump": ["KEY_Z", "KEY_SPACE", "KEY_UP", "KEY_W", "PAD_A"],
+            "run": ["KEY_X", "KEY_LSHIFT", "PAD_B"]
         }
     },
     "code": "src/main.js",

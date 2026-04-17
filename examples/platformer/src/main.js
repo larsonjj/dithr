@@ -11,15 +11,29 @@
 // All art is drawn with primitives (rectfill/circfill).  Replace the
 // placeholder rendering with gfx.spr() calls once you add a spritesheet.
 
-// --- Constants -------------------------------------------------------
+// --- Constants (NES Mario-style, scaled to 8px tiles) ---------------
 
 const TILE = 8;
 const MAP_W = 60; // level width in tiles
 const MAP_H = 23; // level height in tiles (fits 180px)
-const GRAVITY = 0.3;
-const JUMP = -4.5;
-const MOVE = 0.6;
-const FRICTION = 0.85;
+
+// Horizontal movement — acceleration based, not friction
+const WALK_ACCEL = 0.046875; // ground acceleration
+const RUN_ACCEL = 0.046875;
+const RELEASE_DECEL = 0.046875; // deceleration when no input
+const SKID_DECEL = 0.15; // deceleration when reversing direction
+const WALK_MAX = 0.75; // walk top speed
+const RUN_MAX = 1.3; // run top speed (holding run button)
+const AIR_ACCEL = 0.046875; // air control (same as ground in NES)
+
+// Vertical movement — variable jump via two gravity values
+const JUMP_VEL_WALK = -2.6; // jump impulse at walk speed
+const JUMP_VEL_RUN = -2.9; // jump impulse at run speed
+const GRAV_HOLD = 0.11; // gravity while holding jump (floaty rise)
+const GRAV_RELEASE = 0.375; // gravity when jump released (fast fall)
+const MAX_FALL = 2.25; // terminal fall speed
+const COYOTE_TICKS = 4; // frames of grace after leaving ground
+const STOMP_BOUNCE = -2.0; // bounce velocity on enemy stomp
 
 // Tile types
 const T_EMPTY = 0;
@@ -110,6 +124,8 @@ let player = {
     facing: 1, // 1 = right, -1 = left
     alive: true,
     score: 0,
+    jumping: false, // true while jump button is held after launch
+    coyote: 0, // ticks since last grounded
 };
 
 let highScore = 0;
@@ -128,7 +144,7 @@ function spawnEnemies() {
         // Find ground under spawn X
         for (let y = 0; y < MAP_H - 1; ++y) {
             if (solidAt(math.flr(ex / TILE), y + 1)) {
-                ey = y * TILE;
+                ey = (y + 1) * TILE - 7; // align bottom of hitbox with top of ground
                 break;
             }
         }
@@ -199,11 +215,11 @@ function resetPlayer() {
     player.vx = 0;
     player.vy = 0;
     player.alive = true;
+    player.jumping = false;
+    player.coyote = 0;
 }
 
 // --- Callbacks -------------------------------------------------------
-
-let jumpBuffer = 0; // ticks remaining in jump buffer window
 
 function _init() {
     generateLevel();
@@ -214,33 +230,84 @@ function _init() {
 function _fixedUpdate(dt) {
     if (!player.alive) return;
 
-    // Horizontal movement
-    if (input.btn('left')) {
-        player.vx -= MOVE;
+    const running = input.btn('run');
+    const maxSpd = running ? RUN_MAX : WALK_MAX;
+    const accel = player.grounded ? (running ? RUN_ACCEL : WALK_ACCEL) : AIR_ACCEL;
+    const dirL = input.btn('left');
+    const dirR = input.btn('right');
+
+    // --- Horizontal movement (acceleration / deceleration) ---
+    if (dirL && !dirR) {
         player.facing = -1;
-    }
-    if (input.btn('right')) {
-        player.vx += MOVE;
+        if (player.vx > 0) {
+            // Skidding — reversing direction
+            player.vx -= SKID_DECEL;
+            if (player.vx < 0) player.vx = 0;
+        } else {
+            player.vx -= accel;
+            if (player.vx < -maxSpd) player.vx = -maxSpd;
+        }
+    } else if (dirR && !dirL) {
         player.facing = 1;
+        if (player.vx < 0) {
+            player.vx += SKID_DECEL;
+            if (player.vx > 0) player.vx = 0;
+        } else {
+            player.vx += accel;
+            if (player.vx > maxSpd) player.vx = maxSpd;
+        }
+    } else {
+        // No input — decelerate toward zero
+        if (player.vx > 0) {
+            player.vx -= RELEASE_DECEL;
+            if (player.vx < 0) player.vx = 0;
+        } else if (player.vx < 0) {
+            player.vx += RELEASE_DECEL;
+            if (player.vx > 0) player.vx = 0;
+        }
     }
-    player.vx *= FRICTION;
 
-    // Gravity
-    player.vy += GRAVITY;
+    // Clamp to current max (lets go of run button mid-air → slow down gently)
+    if (player.vx > maxSpd) {
+        player.vx -= RELEASE_DECEL;
+        if (player.vx < maxSpd) player.vx = maxSpd;
+    } else if (player.vx < -maxSpd) {
+        player.vx += RELEASE_DECEL;
+        if (player.vx > -maxSpd) player.vx = -maxSpd;
+    }
 
-    // Move + collide X then Y
+    // --- Variable-height gravity ---
+    // Holding jump while rising → floaty; released or falling → fast
+    if (player.jumping && input.btn('jump') && player.vy < 0) {
+        player.vy += GRAV_HOLD;
+    } else {
+        player.vy += GRAV_RELEASE;
+        player.jumping = false;
+    }
+    if (player.vy > MAX_FALL) player.vy = MAX_FALL;
+
+    // --- Move + collide ---
     player.x += player.vx;
     collideX(player);
     player.y += player.vy;
     collideY(player);
 
-    // Jump — buffer keeps the press alive for a few ticks so it
-    // survives the _fixedUpdate-before-_update ordering and brief
-    // airborne moments when stepping off edges.
-    if (jumpBuffer > 0) jumpBuffer--;
-    if (player.grounded && jumpBuffer > 0) {
-        player.vy = JUMP;
-        jumpBuffer = 0;
+    // --- Coyote time ---
+    if (player.grounded) {
+        player.coyote = COYOTE_TICKS;
+    } else if (player.coyote > 0) {
+        player.coyote--;
+    }
+
+    // --- Jump ---
+    if (player.coyote > 0 && input.btnp('jump')) {
+        // Stronger impulse when moving fast (like NES Mario)
+        const spd = math.abs(player.vx);
+        const t = math.min(spd / RUN_MAX, 1);
+        player.vy = JUMP_VEL_WALK + (JUMP_VEL_RUN - JUMP_VEL_WALK) * t;
+        player.jumping = true;
+        player.coyote = 0;
+        player.grounded = false;
     }
 
     // Collect coins
@@ -282,7 +349,8 @@ function _fixedUpdate(dt) {
             // Stomp if falling onto enemy
             if (player.vy > 0 && player.y + player.h - 4 < e.y + 2) {
                 e.alive = false;
-                player.vy = JUMP * 0.6;
+                player.vy = STOMP_BOUNCE;
+                player.jumping = true;
                 player.score += 50;
                 // sfx.play(2); // uncomment when SFX loaded
             } else {
@@ -298,14 +366,8 @@ function _fixedUpdate(dt) {
 }
 
 function _update(dt) {
-    // Buffer edge-triggered input here — _update runs every frame,
-    // _fixedUpdate may skip ticks due to accumulator jitter.
-    // Give the press a 6-tick (~100ms) window to land.
-    if (input.btnp('jump')) jumpBuffer = 6;
-
     if (!player.alive) {
-        if (jumpBuffer > 0) {
-            jumpBuffer = 0;
+        if (input.btnp('jump')) {
             if (player.score > highScore) {
                 highScore = player.score;
                 cart.dset(0, highScore);
@@ -372,7 +434,7 @@ function _draw() {
         const e = enemies[i];
         if (!e.alive) continue;
         // PLACEHOLDER: red box (replace with gfx.spr())
-        gfx.rectfill(e.x, e.y, e.x + e.w, e.y + e.h, 8);
+        gfx.rectfill(e.x, e.y, e.x + e.w - 1, e.y + e.h - 1, 8);
         // Eyes
         const ex1 = e.vx > 0 ? e.x + 4 : e.x + 1;
         gfx.pset(ex1, e.y + 2, 7);
@@ -382,7 +444,7 @@ function _draw() {
     // --- Draw player ---
     if (player.alive) {
         // PLACEHOLDER: coloured box (replace with gfx.spr())
-        gfx.rectfill(player.x, player.y, player.x + player.w, player.y + player.h, 11);
+        gfx.rectfill(player.x, player.y, player.x + player.w - 1, player.y + player.h - 1, 11);
         // Eye
         const eyeX = player.facing > 0 ? player.x + 4 : player.x + 1;
         gfx.pset(eyeX, player.y + 2, 0);
