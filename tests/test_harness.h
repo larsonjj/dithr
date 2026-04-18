@@ -10,6 +10,10 @@
 #include <stdlib.h>
 #include <string.h>
 
+#ifdef _WIN32
+#include <windows.h>
+#endif
+
 /** Always-on assertion: prints file/line and aborts on failure. */
 #define DTR_ASSERT(expr)                                                                           \
     do {                                                                                           \
@@ -135,7 +139,17 @@
 /** Declare a test counter (call once at the top of main). */
 #define DTR_TEST_BEGIN(suite_name)                                                                 \
     int _dtr_test_count = 0;                                                                       \
+    dtr_test_suppress_crash_dialog_();                                                             \
     printf("=== %s ===\n", (suite_name))
+
+/** Suppress Windows Error Reporting dialog so abort() terminates immediately. */
+static inline void dtr_test_suppress_crash_dialog_(void)
+{
+#ifdef _WIN32
+    SetErrorMode(SEM_FAILCRITICALERRORS | SEM_NOGPFAULTERRORBOX | SEM_NOOPENFILEERRORBOX);
+    _set_abort_behavior(0, _WRITE_ABORT_MSG | _CALL_REPORTFAULT);
+#endif
+}
 
 /** Run a single test function and bump the counter. */
 #define DTR_RUN_TEST(fn)                                                                           \

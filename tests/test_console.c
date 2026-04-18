@@ -69,7 +69,7 @@ static void test_console_create_no_cart(void)
 
 #if DEV_BUILD
     DTR_ASSERT(con->watch_asset_mtime >= 0);
-    DTR_ASSERT(con->reload_pending_kind == DTR_RELOAD_PENDING_NONE);
+    DTR_ASSERT_EQ_INT(con->reload_pending_kind, DTR_RELOAD_PENDING_NONE);
 #endif
 
     dtr_console_destroy(con);
