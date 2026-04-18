@@ -280,9 +280,15 @@ jobs:
                     exit 1
                   fi
 
-                  # Clear any token set by setup-node so npm uses OIDC instead.
-                  unset NODE_AUTH_TOKEN 2>/dev/null || true
-                  npm config delete //registry.npmjs.org/:_authToken 2>/dev/null || true
+                  # Remove the _authToken line that setup-node wrote to .npmrc.
+                  # An empty/placeholder token prevents npm from falling through
+                  # to OIDC-based trusted publishing.
+                  sed -i '/:_authToken/d' "${GITHUB_WORKSPACE}/.npmrc" 2>/dev/null || true
+                  sed -i '/:_authToken/d' "$HOME/.npmrc" 2>/dev/null || true
+
+                  echo "--- .npmrc ---"
+                  cat "${GITHUB_WORKSPACE}/.npmrc" || true
+                  echo "---"
 
                   EXPECTED_SCOPE="@dithrkit"
                   for pkg in packages/win32-x64 packages/linux-x64 packages/darwin-arm64 packages/wasm packages/sdk packages/create; do
