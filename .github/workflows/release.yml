@@ -330,17 +330,27 @@ jobs:
                     .version = $v
                   ' packages/create/package.json > "$tmp" && mv "$tmp" packages/create/package.json
 
+            - name: Determine npm publish tag
+              id: npm-tag
+              run: |
+                  VERSION="${GITHUB_REF_NAME#v}"
+                  if echo "$VERSION" | grep -qE '[-]'; then
+                    echo "tag=--tag next" >> "$GITHUB_OUTPUT"
+                  else
+                    echo "tag=" >> "$GITHUB_OUTPUT"
+                  fi
+
             - name: Publish platform packages
               run: |
                   for pkg in win32-x64 linux-x64 darwin-arm64 wasm; do
-                    if ! npm publish "./packages/$pkg" --access public; then
+                    if ! npm publish "./packages/$pkg" --access public ${{ steps.npm-tag.outputs.tag }}; then
                       echo "::error::Failed publishing @dithrkit/$pkg. Ensure trusted publishing is configured on npmjs.com for this package."
                       exit 1
                     fi
                   done
 
             - name: Publish SDK
-              run: npm publish ./packages/sdk --access public
+              run: npm publish ./packages/sdk --access public ${{ steps.npm-tag.outputs.tag }}
 
             - name: Publish create package
-              run: npm publish ./packages/create --access public
+              run: npm publish ./packages/create --access public ${{ steps.npm-tag.outputs.tag }}
