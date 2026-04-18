@@ -145,7 +145,23 @@ jobs:
                   restore-keys: release-macos-deps-
 
             - name: Configure
-              run: cmake --preset release
+              run: |
+                  attempts=0
+                  until [ "$attempts" -ge 3 ]; do
+                    attempts=$((attempts + 1))
+                    echo "Configure attempt ${attempts}/3"
+                    if cmake --preset release; then
+                      exit 0
+                    fi
+
+                    echo "::warning::Configure failed (attempt ${attempts}/3). Clearing SDL3_image FetchContent state and retrying."
+                    rm -rf build/release/_deps/sdl3_image-subbuild \
+                           build/release/_deps/sdl3_image-src \
+                           build/release/_deps/sdl3_image-build
+                  done
+
+                  echo "::error::cmake configure failed after 3 attempts"
+                  exit 1
 
             - name: Build
               run: cmake --build build/release --config Release
