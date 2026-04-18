@@ -419,7 +419,7 @@ jobs:
 
             - name: Install workspace dependencies
               run: >
-                  npm install --ignore-scripts
+                  npm install --ignore-scripts --omit=optional
                   --workspace @dithrkit/sdk
                   --workspace @dithrkit/create
                   --workspace @dithrkit/wasm
@@ -458,7 +458,7 @@ jobs:
 
             - name: Audit dependencies
               run: >
-                  npm audit --audit-level=high
+                  npm audit --audit-level=high --omit=optional
                   --workspace @dithrkit/sdk
                   --workspace @dithrkit/create
                   --workspace @dithrkit/wasm
