@@ -1,0 +1,22 @@
+{
+  "name": "@dithrkit/linux-x64",
+  "version": "0.1.0",
+  "description": "dithr runtime binary for Linux x64",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/dithrkit/dithr.git",
+    "directory": "packages/linux-x64"
+  },
+  "os": [
+    "linux"
+  ],
+  "cpu": [
+    "x64"
+  ],
+  "main": "index.js",
+  "files": [
+    "bin/",
+    "index.js"
+  ]
+}

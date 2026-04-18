@@ -1,0 +1,23 @@
+{
+  "name": "@dithrkit/create",
+  "version": "0.1.0",
+  "description": "Scaffold a new dithr project — use with npm create @dithrkit",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/dithrkit/dithr.git",
+    "directory": "packages/create"
+  },
+  "bin": {
+    "create-dithrkit": "index.js"
+  },
+  "files": [
+    "index.js"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "@dithrkit/sdk": "0.1.0"
+  }
+}

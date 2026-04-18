@@ -1,0 +1,38 @@
+{
+  "name": "@dithrkit/sdk",
+  "version": "0.1.0",
+  "description": "SDK and CLI for the dithr fantasy console",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/dithrkit/dithr.git",
+    "directory": "packages/sdk"
+  },
+  "bin": {
+    "dithrkit": "bin/dithrkit.js"
+  },
+  "exports": {
+    "./configs/tsconfig.base.json": "./configs/tsconfig.base.json",
+    "./configs/eslint": "./configs/eslint.config.js",
+    "./types/*": "./types/*"
+  },
+  "files": [
+    "bin/",
+    "lib/",
+    "templates/",
+    "types/",
+    "configs/"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "esbuild": "^0.24.0"
+  },
+  "optionalDependencies": {
+    "@dithrkit/win32-x64": "0.1.0",
+    "@dithrkit/linux-x64": "0.1.0",
+    "@dithrkit/darwin-arm64": "0.1.0",
+    "@dithrkit/wasm": "0.1.0"
+  }
+}

@@ -1,16 +1,5 @@
 #!/usr/bin/env node
-/**
- * @file  watch-wasm.js
- * @brief Watch cart source directory, auto-rebuild WASM, and serve with
- *        live reload.  Combines file watching, cmake rebuild, static
- *        serving, and SSE-based browser reload into one process.
- *
- * Usage:  node tools/watch-wasm.js <cartDir> [port]
- *
- * Environment:
- *   Expects the WASM build to already be configured
- *   (cmake --preset wasm -DDTR_WASM_CART_DIR=<cartDir>).
- */
+"use strict";
 
 const http = require("node:http");
 const fs = require("node:fs");
@@ -18,27 +7,43 @@ const path = require("node:path");
 const zlib = require("node:zlib");
 const { execSync, spawn } = require("node:child_process");
 
-const CART_DIR = process.argv[2];
-if (!CART_DIR) {
-    console.error("Usage: node tools/watch-wasm.js <cartDir> [port]");
+function usage() {
+    console.log("Usage: dithrkit watch [port] [options]");
+    console.log("");
+    console.log("Watch cart source directory, auto-rebuild, and serve with live reload.");
+    console.log("");
+    console.log("Options:");
+    console.log("  --port, -p <port>  Port to serve on (default: 8080)");
+    console.log("  --help, -h         Show help");
     process.exit(1);
 }
 
-const PORT = parseInt(process.argv[3], 10) || 8080;
-const ROOT = path.resolve(__dirname, "..");
-const BUILD_DIR = path.join(ROOT, "build", "wasm");
-const CART_ABS = path.resolve(CART_DIR);
+const args = process.argv.slice(2);
+if (args.includes("--help") || args.includes("-h")) usage();
 
-/* Read cart.json to determine the JS entry-point file */
-let ENTRY_JS = null;
-try {
-    const cartJson = JSON.parse(fs.readFileSync(path.join(CART_ABS, "cart.json"), "utf8"));
-    if (cartJson.code) {
-        ENTRY_JS = cartJson.code.replace(/\\/g, "/");
+let port = 8080;
+for (let i = 0; i < args.length; i++) {
+    if (args[i] === "--port" || args[i] === "-p") {
+        port = parseInt(args[++i], 10);
+    } else if (!isNaN(parseInt(args[i], 10))) {
+        port = parseInt(args[i], 10);
     }
-} catch (err) {
-    console.warn("Failed to parse cart.json:", err.message);
-    /* cart.json missing or unparseable — fall back to treating all .js as entry */
+}
+
+const cartJson = path.resolve("cart.json");
+if (!fs.existsSync(cartJson)) {
+    console.error("No cart.json found in current directory.");
+    process.exit(1);
+}
+
+const cart = JSON.parse(fs.readFileSync(cartJson, "utf-8"));
+const cartDir = path.dirname(cartJson);
+const buildDir = path.resolve("build", "web");
+
+// Determine JS entry point for hot-reload
+let entryJs = null;
+if (cart.code) {
+    entryJs = cart.code.replace(/\\/g, "/");
 }
 
 /* ------------------------------------------------------------------ */
@@ -135,7 +140,7 @@ function compressStream(enc) {
 }
 
 const server = http.createServer((req, res) => {
-    const url = new URL(req.url, `http://localhost:${PORT}`);
+    const url = new URL(req.url, `http://localhost:${port}`);
     let relPath = decodeURIComponent(url.pathname);
 
     /* SSE endpoint for live reload */
@@ -145,7 +150,7 @@ const server = http.createServer((req, res) => {
             "Cache-Control": "no-cache",
             Connection: "keep-alive",
         });
-        res.write(":\n\n"); // SSE comment to keep connection alive
+        res.write(":\n\n");
         sseClients.add(res);
         req.on("close", () => sseClients.delete(res));
         return;
@@ -154,8 +159,8 @@ const server = http.createServer((req, res) => {
     /* Serve raw cart files for hot reload */
     if (relPath.startsWith("/__cart/")) {
         const cartRel = relPath.slice("/__cart/".length);
-        const cartFile = path.join(CART_ABS, cartRel);
-        if (!cartFile.startsWith(CART_ABS)) {
+        const cartFile = path.join(cartDir, cartRel);
+        if (!cartFile.startsWith(cartDir)) {
             res.writeHead(403);
             res.end("Forbidden");
             return;
@@ -175,11 +180,11 @@ const server = http.createServer((req, res) => {
         return;
     }
 
-    if (relPath === "/") relPath = "/dithr.html";
+    if (relPath === "/") relPath = "/index.html";
 
     // Prevent path traversal
-    const filePath = path.join(BUILD_DIR, relPath);
-    if (!filePath.startsWith(BUILD_DIR)) {
+    const filePath = path.join(buildDir, relPath);
+    if (!filePath.startsWith(buildDir)) {
         res.writeHead(403);
         res.end("Forbidden");
         return;
@@ -253,12 +258,15 @@ function rebuild(openBrowser) {
         return;
     }
     building = true;
-    console.log("\n[watch] Rebuilding…");
+    console.log("\n[watch] Rebuilding web export…");
 
-    const proc = spawn("cmake", ["--build", BUILD_DIR], {
-        cwd: ROOT,
+    // Run dithrkit export --web
+    const dithrkit = process.argv[0];
+    const cliPath = path.join(__dirname, "..", "cli.js");
+    const proc = spawn(dithrkit, [cliPath, "export", "--web", "--out", buildDir], {
+        cwd: cartDir,
         stdio: "inherit",
-        shell: true,
+        shell: false,
     });
 
     proc.on("close", (code) => {
@@ -276,7 +284,7 @@ function rebuild(openBrowser) {
         } else {
             console.log(`[watch] Build failed (exit ${code})`);
             if (openBrowser) {
-                startServer(); // still start server so user can iterate
+                startServer();
             }
         }
 
@@ -287,15 +295,10 @@ function rebuild(openBrowser) {
     });
 }
 
-/* Debounce: collect rapid changes into a single rebuild */
+/* Debounce */
 let debounceTimer = null;
 let pendingFiles = new Set();
 
-/**
- * Returns true for editor temp / backup files that should be ignored.
- * This prevents atomic-save artefacts (VS Code, vim, etc.) from
- * defeating the JS-only hot-reload path.
- */
 function isIgnoredFile(filename) {
     if (!filename) return true;
     if (filename.endsWith("~") || filename.startsWith(".")) return true;
@@ -314,16 +317,12 @@ function onCartChange(eventType, filename) {
         const files = [...pendingFiles];
         pendingFiles.clear();
 
-        /* Filter out any remaining unrecognised files (e.g. no extension) */
         const known = files.filter((f) => path.extname(f) !== "");
         if (known.length === 0) return;
 
         const jsOnly = known.every((f) => f.endsWith(".js") || f.endsWith(".mjs"));
-
-        /* When we know the entry-point, only hot-reload if the changed file
-           IS the entry-point.  Other .js files need a full cmake rebuild. */
         const isEntryChange =
-            jsOnly && ENTRY_JS != null && known.length === 1 && known[0] === ENTRY_JS;
+            jsOnly && entryJs != null && known.length === 1 && known[0] === entryJs;
 
         const ASSET_EXTS = [".png", ".tmj", ".ldtk", ".wav", ".ogg", ".mp3"];
         const assetOnly =
@@ -334,7 +333,6 @@ function onCartChange(eventType, filename) {
             });
 
         if (isEntryChange) {
-            /* Entry-point JS change — hot reload without cmake rebuild */
             console.log(`[watch] JS entry changed: ${known.join(", ")} — hot-reloading`);
             for (const client of sseClients) {
                 for (const f of known) {
@@ -342,7 +340,6 @@ function onCartChange(eventType, filename) {
                 }
             }
         } else if (assetOnly) {
-            /* Asset-only change — reload assets without cmake rebuild */
             console.log(`[watch] Assets changed: ${known.join(", ")} — asset-reloading`);
             for (const client of sseClients) {
                 for (const f of known) {
@@ -350,23 +347,22 @@ function onCartChange(eventType, filename) {
                 }
             }
         } else {
-            /* Non-JS change — full rebuild + page reload */
             rebuild(false);
         }
     }, 300);
 }
 
-fs.watch(CART_ABS, { recursive: true }, onCartChange);
-console.log(`[watch] Watching ${CART_ABS} for changes`);
+fs.watch(cartDir, { recursive: true }, onCartChange);
+console.log(`[watch] Watching ${cartDir} for changes`);
 
 /* ------------------------------------------------------------------ */
 /*  Start server                                                       */
 /* ------------------------------------------------------------------ */
 
 function startServer() {
-    server.listen(PORT, () => {
-        const url = `http://localhost:${PORT}`;
-        console.log(`[watch] Serving ${BUILD_DIR}`);
+    server.listen(port, () => {
+        const url = `http://localhost:${port}`;
+        console.log(`[watch] Serving ${buildDir}`);
         console.log(`[watch]   → ${url}`);
         console.log("[watch] Press Ctrl+C to stop.\n");
 
@@ -385,10 +381,10 @@ function startServer() {
 
     server.on("error", (err) => {
         if (err.code === "EADDRINUSE") {
-            console.log(`[watch] Port ${PORT} in use — killing previous process…`);
+            console.log(`[watch] Port ${port} in use — killing previous process…`);
             try {
                 if (process.platform === "win32") {
-                    const out = execSync(`netstat -ano | findstr :${PORT} | findstr LISTENING`, {
+                    const out = execSync(`netstat -ano | findstr :${port} | findstr LISTENING`, {
                         encoding: "utf8",
                     });
                     const pids = new Set(
@@ -401,7 +397,7 @@ function startServer() {
                         execSync(`taskkill /F /PID ${pid}`, { stdio: "ignore" });
                     }
                 } else {
-                    execSync(`fuser -k ${PORT}/tcp`, { stdio: "ignore" });
+                    execSync(`fuser -k ${port}/tcp`, { stdio: "ignore" });
                 }
             } catch {
                 /* ignore */
@@ -413,11 +409,5 @@ function startServer() {
     });
 }
 
-/* Force a fresh build before serving — delete the .data file so Ninja
- * must relink even if it thinks sources are up to date. */
-const dataFile = path.join(BUILD_DIR, "dithr.data");
-if (fs.existsSync(dataFile)) {
-    fs.unlinkSync(dataFile);
-    console.log("[watch] Removed stale dithr.data to force relink");
-}
+// Initial build + serve
 rebuild(true);

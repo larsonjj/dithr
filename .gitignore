@@ -18,3 +18,12 @@ compile_commands.json
 
 # Logs
 *.log
+
+# Platform binary packages (populated by CI)
+packages/win32-x64/bin/
+packages/linux-x64/bin/
+packages/darwin-arm64/bin/
+packages/wasm/bin/
+
+# npm
+node_modules/

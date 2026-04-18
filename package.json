@@ -1,0 +1,11 @@
+{
+  "private": true,
+  "workspaces": [
+    "packages/sdk",
+    "packages/wasm",
+    "packages/win32-x64",
+    "packages/linux-x64",
+    "packages/darwin-arm64",
+    "packages/create"
+  ]
+}

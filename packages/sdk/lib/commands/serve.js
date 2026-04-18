@@ -1,12 +1,5 @@
 #!/usr/bin/env node
-/**
- * @file  serve-wasm.js
- * @brief Zero-dependency static file server for the WASM build output.
- *        Supports gzip and Brotli compression via Accept-Encoding.
- *
- * Usage:  node tools/serve-wasm.js [port]
- *         Default port is 8080.
- */
+"use strict";
 
 const http = require("node:http");
 const fs = require("node:fs");
@@ -14,8 +7,31 @@ const path = require("node:path");
 const zlib = require("node:zlib");
 const { execSync } = require("node:child_process");
 
-const PORT = parseInt(process.argv[2], 10) || 8080;
-const SERVE_DIR = path.resolve(__dirname, "..", "build", "wasm");
+function usage() {
+    console.log("Usage: dithrkit serve [port] [options]");
+    console.log("");
+    console.log("Start a local WASM dev server for the current cart.");
+    console.log("Serves from the build/web/ directory (created by dithrkit export --web).");
+    console.log("");
+    console.log("Options:");
+    console.log("  --dir <path>  Directory to serve (default: build/web)");
+    console.log("  --help, -h    Show help");
+    process.exit(1);
+}
+
+const args = process.argv.slice(2);
+if (args.includes("--help") || args.includes("-h")) usage();
+
+let port = 8080;
+let serveDir = path.resolve("build", "web");
+
+for (let i = 0; i < args.length; i++) {
+    if (args[i] === "--dir") {
+        serveDir = path.resolve(args[++i]);
+    } else if (!isNaN(parseInt(args[i], 10))) {
+        port = parseInt(args[i], 10);
+    }
+}
 
 const MIME_TYPES = {
     ".html": "text/html; charset=utf-8",
@@ -47,15 +63,14 @@ function compressStream(encoding) {
 }
 
 const server = http.createServer((req, res) => {
-    const url = new URL(req.url, `http://localhost:${PORT}`);
+    const url = new URL(req.url, `http://localhost:${port}`);
     let relPath = decodeURIComponent(url.pathname);
 
-    // Default to index → dithr.html
-    if (relPath === "/") relPath = "/dithr.html";
+    if (relPath === "/") relPath = "/index.html";
 
     // Prevent path traversal
-    const filePath = path.join(SERVE_DIR, relPath);
-    if (!filePath.startsWith(SERVE_DIR)) {
+    const filePath = path.join(serveDir, relPath);
+    if (!filePath.startsWith(serveDir)) {
         res.writeHead(403);
         res.end("Forbidden");
         return;
@@ -92,13 +107,12 @@ const server = http.createServer((req, res) => {
 });
 
 function startServer() {
-    server.listen(PORT, () => {
-        const url = `http://localhost:${PORT}`;
-        console.log(`Serving ${SERVE_DIR}`);
+    server.listen(port, () => {
+        const url = `http://localhost:${port}`;
+        console.log(`Serving ${serveDir}`);
         console.log(`  → ${url}`);
         console.log("Press Ctrl+C to stop.\n");
 
-        // Open browser
         try {
             const cmd =
                 process.platform === "win32"
@@ -114,10 +128,10 @@ function startServer() {
 
     server.on("error", (err) => {
         if (err.code === "EADDRINUSE") {
-            console.log(`Port ${PORT} in use — killing previous process…`);
+            console.log(`Port ${port} in use — killing previous process…`);
             try {
                 if (process.platform === "win32") {
-                    const out = execSync(`netstat -ano | findstr :${PORT} | findstr LISTENING`, {
+                    const out = execSync(`netstat -ano | findstr :${port} | findstr LISTENING`, {
                         encoding: "utf8",
                     });
                     const pids = new Set(
@@ -130,16 +144,22 @@ function startServer() {
                         execSync(`taskkill /F /PID ${pid}`, { stdio: "ignore" });
                     }
                 } else {
-                    execSync(`fuser -k ${PORT}/tcp`, { stdio: "ignore" });
+                    execSync(`fuser -k ${port}/tcp`, { stdio: "ignore" });
                 }
             } catch {
-                /* ignore — process may have already exited */
+                /* ignore */
             }
             setTimeout(startServer, 500);
         } else {
             throw err;
         }
     });
+}
+
+if (!fs.existsSync(serveDir)) {
+    console.error(`Serve directory not found: ${serveDir}`);
+    console.error('Run "dithrkit export --web" first to create a web build.');
+    process.exit(1);
 }
 
 startServer();

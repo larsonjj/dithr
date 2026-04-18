@@ -1,0 +1,22 @@
+{
+  "name": "@dithrkit/win32-x64",
+  "version": "0.1.0",
+  "description": "dithr runtime binary for Windows x64",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/dithrkit/dithr.git",
+    "directory": "packages/win32-x64"
+  },
+  "os": [
+    "win32"
+  ],
+  "cpu": [
+    "x64"
+  ],
+  "main": "index.js",
+  "files": [
+    "bin/",
+    "index.js"
+  ]
+}

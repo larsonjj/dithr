@@ -6,6 +6,7 @@ on:
 
 permissions:
     contents: write
+    id-token: write
 
 jobs:
     build-windows:
@@ -27,11 +28,22 @@ jobs:
                   Copy-Item README.md dist/
                   Compress-Archive -Path dist/* -DestinationPath dithr-windows-x64.zip
 
+            - name: Stage npm package
+              run: |
+                  New-Item -ItemType Directory -Force packages/win32-x64/bin | Out-Null
+                  Copy-Item build/release/Release/dithr.exe packages/win32-x64/bin/
+
             - name: Upload artifact
               uses: actions/upload-artifact@v7
               with:
                   name: dithr-windows-x64
                   path: dithr-windows-x64.zip
+
+            - name: Upload npm package
+              uses: actions/upload-artifact@v7
+              with:
+                  name: npm-win32-x64
+                  path: packages/win32-x64/
 
     build-linux:
         runs-on: ubuntu-latest
@@ -65,11 +77,22 @@ jobs:
                   cp LICENSE README.md dist/
                   tar czf dithr-linux-x64.tar.gz -C dist .
 
+            - name: Stage npm package
+              run: |
+                  mkdir -p packages/linux-x64/bin
+                  cp build/release/dithr packages/linux-x64/bin/
+
             - name: Upload artifact
               uses: actions/upload-artifact@v7
               with:
                   name: dithr-linux-x64
                   path: dithr-linux-x64.tar.gz
+
+            - name: Upload npm package
+              uses: actions/upload-artifact@v7
+              with:
+                  name: npm-linux-x64
+                  path: packages/linux-x64/
 
     build-macos:
         runs-on: macos-latest
@@ -89,18 +112,56 @@ jobs:
                   cp LICENSE README.md dist/
                   tar czf dithr-macos-arm64.tar.gz -C dist .
 
+            - name: Stage npm package
+              run: |
+                  mkdir -p packages/darwin-arm64/bin
+                  cp build/release/dithr packages/darwin-arm64/bin/
+
             - name: Upload artifact
               uses: actions/upload-artifact@v7
               with:
                   name: dithr-macos-arm64
                   path: dithr-macos-arm64.tar.gz
 
+            - name: Upload npm package
+              uses: actions/upload-artifact@v7
+              with:
+                  name: npm-darwin-arm64
+                  path: packages/darwin-arm64/
+
+    build-wasm:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v6
+
+            - name: Setup Emscripten
+              uses: mymindstorm/setup-emsdk@v14
+
+            - name: Configure
+              run: cmake --preset wasm -DDTR_WASM_CART_DIR=examples/hello_world
+
+            - name: Build
+              run: cmake --build build/wasm
+
+            - name: Stage npm package
+              run: |
+                  mkdir -p packages/wasm/bin
+                  cp build/wasm/dithr.js packages/wasm/bin/
+                  cp build/wasm/dithr.wasm packages/wasm/bin/
+
+            - name: Upload npm package
+              uses: actions/upload-artifact@v7
+              with:
+                  name: npm-wasm
+                  path: packages/wasm/
+
     release:
-        needs: [build-windows, build-linux, build-macos]
+        needs: [build-windows, build-linux, build-macos, build-wasm]
         runs-on: ubuntu-latest
         steps:
             - uses: actions/download-artifact@v8
               with:
+                  pattern: dithr-*
                   merge-multiple: true
 
             - name: Create release
@@ -111,3 +172,64 @@ jobs:
                       dithr-windows-x64.zip
                       dithr-linux-x64.tar.gz
                       dithr-macos-arm64.tar.gz
+
+    publish-npm:
+        needs: [build-windows, build-linux, build-macos, build-wasm]
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v6
+
+            - uses: actions/setup-node@v4
+              with:
+                  node-version: 22
+                  registry-url: https://registry.npmjs.org
+
+            - name: Download platform packages
+              uses: actions/download-artifact@v8
+              with:
+                  pattern: npm-*
+
+            - name: Stage platform binaries
+              run: |
+                  cp -r npm-win32-x64/* packages/win32-x64/
+                  cp -r npm-linux-x64/* packages/linux-x64/
+                  cp -r npm-darwin-arm64/* packages/darwin-arm64/
+                  cp -r npm-wasm/* packages/wasm/
+
+            - name: Set package versions from tag
+              run: |
+                  VERSION="${GITHUB_REF_NAME#v}"
+                  for pkg in packages/*/package.json; do
+                    tmp=$(mktemp)
+                    jq --arg v "$VERSION" '.version = $v' "$pkg" > "$tmp" && mv "$tmp" "$pkg"
+                  done
+                  # Update optionalDependencies versions in SDK
+                  tmp=$(mktemp)
+                  jq --arg v "$VERSION" '
+                    .optionalDependencies |= with_entries(.value = $v) |
+                    .version = $v
+                  ' packages/sdk/package.json > "$tmp" && mv "$tmp" packages/sdk/package.json
+                  # Update SDK dependency version in create package
+                  tmp=$(mktemp)
+                  jq --arg v "$VERSION" '
+                    .dependencies["@dithrkit/sdk"] = $v |
+                    .version = $v
+                  ' packages/create/package.json > "$tmp" && mv "$tmp" packages/create/package.json
+
+            - name: Publish platform packages
+              run: |
+                  for pkg in win32-x64 linux-x64 darwin-arm64 wasm; do
+                    npm publish "packages/$pkg" --provenance --access public --dry-run
+                  done
+              env:
+                  NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+            - name: Publish SDK
+              run: npm publish packages/sdk --provenance --access public --dry-run
+              env:
+                  NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+            - name: Publish create package
+              run: npm publish packages/create --provenance --access public --dry-run
+              env:
+                  NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
