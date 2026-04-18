@@ -38,7 +38,74 @@ in the browser via WebAssembly.
 - **Cart system** — package a game as a single `cart.json` plus assets
 - **WASM build** for one-click browser deployment
 
-## Quick Start
+## Quick Start (npm)
+
+The fastest way to start making games with dithr. Requires
+[Node.js](https://nodejs.org/) >= 18.
+
+### Create a project
+
+```bash
+npm create @dithrkit my-game
+cd my-game
+npm install
+```
+
+### Develop
+
+Run your game natively with hot-reload (reloads on save):
+
+```bash
+npx dithrkit run
+```
+
+Or develop in the browser:
+
+```bash
+npx dithrkit watch
+```
+
+### Edit your game
+
+Open `src/main.js` (or `src/main.ts` if you chose TypeScript):
+
+```js
+function _init() {
+    gfx.cls(0);
+}
+
+function _update(dt) {
+    // game logic
+}
+
+function _draw() {
+    gfx.cls(0);
+    gfx.print("hello!", 140, 87, 7);
+}
+```
+
+### Export
+
+Package your game for distribution:
+
+```bash
+npx dithrkit export --web       # browser-ready build
+npx dithrkit export --desktop   # standalone executable
+```
+
+### CLI reference
+
+| Command               | Description                                       |
+| --------------------- | ------------------------------------------------- |
+| `npx dithrkit run`    | Run natively with hot-reload                      |
+| `npx dithrkit build`  | Bundle JS/TS source via esbuild                   |
+| `npx dithrkit serve`  | Build and serve in the browser                    |
+| `npx dithrkit watch`  | Build, serve, and live-reload on file changes     |
+| `npx dithrkit export` | Export for web (`--web`) or desktop (`--desktop`) |
+
+## Building from Source
+
+For contributors or if you want to build the engine yourself.
 
 ### Prerequisites
 
@@ -68,38 +135,6 @@ cmake --build build/debug --config Debug
 
 See [docs/building.md](docs/building.md) for all presets (release,
 WASM) and available CMake cache variables.
-
-## Creating a Cart
-
-Use the scaffolding tool to create a new project:
-
-```bash
-node tools/create-cart.js my-game --template blank
-cd my-game
-```
-
-Edit `src/main.js`:
-
-```js
-function _init() {
-    gfx.cls(0);
-}
-
-function _update(dt) {
-    // game logic
-}
-
-function _draw() {
-    gfx.cls(0);
-    gfx.print("hello!", 140, 87, 7);
-}
-```
-
-Run it:
-
-```bash
-dithr cart.json
-```
 
 ### Command-Line Flags
 
