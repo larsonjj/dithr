@@ -121,13 +121,10 @@ fs.writeFileSync(
         "",
         "```bash",
         "npm install",
-        useTypescript ? "dithrkit build" : "",
-        "dithrkit run",
+        useTypescript ? "npm start  # builds TS in watch mode + runs dithr" : "npm start",
         "```",
         "",
-    ]
-        .filter(Boolean)
-        .join("\n"),
+    ].join("\n"),
 );
 
 // package.json
@@ -137,13 +134,29 @@ const pkg = {
     private: true,
     description: `${name} — dithr cart`,
     scripts: {
-        start: "dithrkit run",
+        start: useTypescript ? "dithrkit dev" : "dithrkit run",
         build: useTypescript ? "dithrkit build" : undefined,
         serve: "dithrkit serve",
         watch: "dithrkit watch",
+        lint: "eslint src/",
+        "lint:fix": "eslint src/ --fix",
+        format: "prettier --write 'src/**/*.{js,ts,json}'",
+        "format:check": "prettier --check 'src/**/*.{js,ts,json}'",
+        typecheck: useTypescript ? "tsc --noEmit" : undefined,
     },
     devDependencies: {
         "@dithrkit/sdk": "^0.1.0",
+        eslint: "^9.0.0",
+        prettier: "^3.0.0",
+        ...(useTypescript
+            ? {
+                  typescript: "^5.0.0",
+                  "typescript-eslint": "^8.0.0",
+                  "eslint-config-prettier": "^10.0.0",
+              }
+            : {
+                  "eslint-config-prettier": "^10.0.0",
+              }),
     },
 };
 // Remove undefined scripts
@@ -219,7 +232,4 @@ console.log("");
 console.log("Next steps:");
 console.log(`  cd ${safeName}`);
 console.log("  npm install");
-if (useTypescript) {
-    console.log("  dithrkit build");
-}
-console.log("  dithrkit run");
+console.log("  npm start");

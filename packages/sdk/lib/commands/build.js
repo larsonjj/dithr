@@ -4,6 +4,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 const { spawnSync } = require("node:child_process");
+const { detectBuild, findEsbuild } = require("../build-helper.js");
 
 function usage() {
     console.log("Usage: dithrkit build [options]");
@@ -29,30 +30,14 @@ if (!fs.existsSync(cartPath)) {
     process.exit(1);
 }
 
-const cart = JSON.parse(fs.readFileSync(cartPath, "utf-8"));
-const codeEntry = cart.code || "dist/main.js";
+const buildInfo = detectBuild(".");
 
-// Determine source file — if code points to dist/, source is in src/
-let srcEntry;
-if (codeEntry.startsWith("dist/")) {
-    const base = path.basename(codeEntry, ".js");
-    const tsFile = path.resolve("src", `${base}.ts`);
-    const jsFile = path.resolve("src", `${base}.js`);
-    if (fs.existsSync(tsFile)) {
-        srcEntry = tsFile;
-    } else if (fs.existsSync(jsFile)) {
-        srcEntry = jsFile;
-    } else {
-        console.error(`Cannot find source file: src/${base}.ts or src/${base}.js`);
-        process.exit(1);
-    }
-} else {
-    // Code entry points directly to source — no build needed
+if (!buildInfo) {
     console.log("Cart code entry does not use dist/. No build required.");
     process.exit(0);
 }
 
-const outFile = path.resolve(codeEntry);
+const { srcEntry, outFile } = buildInfo;
 
 // Ensure output directory exists
 fs.mkdirSync(path.dirname(outFile), { recursive: true });
@@ -70,18 +55,10 @@ if (watchMode) {
 }
 
 // Find esbuild binary
-let esbuildBin;
-try {
-    esbuildBin = require.resolve("esbuild/bin/esbuild");
-} catch {
-    // Fallback: try to find in node_modules/.bin
-    const localBin = path.resolve("node_modules", ".bin", "esbuild");
-    if (fs.existsSync(localBin)) {
-        esbuildBin = localBin;
-    } else {
-        console.error("esbuild not found. It should be installed as part of @dithrkit/sdk.");
-        process.exit(1);
-    }
+const esbuildBin = findEsbuild();
+if (!esbuildBin) {
+    console.error("esbuild not found. Install @dithrkit/sdk or run npm install.");
+    process.exit(1);
 }
 
 try {

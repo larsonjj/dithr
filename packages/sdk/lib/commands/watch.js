@@ -6,6 +6,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const zlib = require("node:zlib");
 const { execSync, spawn } = require("node:child_process");
+const { detectBuild, buildSync } = require("../build-helper.js");
 
 function usage() {
     console.log("Usage: dithrkit watch [port] [options]");
@@ -320,6 +321,16 @@ function onCartChange(eventType, filename) {
         const known = files.filter((f) => path.extname(f) !== "");
         if (known.length === 0) return;
 
+        // Rebuild TypeScript if any .ts files changed
+        const hasTs = known.some((f) => f.endsWith(".ts"));
+        if (hasTs && detectBuild(cartDir)) {
+            console.log("[watch] TypeScript files changed — rebuilding…");
+            if (!buildSync(cartDir)) {
+                console.error("[watch] TypeScript build failed. Fix errors and save to retry.");
+                return;
+            }
+        }
+
         const jsOnly = known.every((f) => f.endsWith(".js") || f.endsWith(".mjs"));
         const isEntryChange =
             jsOnly && entryJs != null && known.length === 1 && known[0] === entryJs;
@@ -427,4 +438,10 @@ function startServer() {
 }
 
 // Initial build + serve
+if (detectBuild(cartDir)) {
+    console.log("[watch] Building TypeScript before initial export…");
+    if (!buildSync(cartDir)) {
+        console.error("[watch] TypeScript build failed. Fix errors and save to retry.");
+    }
+}
 rebuild(true);
