@@ -129,8 +129,9 @@ on native builds.
 ## Scaffolding a new cart
 
 ```bash
-node tools/create-cart.js my-game --template blank
+npm create @dithrkit my-game
 ```
 
-Templates: `blank`, `platformer`. The tool creates the directory
-structure, a starter `cart.json`, and a template `src/main.js`.
+Templates: `blank`, `platformer` (in JS or TS). The tool creates the
+directory structure, a starter `cart.json`, and a template `src/main.js`
+(or `src/main.ts`).

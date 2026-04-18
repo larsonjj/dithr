@@ -3,7 +3,7 @@
 
 const fs = require("node:fs");
 const path = require("node:path");
-const { execSync } = require("node:child_process");
+const { spawnSync } = require("node:child_process");
 
 function usage() {
     console.log("Usage: dithrkit build [options]");
@@ -85,10 +85,13 @@ try {
 }
 
 try {
-    execSync(`node ${JSON.stringify(esbuildBin)} ${esbuildArgs.join(" ")}`, {
+    const result = spawnSync(process.execPath, [esbuildBin, ...esbuildArgs], {
         stdio: "inherit",
         cwd: process.cwd(),
     });
+    if (result.status !== 0) {
+        process.exit(result.status || 1);
+    }
 } catch (err) {
     process.exit(err.status || 1);
 }

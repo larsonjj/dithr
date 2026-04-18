@@ -3,6 +3,21 @@
   "version": "0.1.0",
   "description": "Prebuilt dithr WASM runtime for web exports",
   "license": "MIT",
+  "author": "dithrkit",
+  "homepage": "https://github.com/dithrkit/dithr",
+  "bugs": {
+    "url": "https://github.com/dithrkit/dithr/issues"
+  },
+  "keywords": [
+    "dithr",
+    "fantasy-console",
+    "wasm",
+    "webassembly",
+    "gamedev"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
   "repository": {
     "type": "git",
     "url": "https://github.com/dithrkit/dithr.git",

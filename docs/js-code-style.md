@@ -3,7 +3,7 @@
 This document describes the JavaScript coding conventions for dithr cart source
 files (`src/**/*.js`). The style is enforced by **ESLint** (`@eslint/js`
 recommended) and **Prettier**, both of which are scaffolded automatically by
-`tools/create-cart.js`.
+`npm create @dithrkit` (or `npx dithrkit create`).
 
 ## Table of Contents
 
@@ -27,8 +27,8 @@ recommended) and **Prettier**, both of which are scaffolded automatically by
 
 ## Quick Start
 
-Every cart scaffolded with `create-cart.js` ships with a ready-to-use linting
-and formatting setup. Install dev-dependencies then run:
+Every cart scaffolded with `npm create @dithrkit` ships with a ready-to-use
+linting and formatting setup. Install dev-dependencies then run:
 
 ```bash
 npm install

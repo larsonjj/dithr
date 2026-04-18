@@ -200,7 +200,7 @@ at runtime.
 
 | Script                          | Usage                                                     | Description                                                         |
 | ------------------------------- | --------------------------------------------------------- | ------------------------------------------------------------------- |
-| `tools/create-cart.js`          | `node tools/create-cart.js <name> [--template <t>]`       | Scaffold a new cart project (templates: `blank`, `platformer`)      |
+| `npm create @dithrkit`          | `npm create @dithrkit <name>`                             | Scaffold a new cart project (JS or TS)                              |
 | `tools/cart-export.js`          | `node tools/cart-export.js <cart.json> [--out file.html]` | Export a cart to standalone HTML                                    |
 | `tools/serve-wasm.js`           | `node tools/serve-wasm.js [port]`                         | WASM dev server (default port 8080)                                 |
 | `tools/generate-pages-index.js` | `node tools/generate-pages-index.js <siteDir>`            | Generate index.html linking to all built WASM examples (used by CI) |

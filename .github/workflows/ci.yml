@@ -404,3 +404,54 @@ jobs:
             - name: Run browser smoke test
               working-directory: tests/wasm-browser
               run: npx playwright test
+
+    # ---------------------------------------------------------------------------
+    #  npm packages — structure validation & audit
+    # ---------------------------------------------------------------------------
+    npm-packages:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v6
+
+            - uses: actions/setup-node@v6
+              with:
+                  node-version: 22
+
+            - name: Install workspace dependencies
+              run: npm ci --workspaces --ignore-scripts
+
+            - name: Pack all packages
+              run: |
+                  mkdir -p build/npm-tarballs
+                  for pkg in sdk create wasm win32-x64 linux-x64 darwin-arm64; do
+                    npm pack "./packages/$pkg" --pack-destination build/npm-tarballs
+                  done
+
+            - name: Verify package contents
+              run: |
+                  failed=0
+                  for tarball in build/npm-tarballs/*.tgz; do
+                    echo "::group::$(basename "$tarball")"
+                    tar tzf "$tarball"
+                    echo "::endgroup::"
+                  done
+
+                  # SDK must include bin/, lib/, templates/, types/, configs/
+                  for dir in bin lib templates types configs; do
+                    if ! tar tzf build/npm-tarballs/dithrkit-sdk-*.tgz | grep -q "package/$dir/"; then
+                      echo "::error::SDK package missing $dir/"
+                      failed=1
+                    fi
+                  done
+
+                  # create package must include index.js
+                  if ! tar tzf build/npm-tarballs/dithrkit-create-*.tgz | grep -q "package/index.js"; then
+                    echo "::error::create package missing index.js"
+                    failed=1
+                  fi
+
+                  exit $failed
+
+            - name: Audit dependencies
+              run: npm audit --workspaces --audit-level=high
+              continue-on-error: true

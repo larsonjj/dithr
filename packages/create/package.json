@@ -3,6 +3,18 @@
   "version": "0.1.0",
   "description": "Scaffold a new dithr project — use with npm create @dithrkit",
   "license": "MIT",
+  "author": "dithrkit",
+  "homepage": "https://github.com/dithrkit/dithr",
+  "bugs": {
+    "url": "https://github.com/dithrkit/dithr/issues"
+  },
+  "keywords": [
+    "dithr",
+    "fantasy-console",
+    "create",
+    "scaffold",
+    "gamedev"
+  ],
   "repository": {
     "type": "git",
     "url": "https://github.com/dithrkit/dithr.git",

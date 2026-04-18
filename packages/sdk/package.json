@@ -3,6 +3,20 @@
   "version": "0.1.0",
   "description": "SDK and CLI for the dithr fantasy console",
   "license": "MIT",
+  "author": "dithrkit",
+  "homepage": "https://github.com/dithrkit/dithr",
+  "bugs": {
+    "url": "https://github.com/dithrkit/dithr/issues"
+  },
+  "keywords": [
+    "dithr",
+    "fantasy-console",
+    "game-engine",
+    "retro",
+    "gamedev",
+    "sdk",
+    "cli"
+  ],
   "repository": {
     "type": "git",
     "url": "https://github.com/dithrkit/dithr.git",

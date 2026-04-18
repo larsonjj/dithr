@@ -69,8 +69,8 @@ const server = http.createServer((req, res) => {
     if (relPath === "/") relPath = "/index.html";
 
     // Prevent path traversal
-    const filePath = path.join(serveDir, relPath);
-    if (!filePath.startsWith(serveDir)) {
+    const filePath = path.resolve(serveDir, relPath.slice(1));
+    if (!filePath.startsWith(serveDir + path.sep) && filePath !== serveDir) {
         res.writeHead(403);
         res.end("Forbidden");
         return;

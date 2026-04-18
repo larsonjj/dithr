@@ -159,8 +159,8 @@ const server = http.createServer((req, res) => {
     /* Serve raw cart files for hot reload */
     if (relPath.startsWith("/__cart/")) {
         const cartRel = relPath.slice("/__cart/".length);
-        const cartFile = path.join(cartDir, cartRel);
-        if (!cartFile.startsWith(cartDir)) {
+        const cartFile = path.resolve(cartDir, cartRel);
+        if (!cartFile.startsWith(cartDir + path.sep) && cartFile !== cartDir) {
             res.writeHead(403);
             res.end("Forbidden");
             return;
@@ -183,8 +183,8 @@ const server = http.createServer((req, res) => {
     if (relPath === "/") relPath = "/index.html";
 
     // Prevent path traversal
-    const filePath = path.join(buildDir, relPath);
-    if (!filePath.startsWith(buildDir)) {
+    const filePath = path.resolve(buildDir, relPath.slice(1));
+    if (!filePath.startsWith(buildDir + path.sep) && filePath !== buildDir) {
         res.writeHead(403);
         res.end("Forbidden");
         return;
@@ -352,8 +352,25 @@ function onCartChange(eventType, filename) {
     }, 300);
 }
 
-fs.watch(cartDir, { recursive: true }, onCartChange);
+const watcher = fs.watch(cartDir, { recursive: true }, onCartChange);
 console.log(`[watch] Watching ${cartDir} for changes`);
+
+/* ------------------------------------------------------------------ */
+/*  Graceful shutdown                                                  */
+/* ------------------------------------------------------------------ */
+
+function cleanup() {
+    watcher.close();
+    for (const client of sseClients) {
+        client.end();
+    }
+    sseClients.clear();
+    server.close();
+    process.exit(0);
+}
+
+process.on("SIGINT", cleanup);
+process.on("SIGTERM", cleanup);
 
 /* ------------------------------------------------------------------ */
 /*  Start server                                                       */
