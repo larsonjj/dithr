@@ -219,17 +219,17 @@ jobs:
             - name: Publish platform packages
               run: |
                   for pkg in win32-x64 linux-x64 darwin-arm64 wasm; do
-                    npm publish "./packages/$pkg" --provenance --access public --dry-run
+                    npm publish "./packages/$pkg" --provenance --access public
                   done
               env:
                   NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
             - name: Publish SDK
-              run: npm publish ./packages/sdk --provenance --access public --dry-run
+              run: npm publish ./packages/sdk --provenance --access public
               env:
                   NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
             - name: Publish create package
-              run: npm publish ./packages/create --provenance --access public --dry-run
+              run: npm publish ./packages/create --provenance --access public
               env:
                   NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
