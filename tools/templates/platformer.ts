@@ -1,0 +1,53 @@
+// Platformer template — simple gravity + tile collision
+
+let px = 64;
+let py = 64;
+let vx = 0;
+let vy = 0;
+let grounded = false;
+
+const GRAVITY = 0.4;
+const JUMP_VEL = -5.0;
+const MOVE_SPD = 2.0;
+const FRICTION = 0.8;
+
+export function _init(): void {
+    gfx.cls(0);
+}
+
+export function _update(dt: number): void {
+    // Horizontal movement
+    if (input.btn('left')) vx -= MOVE_SPD;
+    if (input.btn('right')) vx += MOVE_SPD;
+    vx *= FRICTION;
+
+    // Jump
+    if (grounded && input.btnp('jump')) {
+        vy = JUMP_VEL;
+        grounded = false;
+    }
+
+    // Gravity
+    vy += GRAVITY;
+
+    // Simple floor collision at y = 140
+    px += vx;
+    py += vy;
+    if (py >= 140) {
+        py = 140;
+        vy = 0;
+        grounded = true;
+    }
+}
+
+export function _draw(): void {
+    gfx.cls(1);
+
+    // Draw ground
+    gfx.rectfill(0, 148, sys.width() - 1, 180, 3);
+
+    // Draw player
+    gfx.rectfill(math.flr(px), math.flr(py), math.flr(px) + 8, math.flr(py) + 8, 11);
+
+    gfx.print('arrows/wasd: move  z/space: jump', 4, 4, 7);
+}

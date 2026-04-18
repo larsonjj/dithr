@@ -48,6 +48,6 @@
       ]
     }
   },
-  "code": "src/main.js",
+  "code": "dist/main.js",
   "maps": []
 }

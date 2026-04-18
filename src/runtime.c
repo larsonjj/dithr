@@ -364,8 +364,12 @@ bool dtr_runtime_eval(dtr_runtime_t *rt, const char *code, size_t len, const cha
         {
             JSValue ns;
             JSValue global;
-            JSAtom  atoms[] = {
-                rt->atom_init, rt->atom_update, rt->atom_draw, rt->atom_save, rt->atom_restore};
+            JSAtom  atoms[] = {rt->atom_init,
+                               rt->atom_update,
+                               rt->atom_fixed_update,
+                               rt->atom_draw,
+                               rt->atom_save,
+                               rt->atom_restore};
             int32_t cnt;
             int32_t idx;
 

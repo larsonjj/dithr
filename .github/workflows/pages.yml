@@ -48,6 +48,16 @@ jobs:
         steps:
             - uses: actions/checkout@v6
 
+            - uses: actions/setup-node@v6
+              with:
+                  node-version: 22
+
+            - name: Build TypeScript
+              run: |
+                  cd examples/${{ matrix.example }}
+                  npm ci --ignore-scripts
+                  npm run build
+
             - name: Install Ninja
               run: |
                   sudo rm -f /etc/apt/sources.list.d/microsoft-prod.list /etc/apt/sources.list.d/azure-cli.list

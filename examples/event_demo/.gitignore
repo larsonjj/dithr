@@ -2,3 +2,4 @@ node_modules/
 build/
 *.baked.json
 .DS_Store
+dist/

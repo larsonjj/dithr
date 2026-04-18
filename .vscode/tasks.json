@@ -48,6 +48,13 @@
       "dependsOn": "Build (Release)"
     },
     {
+      "label": "Build Example TS",
+      "type": "shell",
+      "command": "npm run build",
+      "options": { "cwd": "${input:ExampleCartWeb}" },
+      "problemMatcher": []
+    },
+    {
       "label": "WASM: Clean Data",
       "type": "shell",
       "command": "rm -f build/wasm/dithr.data",
@@ -69,7 +76,8 @@
       "label": "WASM: Configure",
       "type": "shell",
       "command": "cmake --preset wasm -DDTR_WASM_CART_DIR=${input:ExampleCartWeb}",
-      "problemMatcher": []
+      "problemMatcher": [],
+      "dependsOn": "Build Example TS"
     },
     {
       "label": "WASM: Run Example",
@@ -88,13 +96,22 @@
       "isBackground": true
     },
     {
+      "label": "Build Example TS (Cart)",
+      "type": "shell",
+      "command": "cd $(dirname ${input:ExampleCart}) && npm run build",
+      "windows": {
+        "command": "cd (Split-Path -Parent '${input:ExampleCart}'); npm run build"
+      },
+      "problemMatcher": []
+    },
+    {
       "label": "Run Example",
       "type": "shell",
       "command": "build/debug/dithr ${input:ExampleCart}",
       "windows": {
         "command": "build/debug/Debug/dithr.exe ${input:ExampleCart}"
       },
-      "dependsOn": "Build (Debug)",
+      "dependsOn": ["Build (Debug)", "Build Example TS (Cart)"],
       "problemMatcher": []
     },
     {
