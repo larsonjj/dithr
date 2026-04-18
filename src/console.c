@@ -27,6 +27,10 @@ static void prv_console_cleanup(dtr_console_t *con);
 static bool prv_load_cart_assets(dtr_console_t *con);
 static void prv_render_pause_overlay(dtr_console_t *con);
 static void prv_render_error_overlay(dtr_console_t *con);
+#if DEV_BUILD
+static SDL_EnumerationResult
+    SDLCALL prv_scan_src_cb(void *userdata, const char *dirname, const char *fname);
+#endif
 
 /**
  * \brief           Validate that a relative asset path stays within the cart
@@ -127,8 +131,43 @@ static void prv_console_cleanup(dtr_console_t *con)
 
 typedef struct {
     const char *dir;
-    int64_t     max_mtime;
+    int64_t     max_code_mtime;
+    int64_t     max_asset_mtime;
 } prv_dir_scan_t;
+
+static bool prv_is_code_ext(const char *ext)
+{
+    return ext != NULL && (SDL_strcasecmp(ext, ".js") == 0 || SDL_strcasecmp(ext, ".ts") == 0);
+}
+
+static bool prv_is_asset_ext(const char *ext)
+{
+    return ext != NULL && (SDL_strcasecmp(ext, ".hex") == 0 || SDL_strcasecmp(ext, ".png") == 0 ||
+                           SDL_strcasecmp(ext, ".json") == 0 || SDL_strcasecmp(ext, ".tmj") == 0 ||
+                           SDL_strcasecmp(ext, ".ldtk") == 0 || SDL_strcasecmp(ext, ".wav") == 0 ||
+                           SDL_strcasecmp(ext, ".ogg") == 0 || SDL_strcasecmp(ext, ".mp3") == 0);
+}
+
+static void prv_refresh_watch_mtimes(dtr_console_t *con)
+{
+    if (con->watch_dir[0] != '\0') {
+        prv_dir_scan_t scan;
+
+        scan.dir             = con->watch_dir;
+        scan.max_code_mtime  = 0;
+        scan.max_asset_mtime = 0;
+        SDL_EnumerateDirectory(con->watch_dir, prv_scan_src_cb, &scan);
+        con->watch_mtime       = scan.max_code_mtime;
+        con->watch_asset_mtime = scan.max_asset_mtime;
+    } else {
+        SDL_PathInfo info;
+
+        if (SDL_GetPathInfo(con->watch_path, &info)) {
+            con->watch_mtime = info.modify_time;
+        }
+        con->watch_asset_mtime = 0;
+    }
+}
 
 static SDL_EnumerationResult SDLCALL prv_scan_src_cb(void       *userdata,
                                                      const char *dirname,
@@ -175,13 +214,20 @@ static SDL_EnumerationResult SDLCALL prv_scan_src_cb(void       *userdata,
         return SDL_ENUM_CONTINUE;
     }
 
-    if (ext == NULL || (SDL_strcasecmp(ext, ".js") != 0 && SDL_strcasecmp(ext, ".ts") != 0)) {
+    if (!prv_is_code_ext(ext) && !prv_is_asset_ext(ext)) {
+        return SDL_ENUM_CONTINUE;
+    }
+
+    if (SDL_strcasecmp(fname, "cart.json") == 0) {
         return SDL_ENUM_CONTINUE;
     }
 
     if (SDL_GetPathInfo(full, &info)) {
-        if (info.modify_time > scan->max_mtime) {
-            scan->max_mtime = info.modify_time;
+        if (prv_is_code_ext(ext) && info.modify_time > scan->max_code_mtime) {
+            scan->max_code_mtime = info.modify_time;
+        }
+        if (prv_is_asset_ext(ext) && info.modify_time > scan->max_asset_mtime) {
+            scan->max_asset_mtime = info.modify_time;
         }
     }
 
@@ -209,29 +255,42 @@ static void prv_poll_file_changes(dtr_console_t *con)
         (double)(ticks - con->watch_last_poll) / (double)SDL_GetPerformanceFrequency() * 1000.0;
 
     if (elapsed_ms >= 200.0) {
-        bool changed;
+        bool code_changed;
+        bool asset_changed;
 
-        changed              = false;
+        code_changed         = false;
+        asset_changed        = false;
         con->watch_last_poll = ticks;
 
         if (con->watch_dir[0] != '\0') {
             prv_dir_scan_t scan;
 
-            scan.dir       = con->watch_dir;
-            scan.max_mtime = 0;
+            scan.dir             = con->watch_dir;
+            scan.max_code_mtime  = 0;
+            scan.max_asset_mtime = 0;
             SDL_EnumerateDirectory(con->watch_dir, prv_scan_src_cb, &scan);
-            changed = (scan.max_mtime != con->watch_mtime);
+            code_changed  = (scan.max_code_mtime != con->watch_mtime);
+            asset_changed = (scan.max_asset_mtime != con->watch_asset_mtime);
         } else {
             SDL_PathInfo info;
 
             if (SDL_GetPathInfo(con->watch_path, &info)) {
-                changed = (info.modify_time != con->watch_mtime);
+                code_changed = (info.modify_time != con->watch_mtime);
             }
         }
 
-        if (changed && !con->reload_pending) {
-            con->reload_pending     = true;
-            con->reload_detect_time = ticks;
+        if (code_changed) {
+            if (!con->reload_pending || con->reload_pending_kind != DTR_RELOAD_PENDING_CODE) {
+                con->reload_pending      = true;
+                con->reload_pending_kind = DTR_RELOAD_PENDING_CODE;
+                con->reload_detect_time  = ticks;
+            }
+        } else if (asset_changed) {
+            if (!con->reload_pending) {
+                con->reload_pending      = true;
+                con->reload_pending_kind = DTR_RELOAD_PENDING_ASSET;
+                con->reload_detect_time  = ticks;
+            }
         }
     }
 
@@ -242,9 +301,15 @@ static void prv_poll_file_changes(dtr_console_t *con)
         debounce_ms = (double)(SDL_GetPerformanceCounter() - con->reload_detect_time) /
                       (double)SDL_GetPerformanceFrequency() * 1000.0;
         if (debounce_ms >= 300.0) {
-            SDL_Log("hot-reload: change detected, reloading");
-            con->reload         = true;
-            con->reload_pending = false;
+            if (con->reload_pending_kind == DTR_RELOAD_PENDING_ASSET) {
+                SDL_Log("hot-reload: asset change detected, reloading assets");
+                con->reload_assets = true;
+            } else {
+                SDL_Log("hot-reload: code change detected, reloading code");
+                con->reload = true;
+            }
+            con->reload_pending      = false;
+            con->reload_pending_kind = DTR_RELOAD_PENDING_NONE;
         }
     }
 }
@@ -505,10 +570,12 @@ dtr_console_t *dtr_console_create(const char *cart_path)
     con->watch_dir[0]        = '\0';
     con->watch_path[0]       = '\0';
     con->watch_mtime         = 0;
+    con->watch_asset_mtime   = 0;
     con->watch_last_poll     = SDL_GetPerformanceCounter();
     con->reload_toast        = 0.0f;
     con->reload_toast_failed = false;
     con->reload_pending      = false;
+    con->reload_pending_kind = DTR_RELOAD_PENDING_NONE;
     con->reload_detect_time  = 0;
     con->reload_count        = 0;
     con->prev_code           = NULL;
@@ -549,12 +616,7 @@ dtr_console_t *dtr_console_create(const char *cart_path)
             /* Scan all source files so watch_mtime covers the whole directory,
                preventing a spurious reload on the first poll cycle. */
             if (con->watch_dir[0] != '\0') {
-                prv_dir_scan_t scan;
-
-                scan.dir       = con->watch_dir;
-                scan.max_mtime = 0;
-                SDL_EnumerateDirectory(con->watch_dir, prv_scan_src_cb, &scan);
-                con->watch_mtime = scan.max_mtime;
+                prv_refresh_watch_mtimes(con);
                 SDL_Log("hot-reload: watching directory %s", con->watch_dir);
             } else {
                 SDL_Log("hot-reload: watching %s", con->watch_path);
@@ -1355,21 +1417,7 @@ bool dtr_console_reload(dtr_console_t *con)
 
 #if DEV_BUILD
     {
-        SDL_PathInfo info;
-
-        if (SDL_GetPathInfo(con->watch_path, &info)) {
-            con->watch_mtime = info.modify_time;
-        }
-
-        /* If watching a directory, scan all source files for the max mtime */
-        if (con->watch_dir[0] != '\0') {
-            prv_dir_scan_t scan;
-
-            scan.dir       = con->watch_dir;
-            scan.max_mtime = 0;
-            SDL_EnumerateDirectory(con->watch_dir, prv_scan_src_cb, &scan);
-            con->watch_mtime = scan.max_mtime;
-        }
+        prv_refresh_watch_mtimes(con);
     }
 #endif
 
@@ -1626,6 +1674,10 @@ bool dtr_console_reload_assets(dtr_console_t *con)
     }
 
     prv_load_cart_assets(con);
+
+#if DEV_BUILD
+    prv_refresh_watch_mtimes(con);
+#endif
 
     t_end      = SDL_GetPerformanceCounter();
     elapsed_ms = (double)(t_end - t_start) / (double)SDL_GetPerformanceFrequency() * 1000.0;

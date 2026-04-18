@@ -31,6 +31,14 @@ extern "C" {
 /*  Console — top-level state                                                */
 /* ------------------------------------------------------------------------ */
 
+#if DEV_BUILD
+typedef enum {
+    DTR_RELOAD_PENDING_NONE  = 0,
+    DTR_RELOAD_PENDING_CODE  = 1,
+    DTR_RELOAD_PENDING_ASSET = 2,
+} dtr_reload_pending_kind_t;
+#endif
+
 /**
  * \brief           Top-level console state that owns every subsystem
  */
@@ -111,13 +119,15 @@ typedef struct dtr_console {
     /* Hot-reload: JS source file watching */
     char     watch_dir[1024];     /**< Directory to scan for source changes */
     char     watch_path[1024];    /**< Resolved path to the JS source file */
-    int64_t  watch_mtime;         /**< Newest modify_time across source files */
+    int64_t  watch_mtime;         /**< Newest modify_time across watched code files */
+    int64_t  watch_asset_mtime;   /**< Newest modify_time across watched asset files */
     uint64_t watch_last_poll;     /**< SDL_GetPerformanceCounter at last poll */
     float    reload_toast;        /**< Countdown for "RELOADED" toast overlay */
     bool     reload_toast_failed; /**< True when toast shows a failure message */
     int32_t  reload_count;        /**< Running count of successful reloads */
     bool     reload_pending;      /**< A change was detected, debounce in progress */
     uint64_t reload_detect_time;  /**< Time the first change was detected */
+    uint8_t  reload_pending_kind; /**< Pending debounce target: code or asset */
 
     /* Undo: previous code buffer for one-step revert */
     char  *prev_code;     /**< Previous JS code before last reload */

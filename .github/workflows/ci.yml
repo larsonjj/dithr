@@ -418,7 +418,7 @@ jobs:
                   node-version: 22
 
             - name: Install workspace dependencies
-              run: npm ci --workspaces --ignore-scripts
+              run: npm install --workspaces --ignore-scripts
 
             - name: Pack all packages
               run: |
