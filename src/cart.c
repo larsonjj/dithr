@@ -350,6 +350,23 @@ bool dtr_cart_parse(dtr_cart_t *cart, JSContext *ctx, const char *json, size_t l
         JS_FreeValue(ctx, code_val);
     }
 
+    /* --- buildCommand (optional, DEV_BUILD only) --- */
+    {
+        JSValue build_val;
+
+        build_val = JS_GetPropertyStr(ctx, root, "buildCommand");
+        if (JS_IsString(build_val)) {
+            const char *cmd;
+
+            cmd = JS_ToCString(ctx, build_val);
+            if (cmd != NULL) {
+                SDL_strlcpy(cart->build_command, cmd, sizeof(cart->build_command));
+                JS_FreeCString(ctx, cmd);
+            }
+        }
+        JS_FreeValue(ctx, build_val);
+    }
+
     /* --- maps --- */
     {
         JSValue maps_val;

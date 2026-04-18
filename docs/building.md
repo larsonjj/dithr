@@ -177,19 +177,34 @@ cmake --preset debug -DDTR_FB_WIDTH=128 -DDTR_FB_HEIGHT=128 -DDTR_WINDOW_SCALE=4
 
 ## CMake targets
 
-| Target               | Type           | Description                                                    |
-| -------------------- | -------------- | -------------------------------------------------------------- |
-| `dithr_core`         | Static library | All engine source except `main.c`; SDL linked PUBLIC           |
-| `dithr_core_test`    | Static library | Same sources as `dithr_core`; SDL linked PRIVATE (test builds) |
-| `dithr`              | Executable     | Links `dithr_core` + SDL main callbacks                        |
-| `test_input`         | Test exe       | Keyboard / virtual input tests                                 |
-| `test_cart`          | Test exe       | Cart loading tests                                             |
-| `test_graphics`      | Test exe       | Graphics primitives tests (links `dithr_core_test`)            |
-| `test_event`         | Test exe       | Event bus tests                                                |
-| `test_mouse_gamepad` | Test exe       | Mouse and gamepad state tests                                  |
-| `test_runtime`       | Test exe       | QuickJS runtime wrapper tests                                  |
-| `test_audio`         | Test exe       | Audio subsystem tests                                          |
-| `test_postfx`        | Test exe       | Post-processing pipeline tests                                 |
+| Target                  | Type           | Description                                                    |
+| ----------------------- | -------------- | -------------------------------------------------------------- |
+| `dithr_core`            | Static library | All engine source except `main.c`; SDL linked PUBLIC           |
+| `dithr_core_test`       | Static library | Same sources as `dithr_core`; SDL linked PRIVATE (test builds) |
+| `dithr`                 | Executable     | Links `dithr_core` + SDL main callbacks                        |
+| `test_input`            | Test exe       | Keyboard / virtual input tests                                 |
+| `test_cart`             | Test exe       | Cart loading tests                                             |
+| `test_cart_import`      | Test exe       | Cart import / file-based loading tests                         |
+| `test_graphics`         | Test exe       | Graphics primitives tests (links `dithr_core_test`)            |
+| `test_graphics_ext`     | Test exe       | Extended graphics tests                                        |
+| `test_event`            | Test exe       | Event bus tests                                                |
+| `test_mouse_gamepad`    | Test exe       | Mouse and gamepad state tests                                  |
+| `test_touch`            | Test exe       | Touch input tests                                              |
+| `test_runtime`          | Test exe       | QuickJS runtime wrapper tests                                  |
+| `test_module_normalize` | Test exe       | JS module path normalization tests                             |
+| `test_audio`            | Test exe       | Audio subsystem tests                                          |
+| `test_postfx`           | Test exe       | Post-processing pipeline tests                                 |
+| `test_col`              | Test exe       | Collision detection tests                                      |
+| `test_cam`              | Test exe       | Camera and text metric tests (links `dithr_core_test`)         |
+| `test_ui`               | Test exe       | UI layout tests (links `dithr_core_test`)                      |
+| `test_map`              | Test exe       | Tilemap tests                                                  |
+| `test_synth`            | Test exe       | Synthesizer tests                                              |
+| `test_tween`            | Test exe       | Tween animation tests (links `dithr_core_test`)                |
+| `test_api_bridge`       | Test exe       | JS API bridge tests (QuickJS, no graphics/audio)               |
+| `test_api_bridge_gfx`   | Test exe       | JS API bridge tests requiring a graphics context               |
+| `test_api_bridge_map`   | Test exe       | JS API bridge map tests                                        |
+| `test_console`          | Test exe       | Console lifecycle tests (require SDL display)                  |
+| `test_editor_js`        | Test exe       | Editor JS tests (QuickJS + host file paths)                    |
 
 `dithr_core_test` is marked `EXCLUDE_FROM_ALL` — it is only built when a test
 target depends on it. Because SDL is linked PRIVATE, test binaries that only
@@ -198,9 +213,23 @@ at runtime.
 
 ## Tooling
 
+### SDK CLI (`@dithrkit/sdk`)
+
+| Command           | Usage                         | Description                                    |
+| ----------------- | ----------------------------- | ---------------------------------------------- |
+| `dithrkit run`    | `npx dithrkit run [cart-dir]` | Run natively with hot-reload                   |
+| `dithrkit dev`    | `npx dithrkit dev [cart-dir]` | Build TS in watch mode + run (native dev loop) |
+| `dithrkit build`  | `npx dithrkit build`          | Bundle JS/TS source via esbuild                |
+| `dithrkit serve`  | `npx dithrkit serve [port]`   | Build and serve in the browser                 |
+| `dithrkit watch`  | `npx dithrkit watch [port]`   | Build, serve, and live-reload on file changes  |
+| `dithrkit export` | `npx dithrkit export --web`   | Export for web or desktop distribution         |
+
+### Engine development scripts
+
 | Script                          | Usage                                                     | Description                                                         |
 | ------------------------------- | --------------------------------------------------------- | ------------------------------------------------------------------- |
 | `npm create @dithrkit`          | `npm create @dithrkit <name>`                             | Scaffold a new cart project (JS or TS)                              |
 | `tools/cart-export.js`          | `node tools/cart-export.js <cart.json> [--out file.html]` | Export a cart to standalone HTML                                    |
 | `tools/serve-wasm.js`           | `node tools/serve-wasm.js [port]`                         | WASM dev server (default port 8080)                                 |
+| `tools/watch-wasm.js`           | `node tools/watch-wasm.js <cart-dir>`                     | WASM dev server with file watching and live-reload                  |
 | `tools/generate-pages-index.js` | `node tools/generate-pages-index.js <siteDir>`            | Generate index.html linking to all built WASM examples (used by CI) |

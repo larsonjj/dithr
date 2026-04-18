@@ -130,9 +130,9 @@ typedef struct {
     int64_t     max_mtime;
 } prv_dir_scan_t;
 
-static SDL_EnumerationResult SDLCALL prv_scan_js_cb(void       *userdata,
-                                                    const char *dirname,
-                                                    const char *fname)
+static SDL_EnumerationResult SDLCALL prv_scan_src_cb(void       *userdata,
+                                                     const char *dirname,
+                                                     const char *fname)
 {
     prv_dir_scan_t *scan;
     const char     *ext;
@@ -161,18 +161,21 @@ static SDL_EnumerationResult SDLCALL prv_scan_js_cb(void       *userdata,
         }
     }
 
-    SDL_snprintf(full, sizeof(full), "%s%s", dirname, fname);
+    SDL_snprintf(full, sizeof(full), "%s/%s", dirname, fname);
 
-    /* Recurse into subdirectories */
+    /* Recurse into subdirectories (skip node_modules and dist) */
     if (SDL_GetPathInfo(full, &info) && info.type == SDL_PATHTYPE_DIRECTORY) {
         char subdir[1024];
 
+        if (SDL_strcmp(fname, "node_modules") == 0 || SDL_strcmp(fname, "dist") == 0) {
+            return SDL_ENUM_CONTINUE;
+        }
         SDL_snprintf(subdir, sizeof(subdir), "%s/", full);
-        SDL_EnumerateDirectory(subdir, prv_scan_js_cb, userdata);
+        SDL_EnumerateDirectory(subdir, prv_scan_src_cb, userdata);
         return SDL_ENUM_CONTINUE;
     }
 
-    if (ext == NULL || SDL_strcasecmp(ext, ".js") != 0) {
+    if (ext == NULL || (SDL_strcasecmp(ext, ".js") != 0 && SDL_strcasecmp(ext, ".ts") != 0)) {
         return SDL_ENUM_CONTINUE;
     }
 
@@ -215,8 +218,8 @@ static void prv_poll_file_changes(dtr_console_t *con)
             prv_dir_scan_t scan;
 
             scan.dir       = con->watch_dir;
-            scan.max_mtime = con->watch_mtime;
-            SDL_EnumerateDirectory(con->watch_dir, prv_scan_js_cb, &scan);
+            scan.max_mtime = 0;
+            SDL_EnumerateDirectory(con->watch_dir, prv_scan_src_cb, &scan);
             changed = (scan.max_mtime != con->watch_mtime);
         } else {
             SDL_PathInfo info;
@@ -498,7 +501,7 @@ dtr_console_t *dtr_console_create(const char *cart_path)
     }
 
 #if DEV_BUILD
-    /* Set up file watcher for the JS source directory */
+    /* Set up file watcher for the source directory */
     con->watch_dir[0]        = '\0';
     con->watch_path[0]       = '\0';
     con->watch_mtime         = 0;
@@ -515,36 +518,42 @@ dtr_console_t *dtr_console_create(const char *cart_path)
 
         SDL_snprintf(con->watch_path,
                      sizeof(con->watch_path),
-                     "%s%s",
+                     "%s/%s",
                      con->cart->base_path,
                      con->cart->code_path);
         if (SDL_GetPathInfo(con->watch_path, &info)) {
             con->watch_mtime = info.modify_time;
 
-            /* Extract directory from the full code path */
-            SDL_strlcpy(con->watch_dir, con->watch_path, sizeof(con->watch_dir));
-            {
-                char *last_sep;
+            if (con->cart->build_command[0] != '\0') {
+                /* When a build command is set, watch the entire cart root
+                   so that .ts source changes are detected alongside .js. */
+                SDL_strlcpy(con->watch_dir, con->cart->base_path, sizeof(con->watch_dir));
+            } else {
+                /* Extract directory from the full code path */
+                SDL_strlcpy(con->watch_dir, con->watch_path, sizeof(con->watch_dir));
+                {
+                    char *last_sep;
 
-                last_sep = SDL_strrchr(con->watch_dir, '/');
-                if (last_sep == NULL) {
-                    last_sep = SDL_strrchr(con->watch_dir, '\\');
-                }
-                if (last_sep != NULL) {
-                    *(last_sep + 1) = '\0';
-                } else {
-                    con->watch_dir[0] = '\0';
+                    last_sep = SDL_strrchr(con->watch_dir, '/');
+                    if (last_sep == NULL) {
+                        last_sep = SDL_strrchr(con->watch_dir, '\\');
+                    }
+                    if (last_sep != NULL) {
+                        *(last_sep + 1) = '\0';
+                    } else {
+                        con->watch_dir[0] = '\0';
+                    }
                 }
             }
 
-            /* Scan all .js files so watch_mtime covers the whole directory,
+            /* Scan all source files so watch_mtime covers the whole directory,
                preventing a spurious reload on the first poll cycle. */
             if (con->watch_dir[0] != '\0') {
                 prv_dir_scan_t scan;
 
                 scan.dir       = con->watch_dir;
-                scan.max_mtime = con->watch_mtime;
-                SDL_EnumerateDirectory(con->watch_dir, prv_scan_js_cb, &scan);
+                scan.max_mtime = 0;
+                SDL_EnumerateDirectory(con->watch_dir, prv_scan_src_cb, &scan);
                 con->watch_mtime = scan.max_mtime;
                 SDL_Log("hot-reload: watching directory %s", con->watch_dir);
             } else {
@@ -660,8 +669,11 @@ void dtr_console_event(dtr_console_t *con, SDL_Event *event)
                     {
                         char full[1024];
 
-                        SDL_snprintf(
-                            full, sizeof(full), "%s%s", con->cart->base_path, con->cart->code_path);
+                        SDL_snprintf(full,
+                                     sizeof(full),
+                                     "%s/%s",
+                                     con->cart->base_path,
+                                     con->cart->code_path);
                         if (!SDL_SaveFile(full, con->cart->code, con->cart->code_len)) {
                             SDL_Log(
                                 "hot-reload: undo — failed to write %s: %s", full, SDL_GetError());
@@ -1060,8 +1072,62 @@ bool dtr_console_reload(dtr_console_t *con)
 
     t_start = SDL_GetPerformanceCounter();
 
+#if DEV_BUILD
+    /* ---- 0. Run build command if configured (e.g. esbuild for TS) ---- */
+    if (con->cart->build_command[0] != '\0') {
+        SDL_PropertiesID props;
+        SDL_Process     *proc;
+        const char      *args[4];
+        int              exit_code;
+
+#ifdef _WIN32
+        args[0] = "cmd.exe";
+        args[1] = "/C";
+        args[2] = con->cart->build_command;
+        args[3] = NULL;
+#else
+        args[0] = "/bin/sh";
+        args[1] = "-c";
+        args[2] = con->cart->build_command;
+        args[3] = NULL;
+#endif
+
+        props = SDL_CreateProperties();
+        SDL_SetPointerProperty(props, SDL_PROP_PROCESS_CREATE_ARGS_POINTER, (void *)args);
+        SDL_SetStringProperty(
+            props, SDL_PROP_PROCESS_CREATE_WORKING_DIRECTORY_STRING, con->cart->base_path);
+
+        proc = SDL_CreateProcessWithProperties(props);
+        SDL_DestroyProperties(props);
+
+        if (proc != NULL) {
+            exit_code = -1;
+            SDL_WaitProcess(proc, true, &exit_code);
+            if (exit_code != 0) {
+                SDL_Log("hot-reload: build command failed (exit %d): %s",
+                        exit_code,
+                        con->cart->build_command);
+                con->reload_toast        = 1.5f;
+                con->reload_toast_failed = true;
+            } else {
+                SDL_Log("hot-reload: build command succeeded");
+            }
+            SDL_DestroyProcess(proc);
+
+            if (exit_code != 0) {
+                return false;
+            }
+        } else {
+            SDL_Log("hot-reload: failed to start build command: %s", SDL_GetError());
+            con->reload_toast        = 1.5f;
+            con->reload_toast_failed = true;
+            return false;
+        }
+    }
+#endif
+
     /* ---- 1. Read new JS source from disk (before destroying anything) ---- */
-    SDL_snprintf(code_full, sizeof(code_full), "%s%s", con->cart->base_path, con->cart->code_path);
+    SDL_snprintf(code_full, sizeof(code_full), "%s/%s", con->cart->base_path, con->cart->code_path);
     new_code = (char *)SDL_LoadFile(code_full, &new_len);
     if (new_code == NULL) {
         SDL_Log("hot-reload: failed to read %s", code_full);
@@ -1295,13 +1361,13 @@ bool dtr_console_reload(dtr_console_t *con)
             con->watch_mtime = info.modify_time;
         }
 
-        /* If watching a directory, scan all .js files for the max mtime */
+        /* If watching a directory, scan all source files for the max mtime */
         if (con->watch_dir[0] != '\0') {
             prv_dir_scan_t scan;
 
             scan.dir       = con->watch_dir;
-            scan.max_mtime = con->watch_mtime;
-            SDL_EnumerateDirectory(con->watch_dir, prv_scan_js_cb, &scan);
+            scan.max_mtime = 0;
+            SDL_EnumerateDirectory(con->watch_dir, prv_scan_src_cb, &scan);
             con->watch_mtime = scan.max_mtime;
         }
     }

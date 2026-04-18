@@ -89,8 +89,12 @@ function exportWeb(cart, out) {
     const shellPath = path.join(__dirname, "..", "..", "templates", "shell.html");
     let html = fs.readFileSync(shellPath, "utf-8");
 
-    // Replace title
-    const title = cart.title || "dithr";
+    // Replace title (escape HTML entities to prevent XSS)
+    const title = (cart.title || "dithr")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
     html = html.replace("<title>dithr</title>", `<title>${title}</title>`);
 
     // Replace {{{ SCRIPT }}} with script tags

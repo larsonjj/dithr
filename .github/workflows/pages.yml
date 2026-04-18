@@ -43,6 +43,7 @@ jobs:
                     - drawlist_demo
                     - palette_fx
                     - collision_demo
+                    - synth_demo
                     - sys_explorer
                     - tween_showcase
         steps:

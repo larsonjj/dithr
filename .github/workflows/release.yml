@@ -29,6 +29,15 @@ jobs:
             - name: Build
               run: cmake --build build/release --config Release
 
+            - name: Test
+              run: ctest --output-on-failure -C Release
+              working-directory: build/release
+              env:
+                  SDL_AUDIO_DRIVER: dummy
+                  SDL_VIDEO_DRIVER: dummy
+                  SDL_AUDIODRIVER: dummy
+                  SDL_VIDEODRIVER: dummy
+
             - name: Package
               run: |
                   mkdir dist
@@ -88,6 +97,15 @@ jobs:
             - name: Build
               run: cmake --build build/release --config Release
 
+            - name: Test
+              run: ctest --output-on-failure -C Release
+              working-directory: build/release
+              env:
+                  SDL_AUDIO_DRIVER: dummy
+                  SDL_VIDEO_DRIVER: dummy
+                  SDL_AUDIODRIVER: dummy
+                  SDL_VIDEODRIVER: dummy
+
             - name: Package
               run: |
                   mkdir dist
@@ -131,6 +149,15 @@ jobs:
 
             - name: Build
               run: cmake --build build/release --config Release
+
+            - name: Test
+              run: ctest --output-on-failure -C Release
+              working-directory: build/release
+              env:
+                  SDL_AUDIO_DRIVER: dummy
+                  SDL_VIDEO_DRIVER: dummy
+                  SDL_AUDIODRIVER: dummy
+                  SDL_VIDEODRIVER: dummy
 
             - name: Package
               run: |
@@ -217,7 +244,7 @@ jobs:
         steps:
             - uses: actions/checkout@v6
 
-            - uses: actions/setup-node@v4
+            - uses: actions/setup-node@v6
               with:
                   node-version: 22
                   registry-url: https://registry.npmjs.org

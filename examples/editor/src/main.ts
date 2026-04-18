@@ -47,6 +47,7 @@ import {
 
 // ─── Text input event handler ────────────────────────────────────────────────
 
+
 function onTextInput(ch: string) {
     if (st.activeTab === TAB_MAP && (st.mapResizeMode || st.mapRenameMode)) {
         mapTextInput(ch);
@@ -152,7 +153,11 @@ export function _init(): void {
         loadMusFromDisk();
         loadMapFromDisk();
         loadEditorPrefs();
-        openFile('src/main.js');
+        if (sys.readFile('src/main.ts') !== undefined) {
+            openFile('src/main.ts');
+        } else {
+            openFile('src/main.js');
+        }
     }
     st.restored = false;
 }

@@ -109,9 +109,9 @@ typedef struct dtr_console {
 
 #if DEV_BUILD
     /* Hot-reload: JS source file watching */
-    char     watch_dir[1024];     /**< Directory to scan for .js changes */
+    char     watch_dir[1024];     /**< Directory to scan for source changes */
     char     watch_path[1024];    /**< Resolved path to the JS source file */
-    int64_t  watch_mtime;         /**< Newest modify_time across all .js files */
+    int64_t  watch_mtime;         /**< Newest modify_time across source files */
     uint64_t watch_last_poll;     /**< SDL_GetPerformanceCounter at last poll */
     float    reload_toast;        /**< Countdown for "RELOADED" toast overlay */
     bool     reload_toast_failed; /**< True when toast shows a failure message */

@@ -11,7 +11,7 @@
 | macOS    | AppleClang (Debug)      | [![macos-dbg](https://img.shields.io/github/actions/workflow/status/larsonjj/dithr/ci.yml?branch=main&label=build)](https://github.com/larsonjj/dithr/actions/workflows/ci.yml)      | Ninja, shared libs off              |
 | macOS    | AppleClang (ASan/UBSan) | [![macos-asan](https://img.shields.io/github/actions/workflow/status/larsonjj/dithr/ci.yml?branch=main&label=build)](https://github.com/larsonjj/dithr/actions/workflows/ci.yml)     | Address + UB sanitizers             |
 | WASM     | Emscripten (latest)     | [![wasm](https://img.shields.io/github/actions/workflow/status/larsonjj/dithr/ci.yml?branch=main&label=build)](https://github.com/larsonjj/dithr/actions/workflows/ci.yml)           | + Playwright browser smoke test     |
-| —        | clang-format-20         | [![fmt](https://img.shields.io/github/actions/workflow/status/larsonjj/dithr/ci.yml?branch=main&label=format)](https://github.com/larsonjj/dithr/actions/workflows/ci.yml)           | C/H formatting check                |
+| —        | clang-format-22         | [![fmt](https://img.shields.io/github/actions/workflow/status/larsonjj/dithr/ci.yml?branch=main&label=format)](https://github.com/larsonjj/dithr/actions/workflows/ci.yml)           | C/H formatting check                |
 | —        | clang-tidy              | [![tidy](https://img.shields.io/github/actions/workflow/status/larsonjj/dithr/ci.yml?branch=main&label=tidy)](https://github.com/larsonjj/dithr/actions/workflows/ci.yml)            | Static analysis, warnings as errors |
 | —        | ESLint + Prettier       | [![jslint](https://img.shields.io/github/actions/workflow/status/larsonjj/dithr/ci.yml?branch=main&label=lint)](https://github.com/larsonjj/dithr/actions/workflows/ci.yml)          | Example cart JS linting             |
 
@@ -158,6 +158,7 @@ These flags are accepted by the native `dithr` binary directly:
 | Document                               | Description                                              |
 | -------------------------------------- | -------------------------------------------------------- |
 | [API Reference](docs/api-reference.md) | All 19 JS namespaces with every function and constant    |
+| [CLI Reference](docs/cli.md)           | SDK CLI commands and workflows                           |
 | [Cart Format](docs/cart-format.md)     | `cart.json` schema and asset conventions                 |
 | [Architecture](docs/architecture.md)   | Engine lifecycle, subsystem overview, design decisions   |
 | [Building](docs/building.md)           | Build presets, CMake variables, WASM workflow            |

@@ -180,6 +180,7 @@ struct dtr_cart {
     char    sprite_sheet_path[512];
     char    sprite_flags_path[512];
     char    code_path[512];
+    char    build_command[512];
     char    map_paths[DTR_CART_MAX_MAPS][512];
     char    sfx_paths[DTR_CART_MAX_SFX][512];
     int32_t sfx_count;

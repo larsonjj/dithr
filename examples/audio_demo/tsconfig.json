@@ -12,6 +12,6 @@
     },
     "include": [
         "src/**/*.ts",
-        "types/**/*.d.ts"
+        "../../packages/sdk/types/**/*.d.ts"
     ]
 }

@@ -694,6 +694,44 @@ static void test_cart_parse_code_maps(void)
     DTR_PASS();
 }
 
+static void test_cart_parse_build_command(void)
+{
+    dtr_cart_t *cart;
+    bool        ok;
+    const char *json = "{"
+                       "  \"code\": \"dist/main.js\","
+                       "  \"buildCommand\": \"npx esbuild src/main.ts --bundle\""
+                       "}";
+
+    cart = dtr_cart_create();
+    prv_setup();
+    ok = dtr_cart_parse(cart, s_ctx, json, strlen(json));
+    DTR_ASSERT(ok);
+    DTR_ASSERT(strcmp(cart->code_path, "dist/main.js") == 0);
+    DTR_ASSERT(strcmp(cart->build_command, "npx esbuild src/main.ts --bundle") == 0);
+    prv_teardown();
+    dtr_cart_destroy(cart);
+    DTR_PASS();
+}
+
+static void test_cart_parse_build_command_absent(void)
+{
+    dtr_cart_t *cart;
+    bool        ok;
+    const char *json = "{"
+                       "  \"code\": \"src/main.js\""
+                       "}";
+
+    cart = dtr_cart_create();
+    prv_setup();
+    ok = dtr_cart_parse(cart, s_ctx, json, strlen(json));
+    DTR_ASSERT(ok);
+    DTR_ASSERT(cart->build_command[0] == '\0');
+    prv_teardown();
+    dtr_cart_destroy(cart);
+    DTR_PASS();
+}
+
 /* ------------------------------------------------------------------ */
 /*  Parse — sprites section                                            */
 /* ------------------------------------------------------------------ */
@@ -1054,6 +1092,8 @@ int main(int argc, char *argv[])
     DTR_RUN_TEST(test_cart_parse_runtime);
     DTR_RUN_TEST(test_cart_parse_sfx_music);
     DTR_RUN_TEST(test_cart_parse_code_maps);
+    DTR_RUN_TEST(test_cart_parse_build_command);
+    DTR_RUN_TEST(test_cart_parse_build_command_absent);
     DTR_RUN_TEST(test_cart_parse_sprites);
     DTR_RUN_TEST(test_cart_destroy_null);
     DTR_RUN_TEST(test_cart_parse_huge_display);

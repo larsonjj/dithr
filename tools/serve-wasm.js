@@ -54,8 +54,8 @@ const server = http.createServer((req, res) => {
     if (relPath === "/") relPath = "/dithr.html";
 
     // Prevent path traversal
-    const filePath = path.join(SERVE_DIR, relPath);
-    if (!filePath.startsWith(SERVE_DIR)) {
+    const filePath = path.resolve(SERVE_DIR, relPath.slice(1));
+    if (!filePath.startsWith(SERVE_DIR + path.sep) && filePath !== SERVE_DIR) {
         res.writeHead(403);
         res.end("Forbidden");
         return;

@@ -1,31 +1,32 @@
 {
-  "title": "dithr Editor",
-  "author": "dithr",
-  "version": "0.1.0",
-  "description": "A minimal text editor built on the dithr fantasy console",
-  "display": {
-    "width": 640,
-    "height": 360,
-    "scale": 2,
-    "scaleMode": "letterbox",
-    "pauseKey": false
-  },
-  "timing": {
-    "fps": 60
-  },
-  "sprites": {
-    "tileW": 8,
-    "tileH": 8,
-    "sheetW": 128,
-    "sheetH": 128,
-    "sheet": "sprites.hex",
-    "flags": "flags.hex"
-  },
-  "audio": {
-    "channels": 4
-  },
-  "input": {
-    "default_mappings": {}
-  },
-  "code": "dist/main.js"
+    "title": "dithr Editor",
+    "author": "dithr",
+    "version": "0.1.0",
+    "description": "A minimal text editor built on the dithr fantasy console",
+    "display": {
+        "width": 640,
+        "height": 360,
+        "scale": 2,
+        "scaleMode": "letterbox",
+        "pauseKey": false
+    },
+    "timing": {
+        "fps": 60
+    },
+    "sprites": {
+        "tileW": 8,
+        "tileH": 8,
+        "sheetW": 128,
+        "sheetH": 128,
+        "sheet": "sprites.hex",
+        "flags": "flags.hex"
+    },
+    "audio": {
+        "channels": 4
+    },
+    "input": {
+        "default_mappings": {}
+    },
+    "code": "dist/main.js",
+    "buildCommand": "npx esbuild src/main.ts --bundle --format=esm --target=es2020 --outfile=dist/main.js"
 }

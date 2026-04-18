@@ -150,13 +150,13 @@ endif()
 # --- CTest properties ---
 set(DTR_TEST_TARGETS
     test_input test_graphics test_graphics_ext
-    test_mouse_gamepad test_module_normalize test_audio test_postfx
+    test_mouse_gamepad test_touch test_module_normalize test_audio test_postfx
     test_col test_cam test_ui test_map test_synth test_tween
 )
 if (NOT EMSCRIPTEN)
     list(APPEND DTR_TEST_TARGETS
         test_cart test_event test_runtime test_cart_import test_console
-        test_api_bridge test_api_bridge_gfx test_editor_js
+        test_api_bridge test_api_bridge_gfx test_api_bridge_map test_editor_js
     )
 endif()
 set_tests_properties(${DTR_TEST_TARGETS}

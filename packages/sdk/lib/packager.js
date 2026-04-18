@@ -34,6 +34,11 @@ function packDirectory(dir, mount) {
             const fullPath = path.join(currentDir, entry.name);
             const relPath = relPrefix ? `${relPrefix}/${entry.name}` : entry.name;
 
+            if (entry.isSymbolicLink()) {
+                // Skip symlinks to prevent including files outside the cart
+                continue;
+            }
+
             if (entry.isDirectory()) {
                 walk(fullPath, relPath);
             } else if (entry.isFile()) {

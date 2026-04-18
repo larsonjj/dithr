@@ -86,6 +86,10 @@ const cart = {
     code: codeEntry,
     maps: [],
 };
+if (useTypescript) {
+    cart.buildCommand =
+        "npx esbuild src/main.ts --bundle --format=esm --target=es2020 --outfile=dist/main.js";
+}
 fs.writeFileSync(path.join(dir, "cart.json"), JSON.stringify(cart, null, 4) + "\n");
 
 // src/main.{js,ts} from template
