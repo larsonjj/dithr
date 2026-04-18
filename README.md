@@ -59,6 +59,12 @@ Run your game natively with hot-reload (reloads on save):
 npx dithrkit run
 ```
 
+For TypeScript projects, use `dev` to auto-build and watch for changes:
+
+```bash
+npx dithrkit dev
+```
+
 Or develop in the browser:
 
 ```bash
@@ -98,6 +104,7 @@ npx dithrkit export --desktop   # standalone executable
 | Command               | Description                                       |
 | --------------------- | ------------------------------------------------- |
 | `npx dithrkit run`    | Run natively with hot-reload                      |
+| `npx dithrkit dev`    | Build TS in watch mode + run (native dev loop)    |
 | `npx dithrkit build`  | Bundle JS/TS source via esbuild                   |
 | `npx dithrkit serve`  | Build and serve in the browser                    |
 | `npx dithrkit watch`  | Build, serve, and live-reload on file changes     |
@@ -137,6 +144,8 @@ See [docs/building.md](docs/building.md) for all presets (release,
 WASM) and available CMake cache variables.
 
 ### Command-Line Flags
+
+These flags are accepted by the native `dithr` binary directly:
 
 | Flag           | Short | Description                |
 | -------------- | ----- | -------------------------- |

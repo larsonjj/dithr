@@ -15,9 +15,6 @@ function usage() {
     console.log("built before launching.");
     console.log("");
     console.log("Options:");
-    console.log("  --fullscreen, -f      Launch in fullscreen mode");
-    console.log("  --scale, -s <n>       Set integer pixel scale (1-6)");
-    console.log("  --mute, -m            Start with audio muted");
     console.log("  --no-build            Skip automatic TypeScript build");
     console.log("  --help, -h            Show help");
     process.exit(1);
@@ -28,23 +25,11 @@ if (args.includes("--help") || args.includes("-h")) usage();
 
 // Parse arguments
 let cartDir = ".";
-const runtimeFlags = [];
 let skipBuild = false;
 
 for (let i = 0; i < args.length; i++) {
     const arg = args[i];
-    if (arg === "--fullscreen" || arg === "-f") {
-        runtimeFlags.push("--fullscreen");
-    } else if (arg === "--scale" || arg === "-s") {
-        const val = args[++i];
-        if (!val || !/^[1-6]$/.test(val)) {
-            console.error("--scale requires a value between 1 and 6.");
-            process.exit(1);
-        }
-        runtimeFlags.push("--scale", val);
-    } else if (arg === "--mute" || arg === "-m") {
-        runtimeFlags.push("--mute");
-    } else if (arg === "--no-build") {
+    if (arg === "--no-build") {
         skipBuild = true;
     } else if (!arg.startsWith("-")) {
         cartDir = arg;
@@ -83,7 +68,7 @@ if (!fs.existsSync(binary)) {
     process.exit(1);
 }
 
-const child = spawn(binary, [...runtimeFlags, cartJson], {
+const child = spawn(binary, [cartJson], {
     stdio: "inherit",
     cwd: process.cwd(),
 });
