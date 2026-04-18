@@ -241,6 +241,8 @@ jobs:
     publish-npm:
         needs: [build-windows, build-linux, build-macos, build-wasm]
         runs-on: ubuntu-latest
+        env:
+            NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         steps:
             - uses: actions/checkout@v6
 
@@ -284,7 +286,10 @@ jobs:
             - name: Publish platform packages
               run: |
                   for pkg in win32-x64 linux-x64 darwin-arm64 wasm; do
-                    npm publish "./packages/$pkg" --provenance --access public
+                    if ! npm publish "./packages/$pkg" --provenance --access public; then
+                      echo "::error::Failed publishing @dithrkit/$pkg. If npm returns 404 here, the auth token usually lacks publish access to the @dithrkit scope (or the scope/org is not configured)."
+                      exit 1
+                    fi
                   done
 
             - name: Publish SDK
