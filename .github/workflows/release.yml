@@ -241,8 +241,6 @@ jobs:
     publish-npm:
         needs: [build-windows, build-linux, build-macos, build-wasm]
         runs-on: ubuntu-latest
-        env:
-            NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         steps:
             - uses: actions/checkout@v6
 
@@ -250,6 +248,38 @@ jobs:
               with:
                   node-version: 22
                   registry-url: https://registry.npmjs.org
+
+            - name: Verify npm auth preflight
+              run: |
+                  EXPECTED_REPO="dithrkit/dithr"
+                  if [ "${GITHUB_REPOSITORY}" != "${EXPECTED_REPO}" ]; then
+                    echo "::error::Trusted publishing is configured for ${EXPECTED_REPO}, but this run is from ${GITHUB_REPOSITORY}."
+                    exit 1
+                  fi
+
+                  echo "Registry: $(npm config get registry)"
+                  npm ping --registry https://registry.npmjs.org
+
+                  if [ -n "${NODE_AUTH_TOKEN:-}" ]; then
+                    NPM_USER="$(npm whoami --registry https://registry.npmjs.org)"
+                    echo "Authenticated npm user (token mode): ${NPM_USER}"
+                  else
+                    echo "No NODE_AUTH_TOKEN detected; assuming npm trusted publishing via GitHub OIDC."
+                  fi
+
+                  EXPECTED_SCOPE="@dithrkit"
+                  for pkg in packages/win32-x64 packages/linux-x64 packages/darwin-arm64 packages/wasm packages/sdk packages/create; do
+                    NAME="$(node -p "require('./${pkg}/package.json').name")"
+                    case "$NAME" in
+                      ${EXPECTED_SCOPE}/*) ;;
+                      *)
+                        echo "::error::${pkg} package name '${NAME}' is outside expected scope ${EXPECTED_SCOPE}."
+                        exit 1
+                        ;;
+                    esac
+                  done
+
+                  echo "npm auth preflight passed"
 
             - name: Download platform packages
               uses: actions/download-artifact@v8
@@ -287,7 +317,7 @@ jobs:
               run: |
                   for pkg in win32-x64 linux-x64 darwin-arm64 wasm; do
                     if ! npm publish "./packages/$pkg" --provenance --access public; then
-                      echo "::error::Failed publishing @dithrkit/$pkg. If npm returns 404 here, the auth token usually lacks publish access to the @dithrkit scope (or the scope/org is not configured)."
+                      echo "::error::Failed publishing @dithrkit/$pkg. If npm returns 404 here, check @dithrkit scope/org permissions and trusted publishing (OIDC) configuration for this repository."
                       exit 1
                     fi
                   done
