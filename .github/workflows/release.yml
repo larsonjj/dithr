@@ -273,15 +273,19 @@ jobs:
                     exit 1
                   fi
 
+                  if [ -z "${ACTIONS_ID_TOKEN_REQUEST_URL:-}" ] || [ -z "${ACTIONS_ID_TOKEN_REQUEST_TOKEN:-}" ]; then
+                    echo "::error::OIDC is not available. Ensure workflow/job permissions include id-token: write."
+                    exit 1
+                  fi
+
                   echo "Registry: $(npm config get registry)"
                   npm ping --registry https://registry.npmjs.org
 
-                  if [ -n "${NODE_AUTH_TOKEN:-}" ]; then
-                    NPM_USER="$(npm whoami --registry https://registry.npmjs.org)"
-                    echo "Authenticated npm user (token mode): ${NPM_USER}"
-                  else
-                    echo "No NODE_AUTH_TOKEN detected; assuming npm trusted publishing via GitHub OIDC."
-                  fi
+                  # Enforce tokenless publishing for trusted publishing mode.
+                  echo "NODE_AUTH_TOKEN=" >> "$GITHUB_ENV"
+                  unset NODE_AUTH_TOKEN
+
+                  echo "Using npm trusted publishing via GitHub OIDC (tokenless mode)."
 
                   EXPECTED_SCOPE="@dithrkit"
                   for pkg in packages/win32-x64 packages/linux-x64 packages/darwin-arm64 packages/wasm packages/sdk packages/create; do
