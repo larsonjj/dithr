@@ -265,27 +265,27 @@ jobs:
                   node-version: 22
                   registry-url: https://registry.npmjs.org
 
-            - name: Verify npm auth preflight
+            - name: Upgrade npm for trusted publishing
+              run: npm install -g npm@latest
+
+            - name: Verify trusted publishing preflight
               run: |
+                  echo "npm $(npm --version)"
+
                   EXPECTED_REPO="dithrkit/dithr"
                   if [ "${GITHUB_REPOSITORY}" != "${EXPECTED_REPO}" ]; then
-                    echo "::error::Trusted publishing is configured for ${EXPECTED_REPO}, but this run is from ${GITHUB_REPOSITORY}."
+                    echo "::error::Expected repository ${EXPECTED_REPO}, but this run is from ${GITHUB_REPOSITORY}."
                     exit 1
                   fi
 
                   if [ -z "${ACTIONS_ID_TOKEN_REQUEST_URL:-}" ] || [ -z "${ACTIONS_ID_TOKEN_REQUEST_TOKEN:-}" ]; then
-                    echo "::error::OIDC is not available. Ensure workflow/job permissions include id-token: write."
+                    echo "::error::OIDC is not available. Ensure workflow permissions include id-token: write."
                     exit 1
                   fi
 
-                  echo "Registry: $(npm config get registry)"
-                  npm ping --registry https://registry.npmjs.org
-
-                  # Enforce tokenless publishing for trusted publishing mode.
-                  echo "NODE_AUTH_TOKEN=" >> "$GITHUB_ENV"
-                  unset NODE_AUTH_TOKEN
-
-                  echo "Using npm trusted publishing via GitHub OIDC (tokenless mode)."
+                  # Clear any token set by setup-node so npm uses OIDC instead.
+                  unset NODE_AUTH_TOKEN 2>/dev/null || true
+                  npm config delete //registry.npmjs.org/:_authToken 2>/dev/null || true
 
                   EXPECTED_SCOPE="@dithrkit"
                   for pkg in packages/win32-x64 packages/linux-x64 packages/darwin-arm64 packages/wasm packages/sdk packages/create; do
@@ -299,7 +299,7 @@ jobs:
                     esac
                   done
 
-                  echo "npm auth preflight passed"
+                  echo "Trusted publishing preflight passed (OIDC tokenless mode)."
 
             - name: Download platform packages
               uses: actions/download-artifact@v8
@@ -336,14 +336,14 @@ jobs:
             - name: Publish platform packages
               run: |
                   for pkg in win32-x64 linux-x64 darwin-arm64 wasm; do
-                    if ! npm publish "./packages/$pkg" --provenance --access public; then
-                      echo "::error::Failed publishing @dithrkit/$pkg. If npm returns 404 here, check @dithrkit scope/org permissions and trusted publishing (OIDC) configuration for this repository."
+                    if ! npm publish "./packages/$pkg" --access public; then
+                      echo "::error::Failed publishing @dithrkit/$pkg. Ensure trusted publishing is configured on npmjs.com for this package."
                       exit 1
                     fi
                   done
 
             - name: Publish SDK
-              run: npm publish ./packages/sdk --provenance --access public
+              run: npm publish ./packages/sdk --access public
 
             - name: Publish create package
-              run: npm publish ./packages/create --provenance --access public
+              run: npm publish ./packages/create --access public
