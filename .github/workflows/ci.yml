@@ -417,12 +417,8 @@ jobs:
               with:
                   node-version: 22
 
-            - name: Install workspace dependencies
-              run: >
-                  npm install --ignore-scripts --omit=optional
-                  --workspace @dithrkit/sdk
-                  --workspace @dithrkit/create
-                  --workspace @dithrkit/wasm
+            - name: Install package dependencies
+              run: npm install --ignore-scripts --omit=optional --prefix packages/sdk
 
             - name: Pack all packages
               run: |
@@ -458,8 +454,5 @@ jobs:
 
             - name: Audit dependencies
               run: >
-                  npm audit --audit-level=high --omit=optional
-                  --workspace @dithrkit/sdk
-                  --workspace @dithrkit/create
-                  --workspace @dithrkit/wasm
+                  npm audit --audit-level=high --omit=optional --prefix packages/sdk
               continue-on-error: true
