@@ -94,6 +94,11 @@ jobs:
     # ---------------------------------------------------------------------------
     windows:
         runs-on: windows-latest
+        env:
+            SDL_AUDIO_DRIVER: dummy
+            SDL_VIDEO_DRIVER: dummy
+            SDL_AUDIODRIVER: dummy
+            SDL_VIDEODRIVER: dummy
         steps:
             - uses: actions/checkout@v6
 

@@ -127,7 +127,7 @@ typedef struct dtr_console {
     int32_t  reload_count;        /**< Running count of successful reloads */
     bool     reload_pending;      /**< A change was detected, debounce in progress */
     uint64_t reload_detect_time;  /**< Time the first change was detected */
-    uint8_t  reload_pending_kind; /**< Pending debounce target: code or asset */
+    dtr_reload_pending_kind_t reload_pending_kind; /**< Pending debounce target: code or asset */
 
     /* Undo: previous code buffer for one-step revert */
     char  *prev_code;     /**< Previous JS code before last reload */

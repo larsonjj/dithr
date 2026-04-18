@@ -107,7 +107,7 @@ genhtml coverage.info -o coverage-report
 Open `build/coverage/coverage-report/index.html` in a browser to view the
 results.
 
-CI enforces a **50 % line-coverage minimum**. If overall coverage drops below
+CI enforces a **60 % line-coverage minimum**. If overall coverage drops below
 this threshold the coverage job will fail.
 
 ## WASM Builds
