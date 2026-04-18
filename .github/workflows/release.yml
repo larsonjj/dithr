@@ -265,44 +265,16 @@ jobs:
                   node-version: 24
                   registry-url: https://registry.npmjs.org
 
-            - name: Verify trusted publishing preflight
+            - name: Verify npm auth
+              env:
+                  NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
               run: |
                   echo "npm $(npm --version)"
-
-                  EXPECTED_REPO="dithrkit/dithr"
-                  if [ "${GITHUB_REPOSITORY}" != "${EXPECTED_REPO}" ]; then
-                    echo "::error::Expected repository ${EXPECTED_REPO}, but this run is from ${GITHUB_REPOSITORY}."
+                  if [ -z "${NODE_AUTH_TOKEN:-}" ]; then
+                    echo "::error::NPM_TOKEN secret is not set."
                     exit 1
                   fi
-
-                  if [ -z "${ACTIONS_ID_TOKEN_REQUEST_URL:-}" ] || [ -z "${ACTIONS_ID_TOKEN_REQUEST_TOKEN:-}" ]; then
-                    echo "::error::OIDC is not available. Ensure workflow permissions include id-token: write."
-                    exit 1
-                  fi
-
-                  # Remove the _authToken line that setup-node wrote to .npmrc.
-                  # An empty/placeholder token prevents npm from falling through
-                  # to OIDC-based trusted publishing.
-                  sed -i '/:_authToken/d' "${GITHUB_WORKSPACE}/.npmrc" 2>/dev/null || true
-                  sed -i '/:_authToken/d' "$HOME/.npmrc" 2>/dev/null || true
-
-                  echo "--- .npmrc ---"
-                  cat "${GITHUB_WORKSPACE}/.npmrc" || true
-                  echo "---"
-
-                  EXPECTED_SCOPE="@dithrkit"
-                  for pkg in packages/win32-x64 packages/linux-x64 packages/darwin-arm64 packages/wasm packages/sdk packages/create; do
-                    NAME="$(node -p "require('./${pkg}/package.json').name")"
-                    case "$NAME" in
-                      ${EXPECTED_SCOPE}/*) ;;
-                      *)
-                        echo "::error::${pkg} package name '${NAME}' is outside expected scope ${EXPECTED_SCOPE}."
-                        exit 1
-                        ;;
-                    esac
-                  done
-
-                  echo "Trusted publishing preflight passed (OIDC tokenless mode)."
+                  npm whoami --registry https://registry.npmjs.org
 
             - name: Download platform packages
               uses: actions/download-artifact@v8
@@ -347,16 +319,22 @@ jobs:
                   fi
 
             - name: Publish platform packages
+              env:
+                  NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
               run: |
                   for pkg in win32-x64 linux-x64 darwin-arm64 wasm; do
-                    if ! npm publish "./packages/$pkg" --access public ${{ steps.npm-tag.outputs.tag }}; then
-                      echo "::error::Failed publishing @dithrkit/$pkg. Ensure trusted publishing is configured on npmjs.com for this package."
+                    if ! npm publish "./packages/$pkg" --provenance --access public ${{ steps.npm-tag.outputs.tag }}; then
+                      echo "::error::Failed publishing @dithrkit/$pkg."
                       exit 1
                     fi
                   done
 
             - name: Publish SDK
-              run: npm publish ./packages/sdk --access public ${{ steps.npm-tag.outputs.tag }}
+              env:
+                  NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+              run: npm publish ./packages/sdk --provenance --access public ${{ steps.npm-tag.outputs.tag }}
 
             - name: Publish create package
-              run: npm publish ./packages/create --access public ${{ steps.npm-tag.outputs.tag }}
+              env:
+                  NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+              run: npm publish ./packages/create --provenance --access public ${{ steps.npm-tag.outputs.tag }}
