@@ -19,7 +19,7 @@ let statusTimer = 0;
 
 // --- Helpers ---------------------------------------------------------
 
-function prvStatus(msg) {
+function prvStatus(msg: string) {
     statusMsg = msg;
     statusTimer = 120; // 2 seconds at 60fps
 }

@@ -24,36 +24,36 @@ const COL_MENU = 13; // purple-ish
 // --- State -----------------------------------------------------------
 
 let sidebarOpen = true;
-let sidebarTw = null; // tween handle for sidebar slide
+let sidebarTw: DithrTweenHandle | null = null; // tween handle for sidebar slide
 let sidebarT = 1.0; // 0 = closed, 1 = open
 
 let hp = 0.7;
 let mp = 0.4;
 let xp = 0.55;
 
-let barTweens: any[] = []; // intro tweens for stat bars
+let barTweens: DithrTweenHandle[] = []; // intro tweens for stat bars
 let barValues = [0, 0, 0];
 
 const menuItems = ['Inventory', 'Skills', 'Map', 'Settings'];
-let menuTweens: any[] = []; // staggered menu slide-in tweens
-let menuOffsets: any[] = []; // current x-offsets per item
+let menuTweens: DithrTweenHandle[] = []; // staggered menu slide-in tweens
+let menuOffsets: number[] = []; // current x-offsets per item
 
-let titleTw = null;
+let titleTw: DithrTweenHandle | null = null;
 let titleAlpha = 0; // 0..1 for title fade-in
 
-let bounceTw = null;
+let bounceTw: DithrTweenHandle | null = null;
 let bounceY = 0;
 
 let introDone = false;
 
 // --- Helpers ---------------------------------------------------------
 
-function drawPanel(r, col) {
+function drawPanel(r: { x: number; y: number; w: number; h: number }, col: number) {
     gfx.rectfill(r.x, r.y, r.x + r.w - 1, r.y + r.h - 1, col);
     gfx.rect(r.x, r.y, r.x + r.w - 1, r.y + r.h - 1, COL_BORDER);
 }
 
-function drawBar(r, fill, col) {
+function drawBar(r: { x: number; y: number; w: number; h: number }, fill: number, col: number) {
     gfx.rectfill(r.x, r.y, r.x + r.w - 1, r.y + r.h - 1, COL_BAR_BG);
     if (fill > 0) {
         const fw = math.flr(r.w * math.min(fill, 1));
@@ -64,7 +64,7 @@ function drawBar(r, fill, col) {
     gfx.rect(r.x, r.y, r.x + r.w - 1, r.y + r.h - 1, COL_BORDER);
 }
 
-function drawLabel(text, r, col) {
+function drawLabel(text: string, r: { x: number; y: number; w: number; h: number }, col: number) {
     gfx.print(text, r.x + 2, r.y + 1, col);
 }
 
@@ -251,7 +251,7 @@ export function _draw(): void {
     gfx.print('SPACE: replay  Z: toggle sidebar', 4, 172, COL_LABEL);
 }
 
-function drawMainArea(area) {
+function drawMainArea(area: { x: number; y: number; w: number; h: number }) {
     drawPanel(area, COL_PANEL);
     const inner = ui.inset(area, 4);
 
@@ -275,7 +275,7 @@ function drawMainArea(area) {
     drawEasingPreview(bottomSection);
 }
 
-function drawEasingPreview(area) {
+function drawEasingPreview(area: { x: number; y: number; w: number; h: number }) {
     gfx.print('Easing Curves', area.x, area.y, COL_TITLE);
 
     const graphArea = ui.rect(area.x, area.y + 10, area.w, area.h - 10);

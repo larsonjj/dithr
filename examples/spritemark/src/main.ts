@@ -26,13 +26,13 @@ const REMAP_FROM = 30;
 
 // --- State (structure-of-arrays for cache-friendly iteration) --------
 
-const spX = [];
-const spY = [];
-const spVx = [];
-const spVy = [];
-const spSpr = []; // resolved tile index (skip lookup at draw time)
-const spFlip = [];
-const spCol = []; // per-sprite palette colour
+const spX: number[] = [];
+const spY: number[] = [];
+const spVx: number[] = [];
+const spVy: number[] = [];
+const spSpr: number[] = []; // resolved tile index (skip lookup at draw time)
+const spFlip: boolean[] = [];
+const spCol: number[] = []; // per-sprite palette colour
 let total = 0;
 
 // Screen corners used as spawn origins
@@ -45,7 +45,7 @@ const CORNERS = [
 
 // --- Helpers ---------------------------------------------------------
 
-function spawn(count) {
+function spawn(count: number) {
     for (let i = 0; i < count; ++i) {
         const corner = CORNERS[math.rndInt(CORNERS.length)];
         spX.push(corner[0]);

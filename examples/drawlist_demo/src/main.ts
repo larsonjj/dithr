@@ -13,7 +13,7 @@
 //   6 = explosion   7 = pickup
 // -------------------------------------------------------------------------
 
-function paintTile(tx, ty, pattern) {
+function paintTile(tx: number, ty: number, pattern: number[]) {
     for (let py = 0; py < 8; ++py) {
         for (let px = 0; px < 8; ++px) {
             const col = pattern[py * 8 + px];
@@ -175,11 +175,11 @@ let gameOver = false;
 let shakeTimer = 0;
 let wave = 1;
 
-const bullets = [];
-const enemies = [];
-const trees = [];
-const pickups = [];
-const explosions = [];
+const bullets: { x: number; y: number; dx: number; dy: number }[] = [];
+const enemies: { x: number; y: number; hp: number; speedMul: number }[] = [];
+const trees: { x: number; y: number; type: number }[] = [];
+const pickups: { x: number; y: number; age: number }[] = [];
+const explosions: { x: number; y: number; age: number }[] = [];
 
 // -------------------------------------------------------------------------
 // Helpers
@@ -217,7 +217,7 @@ function spawnPickup() {
     });
 }
 
-function addExplosion(x, y) {
+function addExplosion(x: number, y: number) {
     explosions.push({ x, y, age: 0 });
 }
 

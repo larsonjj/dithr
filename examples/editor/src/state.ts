@@ -11,13 +11,13 @@ export const st = {
     cy: 0, // cursor col / row in buffer
     ox: 0,
     oy: 0, // scroll offset col / row
-    anchor: null, // selection anchor {x,y} or null
+    anchor: null as { x: number; y: number } | null, // selection anchor {x,y} or null
 
     blink: 0,
     curOn: true, // cursor blink state
     fname: '', // current filename
     dirty: false,
-    openFiles: [], // [{path,buf,cx,cy,ox,oy,targetOy,anchor,undoStack,redoStack,dirty,savedBuf}]
+    openFiles: [] as any[], // [{path,buf,cx,cy,ox,oy,targetOy,anchor,undoStack,redoStack,dirty,savedBuf}]
     fileIdx: -1, // active file index (-1 = no files open)
     msg: '',
     msgT: 0, // status message + timer
@@ -25,12 +25,12 @@ export const st = {
 
     // undo / redo
     MAXUNDO: 200,
-    undoStack: [],
-    redoStack: [],
+    undoStack: [] as any[],
+    redoStack: [] as any[],
 
     // file browser
     brMode: false,
-    brEntries: [], // {name, isDir}
+    brEntries: [] as { name: string; isDir: boolean }[], // {name, isDir}
     brIdx: 0,
     brScroll: 0,
     brDir: '', // current directory relative to cart root
@@ -68,7 +68,7 @@ export const st = {
     targetOy: 0,
 
     // modified line tracking (since last save)
-    savedBuf: [], // snapshot at last save/open
+    savedBuf: [] as string[], // snapshot at last save/open
 
     // persistent find highlighting
     lastFindText: '',
@@ -83,10 +83,10 @@ export const st = {
     sprScrollY: 0,
     sprHoverX: -1, // pixel coord under cursor (-1 = none)
     sprHoverY: -1,
-    sprRectAnchor: null, // {x,y} for rectangle drag start
-    sprLineAnchor: null, // {x,y} for line tool start
-    sprCircAnchor: null, // {x,y} for circle tool center
-    sprSelAnchor: null, // {x,y} for selection marquee drag start
+    sprRectAnchor: null as { x: number; y: number } | null, // {x,y} for rectangle drag start
+    sprLineAnchor: null as { x: number; y: number } | null, // {x,y} for line tool start
+    sprCircAnchor: null as { x: number; y: number } | null, // {x,y} for circle tool center
+    sprSelAnchor: null as { x: number; y: number } | null, // {x,y} for selection marquee drag start
     sprDirty: false, // sprite sheet has unsaved changes
     sprSizeW: 1, // multi-tile width in tiles
     sprSizeH: 1, // multi-tile height in tiles
@@ -96,7 +96,7 @@ export const st = {
     sprPanning: false, // middle-click pan in progress
     sprGoto: false, // sprite goto input active
     sprGotoTxt: '', // sprite goto input text
-    sprClipboard: null, // {w,h,pixels[]} for copy/paste
+    sprClipboard: null as { w: number; h: number; pixels: number[] } | null, // {w,h,pixels[]} for copy/paste
     sprFilled: false, // filled shape mode for rect/circle
     sprDither: 0, // dither pattern index (0=off, 1-4=presets)
     sprMirrorX: false, // horizontal symmetry
@@ -108,9 +108,9 @@ export const st = {
     sprAnimFps: 8, // animation frames per second
     sprAnimTimer: 0, // accumulator for animation frame timing
     sprAnimFrame: 0, // current frame index in animation
-    sprSelRect: null, // {x0,y0,x1,y1} marquee selection in sprite pixels
-    sprSelFloat: null, // {x,y,w,h,pixels[]} floating selection being moved
-    sprSelDrag: null, // {ox,oy} drag offset when moving float
+    sprSelRect: null as { x0: number; y0: number; x1: number; y1: number } | null, // {x0,y0,x1,y1} marquee selection in sprite pixels
+    sprSelFloat: null as { x: number; y: number; w: number; h: number; pixels: number[] } | null, // {x,y,w,h,pixels[]} floating selection being moved
+    sprSelDrag: null as { ox: number; oy: number } | null, // {ox,oy} drag offset when moving float
     sprLastPenX: -1, // last pen pixel X for line interpolation
     sprLastPenY: -1, // last pen pixel Y for line interpolation
     helpOverlay: false, // show keyboard shortcut help
@@ -127,18 +127,18 @@ export const st = {
     mapHoverX: -1, // tile coord under cursor (-1 = none)
     mapHoverY: -1,
     mapDirty: false, // unsaved map changes
-    mapRectAnchor: null, // {x,y} for rect tool drag start
+    mapRectAnchor: null as { x: number; y: number } | null, // {x,y} for rect tool drag start
     mapLastPenX: -1, // last pen tile X for interpolation
     mapLastPenY: -1,
     mapGhostLayers: true, // show ghost of other layers
-    mapSelAnchor: null, // {x,y} for selection marquee start
-    mapSelRect: null, // {x0,y0,x1,y1} selected tile region
-    mapSelFloat: null, // {x,y,w,h,tiles[]} floating selection
-    mapSelDrag: null, // {ox,oy} drag offset when moving float
-    mapClipboard: null, // {w,h,tiles[]} for copy/paste
-    mapStampAnchor: null, // picker-grid start for stamp selection
-    mapStampRect: null, // {x0,y0,x1,y1} in sheet grid coords
-    mapLayerVis: [], // bool per layer (true=visible)
+    mapSelAnchor: null as { x: number; y: number } | null, // {x,y} for selection marquee start
+    mapSelRect: null as { x0: number; y0: number; x1: number; y1: number } | null, // {x0,y0,x1,y1} selected tile region
+    mapSelFloat: null as { x: number; y: number; w: number; h: number; tiles: number[] } | null, // {x,y,w,h,tiles[]} floating selection
+    mapSelDrag: null as { ox: number; oy: number } | null, // {ox,oy} drag offset when moving float
+    mapClipboard: null as { w: number; h: number; tiles: number[] } | null, // {w,h,tiles[]} for copy/paste
+    mapStampAnchor: null as { x: number; y: number } | null, // picker-grid start for stamp selection
+    mapStampRect: null as { x0: number; y0: number; x1: number; y1: number } | null, // {x0,y0,x1,y1} in sheet grid coords
+    mapLayerVis: [] as boolean[], // bool per layer (true=visible)
     mapResizeMode: false,
     mapResizeW: '',
     mapResizeH: '',
@@ -147,9 +147,9 @@ export const st = {
     mapLevelIdx: 0, // selected index in level picker
     mapMinimap: true, // show minimap overlay
     mapAutoTile: false, // auto-tile mode active
-    mapAutoGroups: [], // array of base sprite indices (each group = 16 tiles)
+    mapAutoGroups: [] as number[], // array of base sprite indices (each group = 16 tiles)
     mapObjSel: -1, // selected object index (-1 = none)
-    mapObjDrag: null, // {ox,oy} drag offset when moving object
+    mapObjDrag: null as any, // {ox,oy} drag offset when moving object
     mapObjCounter: 0, // incrementing counter for default object names
     mapRenameMode: false, // layer rename dialog active
     mapRenameTxt: '', // layer rename input text
@@ -169,20 +169,20 @@ export const st = {
     sfxVol: 7, // current volume for painting (0-7)
     sfxFx: 0, // current effect for painting (0-7)
     sfxListScroll: 0, // SFX list scroll offset
-    sfxClipboard: null, // copied SFX data {notes[], speed, loopStart, loopEnd}
+    sfxClipboard: null as any, // copied SFX data {notes[], speed, loopStart, loopEnd}
     sfxPlayStart: 0, // sys.time() when playback started (for position cursor)
     sfxSpaceHeld: false, // guard against Space key repeat toggling
-    sfxUndoStack: [], // undo snapshots for current SFX
-    sfxRedoStack: [], // redo snapshots
+    sfxUndoStack: [] as any[], // undo snapshots for current SFX
+    sfxRedoStack: [] as any[], // redo snapshots
     sfxSelStart: -1, // multi-note selection start (-1 = no sel)
     sfxSelEnd: -1, // multi-note selection end
-    sfxNoteClip: null, // copied note range [{pitch,waveform,volume,effect},...]
+    sfxNoteClip: null as any, // copied note range [{pitch,waveform,volume,effect},...]
     sfxDragging: false, // mouse drag painting active
     sfxRenaming: false, // SFX rename mode active
     sfxRenameTxt: '', // SFX rename input text
 
     // music editor state
-    musPatterns: null, // lazy init: [{ch:[-1,-1,-1,-1], flags:0}] × 64
+    musPatterns: null as { ch: number[]; flags: number }[] | null, // lazy init: [{ch:[-1,-1,-1,-1], flags:0}] × 64
     musSel: 0, // selected pattern row (0-63)
     musCol: 0, // selected channel column (0-3)
     musScrollY: 0, // pattern list scroll offset
@@ -190,33 +190,33 @@ export const st = {
     musPlayRow: 0, // current playback pattern index
     musPlayStart: 0, // sys.time() when current SFX started
     musDirty: false, // unsaved music changes
-    musClipboard: null, // copied pattern {ch[], flags}
-    musUndoStack: [], // undo snapshots
-    musRedoStack: [], // redo snapshots
+    musClipboard: null as { ch: number[]; flags: number } | null, // copied pattern {ch[], flags}
+    musUndoStack: [] as any[], // undo snapshots
+    musRedoStack: [] as any[], // redo snapshots
     musMute: [false, false, false, false], // per-channel mute
     musRenaming: false, // pattern rename mode active
     musRenameTxt: '', // pattern rename input text
 
     // caches (invalidated on edit)
-    _blockStateCache: [],
+    _blockStateCache: [] as boolean[],
     _blockStateDirty: true,
-    _bracketMatchCache: null,
-    _bracketDepthCache: [],
+    _bracketMatchCache: null as { cy: number; cx: number; result: { y: number; x: number } | null } | null,
+    _bracketDepthCache: [] as number[],
     _bracketDepthDirty: true,
     _bufVersion: 0,
     _lastCacheVersion: -1,
 
     // minimap cache
     _mmCacheVersion: -1,
-    _mmLineLens: [],
+    _mmLineLens: [] as number[],
 
     // token cache (per-line tokenization results)
-    _tokenCache: [], // [{toks, inBlock}] per line
+    _tokenCache: [] as any[], // [{toks, inBlock}] per line
     _tokenCacheVersion: -1, // buf version when cache was last built
 
     // autocomplete state
     acActive: false, // completion menu visible
-    acItems: [], // completion candidates (strings)
+    acItems: [] as string[], // completion candidates (strings)
     acIdx: 0, // selected item index
     acPrefix: '', // prefix being completed
     acX: 0, // screen X of popup

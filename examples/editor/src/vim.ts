@@ -80,7 +80,7 @@ export function updateVimKeys() {
 
 // ── Vim normal mode dispatch ──
 
-export function vimNormal(ch) {
+export function vimNormal(ch: string) {
     if (st.vim === 'visual' || st.vim === 'vline') {
         vimVisual(ch);
         return;
@@ -290,7 +290,7 @@ export function vimNormal(ch) {
 
 // ── Vim visual mode ──
 
-function vimVisual(ch) {
+function vimVisual(ch: string) {
     if ((ch >= '1' && ch <= '9') || (ch === '0' && st.vimCount !== '')) {
         st.vimCount += ch;
         return;
@@ -389,7 +389,7 @@ function vimVisual(ch) {
 
 // ── Resolve pending operator ──
 
-function vimResolvePending(ch, motionCount) {
+function vimResolvePending(ch: string, motionCount: number) {
     const op = st.vimPending;
     const opCount = st.vimOpCount;
     st.vimPending = '';
@@ -428,7 +428,7 @@ function vimResolvePending(ch, motionCount) {
 
 // ── Linewise operator (dd, yy, cc) ──
 
-function vimLinewiseOp(op, count) {
+function vimLinewiseOp(op: string, count: number) {
     const startLine = st.cy;
     const endLine = Math.min(st.cy + count - 1, st.buf.length - 1);
     let text = '';
@@ -453,7 +453,7 @@ function vimLinewiseOp(op, count) {
 
 // ── Operator + motion ──
 
-function vimMotionOp(op, ch, count) {
+function vimMotionOp(op: string, ch: string, count: number) {
     const ocx = st.cx;
     const ocy = st.cy;
 
@@ -596,7 +596,7 @@ function vimMotionOp(op, ch, count) {
 
 // ── Vim paste ──
 
-function vimPaste(before, count) {
+function vimPaste(before: boolean, count: number) {
     if (!st.vimReg) return;
     pushUndo();
 
@@ -644,7 +644,7 @@ function vimPaste(before, count) {
 
 // ── Vim command execution ──
 
-export function vimExecCmd(cmd) {
+export function vimExecCmd(cmd: string) {
     if (cmd === 'w') {
         saveFile();
     } else if (cmd === 'q') {
@@ -670,7 +670,7 @@ export function vimExecCmd(cmd) {
 
 // ── Vim search ──
 
-export function vimSearchNext(dir) {
+export function vimSearchNext(dir: number) {
     if (!st.vimSearch) {
         status('No search pattern');
         return;

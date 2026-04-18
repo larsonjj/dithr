@@ -13,8 +13,8 @@
 
 // --- State -----------------------------------------------------------
 
-let effects; // filled from postfx.available()
-const active = {}; // name -> bool
+let effects: string[]; // filled from postfx.available()
+const active: Record<string, boolean> = {}; // name -> bool
 let strength = 1.0;
 let t = 0; // time accumulator for the demo scene
 const debugFlash = [0, 0, 0, 0];
@@ -87,7 +87,7 @@ export function _update(dt: number): void {
     }
 }
 
-function toggle(name) {
+function toggle(name: string) {
     active[name] = !active[name];
     rebuildStack();
 }

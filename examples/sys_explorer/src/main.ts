@@ -26,7 +26,7 @@ let typedText = '';
 let lastKeyName = '';
 
 // Build list of all key constants for scanning
-const ALL_KEYS = [];
+const ALL_KEYS: { code: number; name: string }[] = [];
 const KEY_PROPS = [
     'UP',
     'DOWN',
@@ -106,7 +106,7 @@ const KEY_PROPS = [
     'EQUALS',
 ];
 for (let _ki = 0; _ki < KEY_PROPS.length; ++_ki) {
-    const _kv = key[KEY_PROPS[_ki]];
+    const _kv = (key as unknown as Record<string, number>)[KEY_PROPS[_ki]];
     if (_kv !== undefined) ALL_KEYS.push({ code: _kv, name: KEY_PROPS[_ki] });
 }
 

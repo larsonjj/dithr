@@ -15,11 +15,11 @@ let px = 160;
 let py = 90;
 const speed = 80; // pixels per second
 let flash = 0;
-const logLines = []; // recent input events
+const logLines: string[] = []; // recent input events
 let wheelDisplay = 0; // accumulated wheel for display
 let wheelDecay = 0; // timer to fade wheel display
 
-function prvLog(msg) {
+function prvLog(msg: string) {
     logLines.push(msg);
     if (logLines.length > 8) {
         logLines.shift();

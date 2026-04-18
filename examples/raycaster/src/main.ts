@@ -56,14 +56,14 @@ let showMinimap = true; // toggle with M key
 
 // --- Helpers ---------------------------------------------------------
 
-function mapAt(x, y) {
+function mapAt(x: number, y: number) {
     const mx = math.flr(x);
     const my = math.flr(y);
     if (mx < 0 || mx >= MAP_W || my < 0 || my >= MAP_H) return 1;
     return worldMap[my * MAP_W + mx];
 }
 
-function shadeColor(dist, isNs) {
+function shadeColor(dist: number, isNs: boolean) {
     const shades = isNs ? SHADE_NS : SHADE_EW;
     let idx = math.flr(dist / 3);
     if (idx >= shades.length) idx = shades.length - 1;

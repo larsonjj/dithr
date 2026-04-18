@@ -40,7 +40,7 @@ function buildStars() {
     }
 }
 
-function fireTransitionOut(frames) {
+function fireTransitionOut(frames: number) {
     const col = 0;
     switch (transitionType) {
         case 0:
@@ -66,7 +66,7 @@ function fireTransitionOut(frames) {
     }
 }
 
-function startTransition(targetScene) {
+function startTransition(targetScene: number) {
     if (phase !== 'idle') return;
     queuedScene = targetScene;
     phase = 'out';

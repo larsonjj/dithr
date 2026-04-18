@@ -104,8 +104,8 @@ export const TAB_NAMES = ['CODE', 'SPRITES', 'MAP', 'SFX', 'MUSIC'];
 
 // ─── Bracket / auto-close tables ─────────────────────────────────────────────
 
-export const AUTO_CLOSE = { '(': ')', '[': ']', '{': '}' };
-export const BRACKET_PAIRS = { '(': ')', ')': '(', '[': ']', ']': '[', '{': '}', '}': '{' };
+export const AUTO_CLOSE: Record<string, string> = { '(': ')', '[': ']', '{': '}' };
+export const BRACKET_PAIRS: Record<string, string> = { '(': ')', ')': '(', '[': ']', ']': '[', '{': '}', '}': '{' };
 export const BRACKET_COLORS = [8, 9, 12, 11, 13, 14]; // rainbow bracket colors
 
 // ─── JS keywords for syntax highlighting ─────────────────────────────────────

@@ -17,14 +17,14 @@ let playerY = 90;
 const SPEED = 80;
 
 // Event log displayed on screen
-const eventLog = [];
+const eventLog: { text: string; age: number }[] = [];
 const MAX_LOG = 6;
 let handleScore = -1;
 let _handleSpawn = -1;
 let combo = 0;
 let _comboHandle = -1;
 
-function logEvent(msg) {
+function logEvent(msg: string) {
     eventLog.push({ text: msg, age: 0 });
     if (eventLog.length > MAX_LOG) eventLog.shift();
 }
@@ -42,7 +42,7 @@ export function _init(): void {
     // --- Custom game events ---
 
     // Score handler — persistent
-    handleScore = evt.on('coin:collect', (e) => {
+    handleScore = evt.on('coin:collect', (e: { value: number }) => {
         score += e.value;
         logEvent(`coin:collect  score=${score}`);
     });

@@ -91,7 +91,7 @@ export function doRedo() {
 
 // ─── File I/O ────────────────────────────────────────────────────────────────
 
-export function openFile(path) {
+export function openFile(path: string) {
     // If already open, just switch to it
     for (let i = 0; i < st.openFiles.length; i++) {
         if (st.openFiles[i].path === path) {
@@ -192,7 +192,7 @@ export function storeFileState() {
     f.savedBuf = st.savedBuf;
 }
 
-export function loadFileState(idx) {
+export function loadFileState(idx: number) {
     const f = st.openFiles[idx];
     st.buf = f.buf;
     st.cx = f.cx;
@@ -210,14 +210,14 @@ export function loadFileState(idx) {
     st.invalidateCaches();
 }
 
-export function switchToFile(idx) {
+export function switchToFile(idx: number) {
     if (idx === st.fileIdx) return;
     if (idx < 0 || idx >= st.openFiles.length) return;
     storeFileState();
     loadFileState(idx);
 }
 
-export function closeFile(idx) {
+export function closeFile(idx: number) {
     if (idx < 0 || idx >= st.openFiles.length) return;
     if (st.openFiles.length === 1) {
         st.openFiles = [];

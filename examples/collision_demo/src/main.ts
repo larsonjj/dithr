@@ -34,7 +34,7 @@ export function _init(): void {
 }
 
 // --- Collision helpers: test shape i vs shape j ---
-function shapesCollide(a, b) {
+function shapesCollide(a: { type: string; x: number; y: number; w?: number; h?: number; r?: number }, b: { type: string; x: number; y: number; w?: number; h?: number; r?: number }) {
     if (a.type === 'rect' && b.type === 'rect') {
         return col.rect(a.x, a.y, a.w, a.h, b.x, b.y, b.w, b.h);
     }
@@ -47,7 +47,7 @@ function shapesCollide(a, b) {
     return col.circRect(c.x, c.y, c.r, r.x, r.y, r.w, r.h);
 }
 
-function pointInShape(px, py, s) {
+function pointInShape(px: number, py: number, s: { type: string; x: number; y: number; w?: number; h?: number; r?: number }) {
     if (s.type === 'rect') return col.pointRect(px, py, s.x, s.y, s.w, s.h);
     return col.pointCirc(px, py, s.x, s.y, s.r);
 }

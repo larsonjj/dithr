@@ -22,7 +22,7 @@ export function modKey() {
     return key.btn(key.LCTRL) || key.btn(key.RCTRL);
 }
 
-export function clamp(v, lo, hi) {
+export function clamp(v: number, lo: number, hi: number) {
     return v < lo ? lo : v > hi ? hi : v;
 }
 
@@ -52,7 +52,7 @@ export function handleTabSwitch() {
     return false;
 }
 
-export function status(text, sec = 3) {
+export function status(text: string, sec = 3) {
     st.msg = text;
     st.msgT = sec || 3;
 }
@@ -75,7 +75,7 @@ export function ensureVisible() {
 
 // ─── Word helpers ────────────────────────────────────────────────────────────
 
-export function isWordChar(c) {
+export function isWordChar(c: string) {
     return (
         (c >= 'a' && c <= 'z') ||
         (c >= 'A' && c <= 'Z') ||
@@ -85,7 +85,7 @@ export function isWordChar(c) {
     );
 }
 
-export function wordBoundaryLeft(line, col) {
+export function wordBoundaryLeft(line: string, col: number) {
     let c = col;
     if (c <= 0) return 0;
     c--;
@@ -98,7 +98,7 @@ export function wordBoundaryLeft(line, col) {
     return c;
 }
 
-export function wordBoundaryRight(line, col) {
+export function wordBoundaryRight(line: string, col: number) {
     let c = col;
     if (c >= line.length) return line.length;
     if (isWordChar(line[c])) {
@@ -114,7 +114,7 @@ export function wordBoundaryRight(line, col) {
 
 // ─── Bracket context helper ─────────────────────────────────────────────────
 // Returns a boolean array: true at positions inside a string or comment.
-function buildContextMask(line, inBlock) {
+function buildContextMask(line: string, inBlock: boolean) {
     const mask = new Uint8Array(line.length);
     let i = 0;
     const n = line.length;
@@ -167,7 +167,7 @@ function buildContextMask(line, inBlock) {
     return mask;
 }
 
-export function findMatchingBracket(row, col) {
+export function findMatchingBracket(row: number, col: number) {
     const ch = st.buf[row] ? st.buf[row][col] : undefined;
     if (!ch || !BRACKET_PAIRS[ch]) return null;
     const open = '([{';
@@ -218,7 +218,7 @@ export function getCachedBracketMatch() {
 
 // ─── Block comment state tracking ────────────────────────────────────────────
 
-export function trackBlockState(line, inBlock) {
+export function trackBlockState(line: string, inBlock: boolean) {
     let i = 0;
     const n = line.length;
     if (inBlock) {
@@ -256,7 +256,7 @@ export function trackBlockState(line, inBlock) {
 
 // ─── Cache rebuilders ────────────────────────────────────────────────────────
 
-function rebuildBracketDepthCache(upTo) {
+function rebuildBracketDepthCache(upTo: number) {
     st._bracketDepthCache = new Array(upTo);
     let depth = 0;
     for (let r = 0; r < upTo; r++) {
@@ -273,7 +273,7 @@ function rebuildBracketDepthCache(upTo) {
     }
 }
 
-function rebuildBlockStateCache(upTo) {
+function rebuildBlockStateCache(upTo: number) {
     st._blockStateCache = new Array(upTo);
     let inBlock = false;
     for (let i = 0; i < upTo; i++) {
@@ -294,14 +294,14 @@ export function ensureCaches() {
 
 // ─── Indent / line helpers ───────────────────────────────────────────────────
 
-export function firstNonBlank(line) {
+export function firstNonBlank(line: number) {
     const s = st.buf[line];
     let i = 0;
     while (i < s.length && (s[i] === ' ' || s[i] === '\t')) i++;
     return i;
 }
 
-export function getIndent(line) {
+export function getIndent(line: number) {
     const m = st.buf[line].match(/^(\s*)/);
     return m ? m[1] : '';
 }

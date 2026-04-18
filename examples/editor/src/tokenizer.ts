@@ -2,8 +2,8 @@
 
 import { COMCOL, STRCOL, NUMCOL, FG, KWCOL, KEYWORDS } from './config.js';
 
-export function tokenize(line, inBlock) {
-    const toks = [];
+export function tokenize(line: string, inBlock: boolean) {
+    const toks: { text: string; col: number }[] = [];
     let i = 0;
     const n = line.length;
 

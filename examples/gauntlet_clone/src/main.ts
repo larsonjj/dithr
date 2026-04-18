@@ -103,25 +103,25 @@ let flashTick = 0;
 
 // --- Tile helpers ----------------------------------------------------
 
-function tileAt(cx, cy) {
+function tileAt(cx: number, cy: number) {
     if (cx < 0 || cy < 0 || cx >= MAP_W || cy >= MAP_H) {
         return T_WALL;
     }
     return tiles[cy * MAP_W + cx];
 }
 
-function setTile(cx, cy, val) {
+function setTile(cx: number, cy: number, val: number) {
     if (cx >= 0 && cy >= 0 && cx < MAP_W && cy < MAP_H) {
         tiles[cy * MAP_W + cx] = val;
     }
 }
 
-function isSolid(cx, cy) {
+function isSolid(cx: number, cy: number) {
     const tile = tileAt(cx, cy);
     return tile === T_WALL || tile === T_DOOR;
 }
 
-function worldSolid(px, py, wid, hgt) {
+function worldSolid(px: number, py: number, wid: number, hgt: number) {
     const cx0 = math.flr(px / TILE);
     const cy0 = math.flr(py / TILE);
     const cx1 = math.flr((px + wid - 1) / TILE);
@@ -311,7 +311,7 @@ function generateLevel() {
     }
 }
 
-function spawnEnemyNear(cx, cy) {
+function spawnEnemyNear(cx: number, cy: number) {
     if (enemies.length >= MAX_ENEMIES) {
         return;
     }

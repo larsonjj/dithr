@@ -39,7 +39,7 @@ export function updateFind() {
     }
 }
 
-export function findNext(dir) {
+export function findNext(dir: number) {
     if (!st.findText) return;
     const total = st.buf.length;
     const startCol = st.cx + (dir > 0 ? 1 : 0);

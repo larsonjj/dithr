@@ -56,7 +56,7 @@ let findCacheVersion = -1;
 let findCacheText = '';
 let findCacheMatches: any[] = []; // per-line array of match start indices
 
-function ensureFindCache(text) {
+function ensureFindCache(text: string) {
     if (findCacheVersion === st._bufVersion && findCacheText === text) return;
     findCacheVersion = st._bufVersion;
     findCacheText = text;
@@ -460,7 +460,7 @@ export function drawEditor() {
 
 // ─── Selection drawing ───────────────────────────────────────────────────────
 
-export function drawSelection(lineIdx, py, s) {
+export function drawSelection(lineIdx: number, py: number, s: { a: { x: number; y: number }; b: { x: number; y: number } } | null) {
     if (!s) return;
     if (lineIdx < s.a.y || lineIdx > s.b.y) return;
 

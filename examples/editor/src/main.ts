@@ -47,7 +47,7 @@ import {
 
 // ─── Text input event handler ────────────────────────────────────────────────
 
-function onTextInput(ch) {
+function onTextInput(ch: string) {
     if (st.activeTab === TAB_MAP && (st.mapResizeMode || st.mapRenameMode)) {
         mapTextInput(ch);
         return;

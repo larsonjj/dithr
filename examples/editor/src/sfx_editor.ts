@@ -21,6 +21,22 @@ import {
 } from './config.js';
 import { clamp, modKey, status } from './helpers.js';
 
+// ─── SFX types ───────────────────────────────────────────────────────────────
+
+interface SfxNote {
+    pitch: number;
+    waveform: number;
+    volume: number;
+    effect: number;
+}
+
+interface SfxData {
+    notes: SfxNote[];
+    speed: number;
+    loopStart: number;
+    loopEnd: number;
+}
+
 // ─── Layout constants ────────────────────────────────────────────────────────
 
 const LIST_W = 70; // SFX list panel width
@@ -68,10 +84,10 @@ const WAVE_COLORS = [
 
 // ─── SFX list hasData cache ──────────────────────────────────────────────────
 
-let sfxHasData = null;
-let sfxSparkCache = null; // cached pitch arrays per SFX (null = needs rebuild)
-let cachedWaveNames = null;
-let cachedFxNames = null;
+let sfxHasData: boolean[] | null = null;
+let sfxSparkCache: (number[] | null)[] | null = null; // cached pitch arrays per SFX (null = needs rebuild)
+let cachedWaveNames: string[] | null = null;
+let cachedFxNames: string[] | null = null;
 
 // Per-SFX names (editor-only, stored in sfx.json)
 export const sfxNames = new Array(64).fill('');
@@ -104,7 +120,7 @@ function initHasDataCache() {
     }
 }
 
-function markSfxHasData(idx, knownTrue = false) {
+function markSfxHasData(idx: number, knownTrue = false) {
     if (!sfxHasData) return;
     if (sfxSparkCache) sfxSparkCache[idx] = null; // invalidate sparkline cache
     if (knownTrue) {
@@ -126,12 +142,12 @@ function markSfxHasData(idx, knownTrue = false) {
 // ─── Data helpers ────────────────────────────────────────────────────────────
 
 /** Load SFX data from C into a JS array of note objects. */
-function loadSfx(idx) {
+function loadSfx(idx: number): SfxData {
     const data = synth.get(idx);
     if (data) {
         // Clamp speed to valid range (C struct may be zero-initialized)
         data.speed = clamp(data.speed || 16, 1, 32);
-        return data;
+        return data as SfxData;
     }
     // Return default empty SFX
     const notes = [];
@@ -140,7 +156,7 @@ function loadSfx(idx) {
 }
 
 /** Push current SFX data to the C synth engine. */
-function saveSfx(idx, data) {
+function saveSfx(idx: number, data: SfxData) {
     synth.set(idx, data.notes, data.speed, data.loopStart, data.loopEnd);
 }
 
@@ -205,21 +221,21 @@ function curSfx() {
 
 /** Modify a note field and push to C. Accepts optional pre-loaded data
  *  to avoid redundant JS→C roundtrips when caller already has it. */
-function setNoteField(noteIdx, field, value, data = null) {
+function setNoteField(noteIdx: number, field: string, value: number, data: SfxData | null = null) {
     if (!data) data = curSfx();
-    data.notes[noteIdx][field] = value;
+    (data.notes[noteIdx] as unknown as Record<string, number>)[field] = value;
     saveSfx(st.sfxSel, data);
     markSfxHasData(st.sfxSel);
     st.sfxDirty = true;
 }
 
 /** Generate a pitch value from note name index (0-11) and internal octave. */
-function makePitch(noteInOctave, octave) {
+function makePitch(noteInOctave: number, octave: number) {
     return clamp(octave, MIN_INT_OCT, MAX_INT_OCT) * 12 + noteInOctave + 1;
 }
 
 /** Nudge the current field value up or down by `dir` (+1 or -1). */
-function nudgeField(dir) {
+function nudgeField(dir: number) {
     pushSfxUndo();
     const data = curSfx();
     const note = data.notes[st.sfxNote];
@@ -255,7 +271,7 @@ function getPlaybackNote() {
 
 const MAX_SFX_UNDO = 50;
 
-function cloneSfx(data) {
+function cloneSfx(data: SfxData): SfxData {
     const notes = [];
     for (let i = 0; i < 32; i++) {
         const n = data.notes[i];
@@ -340,7 +356,7 @@ const PIANO_KEYS = [
 
 // ─── Update ──────────────────────────────────────────────────────────────────
 
-export function updateSfxEditor(_dt) {
+export function updateSfxEditor(_dt: number) {
     const ctrl = modKey();
     const shift = key.btn(key.LSHIFT) || key.btn(key.RSHIFT);
 
@@ -867,7 +883,7 @@ export function updateSfxEditor(_dt) {
     if (st.sfxField === 0 || st.sfxField === 4) {
         for (let i = 0; i < PIANO_KEYS.length; i++) {
             const pk = PIANO_KEYS[i];
-            if (key.btnp(key[pk.key])) {
+            if (key.btnp((key as unknown as Record<string, number>)[pk.key])) {
                 pushSfxUndo();
                 const data = curSfx();
                 const curNote = data.notes[st.sfxNote];
@@ -1192,7 +1208,7 @@ function drawSfxList() {
     }
 }
 
-function drawNoteGrid(playNote) {
+function drawNoteGrid(playNote: number) {
     const gridTop = GRID_Y;
     const gridBot = FB_H - FOOT_H;
     const contentX = GRID_X + LABEL_W;
@@ -1339,7 +1355,7 @@ function drawNoteGrid(playNote) {
     drawWavePreview(data, playNote);
 }
 
-function drawWavePreview(data, playNote) {
+function drawWavePreview(data: SfxData, playNote: number) {
     // Draw a pitch graph with fixed octave 1-4 range
     const previewY = GRID_Y + HEADER_H + FIELD_H + 8;
     const previewH = FB_H - FOOT_H - previewY - 4;
@@ -1460,7 +1476,7 @@ function drawWavePreview(data, playNote) {
     gfx.print('OCT', GRID_X + 1, previewY + 2, GUTFG);
 }
 
-function drawFooter(data) {
+function drawFooter(data: SfxData) {
     const fy = FB_H - FOOT_H;
     gfx.rectfill(0, fy, FB_W - 1, FB_H - 1, FOOTBG);
     gfx.line(0, fy, FB_W - 1, fy, SEPC);

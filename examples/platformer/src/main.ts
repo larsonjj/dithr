@@ -46,17 +46,17 @@ const T_SPIKE = 3;
 let tiles: any[] = [];
 let coinsLeft = 0;
 
-function solidAt(cx, cy) {
+function solidAt(cx: number, cy: number) {
     if (cx < 0 || cy < 0 || cx >= MAP_W || cy >= MAP_H) return true;
     return tiles[cy * MAP_W + cx] === T_SOLID;
 }
 
-function tileAt(cx, cy) {
+function tileAt(cx: number, cy: number) {
     if (cx < 0 || cy < 0 || cx >= MAP_W || cy >= MAP_H) return T_SOLID;
     return tiles[cy * MAP_W + cx];
 }
 
-function setTile(cx, cy, v) {
+function setTile(cx: number, cy: number, v: number) {
     if (cx >= 0 && cy >= 0 && cx < MAP_W && cy < MAP_H) {
         tiles[cy * MAP_W + cx] = v;
     }
@@ -161,7 +161,7 @@ function spawnEnemies() {
 
 // --- Collision helpers ------------------------------------------------
 
-function collideX(obj) {
+function collideX(obj: { x: number; y: number; w: number; h: number; vx: number }) {
     const left = math.flr(obj.x / TILE);
     const right = math.flr((obj.x + obj.w - 1) / TILE);
     const top = math.flr(obj.y / TILE);
@@ -181,7 +181,7 @@ function collideX(obj) {
     }
 }
 
-function collideY(obj) {
+function collideY(obj: { x: number; y: number; w: number; h: number; vy: number; grounded: boolean }) {
     const left = math.flr(obj.x / TILE);
     const right = math.flr((obj.x + obj.w - 1) / TILE);
     const top = math.flr(obj.y / TILE);
@@ -203,7 +203,7 @@ function collideY(obj) {
     }
 }
 
-function boxesOverlap(a, b) {
+function boxesOverlap(a: { x: number; y: number; w: number; h: number }, b: { x: number; y: number; w: number; h: number }) {
     return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
 }
 

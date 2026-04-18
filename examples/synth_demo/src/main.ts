@@ -93,12 +93,12 @@ let statusTimer = 0;
 
 // --- Helpers ---------------------------------------------------------
 
-function setStatus(msg) {
+function setStatus(msg: string) {
     status = msg;
     statusTimer = 90; // 1.5s at 60fps
 }
 
-function prvShiftPresetPitch(delta) {
+function prvShiftPresetPitch(delta: number) {
     const p = PRESETS[curPreset];
     for (let ni = 0; ni < p.notes.length; ++ni) {
         const np = p.notes[ni].pitch + delta;
@@ -107,12 +107,12 @@ function prvShiftPresetPitch(delta) {
     synth.set(curPreset, p.notes, p.speed);
 }
 
-export function _drawLabel(x, y, label, value, col) {
+export function _drawLabel(x: number, y: number, label: string, value: string, col: number) {
     gfx.print(label, x, y, 6);
     gfx.print(value, x + gfx.textWidth(label) + 2, y, col || 7);
 }
 
-function drawPiano(x, y) {
+function drawPiano(x: number, y: number) {
     const keyW = 5;
     const keyH = 20;
     const blackH = 12;
@@ -148,7 +148,7 @@ function drawPiano(x, y) {
     }
 }
 
-function drawWaveform(x, y, w, h, wave) {
+function drawWaveform(x: number, y: number, w: number, h: number, wave: number) {
     // Simple waveform preview
     gfx.rect(x, y, x + w - 1, y + h - 1, 1);
     const mid = y + math.flr(h / 2);
@@ -192,7 +192,7 @@ function drawWaveform(x, y, w, h, wave) {
     }
 }
 
-function drawChannelIndicators(x, y) {
+function drawChannelIndicators(x: number, y: number) {
     for (let ch = 0; ch < 4; ++ch) {
         const active = synth.playing(ch);
         const selected = ch === curChannel;
@@ -202,7 +202,7 @@ function drawChannelIndicators(x, y) {
     }
 }
 
-function drawNotePattern(x, y, sfxIdx) {
+function drawNotePattern(x: number, y: number, sfxIdx: number) {
     const def = synth.get(sfxIdx);
     if (!def) return;
 
@@ -241,7 +241,7 @@ export function _init(): void {
     setStatus('arrows: navigate  Z: play  X: note preview');
 }
 
-export function _update(_dt) {
+export function _update(_dt: number) {
     if (statusTimer > 0) statusTimer--;
 
     if (playingFlash > 0) playingFlash--;

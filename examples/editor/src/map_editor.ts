@@ -26,6 +26,12 @@ import {
 } from './config.js';
 import { clamp, modKey, status } from './helpers.js';
 import { createHistory, record, commit, undo, redo } from './stroke_history.js';
+import type { StrokeHistory } from './stroke_history.js';
+
+// ─── Map op types ────────────────────────────────────────────────────────────
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+interface MapOp { [key: string]: any; }
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -51,7 +57,7 @@ const LAYER_ROW_H = 10;
 const ZOOM_LEVELS = [1, 2, 3, 4];
 const _GHOST_COLOR = 1; // dim palette index for ghost layer tint
 
-const mapHist = createHistory(100);
+const mapHist: StrokeHistory<MapOp> = createHistory<MapOp>(100);
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -66,7 +72,7 @@ function mapCommit() {
 }
 
 /** Paint a single tile, recording undo. Tile is a 1-based map ID (0=empty). */
-function paintTile(tx, ty, newTile) {
+function paintTile(tx: number, ty: number, newTile: number) {
     const mw = map.width();
     const mh = map.height();
     if (tx < 0 || tx >= mw || ty < 0 || ty >= mh) return;
@@ -78,17 +84,17 @@ function paintTile(tx, ty, newTile) {
 }
 
 /** Convert 0-based sprite index to 1-based map tile ID. */
-function sprToTile(sprIdx) {
+function sprToTile(sprIdx: number) {
     return sprIdx + 1;
 }
 
 /** Convert 1-based map tile ID to 0-based sprite index (-1 if empty). */
-function tileToSpr(tileId) {
+function tileToSpr(tileId: number) {
     return tileId > 0 ? tileId - 1 : -1;
 }
 
 /** Bresenham line between two tile coords, calling paintTile for each. */
-function bresenhamLine(x0, y0, x1, y1, tile) {
+function bresenhamLine(x0: number, y0: number, x1: number, y1: number, tile: number) {
     const ddx = Math.abs(x1 - x0);
     const ddy = Math.abs(y1 - y0);
     const sx = x0 < x1 ? 1 : -1;
@@ -110,7 +116,7 @@ function bresenhamLine(x0, y0, x1, y1, tile) {
 }
 
 /** Flood fill from (sx, sy) replacing target tile with replacement. */
-function floodFill(sx, sy, replacement) {
+function floodFill(sx: number, sy: number, replacement: number) {
     const mw = map.width();
     const mh = map.height();
     if (sx < 0 || sx >= mw || sy < 0 || sy >= mh) return;
@@ -147,7 +153,7 @@ function floodFill(sx, sy, replacement) {
 }
 
 /** Convert mouse screen coords to tile coords. Returns null if outside viewport. */
-function screenToTile(mx, my) {
+function screenToTile(mx: number, my: number) {
     const ts = tileSize();
     if (mx < MAP_VP_X || mx >= MAP_VP_X + MAP_VP_W || my < MAP_VP_Y || my >= MAP_VP_Y + MAP_VP_H)
         return null;
@@ -157,7 +163,7 @@ function screenToTile(mx, my) {
 }
 
 /** Paint stamp pattern at tile position (tx,ty). Uses mapStampRect for multi-tile. */
-function paintStamp(tx, ty) {
+function paintStamp(tx: number, ty: number) {
     const sr = st.mapStampRect;
     if (!sr) {
         paintTile(tx, ty, sprToTile(st.mapTile));
@@ -214,7 +220,7 @@ function dropSelection() {
 // ─── Auto-tile helpers ───────────────────────────────────────────────────────
 
 /** Return the auto-tile group base for a sprite index, or -1 if not in any group. */
-function getAutoGroup(sprIdx) {
+function getAutoGroup(sprIdx: number) {
     for (let i = 0; i < st.mapAutoGroups.length; i++) {
         const base = st.mapAutoGroups[i];
         if (sprIdx >= base && sprIdx < base + 16) return base;
@@ -223,7 +229,7 @@ function getAutoGroup(sprIdx) {
 }
 
 /** Compute 4-bit bitmask for a tile at (tx,ty) based on NESW same-group neighbors. */
-function autoTileMask(tx, ty, base) {
+function autoTileMask(tx: number, ty: number, base: number) {
     const mw = map.width();
     const mh = map.height();
     let mask = 0;
@@ -251,7 +257,7 @@ function autoTileMask(tx, ty, base) {
 }
 
 /** Re-resolve a single auto-tile at (tx,ty) if it belongs to a group. */
-function resolveAutoTile(tx, ty) {
+function resolveAutoTile(tx: number, ty: number) {
     const mw = map.width();
     const mh = map.height();
     if (tx < 0 || tx >= mw || ty < 0 || ty >= mh) return;
@@ -274,7 +280,7 @@ function resolveAutoTile(tx, ty) {
 }
 
 /** Paint with auto-tile: place tile and update NESW neighbors. */
-function paintAutoTile(tx, ty, sprIdx) {
+function paintAutoTile(tx: number, ty: number, sprIdx: number) {
     const base = getAutoGroup(sprIdx);
     if (base < 0) {
         paintTile(tx, ty, sprToTile(sprIdx));
@@ -298,7 +304,7 @@ function paintAutoTile(tx, ty, sprIdx) {
 }
 
 /** Erase with auto-tile: clear tile and update NESW neighbors. */
-function eraseAutoTile(tx, ty) {
+function eraseAutoTile(tx: number, ty: number) {
     const cur = tileToSpr(map.get(tx, ty, st.mapLayer));
     paintTile(tx, ty, 0);
     if (cur >= 0 && getAutoGroup(cur) >= 0) {
@@ -310,7 +316,7 @@ function eraseAutoTile(tx, ty) {
 }
 
 /** Check if current layer is an object layer. */
-function isObjectLayer(idx) {
+function isObjectLayer(idx: number) {
     return map.layerType(idx) === 'objectgroup';
 }
 
@@ -328,7 +334,7 @@ function exportTiledJSON() {
         compressionlevel: -1,
         height: d.height,
         infinite: false,
-        layers: [],
+        layers: [] as Record<string, any>[],
         nextlayerid: d.layers.length + 1,
         nextobjectid: 1,
         orientation: 'orthogonal',
@@ -398,18 +404,18 @@ function exportTiledJSON() {
 }
 
 /** Ensure mapLayerVis array has enough slots. */
-function ensureLayerVis(count) {
+function ensureLayerVis(count: number) {
     while (st.mapLayerVis.length < count) st.mapLayerVis.push(true);
 }
 
 /** Check if layer is visible. */
-function isLayerVisible(idx) {
+function isLayerVisible(idx: number) {
     if (idx >= st.mapLayerVis.length) return true;
     return st.mapLayerVis[idx];
 }
 
 /** Apply a single undo/redo op — handles tile ops and layer structural ops. */
-function applyMapOp(op) {
+function applyMapOp(op: MapOp): MapOp {
     if (op.type === 'addLayer') {
         const { idx } = op;
         const mw = map.width();
@@ -484,7 +490,7 @@ function clearSel() {
 }
 
 /** Handle text input forwarded from main.js for resize/rename dialog. */
-export function mapTextInput(ch) {
+export function mapTextInput(ch: string) {
     if (st.mapResizeMode && ch >= '0' && ch <= '9') {
         if (st.mapResizeField === 0 && st.mapResizeW.length < 4) st.mapResizeW += ch;
         else if (st.mapResizeField === 1 && st.mapResizeH.length < 4) st.mapResizeH += ch;
@@ -1053,7 +1059,7 @@ export function updateMapEditor() {
 
 // ─── Tool handlers ───────────────────────────────────────────────────────────
 
-function handlePenEraser(mBtn, _mPress, _mRelease, _ts) {
+function handlePenEraser(mBtn: boolean, _mPress: boolean, _mRelease: boolean, _ts: number) {
     const hover = screenToTile(mouse.x(), mouse.y());
     if (!hover) return;
 
@@ -1117,7 +1123,7 @@ function handlePenEraser(mBtn, _mPress, _mRelease, _ts) {
     }
 }
 
-function handleFill(mPress) {
+function handleFill(mPress: boolean) {
     if (!mPress) return;
     const hover = screenToTile(mouse.x(), mouse.y());
     if (!hover) return;
@@ -1128,7 +1134,7 @@ function handleFill(mPress) {
     if (mapHist.pending.length > 0) mapCommit();
 }
 
-function handleRect(mBtn, mPress, _mRelease) {
+function handleRect(mBtn: boolean, mPress: boolean, _mRelease: boolean) {
     const hover = screenToTile(mouse.x(), mouse.y());
     if (!hover) return;
 
@@ -1157,7 +1163,7 @@ function handleRect(mBtn, mPress, _mRelease) {
     }
 }
 
-function handleSelection(mBtn, mPress, _mRelease) {
+function handleSelection(mBtn: boolean, mPress: boolean, _mRelease: boolean) {
     const hover = screenToTile(mouse.x(), mouse.y());
     if (!hover) return;
 
@@ -1223,7 +1229,7 @@ function handleSelection(mBtn, mPress, _mRelease) {
     }
 }
 
-function handleObjectTool(mBtn, mPress, _mRelease) {
+function handleObjectTool(mBtn: boolean, mPress: boolean, _mRelease: boolean) {
     const mx = mouse.x();
     const my = mouse.y();
     const ts = tileSize();

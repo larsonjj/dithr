@@ -23,7 +23,7 @@ let STATUS = '';
 
 // --- Helpers ---------------------------------------------------------
 
-function prvStatus(msg) {
+function prvStatus(msg: string) {
     STATUS = msg;
 }
 

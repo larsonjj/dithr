@@ -32,7 +32,7 @@ let py = 0;
 const SPEED = 80; // pixels per second
 
 let currentLevelName = '';
-let levelNames: any[] = [];
+let levelNames: string[] = [];
 let levelIdx = 0;
 
 let infoMsg = '';
@@ -65,7 +65,7 @@ function buildSheet() {
     gfx.fset(2, 0, 1); // water (tile 3) → sprite 2
 }
 
-function buildLevel(name) {
+function buildLevel(name: string) {
     map.create(MAP_W, MAP_H, name);
 
     // Fill with grass
@@ -142,7 +142,7 @@ function buildLevel(name) {
     }
 }
 
-function showInfo(msg) {
+function showInfo(msg: string) {
     infoMsg = msg;
     infoTimer = 3.0;
 }

@@ -28,16 +28,16 @@ let curCy = 5;
 
 // Fake tile data (since we have no Tiled map loaded)
 // We'll draw our own grid using pset/rectfill as a placeholder.
-const tiles = [];
+const tiles: number[] = [];
 
 // --- Helpers ---------------------------------------------------------
 
-function tileAt(cx, cy) {
+function tileAt(cx: number, cy: number) {
     if (cx < 0 || cy < 0 || cx >= MAP_W || cy >= MAP_H) return 0;
     return tiles[cy * MAP_W + cx];
 }
 
-function setTile(cx, cy, t) {
+function setTile(cx: number, cy: number, t: number) {
     if (cx < 0 || cy < 0 || cx >= MAP_W || cy >= MAP_H) return;
     tiles[cy * MAP_W + cx] = t;
 }

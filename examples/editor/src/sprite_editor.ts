@@ -24,6 +24,16 @@ import {
 } from './config.js';
 import { clamp, modKey, status } from './helpers.js';
 import { createHistory, record, commit, undo, redo } from './stroke_history.js';
+import type { StrokeHistory } from './stroke_history.js';
+
+// ─── Sprite op type ──────────────────────────────────────────────────────────
+
+interface SpriteOp {
+    x: number;
+    y: number;
+    prev: number;
+    next: number;
+}
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -66,7 +76,7 @@ const SIZE_PRESETS = [
     [3, 3],
 ];
 
-const sprHist = createHistory(100);
+const sprHist: StrokeHistory<SpriteOp> = createHistory<SpriteOp>(100);
 
 function sprCommit() {
     commit(sprHist);
@@ -100,14 +110,14 @@ const DITHER_LUT = DITHER_PATTERNS.map((mask) => {
 });
 
 // Returns true if the pixel at (px,py) should be drawn for the current dither pattern.
-function ditherCheck(px, py) {
+function ditherCheck(px: number, py: number) {
     return DITHER_LUT[st.sprDither][py & 3][px & 3];
 }
 
 // ─── Geometry helpers ────────────────────────────────────────────────────────
 
 // Bresenham line: calls plot(x,y) for each pixel
-function bresenhamLine(x0, y0, x1, y1, plot) {
+function bresenhamLine(x0: number, y0: number, x1: number, y1: number, plot: (x: number, y: number) => void) {
     const dx = Math.abs(x1 - x0);
     const dy = Math.abs(y1 - y0);
     const sx = x0 < x1 ? 1 : -1;
@@ -129,7 +139,7 @@ function bresenhamLine(x0, y0, x1, y1, plot) {
 }
 
 // Midpoint circle: calls plot(x,y) for each pixel on the outline
-function midpointCircle(cx, cy, r, plot) {
+function midpointCircle(cx: number, cy: number, r: number, plot: (x: number, y: number) => void) {
     if (r <= 0) {
         plot(cx, cy);
         return;
@@ -157,7 +167,7 @@ function midpointCircle(cx, cy, r, plot) {
 }
 
 // Filled midpoint circle
-function midpointCircleFill(cx, cy, r, plot) {
+function midpointCircleFill(cx: number, cy: number, r: number, plot: (x: number, y: number) => void) {
     if (r <= 0) {
         plot(cx, cy);
         return;
@@ -165,7 +175,7 @@ function midpointCircleFill(cx, cy, r, plot) {
     let x = r;
     let y = 0;
     let d = 1 - r;
-    function hline(x0, x1, yy) {
+    function hline(x0: number, x1: number, yy: number) {
         for (let i = x0; i <= x1; i++) plot(i, yy);
     }
     while (x >= y) {
@@ -189,7 +199,7 @@ function canvasTileSize() {
 }
 
 // Get base pixel coords in sheet for the current selection
-function selBase(sheetCols) {
+function selBase(sheetCols: number) {
     const selCol = st.sprSel % sheetCols;
     const selRow = Math.floor(st.sprSel / sheetCols);
     return { x: selCol * 8, y: selRow * 8 };
@@ -252,7 +262,7 @@ function computeLayout() {
 
 // ─── Per-tool handlers ───────────────────────────────────────────────────────
 
-function handlePenEraser(mBtn, symSet) {
+function handlePenEraser(mBtn: boolean, symSet: (x: number, y: number, col: number) => void) {
     if ((st.sprTool === TOOL_PEN || st.sprTool === TOOL_ERA) && mBtn && st.sprHoverX >= 0) {
         const newCol = st.sprTool === TOOL_PEN ? st.sprCol : 0;
         if (
@@ -274,10 +284,10 @@ function handlePenEraser(mBtn, symSet) {
     }
 }
 
-function dedupPendingStroke(mBtn) {
+function dedupPendingStroke(mBtn: boolean) {
     if (!mBtn && sprHist.pending.length > 0) {
-        const seen = {};
-        const deduped = [];
+        const seen: Record<string, number> = {};
+        const deduped: SpriteOp[] = [];
         for (let i = sprHist.pending.length - 1; i >= 0; i--) {
             const op = sprHist.pending[i];
             const k = `${op.x},${op.y}`;
@@ -296,7 +306,7 @@ function dedupPendingStroke(mBtn) {
     }
 }
 
-function handleFill(mPress, base, cw, ch) {
+function handleFill(mPress: boolean, base: { x: number; y: number }, cw: number, ch: number) {
     if (st.sprTool === TOOL_FILL && mPress && st.sprHoverX >= 0) {
         const target = gfx.sget(base.x + st.sprHoverX, base.y + st.sprHoverY);
         if (target !== st.sprCol) {
@@ -306,7 +316,7 @@ function handleFill(mPress, base, cw, ch) {
     }
 }
 
-function handleRect(mBtn, mPress, symSet) {
+function handleRect(mBtn: boolean, mPress: boolean, symSet: (x: number, y: number, col: number) => void) {
     if (st.sprTool !== TOOL_RECT) return;
     if (mPress && st.sprHoverX >= 0) {
         st.sprRectAnchor = { x: st.sprHoverX, y: st.sprHoverY };
@@ -330,7 +340,7 @@ function handleRect(mBtn, mPress, symSet) {
     }
 }
 
-function handleLine(mBtn, mPress, cw, ch, symSet) {
+function handleLine(mBtn: boolean, mPress: boolean, cw: number, ch: number, symSet: (x: number, y: number, col: number) => void) {
     if (st.sprTool !== TOOL_LINE) return;
     if (mPress && st.sprHoverX >= 0) {
         st.sprLineAnchor = { x: st.sprHoverX, y: st.sprHoverY };
@@ -356,7 +366,7 @@ function handleLine(mBtn, mPress, cw, ch, symSet) {
     }
 }
 
-function handleCircle(mBtn, mPress, cw, ch, symSet) {
+function handleCircle(mBtn: boolean, mPress: boolean, cw: number, ch: number, symSet: (x: number, y: number, col: number) => void) {
     if (st.sprTool !== TOOL_CIRC) return;
     if (mPress && st.sprHoverX >= 0) {
         st.sprCircAnchor = { x: st.sprHoverX, y: st.sprHoverY };
@@ -380,7 +390,7 @@ function handleCircle(mBtn, mPress, cw, ch, symSet) {
     }
 }
 
-function handleSelection(mBtn, mPress, base, cw, ch) {
+function handleSelection(mBtn: boolean, mPress: boolean, base: { x: number; y: number }, cw: number, ch: number) {
     if (st.sprTool !== TOOL_SEL) return;
     if (mPress && st.sprHoverX >= 0) {
         if (st.sprSelFloat) {
@@ -444,7 +454,7 @@ export function saveSpritesToDisk() {
 
 // ─── Update ──────────────────────────────────────────────────────────────────
 
-export function updateSpriteEditor(dt) {
+export function updateSpriteEditor(dt: number) {
     const ctrl = modKey();
     const shift = key.btn(key.LSHIFT) || key.btn(key.RSHIFT);
 
@@ -624,7 +634,7 @@ export function updateSpriteEditor(dt) {
     }
 
     // ── Symmetry-aware pixel setter ──
-    function symSet(px, py, col) {
+    function symSet(px: number, py: number, col: number) {
         const coords = [[px, py]];
         if (st.sprMirrorX) coords.push([cw - 1 - px, py]);
         if (st.sprMirrorY) coords.push([px, ch - 1 - py]);
@@ -967,7 +977,7 @@ export function updateSpriteEditor(dt) {
 }
 
 // ── Flood fill helper ──
-function floodFill(baseX, baseY, tileW, tileH, startX, startY, target, fill) {
+function floodFill(baseX: number, baseY: number, tileW: number, tileH: number, startX: number, startY: number, target: number, fill: number) {
     const stack = [startX + startY * tileW];
     const visited = new Uint8Array(tileW * tileH);
     while (stack.length > 0) {
@@ -992,7 +1002,7 @@ function floodFill(baseX, baseY, tileW, tileH, startX, startY, target, fill) {
 }
 
 // ── Rectangle outline helper ──
-function plotRect(x0, y0, x1, y1, col, filled, plotFn) {
+function plotRect(x0: number, y0: number, x1: number, y1: number, col: number, filled: boolean, plotFn: (x: number, y: number, col: number) => void) {
     const rx0 = Math.min(x0, x1);
     const ry0 = Math.min(y0, y1);
     const rx1 = Math.max(x0, x1);
@@ -1007,7 +1017,7 @@ function plotRect(x0, y0, x1, y1, col, filled, plotFn) {
 
 // ─── Selection/marquee helpers ───────────────────────────────────────────────
 
-function liftSelection(base, sr, _cw, _ch) {
+function liftSelection(base: { x: number; y: number }, sr: { x0: number; y0: number; x1: number; y1: number }, _cw: number, _ch: number) {
     const w = sr.x1 - sr.x0 + 1;
     const h = sr.y1 - sr.y0 + 1;
     const pixels = [];
@@ -1028,7 +1038,7 @@ function liftSelection(base, sr, _cw, _ch) {
     st.sprSelRect = null;
 }
 
-function stampFloat(base, cw, ch) {
+function stampFloat(base: { x: number; y: number }, cw: number, ch: number) {
     if (!st.sprSelFloat) return;
     const f = st.sprSelFloat;
     for (let py = 0; py < f.h; py++) {
@@ -1054,7 +1064,7 @@ function stampFloat(base, cw, ch) {
 
 // ─── Transform helpers ──────────────────────────────────────────────────────
 
-function readPixels(base, cw, ch) {
+function readPixels(base: { x: number; y: number }, cw: number, ch: number) {
     const pixels = [];
     for (let py = 0; py < ch; py++) {
         for (let px = 0; px < cw; px++) {
@@ -1064,7 +1074,7 @@ function readPixels(base, cw, ch) {
     return pixels;
 }
 
-function writePixel(sx, sy, newCol) {
+function writePixel(sx: number, sy: number, newCol: number) {
     const prev = gfx.sget(sx, sy);
     if (prev !== newCol) {
         record(sprHist, { x: sx, y: sy, prev, next: newCol });
@@ -1072,7 +1082,7 @@ function writePixel(sx, sy, newCol) {
     }
 }
 
-function transformFlipH(base, cw, ch) {
+function transformFlipH(base: { x: number; y: number }, cw: number, ch: number) {
     const pixels = readPixels(base, cw, ch);
     for (let py = 0; py < ch; py++) {
         for (let px = 0; px < cw; px++) {
@@ -1082,7 +1092,7 @@ function transformFlipH(base, cw, ch) {
     sprCommit();
 }
 
-function transformFlipV(base, cw, ch) {
+function transformFlipV(base: { x: number; y: number }, cw: number, ch: number) {
     const pixels = readPixels(base, cw, ch);
     for (let py = 0; py < ch; py++) {
         for (let px = 0; px < cw; px++) {
@@ -1092,7 +1102,7 @@ function transformFlipV(base, cw, ch) {
     sprCommit();
 }
 
-function transformRotate90(base, cw, ch) {
+function transformRotate90(base: { x: number; y: number }, cw: number, ch: number) {
     // Rotate 90° clockwise: new(x,y) = old(y, cw-1-x)
     const pixels = readPixels(base, cw, ch);
     for (let py = 0; py < ch; py++) {
@@ -1105,7 +1115,7 @@ function transformRotate90(base, cw, ch) {
 
 // ─── Shift/nudge with wrapping ──────────────────────────────────────────────
 
-function nudgePixels(base, cw, ch, dx, dy) {
+function nudgePixels(base: { x: number; y: number }, cw: number, ch: number, dx: number, dy: number) {
     const pixels = readPixels(base, cw, ch);
     for (let py = 0; py < ch; py++) {
         for (let px = 0; px < cw; px++) {
@@ -1119,7 +1129,7 @@ function nudgePixels(base, cw, ch, dx, dy) {
 
 // ─── Clear sprite ───────────────────────────────────────────────────────────
 
-function clearSprite(base, cw, ch) {
+function clearSprite(base: { x: number; y: number }, cw: number, ch: number) {
     let anyChanged = false;
     for (let py = 0; py < ch; py++) {
         for (let px = 0; px < cw; px++) {
@@ -1138,11 +1148,11 @@ function clearSprite(base, cw, ch) {
 
 // ─── Copy / Paste ───────────────────────────────────────────────────────────
 
-function copySprite(base, cw, ch) {
+function copySprite(base: { x: number; y: number }, cw: number, ch: number) {
     st.sprClipboard = { w: cw, h: ch, pixels: readPixels(base, cw, ch) };
 }
 
-function pasteSprite(base, cw, ch) {
+function pasteSprite(base: { x: number; y: number }, cw: number, ch: number) {
     if (!st.sprClipboard) return;
     const clip = st.sprClipboard;
     const pw = Math.min(clip.w, cw);
@@ -1168,14 +1178,14 @@ function pasteSprite(base, cw, ch) {
 // Each icon is drawn as a small pixel pattern offset from the mouse position.
 // Drawn last so it appears on top of everything.
 
-function drawToolCursor(mx, my) {
+function drawToolCursor(mx: number, my: number) {
     const ox = mx + 3; // offset right of cursor
     const oy = my + 3; // offset below cursor
     const s = 2; // pixel scale factor
 
     // Collect icon pixel rects: {x0,y0,x1,y1}
-    const rects = [];
-    function sp(x, y) {
+    const rects: { x0: number; y0: number; x1: number; y1: number }[] = [];
+    function sp(x: number, y: number) {
         rects.push({
             x0: ox + x * s,
             y0: oy + y * s,

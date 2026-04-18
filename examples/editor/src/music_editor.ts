@@ -60,12 +60,12 @@ function ensurePatterns() {
     }
 }
 
-function patternHasData(p) {
+function patternHasData(p: { ch: number[] }) {
     return p.ch[0] >= 0 || p.ch[1] >= 0 || p.ch[2] >= 0 || p.ch[3] >= 0;
 }
 
 /** Play an SFX on a channel only if the SFX slot contains data. */
-function safeSynthPlay(sfxIdx, channel) {
+function safeSynthPlay(sfxIdx: number, channel: number) {
     const data = synth.get(sfxIdx);
     if (!data) return false;
     synth.play(sfxIdx, channel);
@@ -187,7 +187,7 @@ function stopMusic() {
     status('Stopped');
 }
 
-function patternDuration(row) {
+function patternDuration(row: number) {
     // Longest SFX duration across all channels: speed / 4 seconds
     // (32 notes × speed × (44100/128) samples/note / 44100 Hz)
     const pat = st.musPatterns[row];
@@ -204,7 +204,7 @@ function patternDuration(row) {
     return maxDur;
 }
 
-function playPattern(row) {
+function playPattern(row: number) {
     // Start playing a pattern's channels and update play state
     const pat = st.musPatterns[row];
     if (!patternHasData(pat)) {
@@ -256,7 +256,7 @@ function advancePattern() {
 
 // ─── Update ──────────────────────────────────────────────────────────────────
 
-export function updateMusicEditor(_dt) {
+export function updateMusicEditor(_dt: number) {
     ensurePatterns();
     const ctrl = modKey();
     const shift = key.btn(key.LSHIFT) || key.btn(key.RSHIFT);

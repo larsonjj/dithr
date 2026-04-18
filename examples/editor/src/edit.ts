@@ -34,8 +34,8 @@ let acWordCache: any[] = []; // sorted unique words from the entire buffer
 function rebuildWordCache() {
     if (acWordCacheVersion === st._bufVersion) return;
     acWordCacheVersion = st._bufVersion;
-    const seen = {};
-    const words = [];
+    const seen: Record<string, boolean> = {};
+    const words: string[] = [];
     for (let i = 0; i < st.buf.length; i++) {
         const ln = st.buf[i];
         let j = 0;

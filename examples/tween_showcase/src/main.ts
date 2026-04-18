@@ -35,7 +35,7 @@ const EASING_NAMES = [
 let curveT = 0;
 
 // --- Tween pool page ---
-const _tweens = [];
+const _tweens: number[] = [];
 let balls: any[] = [];
 const MAX_BALLS = 8;
 
@@ -52,7 +52,7 @@ const SCHEMES = [
     { name: 'IJKL', left: key.J, right: key.L },
 ];
 
-function applyInputScheme(idx) {
+function applyInputScheme(idx: number) {
     input.clear('move_left');
     input.clear('move_right');
     input.map('move_left', [{ type: 0, code: SCHEMES[idx].left }]);
