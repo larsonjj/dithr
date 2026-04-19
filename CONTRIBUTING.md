@@ -50,7 +50,8 @@ The engine exposes JS namespaces (e.g. `gfx`, `sfx`, `col`). To add one:
     dtr_my_api_register(ctx, global);
     ```
 4. Add the source file to `CMakeLists.txt` under the `dithr_core` sources.
-5. Document the namespace in `docs/api-reference.md`.
+5. Add TypeScript declarations to `packages/sdk/types/dithr.d.ts`.
+6. Document the namespace in `docs/api-reference.md`.
 
 ## Testing
 

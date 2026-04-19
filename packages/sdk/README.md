@@ -51,6 +51,7 @@ module.exports = [
 
 ## Documentation
 
+- [Getting Started](https://github.com/dithrkit/dithr/blob/main/docs/getting-started.md)
 - [API Reference](https://github.com/dithrkit/dithr/blob/main/docs/api-reference.md)
 - [Cart Format](https://github.com/dithrkit/dithr/blob/main/docs/cart-format.md)
 - [Architecture](https://github.com/dithrkit/dithr/blob/main/docs/architecture.md)

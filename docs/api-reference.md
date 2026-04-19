@@ -232,27 +232,34 @@ games).
 
 ## `map` — Tilemaps
 
-| Function       | Parameters                                | Returns                 | Description                                                 |
-| -------------- | ----------------------------------------- | ----------------------- | ----------------------------------------------------------- |
-| `get`          | `cx, cy, layer?, slot?`                   | `int`                   | Tile ID at cell position                                    |
-| `set`          | `cx, cy, tile, layer?, slot?`             | —                       | Set a tile ID                                               |
-| `flag`         | `cx, cy, f, slot?`                        | `bool`                  | Test sprite flag `f` on tile at (cx, cy)                    |
-| `draw`         | `sx, sy, dx, dy, tw?, th?, layer?, slot?` | —                       | Draw a map region. `tw`/`th` default to the full level size |
-| `width`        | `slot?`                                   | `int`                   | Level width in tiles                                        |
-| `height`       | `slot?`                                   | `int`                   | Level height in tiles                                       |
-| `layers`       | `slot?`                                   | `string[]`              | Array of layer names                                        |
-| `levels`       |                                           | `string[]`              | Array of all loaded level names                             |
-| `currentLevel` |                                           | `string`                | Name of the active level                                    |
-| `load`         | `name`                                    | `bool`                  | Switch active level by name                                 |
-| `objects`      | `name?, slot?`                            | `object[]`              | Get map objects, optionally filtered by name                |
-| `object`       | `name, slot?`                             | `object` or `undefined` | First object matching name                                  |
-| `objectsIn`    | `x, y, w, h, slot?`                       | `object[]`              | AABB query for objects overlapping a rectangle              |
-| `objectsWith`  | `prop, value?, slot?`                     | `object[]`              | Filter objects by type or custom property                   |
-| `create`       | `w, h, name?`                             | `bool`                  | Create a blank map with one tile layer                      |
-| `resize`       | `w, h, slot?`                             | `bool`                  | Resize all tile layers (preserves existing data)            |
-| `addLayer`     | `name?, slot?`                            | `int`                   | Add a tile layer, returns index (-1 on error)               |
-| `removeLayer`  | `idx, slot?`                              | `bool`                  | Remove a layer (must keep at least one)                     |
-| `data`         | `slot?`                                   | `object` or `null`      | Full map data for serialization (name, layers, tiles)       |
+| Function         | Parameters                                | Returns                 | Description                                                  |
+| ---------------- | ----------------------------------------- | ----------------------- | ------------------------------------------------------------ |
+| `get`            | `cx, cy, layer?, slot?`                   | `int`                   | Tile ID at cell position                                     |
+| `set`            | `cx, cy, tile, layer?, slot?`             | —                       | Set a tile ID                                                |
+| `flag`           | `cx, cy, f, slot?`                        | `bool`                  | Test sprite flag `f` on tile at (cx, cy)                     |
+| `draw`           | `sx, sy, dx, dy, tw?, th?, layer?, slot?` | —                       | Draw a map region. `tw`/`th` default to the full level size  |
+| `width`          | `slot?`                                   | `int`                   | Level width in tiles                                         |
+| `height`         | `slot?`                                   | `int`                   | Level height in tiles                                        |
+| `layers`         | `slot?`                                   | `string[]`              | Array of layer names                                         |
+| `levels`         |                                           | `string[]`              | Array of all loaded level names                              |
+| `currentLevel`   |                                           | `string`                | Name of the active level                                     |
+| `load`           | `name`                                    | `bool`                  | Switch active level by name                                  |
+| `objects`        | `name?, slot?`                            | `object[]`              | Get map objects, optionally filtered by name                 |
+| `object`         | `name, slot?`                             | `object` or `undefined` | First object matching name                                   |
+| `objectsIn`      | `x, y, w, h, slot?`                       | `object[]`              | AABB query for objects overlapping a rectangle               |
+| `objectsWith`    | `prop, value?, slot?`                     | `object[]`              | Filter objects by type or custom property                    |
+| `create`         | `w, h, name?`                             | `bool`                  | Create a blank map with one tile layer                       |
+| `resize`         | `w, h, slot?`                             | `bool`                  | Resize all tile layers (preserves existing data)             |
+| `addLayer`       | `name?, slot?`                            | `int`                   | Add a tile layer, returns index (-1 on error)                |
+| `removeLayer`    | `idx, slot?`                              | `bool`                  | Remove a layer (must keep at least one)                      |
+| `renameLayer`    | `idx, name, slot?`                        | `bool`                  | Rename a layer at the given index                            |
+| `layerType`      | `idx, slot?`                              | `string`                | Layer type: `"tilelayer"` or `"objectgroup"`                 |
+| `addObjectLayer` | `name?, slot?`                            | `int`                   | Add an object layer, returns index (-1 on error)             |
+| `layerObjects`   | `idx, slot?`                              | `object[]`              | All objects in a specific layer                              |
+| `addObject`      | `layerIdx, obj, slot?`                    | `int`                   | Add an object to a layer, returns object index (-1 on error) |
+| `removeObject`   | `layerIdx, objIdx, slot?`                 | `bool`                  | Remove an object from a layer (shifts remaining objects)     |
+| `setObject`      | `layerIdx, objIdx, fields, slot?`         | `bool`                  | Update object fields (name, type, x, y, w, h, gid)           |
+| `data`           | `slot?`                                   | `object` or `null`      | Full map data for serialization (name, layers, tiles)        |
 
 **Map object shape:**
 
@@ -282,6 +289,15 @@ if (spawn) {
     player.y = spawn.y;
 }
 const coins = map.objectsWith("coin");
+
+/* Add an object layer and place objects at runtime */
+const li = map.addObjectLayer("runtime_objs");
+map.addObject(li, { name: "chest", type: "loot", x: 64, y: 32, w: 16, h: 16 });
+const objs = map.layerObjects(li);
+
+/* Update and remove objects */
+map.setObject(li, 0, { x: 80, y: 48 });
+map.removeObject(li, 0);
 ```
 
 ---
@@ -793,11 +809,12 @@ traversal are rejected with a `RangeError`.
 
 ### Profiling
 
-| Function    | Parameters | Returns                | Description                                                                                                |
-| ----------- | ---------- | ---------------------- | ---------------------------------------------------------------------------------------------------------- |
-| `perf`      |            | `object`               | Returns `{cpu, update_ms, draw_ms, fps, frame, markers}`. `markers` is a label→ms map of user perf markers |
-| `perfBegin` | `label`    | —                      | Start timing a named section (up to 16 markers per frame)                                                  |
-| `perfEnd`   | `label`    | `float` or `undefined` | Stop timing, returns elapsed ms. Appears in `perf().markers`                                               |
+| Function    | Parameters | Returns                | Description                                                                                                 |
+| ----------- | ---------- | ---------------------- | ----------------------------------------------------------------------------------------------------------- |
+| `perf`      |            | `object`               | Returns `{cpu, update_ms, draw_ms, fps, frame, markers}`. `markers` is a label→ms map of user perf markers  |
+| `perfBegin` | `label`    | —                      | Start timing a named section (up to 16 markers per frame)                                                   |
+| `perfEnd`   | `label`    | `float` or `undefined` | Stop timing, returns elapsed ms. Appears in `perf().markers`                                                |
+| `drawFps`   |            | —                      | Draw a colour-coded FPS counter with graph in the top-right corner. Green ≥ 90 %, yellow ≥ 50 %, red < 50 % |
 
 ```js
 /* Show FPS and frame budget */\nconst p = sys.perf();
@@ -968,13 +985,13 @@ supported.
 
 ### Playback
 
-| Function   | Parameters                                            | Returns | Description                                                                |
-| ---------- | ----------------------------------------------------- | ------- | -------------------------------------------------------------------------- |
-| `play`     | `idx, channel?`                                       | —       | Play SFX `idx` on `channel` (0–3, default 0). Edits are heard in real time |
-| `playNote` | `pitch, waveform, volume?, effect?, speed?, channel?` | —       | Preview a single note. `volume` default 5, `speed` default 8               |
-| `stop`     | `channel?`                                            | —       | Stop playback. Omit `channel` to stop all channels and note preview        |
-| `playing`  | `channel?`                                            | `bool`  | Is the given channel playing? (default channel 0)                          |
-| `noteIdx`  | `channel?`                                            | `int`   | Current note index (0–31) or −1 if not playing                             |
+| Function   | Parameters                                            | Returns | Description                                                                                                                                                                                        |
+| ---------- | ----------------------------------------------------- | ------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `play`     | `idx, channel?, sampleOffset?`                        | —       | Play SFX `idx` on `channel` (0–3, default 0). If `sampleOffset` > 0 and the same SFX is already playing on that channel, the call is ignored (useful for live-editing without restarting playback) |
+| `playNote` | `pitch, waveform, volume?, effect?, speed?, channel?` | —       | Preview a single note. `volume` default 5, `speed` default 8                                                                                                                                       |
+| `stop`     | `channel?`                                            | —       | Stop playback. Omit `channel` to stop all channels and note preview                                                                                                                                |
+| `playing`  | `channel?`                                            | `bool`  | Is the given channel playing? (default channel 0)                                                                                                                                                  |
+| `noteIdx`  | `channel?`                                            | `int`   | Current note index (0–31) or −1 if not playing                                                                                                                                                     |
 
 ### Rendering
 

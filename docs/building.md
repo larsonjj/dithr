@@ -17,12 +17,17 @@ dithr uses CMake with presets for easy configuration. All library dependencies
 
 ## Build presets
 
-| Preset     | Binary dir       | Description                     |
-| ---------- | ---------------- | ------------------------------- |
-| `debug`    | `build/debug`    | Debug build, developer mode on  |
-| `release`  | `build/release`  | Optimised release build         |
-| `wasm`     | `build/wasm`     | Emscripten WASM release (Ninja) |
-| `wasm-dev` | `build/wasm-dev` | Emscripten WASM debug (Ninja)   |
+| Preset         | Binary dir           | Description                                                 |
+| -------------- | -------------------- | ----------------------------------------------------------- |
+| `debug`        | `build/debug`        | Debug build, developer mode on                              |
+| `release`      | `build/release`      | Optimised release build                                     |
+| `asan`         | `build/asan`         | Debug + AddressSanitizer + UndefinedBehaviorSanitizer       |
+| `coverage`     | `build/coverage`     | Debug + code coverage instrumentation (GCC/Clang only)      |
+| `pgo-generate` | `build/pgo-generate` | Release build that generates profile data (GCC/Clang only)  |
+| `pgo-use`      | `build/pgo-use`      | Release build using collected profile data (GCC/Clang only) |
+| `fuzz`         | `build/fuzz`         | Fuzz targets with libFuzzer (Clang only, Linux/macOS)       |
+| `wasm`         | `build/wasm`         | Emscripten WASM release (Ninja)                             |
+| `wasm-dev`     | `build/wasm-dev`     | Emscripten WASM debug (Ninja)                               |
 
 ## Native build
 
@@ -51,6 +56,51 @@ cmake --build build/release --config Release
 ```bash
 ctest --test-dir build/debug -C Debug --output-on-failure
 ```
+
+### Sanitizers (ASan + UBSan)
+
+The `asan` preset enables AddressSanitizer and UndefinedBehaviorSanitizer for
+catching memory errors and undefined behaviour at runtime:
+
+```bash
+cmake --preset asan
+cmake --build build/asan
+ctest --test-dir build/asan --output-on-failure
+```
+
+> **Note:** On Windows with MSVC, the ASan runtime DLL
+> (`clang_rt.asan_dynamic-x86_64.dll`) must be on `PATH`.
+
+### Fuzzing
+
+The `fuzz` preset builds fuzz targets with libFuzzer (Clang only, Linux/macOS):
+
+```bash
+cmake --preset fuzz
+cmake --build build/fuzz
+./build/fuzz/tests/fuzz/fuzz_cart_parse corpus/
+```
+
+Fuzz targets live in `tests/fuzz/`. Each target is a standalone executable that
+accepts a corpus directory.
+
+### Profile-guided optimisation (PGO)
+
+PGO is a two-step process (GCC/Clang only, Linux/macOS):
+
+```bash
+# Step 1 — build with instrumentation and run a representative workload
+cmake --preset pgo-generate
+cmake --build build/pgo-generate
+./build/pgo-generate/dithr examples/spritemark/cart.json   # run your workload
+
+# Step 2 — rebuild using the collected profile data
+cmake --preset pgo-use
+cmake --build build/pgo-use
+```
+
+The `pgo-use` preset reads profile data from `build/pgo-generate/` by default
+(configurable via `DTR_PGO_PROFILE_DIR`).
 
 ### Code coverage
 
