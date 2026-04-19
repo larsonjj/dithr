@@ -257,6 +257,9 @@ jobs:
     publish-npm:
         needs: [build-windows, build-linux, build-macos, build-wasm]
         runs-on: ubuntu-latest
+        permissions:
+            contents: read
+            id-token: write
         steps:
             - uses: actions/checkout@v6
 
@@ -265,16 +268,8 @@ jobs:
                   node-version: 24
                   registry-url: https://registry.npmjs.org
 
-            - name: Verify npm auth
-              env:
-                  NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-              run: |
-                  echo "npm $(npm --version)"
-                  if [ -z "${NODE_AUTH_TOKEN:-}" ]; then
-                    echo "::error::NPM_TOKEN secret is not set."
-                    exit 1
-                  fi
-                  npm whoami --registry https://registry.npmjs.org
+            - name: Remove setup-node auth token (OIDC handles auth)
+              run: sed -i '/_authToken/d' ~/.npmrc
 
             - name: Download platform packages
               uses: actions/download-artifact@v8
@@ -319,8 +314,6 @@ jobs:
                   fi
 
             - name: Publish platform packages
-              env:
-                  NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
               run: |
                   for pkg in win32-x64 linux-x64 darwin-arm64 wasm; do
                     if ! npm publish "./packages/$pkg" --provenance --access public ${{ steps.npm-tag.outputs.tag }}; then
@@ -330,11 +323,7 @@ jobs:
                   done
 
             - name: Publish SDK
-              env:
-                  NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
               run: npm publish ./packages/sdk --provenance --access public ${{ steps.npm-tag.outputs.tag }}
 
             - name: Publish create package
-              env:
-                  NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
               run: npm publish ./packages/create --provenance --access public ${{ steps.npm-tag.outputs.tag }}
