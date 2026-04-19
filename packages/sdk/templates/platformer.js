@@ -52,8 +52,7 @@ function tileAt(cx, cy) {
 }
 
 function setTile(cx, cy, v) {
-    if (cx >= 0 && cy >= 0 && cx < MAP_W && cy < MAP_H)
-        tiles[cy * MAP_W + cx] = v;
+    if (cx >= 0 && cy >= 0 && cx < MAP_W && cy < MAP_H) tiles[cy * MAP_W + cx] = v;
 }
 
 function buildLevel() {
@@ -85,8 +84,16 @@ function collideX() {
     const top = math.flr(py / TILE);
     const bot = math.flr((py + 6) / TILE);
     for (let ty = top; ty <= bot; ++ty) {
-        if (solidAt(left, ty)) { px = (left + 1) * TILE; vx = 0; return; }
-        if (solidAt(right, ty)) { px = right * TILE - 6; vx = 0; return; }
+        if (solidAt(left, ty)) {
+            px = (left + 1) * TILE;
+            vx = 0;
+            return;
+        }
+        if (solidAt(right, ty)) {
+            px = right * TILE - 6;
+            vx = 0;
+            return;
+        }
     }
 }
 
@@ -98,11 +105,20 @@ function collideY() {
     grounded = false;
     if (vy < 0) {
         for (let tx = left; tx <= right; ++tx) {
-            if (solidAt(tx, top)) { py = (top + 1) * TILE; vy = 0; return; }
+            if (solidAt(tx, top)) {
+                py = (top + 1) * TILE;
+                vy = 0;
+                return;
+            }
         }
     }
     for (let tx = left; tx <= right; ++tx) {
-        if (solidAt(tx, bot)) { py = bot * TILE - 7; vy = 0; grounded = true; return; }
+        if (solidAt(tx, bot)) {
+            py = bot * TILE - 7;
+            vy = 0;
+            grounded = true;
+            return;
+        }
     }
 }
 
@@ -123,18 +139,31 @@ function _fixedUpdate(_dt) {
         facing = 1;
         vx = vx < 0 ? vx + SKID_DECEL : math.min(vx + accel, maxSpd);
     } else {
-        if (vx > 0) { vx -= RELEASE_DECEL; if (vx < 0) vx = 0; }
-        else if (vx < 0) { vx += RELEASE_DECEL; if (vx > 0) vx = 0; }
+        if (vx > 0) {
+            vx -= RELEASE_DECEL;
+            if (vx < 0) vx = 0;
+        } else if (vx < 0) {
+            vx += RELEASE_DECEL;
+            if (vx > 0) vx = 0;
+        }
     }
 
     // Variable-height gravity
     if (jumping && input.btn("jump") && vy < 0) vy += GRAV_HOLD;
-    else { vy += GRAV_RELEASE; jumping = false; }
+    else {
+        vy += GRAV_RELEASE;
+        jumping = false;
+    }
     if (vy > MAX_FALL) vy = MAX_FALL;
 
-    px += vx; collideX();
-    py += vy; collideY();
-    if (px < 0) { px = 0; vx = 0; }
+    px += vx;
+    collideX();
+    py += vy;
+    collideY();
+    if (px < 0) {
+        px = 0;
+        vx = 0;
+    }
 
     if (grounded) coyote = COYOTE_TICKS;
     else if (coyote > 0) coyote--;
@@ -162,8 +191,10 @@ function _fixedUpdate(_dt) {
 
     // Respawn if fallen
     if (py > MAP_H * TILE + 16) {
-        px = 16; py = (MAP_H - 4) * TILE;
-        vx = 0; vy = 0;
+        px = 16;
+        py = (MAP_H - 4) * TILE;
+        vx = 0;
+        vy = 0;
     }
 }
 
