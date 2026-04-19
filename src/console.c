@@ -320,6 +320,11 @@ static void prv_poll_file_changes(dtr_console_t *con)
 /*  Create                                                             */
 /* ------------------------------------------------------------------ */
 
+size_t dtr_console_sizeof(void)
+{
+    return sizeof(dtr_console_t);
+}
+
 dtr_console_t *dtr_console_create(const char *cart_path)
 {
     dtr_console_t *con;

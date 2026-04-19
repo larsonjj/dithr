@@ -186,6 +186,12 @@ bool dtr_console_reload(dtr_console_t *con);
  */
 bool dtr_console_reload_assets(dtr_console_t *con);
 
+/**
+ * \brief           Return sizeof(dtr_console_t) as seen by the library
+ * \return          Struct size in bytes
+ */
+size_t dtr_console_sizeof(void);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

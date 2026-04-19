@@ -94,5 +94,7 @@ target_compile_definitions(dithr_core_test PUBLIC ${DITHR_COMPILE_DEFS})
 # Dev build flag
 option(DTR_DEV_BUILD "Enable development features (hot reload, debug overlays)" OFF)
 if (DTR_DEV_BUILD)
+    target_compile_definitions(dithr_core_obj PUBLIC DEV_BUILD=1)
     target_compile_definitions(dithr_core PUBLIC DEV_BUILD=1)
+    target_compile_definitions(dithr_core_test PUBLIC DEV_BUILD=1)
 endif()

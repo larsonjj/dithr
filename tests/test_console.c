@@ -40,6 +40,9 @@ static void test_console_create_no_cart(void)
 {
     dtr_console_t *con;
 
+    /* Verify struct layout matches between library and test translation unit */
+    DTR_ASSERT_EQ_INT((long long)dtr_console_sizeof(), (long long)sizeof(dtr_console_t));
+
     con = dtr_console_create("__nonexistent_cart__.json");
     DTR_ASSERT(con != NULL);
 
@@ -68,7 +71,7 @@ static void test_console_create_no_cart(void)
     DTR_ASSERT(!con->fullscreen);
 
 #if DEV_BUILD
-    DTR_ASSERT(con->watch_asset_mtime >= 0);
+    DTR_ASSERT_EQ_INT(con->watch_asset_mtime, 0);
     DTR_ASSERT_EQ_INT(con->reload_pending_kind, DTR_RELOAD_PENDING_NONE);
 #endif
 
