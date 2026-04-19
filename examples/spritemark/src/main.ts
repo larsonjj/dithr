@@ -35,6 +35,14 @@ const spFlip: boolean[] = [];
 const spCol: number[] = []; // per-sprite palette colour
 let total = 0;
 
+// Colour buckets: colBuckets[c] is an array of sprite indices with that colour.
+// Avoids calling gfx.pal() per sprite — only once per colour group.
+const NUM_COLORS = 15;
+const colBuckets: number[][] = [];
+for (let c = 0; c < NUM_COLORS; ++c) {
+    colBuckets.push([]);
+}
+
 // Screen corners used as spawn origins
 const CORNERS = [
     [0, 0],
@@ -48,6 +56,7 @@ const CORNERS = [
 function spawn(count: number) {
     for (let i = 0; i < count; ++i) {
         const corner = CORNERS[math.rndInt(CORNERS.length)];
+        const idx = total + i;
         spX.push(corner[0]);
         spY.push(corner[1]);
         // Velocity aimed away from the chosen corner towards centre
@@ -58,7 +67,9 @@ function spawn(count: number) {
         spSpr.push(SPR_CHARS[math.rndInt(SPR_CHARS.length)]);
         spFlip.push(math.rnd() > 0.5);
         // Random colour from palette (skip 0 = background/transparent)
-        spCol.push(1 + math.rndInt(15));
+        const col = 1 + math.rndInt(15);
+        spCol.push(col);
+        colBuckets[col - 1].push(idx);
     }
     total = spX.length;
 }
@@ -100,6 +111,7 @@ export function _fixedUpdate(dt: number): void {
             spY[i] = 0;
             spVy[i] = -spVy[i];
         }
+
     }
 }
 
@@ -110,13 +122,41 @@ export function _update(_dt: number): void {
     }
 }
 
+// Reusable batch buffer — grows as needed.
+// Layout: [idx, x, y, flipX, flipY, ...] (5 ints per sprite)
+const STRIDE = 5;
+let batchBuf = new Int32Array(SPAWN_COUNT * STRIDE);
+
 export function _draw(): void {
     gfx.cls(1);
 
-    // Draw all sprites (per-sprite colour via palette remap)
-    for (let i = 0; i < total; ++i) {
-        gfx.pal(REMAP_FROM, spCol[i]);
-        gfx.spr(spSpr[i], spX[i], spY[i], 1, 1, spFlip[i], false);
+    // Draw sprites grouped by colour using batch API.
+    // One gfx.pal() + one gfx.sprBatch() per colour (~30 bridge calls
+    // instead of ~4000 individual spr+pal calls).
+    for (let c = 0; c < NUM_COLORS; ++c) {
+        const bucket = colBuckets[c];
+        const n = bucket.length;
+        if (n === 0) continue;
+
+        // Grow buffer if needed
+        const need = n * STRIDE;
+        if (batchBuf.length < need) {
+            batchBuf = new Int32Array(need);
+        }
+
+        // Pack sprite data
+        for (let j = 0; j < n; ++j) {
+            const i = bucket[j];
+            const off = j * STRIDE;
+            batchBuf[off] = spSpr[i];
+            batchBuf[off + 1] = spX[i];
+            batchBuf[off + 2] = spY[i];
+            batchBuf[off + 3] = spFlip[i] ? 1 : 0;
+            batchBuf[off + 4] = 0; // no flip_y
+        }
+
+        gfx.pal(REMAP_FROM, c + 1);
+        gfx.sprBatch(batchBuf, n);
     }
     gfx.pal(); // reset palette
 

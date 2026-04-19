@@ -25,3 +25,6 @@ endfunction()
 
 dtr_add_fuzz_target(fuzz_cart_import fuzz_cart_import.c)
 dtr_add_fuzz_target(fuzz_runtime    fuzz_runtime.c)
+dtr_add_fuzz_target(fuzz_graphics   fuzz_graphics.c)
+dtr_add_fuzz_target(fuzz_synth      fuzz_synth.c)
+dtr_add_fuzz_target(fuzz_postfx     fuzz_postfx.c)

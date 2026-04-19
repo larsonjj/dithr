@@ -325,6 +325,19 @@ void dtr_gfx_spr(dtr_graphics_t *gfx,
                  int32_t         h_tiles,
                  bool            flip_x,
                  bool            flip_y);
+
+/**
+ * \brief           Draw multiple single-tile sprites in one call
+ *
+ * Each sprite is described by 5 consecutive int32 values in \p data:
+ *   [sprite_index, x, y, flip_x, flip_y]
+ *
+ * All sprites use w_tiles=1, h_tiles=1.
+ *
+ * \param[in]       data: Flat array of int32 values (5 per sprite)
+ * \param[in]       count: Number of sprites (data has count*5 elements)
+ */
+void dtr_gfx_spr_batch(dtr_graphics_t *gfx, const int32_t *data, int32_t count);
 void dtr_gfx_sspr(dtr_graphics_t *gfx,
                   int32_t         sx,
                   int32_t         sy,

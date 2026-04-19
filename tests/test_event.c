@@ -535,6 +535,32 @@ static void test_event_reemit_during_flush(void)
 }
 
 /* ------------------------------------------------------------------ */
+/*  Queue accepts up to 256 events after capacity increase             */
+/* ------------------------------------------------------------------ */
+
+static void test_event_queue_large_burst(void)
+{
+    dtr_event_bus_t *bus;
+
+    prv_setup();
+    bus = dtr_event_create(s_ctx);
+
+    /* Emit 200 events — well beyond the old limit of 64 */
+    for (int32_t idx = 0; idx < 200; ++idx) {
+        dtr_event_emit(bus, "test:burst", JS_UNDEFINED);
+    }
+    DTR_ASSERT_EQ_INT(bus->queue_count, 200);
+
+    /* Flush successfully */
+    dtr_event_flush(bus);
+    DTR_ASSERT_EQ_INT(bus->queue_count, 0);
+
+    dtr_event_destroy(bus);
+    prv_teardown();
+    DTR_PASS();
+}
+
+/* ------------------------------------------------------------------ */
 /*  Main                                                               */
 /* ------------------------------------------------------------------ */
 
@@ -559,6 +585,7 @@ int main(int argc, char *argv[])
     DTR_RUN_TEST(test_event_clear_with_handler);
     DTR_RUN_TEST(test_event_clear_null_safe);
     DTR_RUN_TEST(test_event_reemit_during_flush);
+    DTR_RUN_TEST(test_event_queue_large_burst);
 
     DTR_TEST_END();
 }

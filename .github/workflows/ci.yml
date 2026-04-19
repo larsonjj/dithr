@@ -239,8 +239,8 @@ jobs:
                   COVERAGE=$(lcov --summary build/coverage.info 2>&1 \
                     | grep -Po 'lines\.*:\s*\K[0-9]+(\.[0-9]+)?')
                   echo "Line coverage: ${COVERAGE}%"
-                  if [ "$(echo "$COVERAGE < 60" | bc)" -eq 1 ]; then
-                    echo "::error::Coverage ${COVERAGE}% is below the 60% threshold"
+                  if [ "$(echo "$COVERAGE < 65" | bc)" -eq 1 ]; then
+                    echo "::error::Coverage ${COVERAGE}% is below the 65% threshold"
                     exit 1
                   fi
 

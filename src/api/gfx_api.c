@@ -430,6 +430,52 @@ static JSValue js_gfx_spr(JSContext *ctx, JSValueConst this_val, int argc, JSVal
     return JS_UNDEFINED;
 }
 
+/**
+ * \brief           Batch draw single-tile sprites from an Int32Array.
+ *
+ * Layout: 5 ints per sprite [idx, x, y, flipX, flipY, ...].
+ * One JS→C call replaces N individual spr() calls.
+ */
+static JSValue js_gfx_spr_batch(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+{
+    size_t   byte_len;
+    size_t   byte_off;
+    size_t   elem_size;
+    size_t   total_ints;
+    int32_t  count;
+    uint8_t *buf_ptr;
+    JSValue  ab;
+
+    (void)this_val;
+    if (argc < 1) {
+        return JS_UNDEFINED;
+    }
+
+    ab = JS_GetTypedArrayBuffer(ctx, argv[0], &byte_off, &byte_len, &elem_size);
+    if (JS_IsException(ab)) {
+        JS_FreeValue(ctx, ab);
+        return JS_UNDEFINED;
+    }
+
+    buf_ptr = JS_GetArrayBuffer(ctx, &byte_len, ab);
+    JS_FreeValue(ctx, ab);
+    if (buf_ptr == NULL) {
+        return JS_UNDEFINED;
+    }
+
+    buf_ptr += byte_off;
+    total_ints = byte_len / sizeof(int32_t);
+
+    /* Optional second arg: sprite count (defaults to array length / 5) */
+    count = dtr_api_opt_int(ctx, argc, argv, 1, (int32_t)(total_ints / 5));
+    if (count <= 0 || (size_t)count * 5 > total_ints) {
+        return JS_UNDEFINED;
+    }
+
+    dtr_gfx_spr_batch(GFX(ctx), (const int32_t *)buf_ptr, count);
+    return JS_UNDEFINED;
+}
+
 static JSValue js_gfx_sspr(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
     (void)this_val;
@@ -1115,6 +1161,7 @@ static const JSCFunctionListEntry js_gfx_funcs[] = {
     JS_CFUNC_DEF("textWidth", 1, js_gfx_text_width),
     JS_CFUNC_DEF("textHeight", 1, js_gfx_text_height),
     JS_CFUNC_DEF("spr", 7, js_gfx_spr),
+    JS_CFUNC_DEF("sprBatch", 2, js_gfx_spr_batch),
     JS_CFUNC_DEF("sspr", 10, js_gfx_sspr),
     JS_CFUNC_DEF("sprRot", 6, js_gfx_spr_rot),
     JS_CFUNC_DEF("sprAffine", 7, js_gfx_spr_affine),

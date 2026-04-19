@@ -9,6 +9,7 @@
 #include "simd.h"
 
 #include <math.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -379,6 +380,84 @@ static void prv_blit_span(uint8_t       *dst_row,
         uint8_t col;
 
         col = src_ptr[done];
+        if (!transp[col]) {
+            dst[done] = dpal[col];
+        }
+    }
+}
+
+/**
+ * \brief           Blit a horizontally-flipped source span with transparency
+ *                  check and palette remap, using 8-wide unrolled reads.
+ *
+ * Reads source pixels in reverse (right-to-left) while writing the
+ * destination left-to-right, producing a mirrored output.  Same
+ * performance characteristics as prv_blit_span.
+ */
+static void prv_blit_span_flip(uint8_t       *dst_row,
+                               const uint8_t *src_end,
+                               int32_t        scr_x,
+                               int32_t        span,
+                               const bool    *transp,
+                               const uint8_t *dpal)
+{
+    int32_t  done;
+    uint8_t *dst;
+
+    done = 0;
+    dst  = dst_row + scr_x;
+
+    /* 8-wide: read source in reverse, write forward */
+    for (; done + 7 < span; done += 8) {
+        uint8_t i_0;
+        uint8_t i_1;
+        uint8_t i_2;
+        uint8_t i_3;
+        uint8_t i_4;
+        uint8_t i_5;
+        uint8_t i_6;
+        uint8_t i_7;
+
+        i_0 = src_end[-done];
+        i_1 = src_end[-(done + 1)];
+        i_2 = src_end[-(done + 2)];
+        i_3 = src_end[-(done + 3)];
+        i_4 = src_end[-(done + 4)];
+        i_5 = src_end[-(done + 5)];
+        i_6 = src_end[-(done + 6)];
+        i_7 = src_end[-(done + 7)];
+
+        if (!transp[i_0]) {
+            dst[done] = dpal[i_0];
+        }
+        if (!transp[i_1]) {
+            dst[done + 1] = dpal[i_1];
+        }
+        if (!transp[i_2]) {
+            dst[done + 2] = dpal[i_2];
+        }
+        if (!transp[i_3]) {
+            dst[done + 3] = dpal[i_3];
+        }
+        if (!transp[i_4]) {
+            dst[done + 4] = dpal[i_4];
+        }
+        if (!transp[i_5]) {
+            dst[done + 5] = dpal[i_5];
+        }
+        if (!transp[i_6]) {
+            dst[done + 6] = dpal[i_6];
+        }
+        if (!transp[i_7]) {
+            dst[done + 7] = dpal[i_7];
+        }
+    }
+
+    /* Scalar tail */
+    for (; done < span; ++done) {
+        uint8_t col;
+
+        col = src_end[-done];
         if (!transp[col]) {
             dst[done] = dpal[col];
         }
@@ -1333,8 +1412,25 @@ void dtr_gfx_spr(dtr_graphics_t *gfx,
                     span      = vis_x1 - vis_x0 + 1;
 
                     prv_blit_span(dst_row, src_ptr, scr_x, span, transp, dpal);
-                } else
-#endif /* DTR_HAS_SIMD */
+                } else {
+                    int32_t        end_col;
+                    const uint8_t *src_end;
+                    int32_t        scr_x;
+
+                    /*
+                     * src_end points to the last source pixel that maps
+                     * to vis_x0 (the leftmost visible destination pixel).
+                     * For a flip, destination pixel vis_x0 reads from
+                     * source column (tile_w - 1 - (vis_x0 - dst_x0)).
+                     */
+                    end_col = tile_w - 1 - (vis_x0 - dst_x0);
+                    src_end = &sheet[row_off + end_col];
+                    scr_x   = vis_x0;
+                    span    = vis_x1 - vis_x0 + 1;
+
+                    prv_blit_span_flip(dst_row, src_end, scr_x, span, transp, dpal);
+                }
+#else
                 {
                     for (int32_t scr_x = vis_x0; scr_x <= vis_x1; ++scr_x) {
                         int32_t col_idx;
@@ -1350,6 +1446,7 @@ void dtr_gfx_spr(dtr_graphics_t *gfx,
                         dst_row[scr_x] = dpal[col];
                     }
                 }
+#endif /* DTR_HAS_SIMD */
             }
             return;
         }
@@ -1398,6 +1495,150 @@ void dtr_gfx_spr(dtr_graphics_t *gfx,
 
                 dst_row[scr_x] = col;
             }
+        }
+    }
+}
+
+/* ------------------------------------------------------------------ */
+/*  Batch sprite draw — single-tile sprites, no fill pattern           */
+/* ------------------------------------------------------------------ */
+
+void dtr_gfx_spr_batch(dtr_graphics_t *gfx, const int32_t *data, int32_t count)
+{
+    dtr_sprite_sheet_t *sht;
+    const bool         *transp;
+    const uint8_t      *dpal;
+    const uint8_t      *sheet;
+    int32_t             tile_w;
+    int32_t             tile_h;
+    int32_t             sht_w;
+    int32_t             cam_x;
+    int32_t             cam_y;
+    int32_t             clip_l;
+    int32_t             clip_t;
+    int32_t             clip_r;
+    int32_t             clip_b;
+    int32_t             fb_w;
+    int32_t             i;
+
+    if (data == NULL || count <= 0) {
+        return;
+    }
+
+    sht = &gfx->sheet;
+    if (sht->pixels == NULL) {
+        return;
+    }
+
+    /* Hoist invariants out of per-sprite loop */
+    transp = gfx->transparent;
+    dpal   = gfx->draw_pal;
+    sheet  = sht->pixels;
+    tile_w = sht->tile_w;
+    tile_h = sht->tile_h;
+    sht_w  = sht->width;
+    cam_x  = gfx->camera_x;
+    cam_y  = gfx->camera_y;
+    fb_w   = gfx->width;
+
+    prv_get_clip_bounds(gfx, &clip_l, &clip_t, &clip_r, &clip_b);
+
+    for (i = 0; i < count; ++i) {
+        int32_t idx;
+        int32_t x;
+        int32_t y;
+        bool    flip_x;
+        bool    flip_y;
+        int32_t sx0;
+        int32_t sy0;
+        int32_t dst_x0;
+        int32_t dst_y0;
+        int32_t dst_x1;
+        int32_t dst_y1;
+        int32_t vis_x0;
+        int32_t vis_y0;
+        int32_t vis_x1;
+        int32_t vis_y1;
+
+        idx    = data[i * 5];
+        x      = data[i * 5 + 1];
+        y      = data[i * 5 + 2];
+        flip_x = data[i * 5 + 3] != 0;
+        flip_y = data[i * 5 + 4] != 0;
+
+        if (idx < 0 || idx >= sht->count) {
+            continue;
+        }
+
+        sx0 = (idx % sht->cols) * tile_w;
+        sy0 = (idx / sht->cols) * tile_h;
+
+        dst_x0 = x - cam_x;
+        dst_y0 = y - cam_y;
+        dst_x1 = dst_x0 + tile_w - 1;
+        dst_y1 = dst_y0 + tile_h - 1;
+
+        /* Early reject */
+        if (dst_x1 < clip_l || dst_x0 > clip_r || dst_y1 < clip_t || dst_y0 > clip_b) {
+            continue;
+        }
+
+        /* Clamp visible region */
+        vis_x0 = (dst_x0 > clip_l) ? dst_x0 : clip_l;
+        vis_y0 = (dst_y0 > clip_t) ? dst_y0 : clip_t;
+        vis_x1 = (dst_x1 < clip_r) ? dst_x1 : clip_r;
+        vis_y1 = (dst_y1 < clip_b) ? dst_y1 : clip_b;
+
+        for (int32_t scr_y = vis_y0; scr_y <= vis_y1; ++scr_y) {
+            int32_t  row;
+            int32_t  src_y;
+            int32_t  row_off;
+            uint8_t *dst_row;
+
+            row     = scr_y - dst_y0;
+            src_y   = flip_y ? (tile_h - 1 - row) : row;
+            row_off = (src_y + sy0) * sht_w + sx0;
+            dst_row = &gfx->framebuffer[(ptrdiff_t)scr_y * fb_w];
+
+#if DTR_HAS_SIMD
+            if (!flip_x) {
+                int32_t        start_col;
+                const uint8_t *src_ptr;
+                int32_t        span;
+
+                start_col = vis_x0 - dst_x0;
+                src_ptr   = &sheet[row_off + start_col];
+                span      = vis_x1 - vis_x0 + 1;
+
+                prv_blit_span(dst_row, src_ptr, vis_x0, span, transp, dpal);
+            } else {
+                int32_t        end_col;
+                const uint8_t *src_end;
+                int32_t        span;
+
+                end_col = tile_w - 1 - (vis_x0 - dst_x0);
+                src_end = &sheet[row_off + end_col];
+                span    = vis_x1 - vis_x0 + 1;
+
+                prv_blit_span_flip(dst_row, src_end, vis_x0, span, transp, dpal);
+            }
+#else
+            {
+                for (int32_t scr_x = vis_x0; scr_x <= vis_x1; ++scr_x) {
+                    int32_t col_idx;
+                    int32_t src_x;
+                    uint8_t col;
+
+                    col_idx = scr_x - dst_x0;
+                    src_x   = flip_x ? (tile_w - 1 - col_idx) : col_idx;
+                    col     = sheet[row_off + src_x];
+                    if (transp[col]) {
+                        continue;
+                    }
+                    dst_row[scr_x] = dpal[col];
+                }
+            }
+#endif /* DTR_HAS_SIMD */
         }
     }
 }
@@ -2414,6 +2655,7 @@ void dtr_gfx_dl_spr(dtr_graphics_t *gfx,
     dtr_draw_cmd_t *cmd;
 
     if (gfx->draw_list.count >= CONSOLE_MAX_DRAW_CMDS) {
+        fprintf(stderr, "Draw list: max commands reached, dropping command\n");
         return;
     }
     cmd            = &gfx->draw_list.cmds[gfx->draw_list.count];
@@ -2444,6 +2686,7 @@ void dtr_gfx_dl_sspr(dtr_graphics_t *gfx,
     dtr_draw_cmd_t *cmd;
 
     if (gfx->draw_list.count >= CONSOLE_MAX_DRAW_CMDS) {
+        fprintf(stderr, "Draw list: max commands reached, dropping command\n");
         return;
     }
     cmd            = &gfx->draw_list.cmds[gfx->draw_list.count];
@@ -2473,6 +2716,7 @@ void dtr_gfx_dl_spr_rot(dtr_graphics_t *gfx,
     dtr_draw_cmd_t *cmd;
 
     if (gfx->draw_list.count >= CONSOLE_MAX_DRAW_CMDS) {
+        fprintf(stderr, "Draw list: max commands reached, dropping command\n");
         return;
     }
     cmd                  = &gfx->draw_list.cmds[gfx->draw_list.count];
@@ -2501,6 +2745,7 @@ void dtr_gfx_dl_spr_affine(dtr_graphics_t *gfx,
     dtr_draw_cmd_t *cmd;
 
     if (gfx->draw_list.count >= CONSOLE_MAX_DRAW_CMDS) {
+        fprintf(stderr, "Draw list: max commands reached, dropping command\n");
         return;
     }
     cmd                   = &gfx->draw_list.cmds[gfx->draw_list.count];

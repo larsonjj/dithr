@@ -910,6 +910,175 @@ static void test_gfx_dl_overflow(void)
 }
 
 /* ------------------------------------------------------------------ */
+/*  Draw list overflow — each command type caps at max                  */
+/* ------------------------------------------------------------------ */
+
+static void test_gfx_dl_overflow_sspr(void)
+{
+    dtr_graphics_t *gfx = dtr_gfx_create(TW, TH);
+
+    dtr_gfx_dl_begin(gfx);
+    for (int i = 0; i < CONSOLE_MAX_DRAW_CMDS; ++i) {
+        dtr_gfx_dl_sspr(gfx, 0, 0, 0, 1, 1, 0, 0, 1, 1);
+    }
+    DTR_ASSERT_EQ_INT(gfx->draw_list.count, CONSOLE_MAX_DRAW_CMDS);
+
+    /* Overflow */
+    dtr_gfx_dl_sspr(gfx, 0, 0, 0, 1, 1, 0, 0, 1, 1);
+    DTR_ASSERT_EQ_INT(gfx->draw_list.count, CONSOLE_MAX_DRAW_CMDS);
+
+    gfx->draw_list.count = 0;
+    dtr_gfx_dl_end(gfx);
+    dtr_gfx_destroy(gfx);
+    DTR_PASS();
+}
+
+static void test_gfx_dl_overflow_spr_rot(void)
+{
+    dtr_graphics_t *gfx = dtr_gfx_create(TW, TH);
+
+    dtr_gfx_dl_begin(gfx);
+    for (int i = 0; i < CONSOLE_MAX_DRAW_CMDS; ++i) {
+        dtr_gfx_dl_spr_rot(gfx, 0, 0, 0, 0, 0.0f, 0, 0);
+    }
+    DTR_ASSERT_EQ_INT(gfx->draw_list.count, CONSOLE_MAX_DRAW_CMDS);
+
+    dtr_gfx_dl_spr_rot(gfx, 0, 0, 0, 0, 0.0f, 0, 0);
+    DTR_ASSERT_EQ_INT(gfx->draw_list.count, CONSOLE_MAX_DRAW_CMDS);
+
+    gfx->draw_list.count = 0;
+    dtr_gfx_dl_end(gfx);
+    dtr_gfx_destroy(gfx);
+    DTR_PASS();
+}
+
+static void test_gfx_dl_overflow_spr_affine(void)
+{
+    dtr_graphics_t *gfx = dtr_gfx_create(TW, TH);
+
+    dtr_gfx_dl_begin(gfx);
+    for (int i = 0; i < CONSOLE_MAX_DRAW_CMDS; ++i) {
+        dtr_gfx_dl_spr_affine(gfx, 0, 0, 0, 0, 0.0f, 0.0f, 1.0f, 0.0f);
+    }
+    DTR_ASSERT_EQ_INT(gfx->draw_list.count, CONSOLE_MAX_DRAW_CMDS);
+
+    dtr_gfx_dl_spr_affine(gfx, 0, 0, 0, 0, 0.0f, 0.0f, 1.0f, 0.0f);
+    DTR_ASSERT_EQ_INT(gfx->draw_list.count, CONSOLE_MAX_DRAW_CMDS);
+
+    gfx->draw_list.count = 0;
+    dtr_gfx_dl_end(gfx);
+    dtr_gfx_destroy(gfx);
+    DTR_PASS();
+}
+
+/* ------------------------------------------------------------------ */
+/*  Flip with larger framebuffer — exercises SIMD tail handling         */
+/* ------------------------------------------------------------------ */
+
+static void test_gfx_flip_odd_size(void)
+{
+    /* Non-multiple-of-4 pixel count to test SIMD tail loop */
+    dtr_graphics_t *gfx = dtr_gfx_create(13, 7);
+
+    dtr_gfx_cls(gfx, 0);
+    dtr_gfx_pset(gfx, 0, 0, 1);
+    dtr_gfx_pset(gfx, 12, 6, 7);
+    dtr_gfx_flip(gfx);
+
+    /* Verify the RGBA output matches palette lookup */
+    DTR_ASSERT(gfx->pixels[0] != 0);                   /* color 1 → non-black */
+    DTR_ASSERT(gfx->pixels[12 + 6 * 13] != 0);         /* color 7 → non-black */
+    DTR_ASSERT_EQ_INT(gfx->pixels[1], gfx->pixels[2]); /* both color 0 → same */
+
+    dtr_gfx_destroy(gfx);
+    DTR_PASS();
+}
+
+/* ------------------------------------------------------------------ */
+/*  Polygon with fewer than 3 vertices — edge cases                    */
+/* ------------------------------------------------------------------ */
+
+static void test_gfx_polyfill_single_point(void)
+{
+    dtr_graphics_t *gfx   = dtr_gfx_create(TW, TH);
+    int32_t         pts[] = {5, 5};
+
+    dtr_gfx_cls(gfx, 0);
+    dtr_gfx_polyfill(gfx, pts, 1, 3);
+
+    /* 1 vertex — nothing drawn */
+    DTR_ASSERT_EQ_INT(dtr_gfx_pget(gfx, 5, 5), 0);
+
+    dtr_gfx_destroy(gfx);
+    DTR_PASS();
+}
+
+static void test_gfx_polyfill_two_points(void)
+{
+    dtr_graphics_t *gfx   = dtr_gfx_create(TW, TH);
+    int32_t         pts[] = {2, 2, 10, 2};
+
+    dtr_gfx_cls(gfx, 0);
+    dtr_gfx_polyfill(gfx, pts, 2, 5);
+
+    /* 2 vertices — draws a line */
+    DTR_ASSERT_EQ_INT(dtr_gfx_pget(gfx, 2, 2), 5);
+    DTR_ASSERT_EQ_INT(dtr_gfx_pget(gfx, 10, 2), 5);
+
+    dtr_gfx_destroy(gfx);
+    DTR_PASS();
+}
+
+/* ------------------------------------------------------------------ */
+/*  Circle with negative radius                                        */
+/* ------------------------------------------------------------------ */
+
+static void test_gfx_circ_negative_radius(void)
+{
+    dtr_graphics_t *gfx = dtr_gfx_create(TW, TH);
+
+    dtr_gfx_cls(gfx, 0);
+
+    /* Negative radius — should not crash */
+    dtr_gfx_circ(gfx, 8, 8, -3, 5);
+    dtr_gfx_circfill(gfx, 8, 8, -3, 5);
+
+    dtr_gfx_destroy(gfx);
+    DTR_PASS();
+}
+
+/* ------------------------------------------------------------------ */
+/*  Fill pattern with all patterns active                               */
+/* ------------------------------------------------------------------ */
+
+static void test_gfx_fill_pattern_all(void)
+{
+    dtr_graphics_t *gfx = dtr_gfx_create(TW, TH);
+
+    /* Solid fill pattern (all bits set) — all pixels drawn */
+    dtr_gfx_fillp(gfx, 0xFFFF);
+    dtr_gfx_cls(gfx, 0);
+    dtr_gfx_rectfill(gfx, 0, 0, 3, 3, 5);
+    DTR_ASSERT_EQ_INT(dtr_gfx_pget(gfx, 0, 0), 5);
+    DTR_ASSERT_EQ_INT(dtr_gfx_pget(gfx, 3, 3), 5);
+
+    /* Checkerboard pattern — alternating pixels drawn */
+    dtr_gfx_fillp(gfx, 0x5555);
+    dtr_gfx_cls(gfx, 0);
+    dtr_gfx_rectfill(gfx, 0, 0, 3, 3, 7);
+    /* bit 0 is set → (0,0) drawn */
+    DTR_ASSERT_EQ_INT(dtr_gfx_pget(gfx, 0, 0), 7);
+    /* bit 1 is not set → (1,0) not drawn */
+    DTR_ASSERT_EQ_INT(dtr_gfx_pget(gfx, 1, 0), 0);
+
+    /* Reset to solid */
+    dtr_gfx_fillp(gfx, 0);
+
+    dtr_gfx_destroy(gfx);
+    DTR_PASS();
+}
+
+/* ------------------------------------------------------------------ */
 /*  Triangle outline                                                   */
 /* ------------------------------------------------------------------ */
 
@@ -1133,6 +1302,129 @@ static void test_gfx_spr_flip(void)
     DTR_ASSERT_EQ_INT(dtr_gfx_pget(gfx, 0, 0), 0);
 
     gfx->sheet.pixels = NULL;
+    dtr_gfx_destroy(gfx);
+    DTR_PASS();
+}
+
+/* Verify that flip_x with a wide tile (16px) produces the same result
+ * via the prv_blit_span_flip fast path as the scalar fallback.  Uses a
+ * gradient pattern so every column is distinguishable. */
+static void test_gfx_spr_flip_x_wide(void)
+{
+    dtr_graphics_t *gfx = dtr_gfx_create(32, 16);
+    uint8_t         sheet_data[16 * 8];
+
+    memset(sheet_data, 0, sizeof(sheet_data));
+    /* Fill first row with a gradient: col 0→1, 1→2, ... 15→16 */
+    for (int c = 0; c < 16; ++c) {
+        sheet_data[c] = (uint8_t)(c + 1);
+    }
+
+    gfx->sheet.pixels = sheet_data;
+    gfx->sheet.width  = 16;
+    gfx->sheet.height = 8;
+    gfx->sheet.tile_w = 16;
+    gfx->sheet.tile_h = 8;
+    gfx->sheet.cols   = 1;
+    gfx->sheet.rows   = 1;
+    gfx->sheet.count  = 1;
+
+    /* Draw unflipped at row 0 */
+    dtr_gfx_cls(gfx, 0);
+    dtr_gfx_spr(gfx, 0, 0, 0, 1, 1, false, false);
+
+    /* Draw flipped at row 8 */
+    dtr_gfx_spr(gfx, 0, 0, 8, 1, 1, true, false);
+
+    /* Verify every column is mirrored */
+    for (int c = 0; c < 16; ++c) {
+        uint8_t normal  = dtr_gfx_pget(gfx, c, 0);
+        uint8_t flipped = dtr_gfx_pget(gfx, 15 - c, 8);
+        DTR_ASSERT_EQ_INT(normal, flipped);
+    }
+
+    /* Verify first pixel of each row specifically */
+    DTR_ASSERT_EQ_INT(dtr_gfx_pget(gfx, 0, 0), 1);
+    DTR_ASSERT_EQ_INT(dtr_gfx_pget(gfx, 15, 8), 1);
+    DTR_ASSERT_EQ_INT(dtr_gfx_pget(gfx, 0, 8), 16);
+
+    gfx->sheet.pixels = NULL;
+    dtr_gfx_destroy(gfx);
+    DTR_PASS();
+}
+
+/* ------------------------------------------------------------------ */
+/*  spr_batch                                                          */
+/* ------------------------------------------------------------------ */
+
+/* Verify that spr_batch produces the same output as individual spr calls */
+static void test_gfx_spr_batch_matches_individual(void)
+{
+    dtr_graphics_t *gfx = dtr_gfx_create(32, 16);
+    uint8_t         sheet_data[8 * 8];
+    uint8_t         expected[32 * 16];
+    int32_t         batch_data[3 * 5]; /* 3 sprites × 5 ints each */
+
+    /* Sheet: fill with colour 5 */
+    memset(sheet_data, 5, sizeof(sheet_data));
+    sheet_data[0] = 3; /* top-left pixel distinct */
+
+    gfx->sheet.pixels = sheet_data;
+    gfx->sheet.width  = 8;
+    gfx->sheet.height = 8;
+    gfx->sheet.tile_w = 8;
+    gfx->sheet.tile_h = 8;
+    gfx->sheet.cols   = 1;
+    gfx->sheet.rows   = 1;
+    gfx->sheet.count  = 1;
+
+    /* Draw 3 sprites individually and save the framebuffer */
+    dtr_gfx_cls(gfx, 0);
+    dtr_gfx_spr(gfx, 0, 0, 0, 1, 1, false, false);
+    dtr_gfx_spr(gfx, 0, 10, 0, 1, 1, true, false);
+    dtr_gfx_spr(gfx, 0, 20, 5, 1, 1, false, true);
+    memcpy(expected, gfx->framebuffer, sizeof(expected));
+
+    /* Draw the same 3 sprites via batch and compare */
+    dtr_gfx_cls(gfx, 0);
+    batch_data[0]  = 0;
+    batch_data[1]  = 0;
+    batch_data[2]  = 0;
+    batch_data[3]  = 0;
+    batch_data[4]  = 0; /* no flip */
+    batch_data[5]  = 0;
+    batch_data[6]  = 10;
+    batch_data[7]  = 0;
+    batch_data[8]  = 1;
+    batch_data[9]  = 0; /* flip_x */
+    batch_data[10] = 0;
+    batch_data[11] = 20;
+    batch_data[12] = 5;
+    batch_data[13] = 0;
+    batch_data[14] = 1; /* flip_y */
+    dtr_gfx_spr_batch(gfx, batch_data, 3);
+
+    for (int i = 0; i < 32 * 16; ++i) {
+        DTR_ASSERT_EQ_INT(gfx->framebuffer[i], expected[i]);
+    }
+
+    gfx->sheet.pixels = NULL;
+    dtr_gfx_destroy(gfx);
+    DTR_PASS();
+}
+
+/* Verify batch with NULL/zero input doesn't crash */
+static void test_gfx_spr_batch_empty(void)
+{
+    dtr_graphics_t *gfx = dtr_gfx_create(TW, TH);
+
+    dtr_gfx_cls(gfx, 0);
+    dtr_gfx_spr_batch(gfx, NULL, 0);
+    dtr_gfx_spr_batch(gfx, NULL, 5);
+
+    /* Framebuffer should be untouched */
+    DTR_ASSERT_EQ_INT(dtr_gfx_pget(gfx, 0, 0), 0);
+
     dtr_gfx_destroy(gfx);
     DTR_PASS();
 }
@@ -2878,6 +3170,14 @@ int main(int argc, char *argv[])
     DTR_RUN_TEST(test_gfx_dl_begin_end);
     DTR_RUN_TEST(test_gfx_dl_queue_and_sort);
     DTR_RUN_TEST(test_gfx_dl_overflow);
+    DTR_RUN_TEST(test_gfx_dl_overflow_sspr);
+    DTR_RUN_TEST(test_gfx_dl_overflow_spr_rot);
+    DTR_RUN_TEST(test_gfx_dl_overflow_spr_affine);
+    DTR_RUN_TEST(test_gfx_flip_odd_size);
+    DTR_RUN_TEST(test_gfx_polyfill_single_point);
+    DTR_RUN_TEST(test_gfx_polyfill_two_points);
+    DTR_RUN_TEST(test_gfx_circ_negative_radius);
+    DTR_RUN_TEST(test_gfx_fill_pattern_all);
     DTR_RUN_TEST(test_gfx_tri_outline);
     DTR_RUN_TEST(test_gfx_trifill);
     DTR_RUN_TEST(test_gfx_trifill_clipped);
@@ -2888,6 +3188,9 @@ int main(int argc, char *argv[])
     DTR_RUN_TEST(test_gfx_spr_null_sheet);
     DTR_RUN_TEST(test_gfx_spr_out_of_range);
     DTR_RUN_TEST(test_gfx_spr_flip);
+    DTR_RUN_TEST(test_gfx_spr_flip_x_wide);
+    DTR_RUN_TEST(test_gfx_spr_batch_matches_individual);
+    DTR_RUN_TEST(test_gfx_spr_batch_empty);
     DTR_RUN_TEST(test_gfx_sspr_basic);
     DTR_RUN_TEST(test_gfx_sspr_null_sheet);
     DTR_RUN_TEST(test_gfx_spr_rot_basic);

@@ -102,6 +102,7 @@ interface DithrGfx {
 
     // Sprites
     spr(idx?: number, x?: number, y?: number, w?: number, h?: number, flip_x?: boolean, flip_y?: boolean): void;
+    sprBatch(data: Int32Array, count?: number): void;
     sspr(sx?: number, sy?: number, sw?: number, sh?: number, dx?: number, dy?: number, dw?: number, dh?: number): void;
     sprRot(idx?: number, x?: number, y?: number, angle?: number, cx?: number, cy?: number): void;
     sprAffine(idx?: number, x?: number, y?: number, origin_x?: number, origin_y?: number, rot_x?: number, rot_y?: number): void;

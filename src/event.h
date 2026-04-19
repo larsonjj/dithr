@@ -14,7 +14,7 @@ extern "C" {
 #endif /* __cplusplus */
 
 #define DTR_EVENT_MAX_HANDLERS 128
-#define DTR_EVENT_MAX_QUEUED   64
+#define DTR_EVENT_MAX_QUEUED   256
 #define DTR_EVENT_NAME_LEN     48
 #define DTR_EVENT_HASH_BUCKETS 32
 
