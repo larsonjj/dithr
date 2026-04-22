@@ -163,6 +163,7 @@ static bool prv_parse_cli(int argc, char **argv, cli_opts_t *opts)
  * browser renders as console.warn/error.  This callback maps SDL log
  * priorities to console.log, console.warn, and console.error instead.
  */
+/* LCOV_EXCL_START */
 static void prv_emscripten_log_output(void           *userdata,
                                       int             category,
                                       SDL_LogPriority priority,
@@ -185,8 +186,10 @@ static void prv_emscripten_log_output(void           *userdata,
             break;
     }
 }
+/* LCOV_EXCL_STOP */
 #endif
 
+/* LCOV_EXCL_START */
 SDL_AppResult SDL_AppInit(void **appstate, int argc, char **argv)
 {
     app_state_t *app;
@@ -274,11 +277,13 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char **argv)
     *appstate = app;
     return SDL_APP_CONTINUE;
 }
+/* LCOV_EXCL_STOP */
 
 /* ------------------------------------------------------------------ */
 /*  SDL_AppEvent                                                       */
 /* ------------------------------------------------------------------ */
 
+/* LCOV_EXCL_START */
 SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event)
 {
     app_state_t *app = (app_state_t *)appstate;
@@ -295,11 +300,13 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event)
 
     return SDL_APP_CONTINUE;
 }
+/* LCOV_EXCL_STOP */
 
 /* ------------------------------------------------------------------ */
 /*  SDL_AppIterate                                                     */
 /* ------------------------------------------------------------------ */
 
+/* LCOV_EXCL_START */
 SDL_AppResult SDL_AppIterate(void *appstate)
 {
     app_state_t *app = (app_state_t *)appstate;
@@ -354,11 +361,13 @@ SDL_AppResult SDL_AppIterate(void *appstate)
 
     return SDL_APP_CONTINUE;
 }
+/* LCOV_EXCL_STOP */
 
 /* ------------------------------------------------------------------ */
 /*  SDL_AppQuit                                                        */
 /* ------------------------------------------------------------------ */
 
+/* LCOV_EXCL_START */
 void SDL_AppQuit(void *appstate, SDL_AppResult result)
 {
     app_state_t *app = (app_state_t *)appstate;
@@ -370,3 +379,4 @@ void SDL_AppQuit(void *appstate, SDL_AppResult result)
         SDL_free(app);
     }
 }
+/* LCOV_EXCL_STOP */

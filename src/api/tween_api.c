@@ -425,10 +425,15 @@ js_tween_parallel(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst 
         return result;
     }
 
-    count = prv_parse_steps(ctx, argv[0], from, too, dur, ease, CONSOLE_MAX_SEQ_STEPS);
-    si    = dtr_tween_par_add(TWN(ctx), from, too, dur, ease, count);
-
+    count  = prv_parse_steps(ctx, argv[0], from, too, dur, ease, CONSOLE_MAX_SEQ_STEPS);
     result = JS_NewObject(ctx);
+    if (count <= 0) {
+        JS_SetPropertyStr(ctx, result, "id", JS_NewInt32(ctx, -1));
+        JS_SetPropertyStr(ctx, result, "done", JS_UNDEFINED);
+        return result;
+    }
+
+    si = dtr_tween_par_add(TWN(ctx), from, too, dur, ease, count);
     if (si < 0) {
         JS_SetPropertyStr(ctx, result, "id", JS_NewInt32(ctx, -1));
         JS_SetPropertyStr(ctx, result, "done", JS_UNDEFINED);

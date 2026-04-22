@@ -1064,6 +1064,141 @@ static void test_tween_ease_endpoints(void)
     DTR_PASS();
 }
 
+static void test_tween_sequence_basic(void)
+{
+    test_ctx_t *tc = prv_setup();
+
+    prv_register(tc, dtr_tween_api_register);
+    /* valid steps → done is a Promise (not undefined) */
+    DTR_ASSERT(
+        prv_eval_bool(tc,
+                      "(function(){"
+                      "  var h = tween.sequence([{from:0,to:100,dur:1},{from:100,to:200,dur:1}]);"
+                      "  var ok = h.done !== undefined;"
+                      "  tween.seqCancel(h);"
+                      "  return ok;"
+                      "})()"));
+    prv_teardown(tc);
+    DTR_PASS();
+}
+
+static void test_tween_sequence_invalid(void)
+{
+    test_ctx_t *tc = prv_setup();
+
+    prv_register(tc, dtr_tween_api_register);
+    /* empty array → failure, done is undefined */
+    DTR_ASSERT(prv_eval_bool(tc,
+                             "(function(){"
+                             "  var h = tween.sequence([]);"
+                             "  return h.done === undefined;"
+                             "})()"));
+    prv_teardown(tc);
+    DTR_PASS();
+}
+
+static void test_tween_parallel_basic(void)
+{
+    test_ctx_t *tc = prv_setup();
+
+    prv_register(tc, dtr_tween_api_register);
+    /* valid steps → done is a Promise (not undefined) */
+    DTR_ASSERT(
+        prv_eval_bool(tc,
+                      "(function(){"
+                      "  var h = tween.parallel([{from:0,to:100,dur:1},{from:0,to:50,dur:0.5}]);"
+                      "  var ok = h.done !== undefined;"
+                      "  tween.seqCancel(h);"
+                      "  return ok;"
+                      "})()"));
+    prv_teardown(tc);
+    DTR_PASS();
+}
+
+static void test_tween_parallel_empty(void)
+{
+    test_ctx_t *tc = prv_setup();
+
+    prv_register(tc, dtr_tween_api_register);
+    /* empty array → count<=0 guard fires, done is undefined */
+    DTR_ASSERT(prv_eval_bool(tc,
+                             "(function(){"
+                             "  var h = tween.parallel([]);"
+                             "  return h.done === undefined;"
+                             "})()"));
+    prv_teardown(tc);
+    DTR_PASS();
+}
+
+static void test_tween_seq_val(void)
+{
+    test_ctx_t *tc = prv_setup();
+
+    prv_register(tc, dtr_tween_api_register);
+    /* seqVal on a live sequence returns a number */
+    DTR_ASSERT(prv_eval_bool(tc,
+                             "(function(){"
+                             "  var h = tween.sequence([{from:0,to:100,dur:1}]);"
+                             "  var ok = typeof tween.seqVal(h) === 'number';"
+                             "  tween.seqCancel(h);"
+                             "  return ok;"
+                             "})()"));
+    prv_teardown(tc);
+    DTR_PASS();
+}
+
+static void test_tween_seq_done_cancel(void)
+{
+    test_ctx_t *tc = prv_setup();
+
+    prv_register(tc, dtr_tween_api_register);
+    /* seqDone is false before cancel, true after */
+    DTR_ASSERT(prv_eval_bool(tc,
+                             "(function(){"
+                             "  var h = tween.sequence([{from:0,to:100,dur:1}]);"
+                             "  var before = tween.seqDone(h);"
+                             "  tween.seqCancel(h);"
+                             "  var after = tween.seqDone(h);"
+                             "  return !before && after;"
+                             "})()"));
+    prv_teardown(tc);
+    DTR_PASS();
+}
+
+/* ================================================================== */
+/*  Synth API tests                                                    */
+/* ================================================================== */
+
+static void test_synth_env_set_get(void)
+{
+    test_ctx_t *tc = prv_setup();
+
+    prv_register(tc, dtr_synth_api_register);
+    DTR_ASSERT(prv_eval_bool(
+        tc, "synth.set(0, [{pitch:49,waveform:1,volume:7}], 8, 0, 0, 50, 60, 128, 70)"));
+    DTR_ASSERT_EQ_INT(prv_eval_i32(tc, "synth.get(0).envAttack"), 50);
+    DTR_ASSERT_EQ_INT(prv_eval_i32(tc, "synth.get(0).envDecay"), 60);
+    DTR_ASSERT_EQ_INT(prv_eval_i32(tc, "synth.get(0).envSustain"), 128);
+    DTR_ASSERT_EQ_INT(prv_eval_i32(tc, "synth.get(0).envRelease"), 70);
+    prv_teardown(tc);
+    DTR_PASS();
+}
+
+static void test_synth_env_zero_default(void)
+{
+    test_ctx_t *tc = prv_setup();
+
+    prv_register(tc, dtr_synth_api_register);
+    /* no ADSR args → all env fields default to 0 */
+    DTR_ASSERT(prv_eval_bool(tc, "synth.set(0, [{pitch:49,waveform:1,volume:7}])"));
+    DTR_ASSERT_EQ_INT(prv_eval_i32(tc, "synth.get(0).envAttack"), 0);
+    DTR_ASSERT_EQ_INT(prv_eval_i32(tc, "synth.get(0).envDecay"), 0);
+    DTR_ASSERT_EQ_INT(prv_eval_i32(tc, "synth.get(0).envSustain"), 0);
+    DTR_ASSERT_EQ_INT(prv_eval_i32(tc, "synth.get(0).envRelease"), 0);
+    prv_teardown(tc);
+    DTR_PASS();
+}
+
 /* ================================================================== */
 /*  Sys API tests                                                      */
 /* ================================================================== */
@@ -1331,9 +1466,19 @@ int main(void)
     DTR_RUN_TEST(test_touch_position);
     DTR_RUN_TEST(test_touch_released);
 
-    /* Tween API — 2 tests */
+    /* Tween API — 8 tests */
     DTR_RUN_TEST(test_tween_ease_linear);
     DTR_RUN_TEST(test_tween_ease_endpoints);
+    DTR_RUN_TEST(test_tween_sequence_basic);
+    DTR_RUN_TEST(test_tween_sequence_invalid);
+    DTR_RUN_TEST(test_tween_parallel_basic);
+    DTR_RUN_TEST(test_tween_parallel_empty);
+    DTR_RUN_TEST(test_tween_seq_val);
+    DTR_RUN_TEST(test_tween_seq_done_cancel);
+
+    /* Synth API — 2 tests */
+    DTR_RUN_TEST(test_synth_env_set_get);
+    DTR_RUN_TEST(test_synth_env_zero_default);
 
     /* Sys API — 7 tests */
     DTR_RUN_TEST(test_sys_dimensions);
