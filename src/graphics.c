@@ -9,6 +9,7 @@
 #include "simd.h"
 
 #include <math.h>
+#include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -1544,27 +1545,29 @@ void dtr_gfx_spr_batch(dtr_graphics_t *gfx, const int32_t *data, int32_t count)
     prv_get_clip_bounds(gfx, &clip_l, &clip_t, &clip_r, &clip_b);
 
     for (i = 0; i < count; ++i) {
-        int32_t idx;
-        int32_t x;
-        int32_t y;
-        bool    flip_x;
-        bool    flip_y;
-        int32_t sx0;
-        int32_t sy0;
-        int32_t dst_x0;
-        int32_t dst_y0;
-        int32_t dst_x1;
-        int32_t dst_y1;
-        int32_t vis_x0;
-        int32_t vis_y0;
-        int32_t vis_x1;
-        int32_t vis_y1;
+        int32_t   idx;
+        int32_t   x;
+        int32_t   y;
+        bool      flip_x;
+        bool      flip_y;
+        int32_t   sx0;
+        int32_t   sy0;
+        int32_t   dst_x0;
+        int32_t   dst_y0;
+        int32_t   dst_x1;
+        int32_t   dst_y1;
+        int32_t   vis_x0;
+        int32_t   vis_y0;
+        int32_t   vis_x1;
+        int32_t   vis_y1;
+        ptrdiff_t base;
 
-        idx    = data[i * 5];
-        x      = data[i * 5 + 1];
-        y      = data[i * 5 + 2];
-        flip_x = data[i * 5 + 3] != 0;
-        flip_y = data[i * 5 + 4] != 0;
+        base   = (ptrdiff_t)i * 5;
+        idx    = data[base + 0];
+        x      = data[base + 1];
+        y      = data[base + 2];
+        flip_x = data[base + 3] != 0;
+        flip_y = data[base + 4] != 0;
 
         if (idx < 0 || idx >= sht->count) {
             continue;

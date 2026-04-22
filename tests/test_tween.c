@@ -232,6 +232,137 @@ static void test_tween_done_invalid(void)
 }
 
 /* ------------------------------------------------------------------ */
+/*  Sequence / Parallel                                                */
+/* ------------------------------------------------------------------ */
+
+static void test_seq_basic(void)
+{
+    dtr_tween_t twn;
+    double      from[] = {0.0, 100.0};
+    double      too[]  = {100.0, 200.0};
+    double      dur[]  = {1.0, 1.0};
+    dtr_ease_t  ease[] = {DTR_EASE_LINEAR, DTR_EASE_LINEAR};
+    int32_t     si;
+    double      val;
+
+    dtr_tween_init(&twn);
+    si = dtr_tween_seq_add(&twn, from, too, dur, ease, 2);
+    DTR_ASSERT(si >= 0);
+
+    /* At t=0, first step is active, val=0 */
+    val = dtr_tween_seq_val(&twn, si);
+    DTR_ASSERT_NEAR(val, 0.0, EPS);
+    DTR_ASSERT(!dtr_tween_seq_done(&twn, si));
+
+    /* At t=0.5, first step at 50% → val=50 */
+    dtr_tween_tick(&twn, 0.5);
+    val = dtr_tween_seq_val(&twn, si);
+    DTR_ASSERT_NEAR(val, 50.0, 1.0);
+
+    /* At t=1.0, first step done, second starts at 100 */
+    dtr_tween_tick(&twn, 0.5);
+    DTR_ASSERT(!dtr_tween_seq_done(&twn, si));
+
+    /* At t=1.5, second step at 50% → val=150 */
+    dtr_tween_tick(&twn, 0.5);
+    val = dtr_tween_seq_val(&twn, si);
+    DTR_ASSERT_NEAR(val, 150.0, 1.0);
+
+    /* At t=2.0, all done */
+    dtr_tween_tick(&twn, 0.5);
+    DTR_ASSERT(dtr_tween_seq_done(&twn, si));
+    val = dtr_tween_seq_val(&twn, si);
+    DTR_ASSERT_NEAR(val, 200.0, EPS);
+
+    DTR_PASS();
+}
+
+static void test_par_basic(void)
+{
+    dtr_tween_t twn;
+    double      from[] = {0.0, 0.0};
+    double      too[]  = {100.0, 50.0};
+    double      dur[]  = {1.0, 0.5};
+    dtr_ease_t  ease[] = {DTR_EASE_LINEAR, DTR_EASE_LINEAR};
+    int32_t     si;
+
+    dtr_tween_init(&twn);
+    si = dtr_tween_par_add(&twn, from, too, dur, ease, 2);
+    DTR_ASSERT(si >= 0);
+
+    /* Both start simultaneously */
+    DTR_ASSERT(!dtr_tween_seq_done(&twn, si));
+
+    /* At t=0.5, shorter is done but longer isn't */
+    dtr_tween_tick(&twn, 0.5);
+    DTR_ASSERT(!dtr_tween_seq_done(&twn, si));
+
+    /* At t=1.0, both done */
+    dtr_tween_tick(&twn, 0.5);
+    DTR_ASSERT(dtr_tween_seq_done(&twn, si));
+
+    DTR_PASS();
+}
+
+static void test_seq_cancel(void)
+{
+    dtr_tween_t twn;
+    double      from[] = {0.0, 10.0, 20.0};
+    double      too[]  = {10.0, 20.0, 30.0};
+    double      dur[]  = {1.0, 1.0, 1.0};
+    dtr_ease_t  ease[] = {DTR_EASE_LINEAR, DTR_EASE_LINEAR, DTR_EASE_LINEAR};
+    int32_t     si;
+
+    dtr_tween_init(&twn);
+    si = dtr_tween_seq_add(&twn, from, too, dur, ease, 3);
+    DTR_ASSERT(si >= 0);
+
+    dtr_tween_seq_cancel(&twn, si);
+    DTR_ASSERT(dtr_tween_seq_done(&twn, si));
+
+    DTR_PASS();
+}
+
+static void test_seq_invalid(void)
+{
+    dtr_tween_t twn;
+
+    dtr_tween_init(&twn);
+
+    /* Invalid seq index returns safe defaults */
+    DTR_ASSERT(dtr_tween_seq_done(&twn, -1));
+    DTR_ASSERT(dtr_tween_seq_done(&twn, 999));
+    DTR_ASSERT_NEAR(dtr_tween_seq_val(&twn, -1), 0.0, EPS);
+
+    /* Zero count fails */
+    DTR_ASSERT_EQ_INT(dtr_tween_seq_add(&twn, NULL, NULL, NULL, NULL, 0), -1);
+
+    DTR_PASS();
+}
+
+static void test_seq_pool_limit(void)
+{
+    dtr_tween_t twn;
+    double      from[] = {0.0};
+    double      too[]  = {1.0};
+    double      dur[]  = {1.0};
+    dtr_ease_t  ease[] = {DTR_EASE_LINEAR};
+    int32_t     si;
+    int32_t     cnt;
+
+    dtr_tween_init(&twn);
+    for (cnt = 0; cnt < CONSOLE_MAX_TWEEN_SEQS; ++cnt) {
+        si = dtr_tween_seq_add(&twn, from, too, dur, ease, 1);
+        DTR_ASSERT(si >= 0);
+    }
+    /* Pool should be full */
+    si = dtr_tween_seq_add(&twn, from, too, dur, ease, 1);
+    DTR_ASSERT_EQ_INT(si, -1);
+
+    DTR_PASS();
+}
+
+/* ------------------------------------------------------------------ */
 /*  Main                                                               */
 /* ------------------------------------------------------------------ */
 
@@ -254,6 +385,13 @@ int main(void)
     DTR_RUN_TEST(test_tween_eased);
     DTR_RUN_TEST(test_tween_val_invalid);
     DTR_RUN_TEST(test_tween_done_invalid);
+
+    /* Sequences / Parallels */
+    DTR_RUN_TEST(test_seq_basic);
+    DTR_RUN_TEST(test_par_basic);
+    DTR_RUN_TEST(test_seq_cancel);
+    DTR_RUN_TEST(test_seq_invalid);
+    DTR_RUN_TEST(test_seq_pool_limit);
 
     DTR_TEST_END();
 }

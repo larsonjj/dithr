@@ -436,6 +436,43 @@ int16_t *dtr_synth_render(const dtr_synth_sfx_t *sfx, size_t *out_len)
                     sample_vol = smooth_vol_off;
                 }
 
+                /* ADSR envelope — applied per-note when at least one
+                 * timing field is non-zero (backward compatible). */
+                if ((sfx->env_attack | sfx->env_decay | sfx->env_release) != 0) {
+                    int32_t atk;
+                    int32_t dec;
+                    int32_t rel;
+                    float   sus;
+                    float   env;
+
+                    atk = (int32_t)sfx->env_attack * spn / 255;
+                    dec = (int32_t)sfx->env_decay * spn / 255;
+                    rel = (int32_t)sfx->env_release * spn / 255;
+                    sus = (float)sfx->env_sustain / 255.0f;
+
+                    if (sid < atk) {
+                        /* Attack: ramp 0 → 1 */
+                        env = (float)sid / (float)atk;
+                    } else if (sid < atk + dec) {
+                        /* Decay: ramp 1 → sustain level */
+                        float df;
+
+                        df  = (float)(sid - atk) / (float)dec;
+                        env = 1.0f - df * (1.0f - sus);
+                    } else if (rel > 0 && sid >= spn - rel) {
+                        /* Release: ramp sustain → 0 */
+                        float rf;
+
+                        rf  = (float)(sid - (spn - rel)) / (float)rel;
+                        env = sus * (1.0f - rf);
+                    } else {
+                        /* Sustain: hold at sustain level */
+                        env = sus;
+                    }
+
+                    sample_vol *= env;
+                }
+
                 /* Advance phase */
                 freq = cur_freq;
                 phase += freq / (float)DTR_SYNTH_SAMPLE_RATE;

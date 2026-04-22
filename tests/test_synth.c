@@ -986,6 +986,215 @@ static void test_render_adsr_envelope(void)
 }
 
 /* ------------------------------------------------------------------ */
+/*  ADSR envelope fields                                               */
+/* ------------------------------------------------------------------ */
+
+static void test_env_attack_ramp(void)
+{
+    dtr_synth_sfx_t sfx = {0};
+    size_t          len;
+    int16_t        *buf;
+    int32_t         spn;
+    int32_t         max_early;
+    int32_t         max_late;
+
+    /* Attack = 128 (half-note ramp), sustain = 255 (full) */
+    sfx.speed             = 8;
+    sfx.notes[0].pitch    = 49;
+    sfx.notes[0].waveform = DTR_WAVE_SQUARE;
+    sfx.notes[0].volume   = 7;
+    sfx.env_attack        = 128;
+    sfx.env_sustain       = 255;
+
+    buf = dtr_synth_render(&sfx, &len);
+    DTR_ASSERT_NOT_NULL(buf);
+
+    spn = dtr_synth_samples_per_note(sfx.speed);
+
+    /* First 10% should be quiet (ramping up) */
+    max_early = 0;
+    for (int32_t i = 0; i < spn / 10; ++i) {
+        int32_t a = buf[i] < 0 ? -buf[i] : buf[i];
+        if (a > max_early)
+            max_early = a;
+    }
+    /* Last 10% should be at full sustain volume */
+    max_late = 0;
+    for (int32_t i = spn * 9 / 10; i < spn; ++i) {
+        int32_t a = buf[i] < 0 ? -buf[i] : buf[i];
+        if (a > max_late)
+            max_late = a;
+    }
+    DTR_ASSERT(max_late > max_early * 2);
+
+    free(buf);
+    DTR_PASS();
+}
+
+static void test_env_decay_and_sustain(void)
+{
+    dtr_synth_sfx_t sfx = {0};
+    size_t          len;
+    int16_t        *buf;
+    int32_t         spn;
+    int32_t         max_peak;
+    int32_t         max_sustain;
+
+    /* Short attack, decay from 1.0 → sustain=128 (~50%) */
+    sfx.speed             = 8;
+    sfx.notes[0].pitch    = 49;
+    sfx.notes[0].waveform = DTR_WAVE_SQUARE;
+    sfx.notes[0].volume   = 7;
+    sfx.env_attack        = 10;
+    sfx.env_decay         = 100;
+    sfx.env_sustain       = 128;
+
+    buf = dtr_synth_render(&sfx, &len);
+    DTR_ASSERT_NOT_NULL(buf);
+
+    spn = dtr_synth_samples_per_note(sfx.speed);
+
+    /* Peak region: right after attack (~5-15% into note) */
+    max_peak = 0;
+    {
+        int32_t atk_end = 10 * spn / 255;
+        int32_t region  = atk_end + spn / 20;
+
+        for (int32_t i = atk_end; i < region && i < spn; ++i) {
+            int32_t a = buf[i] < 0 ? -buf[i] : buf[i];
+            if (a > max_peak)
+                max_peak = a;
+        }
+    }
+
+    /* Sustain region: 70-80% into note */
+    max_sustain = 0;
+    for (int32_t i = spn * 7 / 10; i < spn * 8 / 10; ++i) {
+        int32_t a = buf[i] < 0 ? -buf[i] : buf[i];
+        if (a > max_sustain)
+            max_sustain = a;
+    }
+
+    /* Peak should be louder than sustain */
+    DTR_ASSERT(max_peak > max_sustain);
+    /* Sustain should still be audible */
+    DTR_ASSERT(max_sustain > 1000);
+
+    free(buf);
+    DTR_PASS();
+}
+
+static void test_env_release_ramp(void)
+{
+    dtr_synth_sfx_t sfx = {0};
+    size_t          len;
+    int16_t        *buf;
+    int32_t         spn;
+    int32_t         max_mid;
+    int32_t         max_end;
+
+    /* Full sustain with release = 128 (half-note release) */
+    sfx.speed             = 8;
+    sfx.notes[0].pitch    = 49;
+    sfx.notes[0].waveform = DTR_WAVE_SQUARE;
+    sfx.notes[0].volume   = 7;
+    sfx.env_sustain       = 255;
+    sfx.env_release       = 128;
+
+    buf = dtr_synth_render(&sfx, &len);
+    DTR_ASSERT_NOT_NULL(buf);
+
+    spn = dtr_synth_samples_per_note(sfx.speed);
+
+    /* Mid note should be at full volume */
+    max_mid = 0;
+    for (int32_t i = spn / 4; i < spn * 3 / 8; ++i) {
+        int32_t a = buf[i] < 0 ? -buf[i] : buf[i];
+        if (a > max_mid)
+            max_mid = a;
+    }
+    /* Last 5% of note should be quiet (release ramp down) */
+    max_end = 0;
+    for (int32_t i = spn * 95 / 100; i < spn; ++i) {
+        int32_t a = buf[i] < 0 ? -buf[i] : buf[i];
+        if (a > max_end)
+            max_end = a;
+    }
+    DTR_ASSERT(max_mid > max_end * 3);
+
+    free(buf);
+    DTR_PASS();
+}
+
+static void test_env_zero_fields_no_effect(void)
+{
+    dtr_synth_sfx_t sfx_plain = {0};
+    dtr_synth_sfx_t sfx_env   = {0};
+    size_t          len_plain;
+    size_t          len_env;
+    int16_t        *buf_plain;
+    int16_t        *buf_env;
+
+    /* Both have identical note data, env fields all zero */
+    sfx_plain.speed             = 8;
+    sfx_plain.notes[0].pitch    = 49;
+    sfx_plain.notes[0].waveform = DTR_WAVE_SQUARE;
+    sfx_plain.notes[0].volume   = 7;
+
+    sfx_env = sfx_plain; /* copies all fields including zero env */
+
+    buf_plain = dtr_synth_render(&sfx_plain, &len_plain);
+    buf_env   = dtr_synth_render(&sfx_env, &len_env);
+    DTR_ASSERT_NOT_NULL(buf_plain);
+    DTR_ASSERT_NOT_NULL(buf_env);
+    DTR_ASSERT(len_plain == len_env);
+
+    /* Outputs should be identical when no envelope is active */
+    for (size_t i = 0; i < len_plain; ++i) {
+        DTR_ASSERT_EQ_INT(buf_plain[i], buf_env[i]);
+    }
+
+    free(buf_plain);
+    free(buf_env);
+    DTR_PASS();
+}
+
+static void test_env_full_adsr(void)
+{
+    dtr_synth_sfx_t sfx = {0};
+    size_t          len;
+    int16_t        *buf;
+
+    /* Full ADSR: attack=50, decay=50, sustain=128, release=50 */
+    sfx.speed             = 8;
+    sfx.notes[0].pitch    = 49;
+    sfx.notes[0].waveform = DTR_WAVE_TRIANGLE;
+    sfx.notes[0].volume   = 7;
+    sfx.env_attack        = 50;
+    sfx.env_decay         = 50;
+    sfx.env_sustain       = 128;
+    sfx.env_release       = 50;
+
+    buf = dtr_synth_render(&sfx, &len);
+    DTR_ASSERT_NOT_NULL(buf);
+    DTR_ASSERT(len > 0);
+
+    /* Just verify it doesn't crash and produces some audio */
+    {
+        bool has_nonzero = false;
+
+        for (size_t i = 0; i < len && !has_nonzero; ++i) {
+            if (buf[i] != 0)
+                has_nonzero = true;
+        }
+        DTR_ASSERT(has_nonzero);
+    }
+
+    free(buf);
+    DTR_PASS();
+}
+
+/* ------------------------------------------------------------------ */
 /*  Main                                                               */
 /* ------------------------------------------------------------------ */
 
@@ -1059,6 +1268,13 @@ int main(void)
     /* Multi-note / envelope */
     DTR_RUN_TEST(test_render_multi_note);
     DTR_RUN_TEST(test_render_adsr_envelope);
+
+    /* ADSR envelope fields */
+    DTR_RUN_TEST(test_env_attack_ramp);
+    DTR_RUN_TEST(test_env_decay_and_sustain);
+    DTR_RUN_TEST(test_env_release_ramp);
+    DTR_RUN_TEST(test_env_zero_fields_no_effect);
+    DTR_RUN_TEST(test_env_full_adsr);
 
     DTR_TEST_END();
 }

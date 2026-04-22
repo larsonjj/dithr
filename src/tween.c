@@ -135,6 +135,10 @@ void dtr_tween_init(dtr_tween_t *twn)
         twn->pool[idx].resolved = false;
     }
     twn->count = 0;
+    for (idx = 0; idx < CONSOLE_MAX_TWEEN_SEQS; ++idx) {
+        twn->seqs[idx].active = false;
+    }
+    twn->seq_count = 0;
 }
 
 int32_t dtr_tween_add(dtr_tween_t *twn,
@@ -238,4 +242,154 @@ void dtr_tween_cancel_all(dtr_tween_t *twn)
         twn->pool[idx].active = false;
     }
     twn->count = 0;
+    for (idx = 0; idx < twn->seq_count; ++idx) {
+        twn->seqs[idx].active = false;
+    }
+    twn->seq_count = 0;
+}
+
+/* ---- Sequences & parallels --------------------------------------------- */
+
+static int32_t prv_seq_alloc(dtr_tween_t *twn)
+{
+    int32_t idx;
+
+    for (idx = 0; idx < CONSOLE_MAX_TWEEN_SEQS; ++idx) {
+        if (!twn->seqs[idx].active) {
+            if (idx >= twn->seq_count) {
+                twn->seq_count = idx + 1;
+            }
+            return idx;
+        }
+    }
+    return -1;
+}
+
+int32_t dtr_tween_seq_add(dtr_tween_t      *twn,
+                          const double     *from,
+                          const double     *too,
+                          const double     *dur,
+                          const dtr_ease_t *ease,
+                          int32_t           count)
+{
+    int32_t si;
+    int32_t step;
+    double  cumulative_delay;
+
+    if (count <= 0 || count > CONSOLE_MAX_SEQ_STEPS) {
+        return -1;
+    }
+
+    si = prv_seq_alloc(twn);
+    if (si < 0) {
+        return -1;
+    }
+
+    cumulative_delay = 0.0;
+    for (step = 0; step < count; ++step) {
+        int32_t ti;
+
+        ti = dtr_tween_add(twn, from[step], too[step], dur[step], ease[step], cumulative_delay);
+        if (ti < 0) {
+            /* Roll back already-added tweens */
+            for (int32_t r = 0; r < step; ++r) {
+                dtr_tween_cancel(twn, twn->seqs[si].steps[r]);
+            }
+            return -1;
+        }
+        twn->seqs[si].steps[step] = ti;
+        cumulative_delay += dur[step];
+    }
+    twn->seqs[si].step_count = count;
+    twn->seqs[si].active     = true;
+    twn->seqs[si].parallel   = false;
+    return si;
+}
+
+int32_t dtr_tween_par_add(dtr_tween_t      *twn,
+                          const double     *from,
+                          const double     *too,
+                          const double     *dur,
+                          const dtr_ease_t *ease,
+                          int32_t           count)
+{
+    int32_t si;
+    int32_t step;
+
+    if (count <= 0 || count > CONSOLE_MAX_SEQ_STEPS) {
+        return -1;
+    }
+
+    si = prv_seq_alloc(twn);
+    if (si < 0) {
+        return -1;
+    }
+
+    for (step = 0; step < count; ++step) {
+        int32_t ti;
+
+        ti = dtr_tween_add(twn, from[step], too[step], dur[step], ease[step], 0.0);
+        if (ti < 0) {
+            for (int32_t r = 0; r < step; ++r) {
+                dtr_tween_cancel(twn, twn->seqs[si].steps[r]);
+            }
+            return -1;
+        }
+        twn->seqs[si].steps[step] = ti;
+    }
+    twn->seqs[si].step_count = count;
+    twn->seqs[si].active     = true;
+    twn->seqs[si].parallel   = true;
+    return si;
+}
+
+double dtr_tween_seq_val(dtr_tween_t *twn, int32_t seq_idx)
+{
+    int32_t step;
+
+    if (seq_idx < 0 || seq_idx >= CONSOLE_MAX_TWEEN_SEQS || !twn->seqs[seq_idx].active) {
+        return 0.0;
+    }
+
+    /* Return value of the first non-done step, or last step if all done */
+    for (step = 0; step < twn->seqs[seq_idx].step_count; ++step) {
+        int32_t ti;
+
+        ti = twn->seqs[seq_idx].steps[step];
+        if (!dtr_tween_done(twn, ti)) {
+            return dtr_tween_val(twn, ti);
+        }
+    }
+    step = twn->seqs[seq_idx].step_count - 1;
+    return dtr_tween_val(twn, twn->seqs[seq_idx].steps[step]);
+}
+
+bool dtr_tween_seq_done(dtr_tween_t *twn, int32_t seq_idx)
+{
+    int32_t step;
+
+    if (seq_idx < 0 || seq_idx >= CONSOLE_MAX_TWEEN_SEQS || !twn->seqs[seq_idx].active) {
+        return true;
+    }
+
+    for (step = 0; step < twn->seqs[seq_idx].step_count; ++step) {
+        if (!dtr_tween_done(twn, twn->seqs[seq_idx].steps[step])) {
+            return false;
+        }
+    }
+    return true;
+}
+
+void dtr_tween_seq_cancel(dtr_tween_t *twn, int32_t seq_idx)
+{
+    int32_t step;
+
+    if (seq_idx < 0 || seq_idx >= CONSOLE_MAX_TWEEN_SEQS || !twn->seqs[seq_idx].active) {
+        return;
+    }
+
+    for (step = 0; step < twn->seqs[seq_idx].step_count; ++step) {
+        dtr_tween_cancel(twn, twn->seqs[seq_idx].steps[step]);
+    }
+    twn->seqs[seq_idx].active = false;
 }

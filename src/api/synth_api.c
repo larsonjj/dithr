@@ -274,6 +274,39 @@ static int16_t prv_voice_sample(dtr_synth_voice_t *v)
                 break;
         }
 
+        /* ADSR envelope — applied per-note when at least one
+         * timing field is non-zero (backward compatible). */
+        if ((sfx->env_attack | sfx->env_decay | sfx->env_release) != 0) {
+            int32_t atk;
+            int32_t dec;
+            int32_t rel;
+            float   sus;
+            float   env;
+
+            atk = (int32_t)sfx->env_attack * spn / 255;
+            dec = (int32_t)sfx->env_decay * spn / 255;
+            rel = (int32_t)sfx->env_release * spn / 255;
+            sus = (float)sfx->env_sustain / 255.0f;
+
+            if (v->note_pos < atk) {
+                env = (float)v->note_pos / (float)atk;
+            } else if (v->note_pos < atk + dec) {
+                float df;
+
+                df  = (float)(v->note_pos - atk) / (float)dec;
+                env = 1.0f - df * (1.0f - sus);
+            } else if (rel > 0 && v->note_pos >= spn - rel) {
+                float rf;
+
+                rf  = (float)(v->note_pos - (spn - rel)) / (float)rel;
+                env = sus * (1.0f - rf);
+            } else {
+                env = sus;
+            }
+
+            sample_vol *= env;
+        }
+
         /* Advance phase */
         v->phase += cur_freq / (float)DTR_SYNTH_SAMPLE_RATE;
         v->phase -= SDL_floorf(v->phase);
@@ -796,6 +829,35 @@ static JSValue js_synth_set(JSContext *ctx, JSValueConst this_val, int argc, JSV
         tmp.loop_end   = (uint8_t)le;
     }
 
+    /* ADSR envelope (optional positional args 5–8) */
+    {
+        int32_t ea = dtr_api_opt_int(ctx, argc, argv, 5, 0);
+        int32_t ed = dtr_api_opt_int(ctx, argc, argv, 6, 0);
+        int32_t es = dtr_api_opt_int(ctx, argc, argv, 7, 0);
+        int32_t er = dtr_api_opt_int(ctx, argc, argv, 8, 0);
+
+        if (ea < 0)
+            ea = 0;
+        if (ea > 255)
+            ea = 255;
+        if (ed < 0)
+            ed = 0;
+        if (ed > 255)
+            ed = 255;
+        if (es < 0)
+            es = 0;
+        if (es > 255)
+            es = 255;
+        if (er < 0)
+            er = 0;
+        if (er > 255)
+            er = 255;
+        tmp.env_attack  = (uint8_t)ea;
+        tmp.env_decay   = (uint8_t)ed;
+        tmp.env_sustain = (uint8_t)es;
+        tmp.env_release = (uint8_t)er;
+    }
+
     /*
      * Copy into the live def atomically under the audio stream lock.
      * Without this, the callback thread can read a half-written def
@@ -866,6 +928,10 @@ static JSValue js_synth_get(JSContext *ctx, JSValueConst this_val, int argc, JSV
     JS_SetPropertyStr(ctx, result, "speed", JS_NewInt32(ctx, def->speed));
     JS_SetPropertyStr(ctx, result, "loopStart", JS_NewInt32(ctx, def->loop_start));
     JS_SetPropertyStr(ctx, result, "loopEnd", JS_NewInt32(ctx, def->loop_end));
+    JS_SetPropertyStr(ctx, result, "envAttack", JS_NewInt32(ctx, def->env_attack));
+    JS_SetPropertyStr(ctx, result, "envDecay", JS_NewInt32(ctx, def->env_decay));
+    JS_SetPropertyStr(ctx, result, "envSustain", JS_NewInt32(ctx, def->env_sustain));
+    JS_SetPropertyStr(ctx, result, "envRelease", JS_NewInt32(ctx, def->env_release));
 
     return result;
 }
@@ -1398,7 +1464,7 @@ js_synth_pitch_freq(JSContext *ctx, JSValueConst this_val, int argc, JSValueCons
 /* ------------------------------------------------------------------ */
 
 static const JSCFunctionListEntry js_synth_funcs[] = {
-    JS_CFUNC_DEF("set", 5, js_synth_set),
+    JS_CFUNC_DEF("set", 9, js_synth_set),
     JS_CFUNC_DEF("get", 1, js_synth_get),
     JS_CFUNC_DEF("play", 3, js_synth_play),
     JS_CFUNC_DEF("playNote", 6, js_synth_play_note),

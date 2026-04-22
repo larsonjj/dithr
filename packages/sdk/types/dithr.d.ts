@@ -54,6 +54,10 @@ interface DithrSynthSfx {
     speed: number;
     loopStart: number;
     loopEnd: number;
+    envAttack: number;
+    envDecay: number;
+    envSustain: number;
+    envRelease: number;
 }
 
 interface DithrTweenHandle {
@@ -616,6 +620,13 @@ interface DithrUi {
 // tween — Tweening Engine
 // ---------------------------------------------------------------------------
 
+interface DithrTweenStepConfig {
+    from: number;
+    to: number;
+    dur: number;
+    ease?: string;
+}
+
 interface DithrTween {
     start(from: number, to: number, dur: number, ease?: string, delay?: number): DithrTweenHandle;
     tick(dt: number): void;
@@ -624,6 +635,11 @@ interface DithrTween {
     cancel(handle_or_id: DithrTweenHandle | number): void;
     cancelAll(): void;
     ease(t: number, name: string): number;
+    sequence(steps: DithrTweenStepConfig[]): DithrTweenHandle;
+    parallel(steps: DithrTweenStepConfig[]): DithrTweenHandle;
+    seqVal(handle_or_id: DithrTweenHandle | number): number;
+    seqDone(handle_or_id: DithrTweenHandle | number): boolean;
+    seqCancel(handle_or_id: DithrTweenHandle | number): void;
 }
 
 // ---------------------------------------------------------------------------
@@ -643,7 +659,7 @@ interface DithrCam {
 
 interface DithrSynth {
     // Definitions
-    set(idx: number, notes: DithrSynthNote[], speed?: number, loopStart?: number, loopEnd?: number): boolean;
+    set(idx: number, notes: DithrSynthNote[], speed?: number, loopStart?: number, loopEnd?: number, envAttack?: number, envDecay?: number, envSustain?: number, envRelease?: number): boolean;
     get(idx: number): DithrSynthSfx | undefined;
     count(): number;
 

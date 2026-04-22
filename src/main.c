@@ -23,6 +23,7 @@
 typedef struct app_state {
     dtr_console_t *con;
     const char    *cart_path;
+    int32_t        max_frames; /* 0 = unlimited */
 #ifdef __EMSCRIPTEN__
     bool idbfs_ready; /* true once IDBFS initial sync completes */
 #endif
@@ -65,9 +66,11 @@ EMSCRIPTEN_KEEPALIVE void dtr_wasm_reload_assets(void)
 
 typedef struct cli_opts {
     const char *cart_path;
-    int32_t     scale; /* 0 = use cart default */
+    int32_t     scale;  /* 0 = use cart default */
+    int32_t     frames; /* 0 = unlimited, >0 = exit after N frames */
     bool        fullscreen;
     bool        mute;
+    bool        headless;
 } cli_opts_t;
 
 static void prv_print_usage(void)
@@ -79,7 +82,9 @@ static void prv_print_usage(void)
             "  --version     Show version and exit\n"
             "  --fullscreen  Start in fullscreen mode\n"
             "  --scale N     Window scale factor (1-10)\n"
-            "  --mute        Start with audio muted\n");
+            "  --mute        Start with audio muted\n"
+            "  --headless    Use dummy video/audio drivers (no window)\n"
+            "  --frames N    Exit after N frames (requires --headless)\n");
 }
 
 /**
@@ -90,8 +95,10 @@ static bool prv_parse_cli(int argc, char **argv, cli_opts_t *opts)
 {
     opts->cart_path  = "cart.json";
     opts->scale      = 0;
+    opts->frames     = 0;
     opts->fullscreen = false;
     opts->mute       = false;
+    opts->headless   = false;
 
     for (int i = 1; i < argc; ++i) {
         if (SDL_strcmp(argv[i], "--help") == 0 || SDL_strcmp(argv[i], "-h") == 0) {
@@ -108,6 +115,19 @@ static bool prv_parse_cli(int argc, char **argv, cli_opts_t *opts)
         }
         if (SDL_strcmp(argv[i], "--mute") == 0 || SDL_strcmp(argv[i], "-m") == 0) {
             opts->mute = true;
+            continue;
+        }
+        if (SDL_strcmp(argv[i], "--headless") == 0) {
+            opts->headless = true;
+            continue;
+        }
+        if (SDL_strcmp(argv[i], "--frames") == 0 && i + 1 < argc) {
+            int val = SDL_atoi(argv[++i]);
+            if (val >= 1) {
+                opts->frames = val;
+            } else {
+                SDL_Log("Warning: --frames value must be >= 1, ignoring");
+            }
             continue;
         }
         if ((SDL_strcmp(argv[i], "--scale") == 0 || SDL_strcmp(argv[i], "-s") == 0) &&
@@ -195,7 +215,14 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char **argv)
         SDL_free(app);
         return SDL_APP_SUCCESS;
     }
-    app->cart_path = opts.cart_path;
+    app->cart_path  = opts.cart_path;
+    app->max_frames = opts.frames;
+
+    /* Headless mode: use dummy drivers so no window or audio device is opened */
+    if (opts.headless) {
+        SDL_SetHint(SDL_HINT_VIDEO_DRIVER, "dummy");
+        SDL_SetHint(SDL_HINT_AUDIO_DRIVER, "dummy");
+    }
 #endif
     SDL_Log("dithr %s — loading %s", CONSOLE_VERSION, app->cart_path);
 
@@ -316,6 +343,12 @@ SDL_AppResult SDL_AppIterate(void *appstate)
     }
 
     if (!app->con->running) {
+        return SDL_APP_SUCCESS;
+    }
+
+    /* --frames N: exit after N frames (headless smoke testing) */
+    if (app->max_frames > 0 && app->con->frame_count >= (uint64_t)app->max_frames) {
+        SDL_Log("Reached frame limit (%d), exiting", app->max_frames);
         return SDL_APP_SUCCESS;
     }
 

@@ -68,6 +68,14 @@ typedef struct dtr_synth_sfx {
     uint8_t          speed;      /**< Ticks per note (1-255, higher = slower) */
     uint8_t          loop_start; /**< Loop start note index (0-31) */
     uint8_t          loop_end;   /**< Loop end note index (0-31, 0 = no loop) */
+
+    /** Per-note ADSR envelope (all zero = no envelope, backward compatible).
+     *  Timing fields map 1-255 to a fraction of each note's duration.
+     *  Active when at least one timing field (attack/decay/release) is non-zero. */
+    uint8_t env_attack;  /**< Attack time  (0=instant, 255=full note) */
+    uint8_t env_decay;   /**< Decay time   (0=none,    255=full note) */
+    uint8_t env_sustain; /**< Sustain level (0=silent,  255=full vol)  */
+    uint8_t env_release; /**< Release time  (0=instant, 255=full note) */
 } dtr_synth_sfx_t;
 
 /* ------------------------------------------------------------------ */
