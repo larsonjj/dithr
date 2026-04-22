@@ -1075,6 +1075,7 @@ static void test_tween_sequence_basic(void)
                       "(function(){"
                       "  var h = tween.sequence([{from:0,to:100,dur:1},{from:100,to:200,dur:1}]);"
                       "  var ok = h.done !== undefined;"
+                      "  if (ok) h.done.catch(function(){});"
                       "  tween.seqCancel(h);"
                       "  return ok;"
                       "})()"));
@@ -1108,6 +1109,7 @@ static void test_tween_parallel_basic(void)
                       "(function(){"
                       "  var h = tween.parallel([{from:0,to:100,dur:1},{from:0,to:50,dur:0.5}]);"
                       "  var ok = h.done !== undefined;"
+                      "  if (ok) h.done.catch(function(){});"
                       "  tween.seqCancel(h);"
                       "  return ok;"
                       "})()"));
@@ -1139,6 +1141,7 @@ static void test_tween_seq_val(void)
     DTR_ASSERT(prv_eval_bool(tc,
                              "(function(){"
                              "  var h = tween.sequence([{from:0,to:100,dur:1}]);"
+                             "  h.done.catch(function(){});"
                              "  var ok = typeof tween.seqVal(h) === 'number';"
                              "  tween.seqCancel(h);"
                              "  return ok;"
@@ -1156,6 +1159,7 @@ static void test_tween_seq_done_cancel(void)
     DTR_ASSERT(prv_eval_bool(tc,
                              "(function(){"
                              "  var h = tween.sequence([{from:0,to:100,dur:1}]);"
+                             "  h.done.catch(function(){});"
                              "  var before = tween.seqDone(h);"
                              "  tween.seqCancel(h);"
                              "  var after = tween.seqDone(h);"
