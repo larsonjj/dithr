@@ -314,7 +314,7 @@ jobs:
               uses: actions/cache@v5
               with:
                   path: emsdk
-                  key: emsdk-${{ runner.os }}
+                  key: emsdk-5.0.6-${{ runner.os }}
 
             - name: Setup Emscripten
               if: steps.cache-emsdk.outputs.cache-hit != 'true'
@@ -322,12 +322,12 @@ jobs:
                   rm -rf emsdk
                   git clone https://github.com/emscripten-core/emsdk.git --depth 1
                   cd emsdk
-                  ./emsdk install latest
-                  ./emsdk activate latest
+                  ./emsdk install 5.0.6
+                  ./emsdk activate 5.0.6
 
             - name: Activate emsdk
               run: |
-                  cd emsdk && ./emsdk activate latest
+                  cd emsdk && ./emsdk activate 5.0.6
                   echo "${{ github.workspace }}/emsdk" >> $GITHUB_PATH
                   echo "${{ github.workspace }}/emsdk/upstream/emscripten" >> $GITHUB_PATH
                   echo "EMSDK=${{ github.workspace }}/emsdk" >> $GITHUB_ENV
