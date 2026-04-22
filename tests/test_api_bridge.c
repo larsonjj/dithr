@@ -98,6 +98,35 @@ static void prv_register(test_ctx_t *tc, void (*fn)(JSContext *, JSValue))
     JS_FreeValue(tc->rt->ctx, global);
 }
 
+/** Print a JS exception (message + stack) to stderr for diagnostics. */
+static void prv_dump_exception(test_ctx_t *tc, const char *code)
+{
+    JSValue     exc;
+    JSValue     stack;
+    const char *msg;
+    const char *stk;
+
+    exc = JS_GetException(tc->rt->ctx);
+    msg = JS_ToCString(tc->rt->ctx, exc);
+    fprintf(stderr, "  EXC in <%s>: %s\n", code, msg ? msg : "(unknown)");
+    if (msg) {
+        JS_FreeCString(tc->rt->ctx, msg);
+    }
+    if (JS_IsError(exc)) {
+        stack = JS_GetPropertyStr(tc->rt->ctx, exc, "stack");
+        if (!JS_IsUndefined(stack)) {
+            stk = JS_ToCString(tc->rt->ctx, stack);
+            if (stk) {
+                fprintf(stderr, "%s", stk);
+                JS_FreeCString(tc->rt->ctx, stk);
+            }
+        }
+        JS_FreeValue(tc->rt->ctx, stack);
+    }
+    JS_FreeValue(tc->rt->ctx, exc);
+    fflush(stderr);
+}
+
 /** Evaluate JS and return the float64 result. */
 static double prv_eval_f64(test_ctx_t *tc, const char *code)
 {
@@ -105,6 +134,9 @@ static double prv_eval_f64(test_ctx_t *tc, const char *code)
     double  result;
 
     val = JS_Eval(tc->rt->ctx, code, strlen(code), "<test>", JS_EVAL_TYPE_GLOBAL);
+    if (JS_IsException(val)) {
+        prv_dump_exception(tc, code);
+    }
     DTR_ASSERT(!JS_IsException(val));
     JS_ToFloat64(tc->rt->ctx, &result, val);
     JS_FreeValue(tc->rt->ctx, val);
@@ -118,6 +150,9 @@ static int32_t prv_eval_i32(test_ctx_t *tc, const char *code)
     int32_t result;
 
     val = JS_Eval(tc->rt->ctx, code, strlen(code), "<test>", JS_EVAL_TYPE_GLOBAL);
+    if (JS_IsException(val)) {
+        prv_dump_exception(tc, code);
+    }
     DTR_ASSERT(!JS_IsException(val));
     JS_ToInt32(tc->rt->ctx, &result, val);
     JS_FreeValue(tc->rt->ctx, val);
@@ -131,6 +166,9 @@ static bool prv_eval_bool(test_ctx_t *tc, const char *code)
     bool    result;
 
     val = JS_Eval(tc->rt->ctx, code, strlen(code), "<test>", JS_EVAL_TYPE_GLOBAL);
+    if (JS_IsException(val)) {
+        prv_dump_exception(tc, code);
+    }
     DTR_ASSERT(!JS_IsException(val));
     result = JS_ToBool(tc->rt->ctx, val) != 0;
     JS_FreeValue(tc->rt->ctx, val);
@@ -143,6 +181,9 @@ static void prv_eval_void(test_ctx_t *tc, const char *code)
     JSValue val;
 
     val = JS_Eval(tc->rt->ctx, code, strlen(code), "<test>", JS_EVAL_TYPE_GLOBAL);
+    if (JS_IsException(val)) {
+        prv_dump_exception(tc, code);
+    }
     DTR_ASSERT(!JS_IsException(val));
     JS_FreeValue(tc->rt->ctx, val);
 }
