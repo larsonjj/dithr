@@ -73,6 +73,10 @@ static test_ctx_t *prv_setup(void)
 
 static void prv_teardown(test_ctx_t *tc)
 {
+    /* Drain any pending JS jobs (Promise microtasks like .catch handlers) so
+     * they don't leak into runtime destruction and trip GC asserts under
+     * macOS ASan/UBSan. */
+    dtr_runtime_drain_jobs(tc->rt);
     dtr_event_destroy(tc->con.events);
     dtr_runtime_destroy(tc->rt);
     dtr_cart_destroy(tc->con.cart);
