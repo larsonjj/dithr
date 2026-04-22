@@ -60,8 +60,11 @@ static test_ctx_t *prv_setup(void)
     DTR_ASSERT(tc->con.touch != NULL);
     DTR_ASSERT(tc->con.cart != NULL);
 
-    /* Create runtime — sets JS_SetContextOpaque(ctx, &tc->con) */
-    tc->rt = dtr_runtime_create(&tc->con, 8, 256);
+    /* Create runtime — sets JS_SetContextOpaque(ctx, &tc->con).
+     * Use a generous JS stack size (2 MB) so AppleClang ASan/UBSan, which
+     * inflates C frames substantially, doesn't trip the JS engine's
+     * stack-size guard during nested calls like tween.sequence(). */
+    tc->rt = dtr_runtime_create(&tc->con, 8, 2048);
     DTR_ASSERT(tc->rt != NULL);
 
     /* Event bus needs the JSContext */
