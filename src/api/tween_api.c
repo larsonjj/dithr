@@ -188,6 +188,9 @@ static JSValue js_tween_tick(JSContext *ctx, JSValueConst this_val, int argc, JS
 
                 id_val = JS_NewInt32(ctx, idx);
                 ret    = JS_Call(ctx, prv_resolve[idx], JS_UNDEFINED, 1, &id_val);
+                if (JS_IsException(ret)) {
+                    JS_FreeValue(ctx, JS_GetException(ctx));
+                }
                 JS_FreeValue(ctx, ret);
                 JS_FreeValue(ctx, id_val);
                 prv_clear_promise(ctx, idx);
@@ -244,6 +247,9 @@ static JSValue js_tween_cancel(JSContext *ctx, JSValueConst this_val, int argc, 
 
         reason = JS_NewString(ctx, "tween cancelled");
         ret    = JS_Call(ctx, prv_reject[idx], JS_UNDEFINED, 1, &reason);
+        if (JS_IsException(ret)) {
+            JS_FreeValue(ctx, JS_GetException(ctx));
+        }
         JS_FreeValue(ctx, ret);
         JS_FreeValue(ctx, reason);
         prv_clear_promise(ctx, idx);
@@ -275,6 +281,9 @@ js_tween_cancel_all(JSContext *ctx, JSValueConst this_val, int argc, JSValueCons
 
             reason = JS_NewString(ctx, "tween cancelled");
             ret    = JS_Call(ctx, prv_reject[idx], JS_UNDEFINED, 1, &reason);
+            if (JS_IsException(ret)) {
+                JS_FreeValue(ctx, JS_GetException(ctx));
+            }
             JS_FreeValue(ctx, ret);
             JS_FreeValue(ctx, reason);
             prv_clear_promise(ctx, idx);
@@ -547,6 +556,9 @@ js_tween_seq_cancel(JSContext *ctx, JSValueConst this_val, int argc, JSValueCons
 
                 reason = JS_NewString(ctx, "tween cancelled");
                 ret    = JS_Call(ctx, prv_reject[ti], JS_UNDEFINED, 1, &reason);
+                if (JS_IsException(ret)) {
+                    JS_FreeValue(ctx, JS_GetException(ctx));
+                }
                 JS_FreeValue(ctx, ret);
                 JS_FreeValue(ctx, reason);
                 prv_clear_promise(ctx, ti);
