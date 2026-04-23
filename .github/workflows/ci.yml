@@ -77,12 +77,19 @@ jobs:
               with:
                   extra-packages: clang-tidy
 
+            - name: Setup ccache
+              uses: hendrikmuhs/ccache-action@v1.2
+              with:
+                  key: linux-tidy-ccache
+                  max-size: 500M
+
             - name: Configure
               run: >
                   cmake -B build/debug -G Ninja
                   -DCMAKE_BUILD_TYPE=Debug
                   -DBUILD_SHARED_LIBS=OFF
                   -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+                  -DCMAKE_C_COMPILER_LAUNCHER=ccache
 
             - name: Run clang-tidy
               run: |
@@ -172,8 +179,14 @@ jobs:
               with:
                   extra-packages: ${{ matrix.extra-packages || '' }}
 
+            - name: Setup ccache
+              uses: hendrikmuhs/ccache-action@v1.2
+              with:
+                  key: ${{ matrix.cache-key }}-ccache
+                  max-size: 500M
+
             - name: Configure
-              run: cmake ${{ matrix.cmake-args }}
+              run: cmake ${{ matrix.cmake-args }} -DCMAKE_C_COMPILER_LAUNCHER=ccache
 
             - name: Build
               run: cmake --build ${{ matrix.build-dir }}
@@ -211,12 +224,19 @@ jobs:
               with:
                   extra-packages: lcov
 
+            - name: Setup ccache
+              uses: hendrikmuhs/ccache-action@v1.2
+              with:
+                  key: linux-cov-ccache
+                  max-size: 500M
+
             - name: Configure
               run: >
                   cmake -B build/coverage -G Ninja
                   -DCMAKE_BUILD_TYPE=Debug
                   -DDTR_ENABLE_COVERAGE=ON
                   -DBUILD_SHARED_LIBS=OFF
+                  -DCMAKE_C_COMPILER_LAUNCHER=ccache
 
             - name: Build
               run: cmake --build build/coverage
@@ -288,8 +308,14 @@ jobs:
                   key: ${{ matrix.cache-key }}-${{ hashFiles('CMakeLists.txt') }}
                   restore-keys: ${{ matrix.cache-key }}-
 
+            - name: Setup ccache
+              uses: hendrikmuhs/ccache-action@v1.2
+              with:
+                  key: ${{ matrix.cache-key }}-ccache
+                  max-size: 500M
+
             - name: Configure
-              run: cmake ${{ matrix.cmake-args }}
+              run: cmake ${{ matrix.cmake-args }} -DCMAKE_C_COMPILER_LAUNCHER=ccache
 
             - name: Build
               run: cmake --build ${{ matrix.build-dir }}
@@ -341,10 +367,17 @@ jobs:
                   key: wasm-ci-deps-${{ hashFiles('CMakeLists.txt') }}
                   restore-keys: wasm-ci-deps-
 
+            - name: Setup ccache
+              uses: hendrikmuhs/ccache-action@v1.2
+              with:
+                  key: wasm-ci-ccache
+                  max-size: 500M
+
             - name: Configure
               run: >
                   cmake --preset wasm
                   -DDTR_WASM_CART_DIR=${{ github.workspace }}/examples/hello_world
+                  -DCMAKE_C_COMPILER_LAUNCHER=ccache
 
             - name: Build
               run: cmake --build build/wasm

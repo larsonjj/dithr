@@ -165,6 +165,20 @@ cmake --preset release
 cmake --build build/release
 ```
 
+### Native architecture tuning
+
+For local benchmarking on a known target machine, opt in to
+`-march=native` so the compiler can use the full host instruction set
+(AVX2, AVX-512, etc.). Off by default — release artifacts ship with a
+portable baseline.
+
+```bash
+cmake --preset release -DDTR_NATIVE_ARCH=ON
+cmake --build build/release
+```
+
+This option is a no-op on MSVC and Emscripten.
+
 ### PGO (Profile-Guided Optimization)
 
 Two-step build that profiles real workloads:
@@ -183,10 +197,59 @@ cmake --build --preset pgo-use
 ## WASM-Specific Notes
 
 - The WASM build uses `-Oz -flto` for minimal binary size.
-- Initial memory is 64 MB with `ALLOW_MEMORY_GROWTH`.
+- Initial memory is 64 MB with `ALLOW_MEMORY_GROWTH`, capped at **512 MB**
+  via `-sMAXIMUM_MEMORY` to prevent runaway allocations from crashing the
+  browser tab.
 - SIMD is available via `-msimd128` when `DTR_ENABLE_SIMD=ON` (default).
 - Minimize the number of JS→C API calls per frame — each crossing has
   overhead in Emscripten.
+
+## Engine Hotspots (for contributors)
+
+If you are profiling the engine itself rather than a cart, the
+dominant per-frame costs are usually:
+
+| Hotspot                          | Source                             |
+| -------------------------------- | ---------------------------------- |
+| Sprite blit (`prv_blit_span`)    | `src/graphics.c` — 8-wide unrolled |
+| Palette flip (`dtr_gfx_flip_to`) | `src/graphics.c` — SIMD LUT gather |
+| Tilemap iteration                | `src/graphics.c` `dtr_gfx_tilemap` |
+| Active screen transitions        | `src/graphics.c` transition update |
+| Stacked postfx effects           | `src/postfx.c` per-pixel passes    |
+
+`dtr_gfx_transition_update_buf` and `dtr_postfx_apply` early-out when no
+transition is active and the postfx stack is empty respectively, so
+adding either feature only costs cycles when actually used.
+
+For per-function CPU time, the simplest cross-platform option is the
+`spritemark` example, which prints a steady-state FPS readout in the
+top-left corner. Use it to compare engine changes:
+
+```bash
+cmake --preset release -DDTR_NATIVE_ARCH=ON
+cmake --build build/release
+build/release/Release/dithr examples/spritemark/cart.json
+```
+
+Press SPACE (or click) to spawn 200 more sprites per press; the FPS
+number in the top-left is the benchmark.
+
+### Micro-benchmarks (`tests/perf/`)
+
+For tracking individual primitives across builds, an opt-in benchmark
+suite lives in `tests/perf/`. It is excluded from the default build
+and CTest run; enable it explicitly:
+
+```bash
+cmake --preset release -DDTR_BUILD_PERF=ON
+cmake --build build/release --config Release
+ctest --test-dir build/release -L perf -C Release --output-on-failure
+```
+
+Each benchmark prints `name iters=N ns/iter=X.X` lines so results can
+be diffed across commits. Add new files to `tests/perf/CMakeLists.txt`
+via `dtr_add_perf_test(name source.c)` — they are auto-tagged with the
+`perf` CTest label and stay out of the coverage gate.
 
 ## General Tips
 

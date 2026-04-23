@@ -161,3 +161,9 @@ set_tests_properties(${DTR_TEST_TARGETS}
         TIMEOUT 120
         ENVIRONMENT "SDL_AUDIO_DRIVER=dummy;SDL_VIDEO_DRIVER=dummy;SDL_AUDIODRIVER=dummy;SDL_VIDEODRIVER=dummy"
 )
+
+# --- Optional micro-benchmarks (LABELS perf, opt-in) ---
+option(DTR_BUILD_PERF "Build the tests/perf/ benchmark suite" OFF)
+if (DTR_BUILD_PERF AND NOT EMSCRIPTEN)
+    add_subdirectory(perf)
+endif()

@@ -3,6 +3,64 @@
 dithr exposes **19 namespaces** to cart JavaScript code. All functions are
 available as globals on their namespace object (e.g. `gfx.cls()`).
 
+## Quick Start
+
+A minimum viable cart is two files: `cart.json` (manifest) and a JS
+entry point.
+
+**`cart.json`**
+
+```jsonc
+{
+    "title": "My Cart",
+
+    /* Path to the cart's JS entry point, relative to cart.json */
+    "code": { "path": "main.js" },
+
+    /* Logical resolution and integer scale for the window */
+    "display": { "width": 320, "height": 180, "scale": 3 },
+}
+```
+
+**`main.js`**
+
+```js
+let x = 160;
+let y = 90;
+
+function _init() {
+    gfx.color(7); /* default to white text */
+}
+
+function _update(dt) {
+    if (key.btn(key.LEFT)) x -= 60 * dt;
+    if (key.btn(key.RIGHT)) x += 60 * dt;
+    if (key.btn(key.UP)) y -= 60 * dt;
+    if (key.btn(key.DOWN)) y += 60 * dt;
+}
+
+function _draw() {
+    gfx.cls(0);
+    gfx.print("Hello, dithr!", 8, 8);
+    gfx.circfill(x | 0, y | 0, 4, 8);
+}
+```
+
+Run it:
+
+```bash
+build/release/Release/dithr path/to/cart.json
+```
+
+`examples/hello_world` is the same cart with a `package.json` for
+TypeScript builds. Larger examples in `examples/` show audio
+(`audio_demo`), tilemaps (`tilemap`), input (`input_demo`), and
+post-processing (`postfx_demo`).
+
+---
+
+## Lifecycle Callbacks
+
 The engine calls three optional global callbacks each frame:
 
 | Callback           | Signature                        | Description                                             |

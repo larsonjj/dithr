@@ -95,8 +95,24 @@ prints a summary and returns 0.
 
 ## Coverage
 
-CI enforces a minimum line-coverage threshold (currently 60%). To collect
-coverage locally:
+CI enforces a minimum line-coverage threshold of **65 %**. The threshold
+is set deliberately below 100 % to account for code paths that are not
+practical to exercise from unit tests:
+
+- **`#if DEV_BUILD` blocks** (hot reload, file watching) — only compiled
+  in dev builds and exercised manually with running carts.
+- **Defensive error branches** — `SDL_LoadFile` / `js_malloc` failure
+  paths and similar OOM/I/O guards.
+- **Platform-specific code paths** — e.g. macOS-only Cocoa shims, Windows
+  `SDL_Filesystem` quirks, WASM `EM_ASM` blocks.
+- **Hot-path SIMD specialisations** — covered by their scalar fallbacks
+  during CI (which uses a baseline x86-64 toolchain), so the SIMD bodies
+  themselves often show as uncovered.
+
+Raising the gate is welcome — open a PR adding tests for an underserved
+module first, then bump the number in `.github/workflows/ci.yml`.
+
+To collect coverage locally:
 
 ```bash
 cmake -B build/coverage -G Ninja \
@@ -115,6 +131,9 @@ lcov --capture --directory . --include '*/src/*' \
 genhtml coverage.info --output-directory coverage-report
 open coverage-report/index.html
 ```
+
+On Windows, the equivalent is the **Coverage (Windows)** VS Code task,
+which uses OpenCppCoverage to produce `build/coverage-report/`.
 
 ## Linting Example Carts
 
