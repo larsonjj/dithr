@@ -1,6 +1,6 @@
 {
   "name": "@dithrkit/create",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Scaffold a new dithr project — use with npm create @dithrkit",
   "license": "MIT",
   "author": "dithrkit",
@@ -30,6 +30,6 @@
     "node": ">=18"
   },
   "dependencies": {
-    "@dithrkit/sdk": "0.1.0"
+    "@dithrkit/sdk": "0.2.0"
   }
 }

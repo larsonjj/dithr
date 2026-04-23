@@ -199,6 +199,145 @@ jobs:
                   name: npm-darwin-arm64
                   path: packages/darwin-arm64/
 
+    # Intel Mac build. Pinned to macos-13 because it is the last
+    # Intel-native github-hosted macOS runner; macos-14+ are
+    # arm64-only. Re-evaluate when macos-13 is retired.
+    build-macos-x64:
+        runs-on: macos-13
+        steps:
+            - uses: actions/checkout@v6
+
+            - name: Cache dependencies
+              uses: actions/cache@v5
+              with:
+                  path: |
+                      build/release/_deps
+                      ~/.cmake/packages
+                  key: release-macos-x64-deps-${{ hashFiles('CMakeLists.txt') }}
+                  restore-keys: release-macos-x64-deps-
+
+            - name: Configure
+              run: |
+                  attempts=0
+                  until [ "$attempts" -ge 3 ]; do
+                    attempts=$((attempts + 1))
+                    echo "Configure attempt ${attempts}/3"
+                    if cmake --preset release; then
+                      exit 0
+                    fi
+
+                    echo "::warning::Configure failed (attempt ${attempts}/3). Clearing SDL3_image FetchContent state and retrying."
+                    rm -rf build/release/_deps/sdl3_image-subbuild \
+                           build/release/_deps/sdl3_image-src \
+                           build/release/_deps/sdl3_image-build
+                  done
+
+                  echo "::error::cmake configure failed after 3 attempts"
+                  exit 1
+
+            - name: Build
+              run: cmake --build build/release --config Release
+
+            - name: Test
+              run: ctest --output-on-failure -C Release
+              working-directory: build/release
+              env:
+                  SDL_AUDIO_DRIVER: dummy
+                  SDL_VIDEO_DRIVER: dummy
+                  SDL_AUDIODRIVER: dummy
+                  SDL_VIDEODRIVER: dummy
+
+            - name: Package
+              run: |
+                  mkdir dist
+                  cp build/release/dithr dist/
+                  cp LICENSE README.md dist/
+                  tar czf dithr-darwin-x64.tar.gz -C dist .
+
+            - name: Stage npm package
+              run: |
+                  mkdir -p packages/darwin-x64/bin
+                  cp build/release/dithr packages/darwin-x64/bin/
+
+            - name: Upload artifact
+              uses: actions/upload-artifact@v7
+              with:
+                  name: dithr-darwin-x64
+                  path: dithr-darwin-x64.tar.gz
+
+            - name: Upload npm package
+              uses: actions/upload-artifact@v7
+              with:
+                  name: npm-darwin-x64
+                  path: packages/darwin-x64/
+
+    build-linux-arm64:
+        runs-on: ubuntu-24.04-arm
+        steps:
+            - uses: actions/checkout@v6
+
+            - name: Install dependencies
+              run: |
+                  sudo rm -f /etc/apt/sources.list.d/microsoft-prod.list /etc/apt/sources.list.d/azure-cli.list
+                  sudo apt-get update
+                  sudo apt-get install -y ninja-build \
+                    libx11-dev libxext-dev libxcursor-dev libxi-dev \
+                    libxfixes-dev libxrandr-dev libxrender-dev libxss-dev \
+                    libxtst-dev libxxf86vm-dev \
+                    libwayland-dev libxkbcommon-dev \
+                    libdrm-dev libgbm-dev libgl1-mesa-dev libgles2-mesa-dev \
+                    libegl1-mesa-dev libdbus-1-dev libudev-dev \
+                    libasound2-dev libpulse-dev libpipewire-0.3-dev \
+                    libdecor-0-dev
+
+            - name: Cache dependencies
+              uses: actions/cache@v5
+              with:
+                  path: |
+                      build/release/_deps
+                      ~/.cmake/packages
+                  key: release-linux-arm64-deps-${{ hashFiles('CMakeLists.txt') }}
+                  restore-keys: release-linux-arm64-deps-
+
+            - name: Configure
+              run: cmake --preset release
+
+            - name: Build
+              run: cmake --build build/release --config Release
+
+            - name: Test
+              run: ctest --output-on-failure -C Release
+              working-directory: build/release
+              env:
+                  SDL_AUDIO_DRIVER: dummy
+                  SDL_VIDEO_DRIVER: dummy
+                  SDL_AUDIODRIVER: dummy
+                  SDL_VIDEODRIVER: dummy
+
+            - name: Package
+              run: |
+                  mkdir dist
+                  cp build/release/dithr dist/
+                  cp LICENSE README.md dist/
+                  tar czf dithr-linux-arm64.tar.gz -C dist .
+
+            - name: Stage npm package
+              run: |
+                  mkdir -p packages/linux-arm64/bin
+                  cp build/release/dithr packages/linux-arm64/bin/
+
+            - name: Upload artifact
+              uses: actions/upload-artifact@v7
+              with:
+                  name: dithr-linux-arm64
+                  path: dithr-linux-arm64.tar.gz
+
+            - name: Upload npm package
+              uses: actions/upload-artifact@v7
+              with:
+                  name: npm-linux-arm64
+                  path: packages/linux-arm64/
+
     build-wasm:
         runs-on: ubuntu-latest
         steps:
@@ -238,7 +377,15 @@ jobs:
                   path: packages/wasm/
 
     release:
-        needs: [build-windows, build-linux, build-macos, build-wasm]
+        needs:
+            [
+                build-windows,
+                build-linux,
+                build-linux-arm64,
+                build-macos,
+                build-macos-x64,
+                build-wasm,
+            ]
         runs-on: ubuntu-latest
         steps:
             - uses: actions/download-artifact@v8
@@ -253,10 +400,20 @@ jobs:
                   files: |
                       dithr-windows-x64.zip
                       dithr-linux-x64.tar.gz
+                      dithr-linux-arm64.tar.gz
                       dithr-macos-arm64.tar.gz
+                      dithr-darwin-x64.tar.gz
 
     publish-npm:
-        needs: [build-windows, build-linux, build-macos, build-wasm]
+        needs:
+            [
+                build-windows,
+                build-linux,
+                build-linux-arm64,
+                build-macos,
+                build-macos-x64,
+                build-wasm,
+            ]
         runs-on: ubuntu-latest
         permissions:
             contents: read
@@ -284,6 +441,8 @@ jobs:
               run: |
                   cp -r npm-win32-x64/* packages/win32-x64/
                   cp -r npm-linux-x64/* packages/linux-x64/
+                  cp -r npm-linux-arm64/* packages/linux-arm64/
+                  cp -r npm-darwin-x64/* packages/darwin-x64/
                   cp -r npm-darwin-arm64/* packages/darwin-arm64/
                   cp -r npm-wasm/* packages/wasm/
 
@@ -319,7 +478,7 @@ jobs:
 
             - name: Publish platform packages
               run: |
-                  for pkg in win32-x64 linux-x64 darwin-arm64 wasm; do
+                  for pkg in win32-x64 linux-x64 linux-arm64 darwin-x64 darwin-arm64 wasm; do
                     if ! npm publish "./packages/$pkg" --provenance --access public ${{ steps.npm-tag.outputs.tag }}; then
                       echo "::error::Failed publishing @dithrkit/$pkg."
                       exit 1

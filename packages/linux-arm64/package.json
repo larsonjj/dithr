@@ -1,7 +1,7 @@
 {
-  "name": "@dithrkit/linux-x64",
+  "name": "@dithrkit/linux-arm64",
   "version": "0.2.0",
-  "description": "dithr runtime binary for Linux x64",
+  "description": "dithr runtime binary for Linux ARM64",
   "license": "MIT",
   "author": "dithrkit",
   "homepage": "https://github.com/dithrkit/dithr",
@@ -12,6 +12,7 @@
     "dithr",
     "fantasy-console",
     "linux",
+    "arm64",
     "binary"
   ],
   "engines": {
@@ -20,13 +21,13 @@
   "repository": {
     "type": "git",
     "url": "git+https://github.com/dithrkit/dithr.git",
-    "directory": "packages/linux-x64"
+    "directory": "packages/linux-arm64"
   },
   "os": [
     "linux"
   ],
   "cpu": [
-    "x64"
+    "arm64"
   ],
   "main": "index.js",
   "files": [

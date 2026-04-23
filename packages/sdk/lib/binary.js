@@ -3,6 +3,8 @@
 const PLATFORMS = {
     "win32-x64": "@dithrkit/win32-x64",
     "linux-x64": "@dithrkit/linux-x64",
+    "linux-arm64": "@dithrkit/linux-arm64",
+    "darwin-x64": "@dithrkit/darwin-x64",
     "darwin-arm64": "@dithrkit/darwin-arm64",
 };
 
