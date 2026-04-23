@@ -179,8 +179,14 @@ static void prv_apply_crt(uint32_t *pixels, int32_t w, int32_t h, float strength
     float inv_max_dist_sq;
     float half_strength;
 
-    cx              = (float)w * 0.5f;
-    cy              = (float)h * 0.5f;
+    cx = (float)w * 0.5f;
+    cy = (float)h * 0.5f;
+    /* Defensive: skip the effect entirely if dimensions are degenerate.
+     * cx*cx + cy*cy is always >= 0; only zero when both w and h are zero,
+     * which would otherwise produce a division by zero below. */
+    if (cx * cx + cy * cy < 1e-6f) {
+        return;
+    }
     inv_max_dist_sq = 1.0f / (cx * cx + cy * cy);
     half_strength   = strength * 0.5f;
 

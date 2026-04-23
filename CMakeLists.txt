@@ -82,6 +82,14 @@ endif()
 # Fuzzing — libFuzzer (Clang only)
 option(DTR_BUILD_FUZZ "Build fuzz harnesses" OFF)
 
+# Native architecture tuning — GCC / Clang only.  Off by default so release
+# artifacts stay portable; enable for local benchmarking to let the
+# compiler use the host CPU's full instruction set (AVX2/AVX-512, etc.).
+option(DTR_NATIVE_ARCH "Enable -march=native (non-MSVC, non-Emscripten)" OFF)
+if (DTR_NATIVE_ARCH AND NOT MSVC AND NOT EMSCRIPTEN)
+    add_compile_options(-march=native)
+endif()
+
 # SIMD optimisation (SSE2 / NEON / wasm-simd128)
 option(DTR_ENABLE_SIMD "Enable SIMD optimizations" ON)
 if (DTR_ENABLE_SIMD)
