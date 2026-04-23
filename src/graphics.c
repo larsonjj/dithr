@@ -357,14 +357,14 @@ static inline void prv_blit_span_impl(uint8_t       *dst_row,
         uint8_t i_6;
         uint8_t i_7;
 
-        i_0 = src_base[(done + 0) * src_step];
-        i_1 = src_base[(done + 1) * src_step];
-        i_2 = src_base[(done + 2) * src_step];
-        i_3 = src_base[(done + 3) * src_step];
-        i_4 = src_base[(done + 4) * src_step];
-        i_5 = src_base[(done + 5) * src_step];
-        i_6 = src_base[(done + 6) * src_step];
-        i_7 = src_base[(done + 7) * src_step];
+        i_0 = src_base[(ptrdiff_t)(done + 0) * src_step];
+        i_1 = src_base[(ptrdiff_t)(done + 1) * src_step];
+        i_2 = src_base[(ptrdiff_t)(done + 2) * src_step];
+        i_3 = src_base[(ptrdiff_t)(done + 3) * src_step];
+        i_4 = src_base[(ptrdiff_t)(done + 4) * src_step];
+        i_5 = src_base[(ptrdiff_t)(done + 5) * src_step];
+        i_6 = src_base[(ptrdiff_t)(done + 6) * src_step];
+        i_7 = src_base[(ptrdiff_t)(done + 7) * src_step];
 
         if (!transp[i_0]) {
             dst[done] = dpal[i_0];
@@ -396,7 +396,7 @@ static inline void prv_blit_span_impl(uint8_t       *dst_row,
     for (; done < span; ++done) {
         uint8_t col;
 
-        col = src_base[done * src_step];
+        col = src_base[(ptrdiff_t)done * src_step];
         if (!transp[col]) {
             dst[done] = dpal[col];
         }
