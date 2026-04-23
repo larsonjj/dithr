@@ -317,12 +317,28 @@ static uint16_t prv_row_pattern(uint16_t fill_pattern, int32_t scr_y)
  * Only compiled when DTR_HAS_SIMD is true (fast-path guard).
  */
 #if DTR_HAS_SIMD
-static void prv_blit_span(uint8_t       *dst_row,
-                          const uint8_t *src_ptr,
-                          int32_t        scr_x,
-                          int32_t        span,
-                          const bool    *transp,
-                          const uint8_t *dpal)
+/**
+ * \brief           Shared 8-wide unrolled blit-span implementation.
+ *
+ * \param[in]       src_step  +1 for forward (normal) blit, -1 for flipped
+ *                            blit.  Must be a compile-time constant at the
+ *                            call site so the optimizer can specialize the
+ *                            two variants identically to the previous
+ *                            hand-written pair.
+ *
+ * Forward callers pass \c src_base pointing at the first source pixel.
+ * Flipped callers pass \c src_base pointing at the LAST source pixel
+ * (i.e. \c src_ptr + span - 1) so that \c src_base[done * src_step]
+ * walks the source in reverse while the destination is written
+ * left-to-right.
+ */
+static inline void prv_blit_span_impl(uint8_t       *dst_row,
+                                      const uint8_t *src_base,
+                                      int32_t        scr_x,
+                                      int32_t        span,
+                                      const bool    *transp,
+                                      const uint8_t *dpal,
+                                      int8_t         src_step)
 {
     int32_t  done;
     uint8_t *dst;
@@ -341,14 +357,14 @@ static void prv_blit_span(uint8_t       *dst_row,
         uint8_t i_6;
         uint8_t i_7;
 
-        i_0 = src_ptr[done];
-        i_1 = src_ptr[done + 1];
-        i_2 = src_ptr[done + 2];
-        i_3 = src_ptr[done + 3];
-        i_4 = src_ptr[done + 4];
-        i_5 = src_ptr[done + 5];
-        i_6 = src_ptr[done + 6];
-        i_7 = src_ptr[done + 7];
+        i_0 = src_base[(done + 0) * src_step];
+        i_1 = src_base[(done + 1) * src_step];
+        i_2 = src_base[(done + 2) * src_step];
+        i_3 = src_base[(done + 3) * src_step];
+        i_4 = src_base[(done + 4) * src_step];
+        i_5 = src_base[(done + 5) * src_step];
+        i_6 = src_base[(done + 6) * src_step];
+        i_7 = src_base[(done + 7) * src_step];
 
         if (!transp[i_0]) {
             dst[done] = dpal[i_0];
@@ -380,7 +396,7 @@ static void prv_blit_span(uint8_t       *dst_row,
     for (; done < span; ++done) {
         uint8_t col;
 
-        col = src_ptr[done];
+        col = src_base[done * src_step];
         if (!transp[col]) {
             dst[done] = dpal[col];
         }
@@ -388,12 +404,24 @@ static void prv_blit_span(uint8_t       *dst_row,
 }
 
 /**
- * \brief           Blit a horizontally-flipped source span with transparency
- *                  check and palette remap, using 8-wide unrolled reads.
+ * \brief           Forward blit: read source left-to-right, write left-to-right.
+ */
+static void prv_blit_span(uint8_t       *dst_row,
+                          const uint8_t *src_ptr,
+                          int32_t        scr_x,
+                          int32_t        span,
+                          const bool    *transp,
+                          const uint8_t *dpal)
+{
+    prv_blit_span_impl(dst_row, src_ptr, scr_x, span, transp, dpal, (int8_t)1);
+}
+
+/**
+ * \brief           Flipped blit: read source right-to-left, write left-to-right.
  *
- * Reads source pixels in reverse (right-to-left) while writing the
- * destination left-to-right, producing a mirrored output.  Same
- * performance characteristics as prv_blit_span.
+ * \param[in]       src_end  Pointer to the LAST source pixel (i.e. the
+ *                           rightmost pixel that should appear leftmost
+ *                           in the destination).
  */
 static void prv_blit_span_flip(uint8_t       *dst_row,
                                const uint8_t *src_end,
@@ -402,67 +430,7 @@ static void prv_blit_span_flip(uint8_t       *dst_row,
                                const bool    *transp,
                                const uint8_t *dpal)
 {
-    int32_t  done;
-    uint8_t *dst;
-
-    done = 0;
-    dst  = dst_row + scr_x;
-
-    /* 8-wide: read source in reverse, write forward */
-    for (; done + 7 < span; done += 8) {
-        uint8_t i_0;
-        uint8_t i_1;
-        uint8_t i_2;
-        uint8_t i_3;
-        uint8_t i_4;
-        uint8_t i_5;
-        uint8_t i_6;
-        uint8_t i_7;
-
-        i_0 = src_end[-done];
-        i_1 = src_end[-(done + 1)];
-        i_2 = src_end[-(done + 2)];
-        i_3 = src_end[-(done + 3)];
-        i_4 = src_end[-(done + 4)];
-        i_5 = src_end[-(done + 5)];
-        i_6 = src_end[-(done + 6)];
-        i_7 = src_end[-(done + 7)];
-
-        if (!transp[i_0]) {
-            dst[done] = dpal[i_0];
-        }
-        if (!transp[i_1]) {
-            dst[done + 1] = dpal[i_1];
-        }
-        if (!transp[i_2]) {
-            dst[done + 2] = dpal[i_2];
-        }
-        if (!transp[i_3]) {
-            dst[done + 3] = dpal[i_3];
-        }
-        if (!transp[i_4]) {
-            dst[done + 4] = dpal[i_4];
-        }
-        if (!transp[i_5]) {
-            dst[done + 5] = dpal[i_5];
-        }
-        if (!transp[i_6]) {
-            dst[done + 6] = dpal[i_6];
-        }
-        if (!transp[i_7]) {
-            dst[done + 7] = dpal[i_7];
-        }
-    }
-
-    /* Scalar tail */
-    for (; done < span; ++done) {
-        uint8_t col;
-
-        col = src_end[-done];
-        if (!transp[col]) {
-            dst[done] = dpal[col];
-        }
-    }
+    prv_blit_span_impl(dst_row, src_end, scr_x, span, transp, dpal, (int8_t)-1);
 }
 #endif /* DTR_HAS_SIMD */
 
