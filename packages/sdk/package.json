@@ -47,7 +47,6 @@
     "@dithrkit/win32-x64": "0.2.0",
     "@dithrkit/linux-x64": "0.2.0",
     "@dithrkit/linux-arm64": "0.2.0",
-    "@dithrkit/darwin-x64": "0.2.0",
     "@dithrkit/darwin-arm64": "0.2.0",
     "@dithrkit/wasm": "0.2.0"
   }
