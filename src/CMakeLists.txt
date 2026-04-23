@@ -48,9 +48,6 @@ target_compile_options(dithr_core_obj PRIVATE ${DTR_WARN_FLAGS})
 if (DTR_ENABLE_SIMD AND DTR_SIMD_FLAGS)
     target_compile_options(dithr_core_obj PRIVATE ${DTR_SIMD_FLAGS})
 endif()
-if (MSVC)
-    target_compile_options(dithr_core_obj PRIVATE /wd4244)
-endif()
 target_link_libraries(dithr_core_obj PUBLIC
     SDL3::SDL3
     SDL3_mixer::SDL3_mixer

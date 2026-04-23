@@ -269,8 +269,12 @@ if (EMSCRIPTEN)
         target_link_options(dithr PRIVATE -msimd128)
     endif()
 
+    # Cap WASM heap growth at 512 MiB so a runaway cart cannot exhaust the
+    # browser tab's memory. Generous for fantasy-console workloads while
+    # staying well below typical browser per-tab limits.
     target_link_options(dithr PRIVATE
         -sALLOW_MEMORY_GROWTH=1
+        -sMAXIMUM_MEMORY=536870912
         -sSTACK_SIZE=1048576
         -sINITIAL_MEMORY=67108864
         -sENVIRONMENT=web

@@ -4,7 +4,7 @@
  */
 
 #include "cart.h"
-#include "quickjs.h"
+#include "quickjs_compat.h"
 #include "test_harness.h"
 
 #include <assert.h>

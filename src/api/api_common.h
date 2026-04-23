@@ -8,7 +8,7 @@
 
 #include "../console.h"
 #include "../runtime.h"
-#include "quickjs.h"
+#include "quickjs_compat.h"
 
 #ifdef __cplusplus
 extern "C" {

@@ -48,9 +48,6 @@ function(dtr_add_test name source)
 
     add_executable(${name} ${source})
     target_link_libraries(${name} PRIVATE ${ARG_LINK_LIB})
-    if (MSVC)
-        target_compile_options(${name} PRIVATE /wd4244)
-    endif()
     if (EMSCRIPTEN)
         target_link_options(${name} PRIVATE
             -sENVIRONMENT=node

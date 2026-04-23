@@ -7,7 +7,7 @@
 #define DTR_EVENT_H
 
 #include "console.h"
-#include "quickjs.h"
+#include "quickjs_compat.h"
 
 #ifdef __cplusplus
 extern "C" {

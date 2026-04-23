@@ -4,7 +4,7 @@
  */
 
 #include "event.h"
-#include "quickjs.h"
+#include "quickjs_compat.h"
 #include "test_harness.h"
 
 #include <stdio.h>

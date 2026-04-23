@@ -13,7 +13,7 @@ static JSValue js_mouse_x(JSContext *ctx, JSValueConst this_val, int argc, JSVal
     (void)this_val;
     (void)argc;
     (void)argv;
-    return JS_NewInt32(ctx, MOUSE(ctx)->x);
+    return JS_NewInt32(ctx, (int32_t)MOUSE(ctx)->x);
 }
 
 static JSValue js_mouse_y(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
@@ -21,7 +21,7 @@ static JSValue js_mouse_y(JSContext *ctx, JSValueConst this_val, int argc, JSVal
     (void)this_val;
     (void)argc;
     (void)argv;
-    return JS_NewInt32(ctx, MOUSE(ctx)->y);
+    return JS_NewInt32(ctx, (int32_t)MOUSE(ctx)->y);
 }
 
 static JSValue js_mouse_dx(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
@@ -29,7 +29,7 @@ static JSValue js_mouse_dx(JSContext *ctx, JSValueConst this_val, int argc, JSVa
     (void)this_val;
     (void)argc;
     (void)argv;
-    return JS_NewInt32(ctx, MOUSE(ctx)->dx);
+    return JS_NewInt32(ctx, (int32_t)MOUSE(ctx)->dx);
 }
 
 static JSValue js_mouse_dy(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
@@ -37,7 +37,7 @@ static JSValue js_mouse_dy(JSContext *ctx, JSValueConst this_val, int argc, JSVa
     (void)this_val;
     (void)argc;
     (void)argv;
-    return JS_NewInt32(ctx, MOUSE(ctx)->dy);
+    return JS_NewInt32(ctx, (int32_t)MOUSE(ctx)->dy);
 }
 
 static JSValue js_mouse_wheel(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
@@ -45,7 +45,7 @@ static JSValue js_mouse_wheel(JSContext *ctx, JSValueConst this_val, int argc, J
     (void)this_val;
     (void)argc;
     (void)argv;
-    return JS_NewInt32(ctx, MOUSE(ctx)->wheel);
+    return JS_NewInt32(ctx, (int32_t)MOUSE(ctx)->wheel);
 }
 
 static JSValue js_mouse_btn(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
