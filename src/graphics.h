@@ -200,6 +200,10 @@ struct dtr_graphics {
     /* Framebuffer dimensions (may be overridden by cart) */
     int32_t width;
     int32_t height;
+
+    /* One-shot warning flag: set after the first time gfx.spr* is called
+     * without an active sheet, so we don't spam the log. */
+    bool warned_no_sheet;
 };
 
 /* ------------------------------------------------------------------------ */

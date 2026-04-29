@@ -45,7 +45,9 @@ const playerVx = 30; // pixels per second
 
 // --- Callbacks -------------------------------------------------------
 
-export function _init(): void {
+export async function _init(): Promise<void> {
+    await res.loadSprite('sheet', 'assets/sprites/spritesheet.png');
+    res.setActiveSheet('sheet', { tileW: 8, tileH: 8 });
     gfx.cls(0);
 }
 

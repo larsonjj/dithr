@@ -28,6 +28,12 @@ const MIME_TYPES = {
     ".ico": "image/x-icon",
     ".svg": "image/svg+xml",
     ".txt": "text/plain; charset=utf-8",
+    ".tmj": "application/json; charset=utf-8",
+    ".ldtk": "application/json; charset=utf-8",
+    ".hex": "text/plain; charset=utf-8",
+    ".ogg": "audio/ogg",
+    ".mp3": "audio/mpeg",
+    ".wav": "audio/wav",
 };
 
 function getMime(filePath) {
@@ -76,6 +82,27 @@ const server = http.createServer((req, res) => {
         res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0");
         res.setHeader("Pragma", "no-cache");
         res.setHeader("Expires", "0");
+
+        // Prefer a pre-compressed sibling (foo.tmj.br / foo.tmj.gz) when the
+        // client accepts it. Saves CPU on every request; honors the cart's
+        // build-time `assets.compress` setting.
+        if (encoding) {
+            const suffix = encoding === "br" ? ".br" : ".gz";
+            const siblingPath = filePath + suffix;
+            try {
+                const siblingStat = fs.statSync(siblingPath);
+                if (siblingStat.isFile()) {
+                    res.setHeader("Content-Encoding", encoding);
+                    res.setHeader("Content-Length", siblingStat.size);
+                    res.writeHead(200);
+                    fs.createReadStream(siblingPath).pipe(res);
+                    return;
+                }
+            } catch {
+                /* no sibling — fall through to on-the-fly compression */
+            }
+        }
+
         const stream = fs.createReadStream(filePath);
         const comp = compressStream(encoding);
 

@@ -103,7 +103,6 @@ function main() {
             },
         },
         code: codeEntry,
-        maps: [],
     };
     fs.writeFileSync(path.join(dir, "cart.json"), JSON.stringify(cart, null, 4) + "\n");
 

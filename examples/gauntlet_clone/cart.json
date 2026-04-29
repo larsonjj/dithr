@@ -50,6 +50,5 @@
     }
   },
   "code": "dist/main.js",
-  "buildCommand": "npx esbuild src/main.ts --bundle --format=esm --target=es2020 --outfile=dist/main.js",
-  "maps": []
+  "buildCommand": "npx esbuild src/main.ts --bundle --format=esm --target=es2020 --outfile=dist/main.js"
 }

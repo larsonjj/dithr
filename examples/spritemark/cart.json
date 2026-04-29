@@ -13,7 +13,6 @@
     "ups": 60
   },
   "sprites": {
-    "sheet": "assets/sprites/spritesheet.png",
     "tileW": 16,
     "tileH": 16
   },
@@ -24,6 +23,5 @@
     "default_mappings": {}
   },
   "code": "dist/main.js",
-  "buildCommand": "npx esbuild src/main.ts --bundle --format=esm --target=es2020 --outfile=dist/main.js",
-  "maps": []
+  "buildCommand": "npx esbuild src/main.ts --bundle --format=esm --target=es2020 --outfile=dist/main.js"
 }

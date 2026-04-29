@@ -292,16 +292,75 @@ if (EMSCRIPTEN)
         -Oz
     )
 
-    # Preload cart assets into the Emscripten virtual FS
+    # Preload cart assets into the Emscripten virtual FS.
+    #
+    # Asset selection is driven by the cart's `assets` block in cart.json,
+    # resolved through tools/resolve-assets.js. Files matching `assets.dynamic`
+    # are NOT preloaded — they are copied to build/wasm/dynamic/ and fetched
+    # over HTTP at runtime via the res.* API.
     if (DTR_WASM_CART_DIR)
-        target_link_options(dithr PRIVATE
-            "SHELL:--preload-file ${DTR_WASM_CART_DIR}@/cart"
+        find_program(NODE_EXECUTABLE node REQUIRED)
+
+        # Resolve the manifest at configure time and capture file lists.
+        execute_process(
+            COMMAND ${NODE_EXECUTABLE}
+                "${CMAKE_SOURCE_DIR}/tools/resolve-assets.js"
+                "${DTR_WASM_CART_DIR}"
+                --json
+            OUTPUT_VARIABLE DTR_ASSETS_JSON
+            RESULT_VARIABLE DTR_ASSETS_RC
+            ERROR_VARIABLE DTR_ASSETS_ERR
         )
+        if (NOT DTR_ASSETS_RC EQUAL 0)
+            message(FATAL_ERROR
+                "resolve-assets.js failed for ${DTR_WASM_CART_DIR}:\n${DTR_ASSETS_ERR}")
+        endif()
+
+        string(JSON DTR_BUNDLED_LEN LENGTH "${DTR_ASSETS_JSON}" bundled)
+        string(JSON DTR_DYNAMIC_LEN LENGTH "${DTR_ASSETS_JSON}" dynamic)
+        message(STATUS
+            "Cart ${DTR_WASM_CART_DIR}: ${DTR_BUNDLED_LEN} bundled, ${DTR_DYNAMIC_LEN} dynamic")
+
+        # Add a --preload-file flag per bundled file. Each maps an absolute
+        # source path to a destination under /cart/<rel> in the MEMFS.
+        set(DTR_BUNDLED_ABS_FILES "")
+        if (DTR_BUNDLED_LEN GREATER 0)
+            math(EXPR DTR_BUNDLED_LAST "${DTR_BUNDLED_LEN} - 1")
+            foreach (i RANGE 0 ${DTR_BUNDLED_LAST})
+                string(JSON rel GET "${DTR_ASSETS_JSON}" bundled ${i})
+                set(abs "${DTR_WASM_CART_DIR}/${rel}")
+                target_link_options(dithr PRIVATE
+                    "SHELL:--preload-file ${abs}@/cart/${rel}"
+                )
+                list(APPEND DTR_BUNDLED_ABS_FILES "${abs}")
+            endforeach()
+        endif()
+
         target_compile_definitions(dithr PRIVATE DTR_WASM_CART_PATH="/cart/cart.json")
 
-        # Track cart directory contents so Ninja relinks when assets change
-        file(GLOB_RECURSE DTR_CART_FILES "${DTR_WASM_CART_DIR}/*")
-        set_property(TARGET dithr PROPERTY LINK_DEPENDS ${DTR_CART_FILES})
+        # Stage dynamic assets at build time (copy + optional compression).
+        # Re-runs whenever the manifest changes; the script itself diffs to
+        # avoid unnecessary copies.
+        set(DTR_WASM_DYNAMIC_DIR "${CMAKE_BINARY_DIR}/dynamic")
+        add_custom_command(
+            TARGET dithr PRE_LINK
+            COMMAND ${NODE_EXECUTABLE}
+                "${CMAKE_SOURCE_DIR}/tools/prepare-dynamic.js"
+                "${DTR_WASM_CART_DIR}"
+                "${DTR_WASM_DYNAMIC_DIR}"
+            COMMENT "Staging dynamic assets → ${DTR_WASM_DYNAMIC_DIR}"
+            VERBATIM
+        )
+
+        # Track only bundled files for relink. Edits to dynamic files trigger
+        # only a re-stage (via the PRE_LINK custom command above).
+        if (DTR_BUNDLED_ABS_FILES)
+            set_property(TARGET dithr PROPERTY LINK_DEPENDS
+                ${DTR_BUNDLED_ABS_FILES}
+                "${CMAKE_SOURCE_DIR}/tools/resolve-assets.js"
+                "${DTR_WASM_CART_DIR}/cart.json"
+            )
+        endif()
     endif()
 
     # Produce .html output with custom shell page

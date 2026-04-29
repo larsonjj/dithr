@@ -173,61 +173,60 @@ See [Cart Format](cart-format.md) for the full schema.
 
 ## 5. Add assets
 
+Carts load assets explicitly via the `res` API in an async `_init`. Place
+assets under `assets/` and load them by name:
+
 ### Sprites
 
-Place your sprite sheet PNG in `assets/sprites/` and reference it in
-`cart.json`:
-
-```json
-{
-    "sprites": {
-        "sheet": "assets/sprites/sheet.png",
-        "tileW": 8,
-        "tileH": 8
-    }
-}
-```
-
-Draw sprites with `gfx.spr()`:
-
 ```js
-gfx.spr(0, 10, 10); // sprite 0 at (10, 10)
-gfx.spr(1, 20, 10, 1, 1); // sprite 1, normal size
+async function _init() {
+    await res.loadSprite("sheet", "assets/sprites/sheet.png");
+    res.setActiveSheet("sheet", { tileW: 8, tileH: 8 });
+}
+
+function _draw() {
+    gfx.spr(0, 10, 10); // sprite 0 at (10, 10)
+    gfx.spr(1, 20, 10, 1, 1); // sprite 1, normal size
+}
 ```
 
 ### Tilemaps
 
 Export maps from [Tiled](https://www.mapeditor.org/) as `.tmj` (JSON) and
-reference them in `cart.json`:
-
-```json
-{
-    "maps": ["assets/maps/level.tmj"]
-}
-```
-
-Draw and query the map in code:
+load them by name:
 
 ```js
-map.draw(cam.get().x, cam.get().y, 0, 0);
-const spawn = map.object("player_spawn");
+async function _init() {
+    await res.loadMap("level", "assets/maps/level.tmj");
+    map.use("level");
+}
+
+function _draw() {
+    map.draw(cam.get().x, cam.get().y, 0, 0);
+    const spawn = map.object("player_spawn");
+}
 ```
 
 ### Sound effects and music
 
-Place audio files in `assets/sfx/` and `assets/music/`:
-
-```json
-{
-    "sfx": ["assets/sfx/jump.wav", "assets/sfx/coin.wav"],
-    "music": ["assets/music/theme.ogg"]
-}
-```
+Place audio files in `assets/sfx/` and `assets/music/`, load them with
+named ids, then play by id:
 
 ```js
-sfx.play(0); // play jump sound
-mus.play(0); // play background music
-mus.volume(0, 0.5); // set music volume
+async function _init() {
+    await res.loadSfx("jump", "assets/sfx/jump.wav");
+    await res.loadSfx("coin", "assets/sfx/coin.wav");
+    await res.loadMusic("theme", "assets/music/theme.ogg");
+}
+
+function _update() {
+    if (input.btnp("jump")) sfx.play("jump");
+}
+
+function _start() {
+    mus.play("theme");
+    mus.volume(0, 0.5); // channel 0 volume
+}
 ```
 
 ## 6. Lint and format

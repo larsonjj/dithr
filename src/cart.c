@@ -202,25 +202,11 @@ bool dtr_cart_parse(dtr_cart_t *cart, JSContext *ctx, const char *json, size_t l
     /* --- sprites --- */
     sub = JS_GetPropertyStr(ctx, root, "sprites");
     if (JS_IsObject(sub)) {
-        JSValue sheet;
+        cart->sprites.tile_w = prv_json_int(ctx, sub, "tileW", CONSOLE_TILE_W);
+        cart->sprites.tile_h = prv_json_int(ctx, sub, "tileH", CONSOLE_TILE_H);
 
-        cart->sprites.tile_w  = prv_json_int(ctx, sub, "tileW", CONSOLE_TILE_W);
-        cart->sprites.tile_h  = prv_json_int(ctx, sub, "tileH", CONSOLE_TILE_H);
-        cart->sprites.sheet_w = prv_json_int(ctx, sub, "sheetW", 128);
-        cart->sprites.sheet_h = prv_json_int(ctx, sub, "sheetH", 128);
-
-        sheet = JS_GetPropertyStr(ctx, sub, "sheet");
-        if (JS_IsString(sheet)) {
-            const char *path;
-
-            path = JS_ToCString(ctx, sheet);
-            if (path != NULL) {
-                SDL_strlcpy(cart->sprite_sheet_path, path, sizeof(cart->sprite_sheet_path));
-                JS_FreeCString(ctx, path);
-            }
-        }
-        JS_FreeValue(ctx, sheet);
-
+        /* Phase 3: sprites.sheet is gone — load via res.loadSprite() instead.
+         * sprites.flags is still honored for now (it's small and palette-side). */
         {
             JSValue flags_val;
 
@@ -267,71 +253,7 @@ bool dtr_cart_parse(dtr_cart_t *cart, JSContext *ctx, const char *json, size_t l
     }
     JS_FreeValue(ctx, sub);
 
-    /* --- sfx (array of file paths) --- */
-    {
-        JSValue arr;
-
-        arr = JS_GetPropertyStr(ctx, root, "sfx");
-        if (JS_IsArray(arr)) {
-            JSValue len_val;
-            int32_t arr_len;
-
-            len_val = JS_GetPropertyStr(ctx, arr, "length");
-            JS_ToInt32(ctx, &arr_len, len_val);
-            JS_FreeValue(ctx, len_val);
-
-            cart->sfx_count = (arr_len > DTR_CART_MAX_SFX) ? DTR_CART_MAX_SFX : arr_len;
-            for (int32_t idx = 0; idx < cart->sfx_count; ++idx) {
-                JSValue elem;
-
-                elem = JS_GetPropertyUint32(ctx, arr, (uint32_t)idx);
-                if (JS_IsString(elem)) {
-                    const char *str;
-
-                    str = JS_ToCString(ctx, elem);
-                    if (str != NULL) {
-                        SDL_strlcpy(cart->sfx_paths[idx], str, sizeof(cart->sfx_paths[idx]));
-                        JS_FreeCString(ctx, str);
-                    }
-                }
-                JS_FreeValue(ctx, elem);
-            }
-        }
-        JS_FreeValue(ctx, arr);
-    }
-
-    /* --- music (array of file paths) --- */
-    {
-        JSValue arr;
-
-        arr = JS_GetPropertyStr(ctx, root, "music");
-        if (JS_IsArray(arr)) {
-            JSValue len_val;
-            int32_t arr_len;
-
-            len_val = JS_GetPropertyStr(ctx, arr, "length");
-            JS_ToInt32(ctx, &arr_len, len_val);
-            JS_FreeValue(ctx, len_val);
-
-            cart->music_count = (arr_len > DTR_CART_MAX_MUSIC) ? DTR_CART_MAX_MUSIC : arr_len;
-            for (int32_t idx = 0; idx < cart->music_count; ++idx) {
-                JSValue elem;
-
-                elem = JS_GetPropertyUint32(ctx, arr, (uint32_t)idx);
-                if (JS_IsString(elem)) {
-                    const char *str;
-
-                    str = JS_ToCString(ctx, elem);
-                    if (str != NULL) {
-                        SDL_strlcpy(cart->music_paths[idx], str, sizeof(cart->music_paths[idx]));
-                        JS_FreeCString(ctx, str);
-                    }
-                }
-                JS_FreeValue(ctx, elem);
-            }
-        }
-        JS_FreeValue(ctx, arr);
-    }
+    /* --- sfx / music: removed in Phase 3 — load via res.loadSfx/Music --- */
 
     /* --- code (inline or path) --- */
     {
@@ -367,38 +289,7 @@ bool dtr_cart_parse(dtr_cart_t *cart, JSContext *ctx, const char *json, size_t l
         JS_FreeValue(ctx, build_val);
     }
 
-    /* --- maps --- */
-    {
-        JSValue maps_val;
-        int32_t maps_len;
-
-        maps_val = JS_GetPropertyStr(ctx, root, "maps");
-        if (JS_IsArray(maps_val)) {
-            JSValue length_val;
-
-            length_val = JS_GetPropertyStr(ctx, maps_val, "length");
-            JS_ToInt32(ctx, &maps_len, length_val);
-            JS_FreeValue(ctx, length_val);
-
-            cart->map_count = (maps_len > CONSOLE_MAP_SLOTS) ? CONSOLE_MAP_SLOTS : maps_len;
-            for (int32_t idx = 0; idx < cart->map_count; ++idx) {
-                JSValue elem;
-
-                elem = JS_GetPropertyUint32(ctx, maps_val, (uint32_t)idx);
-                if (JS_IsString(elem)) {
-                    const char *path;
-
-                    path = JS_ToCString(ctx, elem);
-                    if (path != NULL) {
-                        SDL_strlcpy(cart->map_paths[idx], path, sizeof(cart->map_paths[idx]));
-                        JS_FreeCString(ctx, path);
-                    }
-                }
-                JS_FreeValue(ctx, elem);
-            }
-        }
-        JS_FreeValue(ctx, maps_val);
-    }
+    /* --- maps: removed in Phase 3 — load via res.loadMap --- */
 
     /* --- input.default_mappings --- */
     sub = JS_GetPropertyStr(ctx, root, "input");
@@ -993,7 +884,6 @@ void dtr_cart_destroy(dtr_cart_t *cart)
         dtr_cart_free_map(cart, idx);
     }
 
-    DTR_FREE(cart->sprite_rgba);
     DTR_FREE(cart->code);
     DTR_FREE(cart);
 }

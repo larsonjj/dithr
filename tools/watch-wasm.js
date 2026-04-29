@@ -18,6 +18,8 @@ const path = require("node:path");
 const zlib = require("node:zlib");
 const { execSync, spawn } = require("node:child_process");
 
+const { matchesAny, readAssetsConfig } = require("./resolve-assets.js");
+
 const CART_DIR = process.argv[2];
 if (!CART_DIR) {
     console.error("Usage: node tools/watch-wasm.js <cartDir> [port]");
@@ -27,19 +29,26 @@ if (!CART_DIR) {
 const PORT = parseInt(process.argv[3], 10) || 8080;
 const ROOT = path.resolve(__dirname, "..");
 const BUILD_DIR = path.join(ROOT, "build", "wasm");
+const DYNAMIC_DIR = path.join(BUILD_DIR, "dynamic");
 const CART_ABS = path.resolve(CART_DIR);
 
-/* Read cart.json to determine the JS entry-point file */
+/* Read cart.json to determine the JS entry-point file and dynamic globs */
 let ENTRY_JS = null;
-try {
-    const cartJson = JSON.parse(fs.readFileSync(path.join(CART_ABS, "cart.json"), "utf8"));
-    if (cartJson.code) {
-        ENTRY_JS = cartJson.code.replace(/\\/g, "/");
+let DYNAMIC_GLOBS = [];
+function reloadCartConfig() {
+    try {
+        const cartJson = JSON.parse(fs.readFileSync(path.join(CART_ABS, "cart.json"), "utf8"));
+        if (cartJson.code) {
+            ENTRY_JS = cartJson.code.replace(/\\/g, "/");
+        }
+        const cfg = readAssetsConfig(CART_ABS);
+        DYNAMIC_GLOBS = cfg.dynamic;
+    } catch (err) {
+        console.warn("Failed to parse cart.json:", err.message);
+        /* cart.json missing or unparseable — fall back to treating all .js as entry */
     }
-} catch (err) {
-    console.warn("Failed to parse cart.json:", err.message);
-    /* cart.json missing or unparseable — fall back to treating all .js as entry */
 }
+reloadCartConfig();
 
 /* ------------------------------------------------------------------ */
 /*  SSE live-reload                                                    */
@@ -318,6 +327,17 @@ function onCartChange(eventType, filename) {
         const known = files.filter((f) => path.extname(f) !== "");
         if (known.length === 0) return;
 
+        /* If cart.json itself changed, reload our cached config so subsequent
+           classifications use the new dynamic glob set. */
+        if (known.includes("cart.json")) {
+            reloadCartConfig();
+        }
+
+        /* Files matching assets.dynamic globs only need to be re-staged into
+           build/wasm/dynamic/ — no cmake link required. */
+        const dynamicOnly =
+            DYNAMIC_GLOBS.length > 0 && known.every((f) => matchesAny(f, DYNAMIC_GLOBS));
+
         const jsOnly = known.every((f) => f.endsWith(".js") || f.endsWith(".mjs"));
 
         /* When we know the entry-point, only hot-reload if the changed file
@@ -341,6 +361,22 @@ function onCartChange(eventType, filename) {
                     client.write(`event: hotreload\ndata: ${f}\n\n`);
                 }
             }
+        } else if (dynamicOnly) {
+            /* Dynamic-asset change — re-stage build/wasm/dynamic/ and signal
+               assetreload. Skip cmake entirely. */
+            console.log(`[watch] Dynamic assets changed: ${known.join(", ")} — re-staging`);
+            const proc = spawn(
+                process.execPath,
+                [path.join(__dirname, "prepare-dynamic.js"), CART_ABS, DYNAMIC_DIR],
+                { stdio: "inherit" },
+            );
+            proc.on("close", () => {
+                for (const client of sseClients) {
+                    for (const f of known) {
+                        client.write(`event: assetreload\ndata: ${f}\n\n`);
+                    }
+                }
+            });
         } else if (assetOnly) {
             /* Asset-only change — reload assets without cmake rebuild */
             console.log(`[watch] Assets changed: ${known.join(", ")} — asset-reloading`);

@@ -76,7 +76,9 @@ function spawn(count: number) {
 
 // --- Callbacks -------------------------------------------------------
 
-export function _init(): void {
+export async function _init(): Promise<void> {
+    await res.loadSprite('sheet', 'assets/sprites/spritesheet.png');
+    res.setActiveSheet('sheet', { tileW: 8, tileH: 8 });
     gfx.cls(0);
     // Start with an initial batch
     spawn(SPAWN_COUNT);

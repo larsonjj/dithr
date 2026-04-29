@@ -16,13 +16,46 @@ static dtr_map_level_t *prv_get_level(JSContext *ctx, int argc, JSValueConst *ar
     dtr_console_t *con;
     int32_t        slot;
 
-    con  = dtr_api_get_console(ctx);
+    con = dtr_api_get_console(ctx);
+
+    /* No explicit slot arg → prefer the res-selected active map if one is set. */
+    if (slot_idx >= argc && con->res != NULL && con->res->active_map_slot >= 0) {
+        const dtr_res_entry_t *e = &con->res->entries[con->res->active_map_slot];
+        if (e->status == DTR_RES_STATUS_READY && e->kind == DTR_RES_MAP) {
+            return e->payload.map;
+        }
+    }
+
     slot = dtr_api_opt_int(ctx, argc, argv, slot_idx, con->cart->current_map);
 
     if (slot < 0 || slot >= con->cart->map_count) {
         return NULL;
     }
     return con->cart->maps[slot];
+}
+
+/* ------------------------------------------------------------------ */
+/*  map.use(nameOrHandle) — select the active map from the res        */
+/*  registry. Throws TypeError if the name/handle is unknown or       */
+/*  not a map resource.                                                */
+/* ------------------------------------------------------------------ */
+
+static JSValue js_map_use(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+{
+    dtr_console_t *con;
+    int32_t        slot;
+
+    (void)this_val;
+    if (argc < 1) {
+        return JS_ThrowTypeError(ctx, "map.use: missing map name or handle");
+    }
+    con  = dtr_api_get_console(ctx);
+    slot = dtr_res_resolve_handle(con, argv[0], DTR_RES_MAP);
+    if (slot < 0) {
+        return JS_ThrowTypeError(ctx, "map.use: unknown map (must be a loaded res name or handle)");
+    }
+    con->res->active_map_slot = slot;
+    return JS_UNDEFINED;
 }
 
 /* ------------------------------------------------------------------ */
@@ -330,6 +363,19 @@ static JSValue js_map_load(JSContext *ctx, JSValueConst this_val, int argc, JSVa
     name = JS_ToCString(ctx, argv[0]);
     if (name == NULL) {
         return JS_FALSE;
+    }
+
+    /* Phase 3: prefer the res registry if a map with this name is loaded. */
+    if (con->res != NULL) {
+        int32_t slot = dtr_res_find(con->res, name);
+        if (slot >= 0) {
+            const dtr_res_entry_t *e = &con->res->entries[slot];
+            if (e->status == DTR_RES_STATUS_READY && e->kind == DTR_RES_MAP) {
+                con->res->active_map_slot = slot;
+                JS_FreeCString(ctx, name);
+                return JS_TRUE;
+            }
+        }
     }
 
     for (int32_t idx = 0; idx < con->cart->map_count; ++idx) {
@@ -1379,6 +1425,7 @@ static const JSCFunctionListEntry js_map_funcs[] = {
     JS_CFUNC_DEF("levels", 0, js_map_levels),
     JS_CFUNC_DEF("currentLevel", 0, js_map_current_level),
     JS_CFUNC_DEF("load", 1, js_map_load),
+    JS_CFUNC_DEF("use", 1, js_map_use),
     JS_CFUNC_DEF("objects", 1, js_map_objects),
     JS_CFUNC_DEF("object", 1, js_map_object),
     JS_CFUNC_DEF("objectsIn", 4, js_map_objects_in),

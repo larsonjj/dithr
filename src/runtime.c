@@ -298,6 +298,11 @@ dtr_runtime_t *dtr_runtime_create(dtr_console_t *con, int32_t heap_mb, int32_t s
     rt->error_line   = 0;
     rt->error_msg[0] = '\0';
 
+    rt->init_pending     = false;
+    rt->init_promise     = JS_UNDEFINED;
+    rt->init_warned_slow = false;
+    rt->init_start_perf  = 0;
+
     return rt;
 }
 
@@ -308,6 +313,11 @@ void dtr_runtime_destroy(dtr_runtime_t *rt)
     }
 
     if (rt->ctx != NULL) {
+        if (rt->init_pending && !JS_IsUndefined(rt->init_promise)) {
+            JS_FreeValue(rt->ctx, rt->init_promise);
+            rt->init_promise = JS_UNDEFINED;
+            rt->init_pending = false;
+        }
         JS_FreeAtom(rt->ctx, rt->atom_init);
         JS_FreeAtom(rt->ctx, rt->atom_update);
         JS_FreeAtom(rt->ctx, rt->atom_fixed_update);
@@ -481,6 +491,133 @@ bool dtr_runtime_call_argv(dtr_runtime_t *rt, JSAtom name, int argc, JSValue *ar
 }
 
 /* ------------------------------------------------------------------ */
+/*  Async _init bridge                                                 */
+/* ------------------------------------------------------------------ */
+
+/* Returns true if `v` is a thenable (Promise or duck-typed equivalent). */
+static bool prv_value_is_thenable(JSContext *ctx, JSValueConst v)
+{
+    JSValue then_fn;
+    bool    ok;
+
+    if (!JS_IsObject(v)) {
+        return false;
+    }
+    then_fn = JS_GetPropertyStr(ctx, v, "then");
+    ok      = JS_IsFunction(ctx, then_fn);
+    JS_FreeValue(ctx, then_fn);
+    return ok;
+}
+
+bool dtr_runtime_call_init(dtr_runtime_t *rt)
+{
+    JSValue global;
+    JSValue func;
+    JSValue result;
+
+    if (rt->error_active) {
+        return false;
+    }
+
+    /* If a previous _init promise is still in flight, drop it before
+     * dispatching a new one (e.g. on hot-reload). */
+    if (rt->init_pending && !JS_IsUndefined(rt->init_promise)) {
+        JS_FreeValue(rt->ctx, rt->init_promise);
+        rt->init_promise = JS_UNDEFINED;
+    }
+    rt->init_pending     = false;
+    rt->init_warned_slow = false;
+    rt->init_start_perf  = 0;
+
+    global = JS_GetGlobalObject(rt->ctx);
+    func   = JS_GetProperty(rt->ctx, global, rt->atom_init);
+
+    if (!JS_IsFunction(rt->ctx, func)) {
+        JS_FreeValue(rt->ctx, func);
+        JS_FreeValue(rt->ctx, global);
+        return true;
+    }
+
+    result = JS_Call(rt->ctx, func, global, 0, NULL);
+    if (JS_IsException(result)) {
+        prv_capture_exception(rt);
+        JS_FreeValue(rt->ctx, result);
+        JS_FreeValue(rt->ctx, func);
+        JS_FreeValue(rt->ctx, global);
+        return false;
+    }
+
+    if (prv_value_is_thenable(rt->ctx, result)) {
+        rt->init_promise    = result; /* take ownership */
+        rt->init_pending    = true;
+        rt->init_start_perf = SDL_GetPerformanceCounter();
+    } else {
+        JS_FreeValue(rt->ctx, result);
+    }
+
+    JS_FreeValue(rt->ctx, func);
+    JS_FreeValue(rt->ctx, global);
+    return true;
+}
+
+bool dtr_runtime_init_pending(dtr_runtime_t *rt)
+{
+    JSPromiseStateEnum state;
+    double             elapsed_ms;
+
+    if (!rt->init_pending) {
+        return false;
+    }
+    if (JS_IsUndefined(rt->init_promise)) {
+        rt->init_pending = false;
+        return false;
+    }
+
+    state = JS_PromiseState(rt->ctx, rt->init_promise);
+    if (state == JS_PROMISE_PENDING) {
+        /* Slow-init warning fires once after 30 s. */
+        if (!rt->init_warned_slow && rt->init_start_perf != 0) {
+            uint64_t now = SDL_GetPerformanceCounter();
+            elapsed_ms   = (double)(now - rt->init_start_perf) /
+                           (double)SDL_GetPerformanceFrequency() * 1000.0;
+            if (elapsed_ms > 30000.0) {
+                rt->init_warned_slow = true;
+                SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
+                            "_init promise has not settled after 30 s "
+                            "\u2014 are all res.load* calls awaited?");
+            }
+        }
+        return true;
+    }
+
+    if (state == JS_PROMISE_REJECTED) {
+        JSValue     reason;
+        const char *msg;
+
+        reason = JS_PromiseResult(rt->ctx, rt->init_promise);
+        msg    = JS_ToCString(rt->ctx, reason);
+        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
+                     "_init promise rejected: %s",
+                     msg != NULL ? msg : "(unknown)");
+        if (msg != NULL) {
+            JS_FreeCString(rt->ctx, msg);
+        }
+        SDL_strlcpy(rt->error_msg,
+                    "_init promise rejected — see console for details",
+                    sizeof(rt->error_msg));
+        rt->error_active = true;
+        rt->error_line   = 0;
+        JS_FreeValue(rt->ctx, reason);
+    }
+
+    /* Fulfilled or rejected — release the promise either way. */
+    JS_FreeValue(rt->ctx, rt->init_promise);
+    rt->init_promise = JS_UNDEFINED;
+    rt->init_pending = false;
+    return false;
+}
+
+/* ------------------------------------------------------------------ */
 /*  Drain microtasks                                                   */
 /* ------------------------------------------------------------------ */
 
@@ -514,6 +651,26 @@ JSValue dtr_runtime_parse_json(dtr_runtime_t *rt, const char *json, size_t len)
         prv_capture_exception(rt);
     }
     return result;
+}
+
+/* ------------------------------------------------------------------ */
+/*  Promise helper                                                     */
+/* ------------------------------------------------------------------ */
+
+JSValue dtr_runtime_make_promise(dtr_runtime_t *rt, JSValue *resolve_out, JSValue *reject_out)
+{
+    JSValue funcs[2];
+    JSValue promise;
+
+    promise = JS_NewPromiseCapability(rt->ctx, funcs);
+    if (JS_IsException(promise)) {
+        *resolve_out = JS_UNDEFINED;
+        *reject_out  = JS_UNDEFINED;
+        return promise;
+    }
+    *resolve_out = funcs[0];
+    *reject_out  = funcs[1];
+    return promise;
 }
 
 /* ------------------------------------------------------------------ */

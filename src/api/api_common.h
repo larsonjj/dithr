@@ -7,6 +7,7 @@
 #define DTR_API_COMMON_H
 
 #include "../console.h"
+#include "../resources.h"
 #include "../runtime.h"
 #include "quickjs_compat.h"
 
@@ -73,6 +74,28 @@ static inline const char *dtr_api_get_string(JSContext *ctx, JSValueConst val)
     return JS_ToCString(ctx, val);
 }
 
+/**
+ * \brief   Resolve a JS arg (string-or-number) to an audio system slot
+ *          for the given audio kind (DTR_RES_SFX or DTR_RES_MUSIC).
+ * \return  Audio slot >= 0 on success; -1 if unknown or wrong kind.
+ */
+static inline int32_t
+dtr_api_resolve_audio_slot(JSContext *ctx, JSValueConst v, dtr_res_kind_t kind)
+{
+    dtr_console_t *con;
+    int32_t        res_slot;
+
+    con = dtr_api_get_console(ctx);
+    if (con == NULL || con->res == NULL) {
+        return -1;
+    }
+    res_slot = dtr_res_resolve_handle(con, v, kind);
+    if (res_slot < 0) {
+        return -1;
+    }
+    return con->res->entries[res_slot].payload.audio_slot;
+}
+
 /* Per-namespace registration functions */
 void dtr_gfx_api_register(JSContext *ctx, JSValue global);
 void dtr_map_api_register(JSContext *ctx, JSValue global);
@@ -93,6 +116,7 @@ void dtr_ui_api_register(JSContext *ctx, JSValue global);
 void dtr_tween_api_register(JSContext *ctx, JSValue global);
 void dtr_synth_api_register(JSContext *ctx, JSValue global);
 void dtr_touch_api_register(JSContext *ctx, JSValue global);
+void dtr_res_api_register(JSContext *ctx, JSValue global);
 
 #ifdef __cplusplus
 }

@@ -36,6 +36,17 @@ struct dtr_runtime {
     bool    error_active;
     char    error_msg[DTR_ERROR_MSG_LEN];
     int32_t error_line;
+
+    /* Async _init bookkeeping (Phase 3.5).
+     *
+     * If the cart's _init returns a Promise, the runtime stashes it here
+     * and dtr_console_iterate skips _fixedUpdate / _update / _draw until
+     * the promise settles. A timeout warning fires after 30 s.
+     */
+    bool     init_pending;
+    JSValue  init_promise;     /**< Owned. JS_UNDEFINED when no promise pending. */
+    bool     init_warned_slow; /**< true after the 30 s warning has fired. */
+    uint64_t init_start_perf;  /**< SDL_GetPerformanceCounter() at _init dispatch. */
 };
 
 /* ------------------------------------------------------------------------ */
@@ -91,6 +102,27 @@ bool dtr_runtime_call(dtr_runtime_t *rt, JSAtom name);
 bool dtr_runtime_call_argv(dtr_runtime_t *rt, JSAtom name, int argc, JSValue *argv);
 
 /**
+ * \brief   Call the cart's `_init` function, with awareness of an
+ *          optionally-returned Promise.
+ *
+ * Behaves like dtr_runtime_call(rt, atom_init), but if the function
+ * returns a thenable the runtime stashes it on `rt->init_promise`
+ * and sets `rt->init_pending = true`. Callers must consult
+ * dtr_runtime_init_pending() before driving _update/_draw.
+ *
+ * \return  true if dispatched cleanly (whether sync or pending);
+ *          false if an exception was thrown synchronously.
+ */
+bool dtr_runtime_call_init(dtr_runtime_t *rt);
+
+/**
+ * \brief   true while the cart's `_init` is still awaiting a returned
+ *          Promise. Polls the promise state and clears `init_pending`
+ *          when it settles. On rejection, surfaces the error overlay.
+ */
+bool dtr_runtime_init_pending(dtr_runtime_t *rt);
+
+/**
  * \brief           Drain pending QuickJS microtasks
  */
 void dtr_runtime_drain_jobs(dtr_runtime_t *rt);
@@ -103,6 +135,15 @@ void dtr_runtime_drain_jobs(dtr_runtime_t *rt);
  * \return          Parsed JS value (caller must JS_FreeValue)
  */
 JSValue dtr_runtime_parse_json(dtr_runtime_t *rt, const char *json, size_t len);
+
+/**
+ * \brief           Allocate a new pending Promise + its resolve/reject pair.
+ * \param[in]       rt: Runtime
+ * \param[out]      resolve_out: Receives the resolve function (caller frees)
+ * \param[out]      reject_out: Receives the reject function (caller frees)
+ * \return          The promise (caller frees), or JS_EXCEPTION on failure
+ */
+JSValue dtr_runtime_make_promise(dtr_runtime_t *rt, JSValue *resolve_out, JSValue *reject_out);
 
 /**
  * \brief           Clear the error state and resume execution

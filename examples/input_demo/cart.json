@@ -12,7 +12,6 @@
     "fps": 60
   },
   "sprites": {
-    "sheet": "assets/sprites/spritesheet.png",
     "tileW": 8,
     "tileH": 8
   },
@@ -53,6 +52,5 @@
     }
   },
   "code": "dist/main.js",
-  "buildCommand": "npx esbuild src/main.ts --bundle --format=esm --target=es2020 --outfile=dist/main.js",
-  "maps": []
+  "buildCommand": "npx esbuild src/main.ts --bundle --format=esm --target=es2020 --outfile=dist/main.js"
 }

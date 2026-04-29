@@ -288,36 +288,87 @@ games).
 
 ---
 
+## `res` — Resource Loader
+
+Asynchronous, Promise-based loader for sprites, maps, audio, JSON, and raw
+files. All `load*` calls take a string `name` (your handle for the asset)
+and a `path` relative to the cart directory. They return a Promise that
+settles when decoding completes — typically on the next frame for bundled
+assets, or when an HTTP fetch finishes for `dynamic` assets on web.
+
+| Function           | Parameters                 | Returns               | Description                                                   |
+| ------------------ | -------------------------- | --------------------- | ------------------------------------------------------------- |
+| `loadSprite`       | `name, path`               | `Promise<void>`       | Load a sprite sheet (PNG)                                     |
+| `loadMap`          | `name, path`               | `Promise<void>`       | Load a Tiled `.tmj` or LDtk `.ldtk` map                       |
+| `loadSfx`          | `name, path`               | `Promise<void>`       | Load a sound effect (wav/ogg)                                 |
+| `loadMusic`        | `name, path`               | `Promise<void>`       | Load a music track (ogg/mp3)                                  |
+| `loadJson`         | `name, path`               | `Promise<any>`        | Load and parse a JSON file                                    |
+| `loadRaw`          | `name, path`               | `Promise<Uint8Array>` | Load arbitrary bytes                                          |
+| `loadHex`          | `name, path`               | `Promise<Uint8Array>` | Load a `.hex` palette/flag dump                               |
+| `has`              | `name`                     | `bool`                | Is the name registered (may still be loading)?                |
+| `isLoaded`         | `name`                     | `bool`                | Sync probe — is decoding complete?                            |
+| `handle`           | `name`                     | `int`                 | Stable integer slot for hot-loop fast-path; throws if missing |
+| `unload`           | `name`                     | `bool`                | Free a loaded asset                                           |
+| `list`             | `kind?`                    | `string[]`            | List loaded names, optionally filtered by kind                |
+| `setActiveSheet`   | `name, { tileW?, tileH? }` | —                     | Set the spritesheet used by `gfx.spr*` calls                  |
+| `setActiveFlags`   | `name`                     | —                     | Set the active sprite-flag table (loaded via `loadHex`)       |
+| `setActivePalette` | `name`                     | —                     | Set the active palette (loaded via `loadHex`)                 |
+| `preload`          | `names[]`                  | `Promise<void[]>`     | `Promise.all` shortcut over many loads                        |
+
+`load*` rejects if the file is missing or fails to decode. `_init` may be
+declared `async` and `await` these promises — the engine defers
+`_update`/`_draw` ticks until the returned promise settles (with a 30 s
+slow-load warning).
+
+```js
+async function _init() {
+    await Promise.all([
+        res.loadSprite("sheet", "assets/sprites/sheet.png"),
+        res.loadHex("flags", "flags.hex"),
+        res.loadMap("level1", "assets/maps/level1.tmj"),
+        res.loadSfx("jump", "assets/sfx/jump.wav"),
+        res.loadMusic("theme", "assets/music/theme.mp3"),
+    ]);
+    res.setActiveSheet("sheet", { tileW: 8, tileH: 8 });
+    res.setActiveFlags("flags");
+    map.use("level1");
+    mus.play("theme");
+}
+```
+
+---
+
 ## `map` — Tilemaps
 
-| Function         | Parameters                                | Returns                 | Description                                                  |
-| ---------------- | ----------------------------------------- | ----------------------- | ------------------------------------------------------------ |
-| `get`            | `cx, cy, layer?, slot?`                   | `int`                   | Tile ID at cell position                                     |
-| `set`            | `cx, cy, tile, layer?, slot?`             | —                       | Set a tile ID                                                |
-| `flag`           | `cx, cy, f, slot?`                        | `bool`                  | Test sprite flag `f` on tile at (cx, cy)                     |
-| `draw`           | `sx, sy, dx, dy, tw?, th?, layer?, slot?` | —                       | Draw a map region. `tw`/`th` default to the full level size  |
-| `width`          | `slot?`                                   | `int`                   | Level width in tiles                                         |
-| `height`         | `slot?`                                   | `int`                   | Level height in tiles                                        |
-| `layers`         | `slot?`                                   | `string[]`              | Array of layer names                                         |
-| `levels`         |                                           | `string[]`              | Array of all loaded level names                              |
-| `currentLevel`   |                                           | `string`                | Name of the active level                                     |
-| `load`           | `name`                                    | `bool`                  | Switch active level by name                                  |
-| `objects`        | `name?, slot?`                            | `object[]`              | Get map objects, optionally filtered by name                 |
-| `object`         | `name, slot?`                             | `object` or `undefined` | First object matching name                                   |
-| `objectsIn`      | `x, y, w, h, slot?`                       | `object[]`              | AABB query for objects overlapping a rectangle               |
-| `objectsWith`    | `prop, value?, slot?`                     | `object[]`              | Filter objects by type or custom property                    |
-| `create`         | `w, h, name?`                             | `bool`                  | Create a blank map with one tile layer                       |
-| `resize`         | `w, h, slot?`                             | `bool`                  | Resize all tile layers (preserves existing data)             |
-| `addLayer`       | `name?, slot?`                            | `int`                   | Add a tile layer, returns index (-1 on error)                |
-| `removeLayer`    | `idx, slot?`                              | `bool`                  | Remove a layer (must keep at least one)                      |
-| `renameLayer`    | `idx, name, slot?`                        | `bool`                  | Rename a layer at the given index                            |
-| `layerType`      | `idx, slot?`                              | `string`                | Layer type: `"tilelayer"` or `"objectgroup"`                 |
-| `addObjectLayer` | `name?, slot?`                            | `int`                   | Add an object layer, returns index (-1 on error)             |
-| `layerObjects`   | `idx, slot?`                              | `object[]`              | All objects in a specific layer                              |
-| `addObject`      | `layerIdx, obj, slot?`                    | `int`                   | Add an object to a layer, returns object index (-1 on error) |
-| `removeObject`   | `layerIdx, objIdx, slot?`                 | `bool`                  | Remove an object from a layer (shifts remaining objects)     |
-| `setObject`      | `layerIdx, objIdx, fields, slot?`         | `bool`                  | Update object fields (name, type, x, y, w, h, gid)           |
-| `data`           | `slot?`                                   | `object` or `null`      | Full map data for serialization (name, layers, tiles)        |
+| Function         | Parameters                                | Returns                 | Description                                                                              |
+| ---------------- | ----------------------------------------- | ----------------------- | ---------------------------------------------------------------------------------------- |
+| `get`            | `cx, cy, layer?, slot?`                   | `int`                   | Tile ID at cell position                                                                 |
+| `set`            | `cx, cy, tile, layer?, slot?`             | —                       | Set a tile ID                                                                            |
+| `flag`           | `cx, cy, f, slot?`                        | `bool`                  | Test sprite flag `f` on tile at (cx, cy)                                                 |
+| `draw`           | `sx, sy, dx, dy, tw?, th?, layer?, slot?` | —                       | Draw a map region. `tw`/`th` default to the full level size                              |
+| `width`          | `slot?`                                   | `int`                   | Level width in tiles                                                                     |
+| `height`         | `slot?`                                   | `int`                   | Level height in tiles                                                                    |
+| `layers`         | `slot?`                                   | `string[]`              | Array of layer names                                                                     |
+| `levels`         |                                           | `string[]`              | Array of all loaded level names                                                          |
+| `currentLevel`   |                                           | `string`                | Name of the active level                                                                 |
+| `load`           | `name`                                    | `bool`                  | Switch active level by name (loaded `res` map or built-in)                               |
+| `use`            | `nameOrHandle`                            | `bool`                  | Select active map registered via `res.loadMap()` (string name or `res.handle()` integer) |
+| `objects`        | `name?, slot?`                            | `object[]`              | Get map objects, optionally filtered by name                                             |
+| `object`         | `name, slot?`                             | `object` or `undefined` | First object matching name                                                               |
+| `objectsIn`      | `x, y, w, h, slot?`                       | `object[]`              | AABB query for objects overlapping a rectangle                                           |
+| `objectsWith`    | `prop, value?, slot?`                     | `object[]`              | Filter objects by type or custom property                                                |
+| `create`         | `w, h, name?`                             | `bool`                  | Create a blank map with one tile layer                                                   |
+| `resize`         | `w, h, slot?`                             | `bool`                  | Resize all tile layers (preserves existing data)                                         |
+| `addLayer`       | `name?, slot?`                            | `int`                   | Add a tile layer, returns index (-1 on error)                                            |
+| `removeLayer`    | `idx, slot?`                              | `bool`                  | Remove a layer (must keep at least one)                                                  |
+| `renameLayer`    | `idx, name, slot?`                        | `bool`                  | Rename a layer at the given index                                                        |
+| `layerType`      | `idx, slot?`                              | `string`                | Layer type: `"tilelayer"` or `"objectgroup"`                                             |
+| `addObjectLayer` | `name?, slot?`                            | `int`                   | Add an object layer, returns index (-1 on error)                                         |
+| `layerObjects`   | `idx, slot?`                              | `object[]`              | All objects in a specific layer                                                          |
+| `addObject`      | `layerIdx, obj, slot?`                    | `int`                   | Add an object to a layer, returns object index (-1 on error)                             |
+| `removeObject`   | `layerIdx, objIdx, slot?`                 | `bool`                  | Remove an object from a layer (shifts remaining objects)                                 |
+| `setObject`      | `layerIdx, objIdx, fields, slot?`         | `bool`                  | Update object fields (name, type, x, y, w, h, gid)                                       |
+| `data`           | `slot?`                                   | `object` or `null`      | Full map data for serialization (name, layers, tiles)                                    |
 
 **Map object shape:**
 
@@ -560,21 +611,25 @@ evt.emit("coin_collected", { value: 10 });
 
 ## `sfx` — Sound Effects
 
-| Function    | Parameters              | Returns | Description                                         |
-| ----------- | ----------------------- | ------- | --------------------------------------------------- |
-| `play`      | `id?, channel?, loops?` | —       | Play a sound. `channel` −1 = auto. `loops` 0 = once |
-| `stop`      | `channel?`              | —       | Stop a channel (−1 = all)                           |
-| `volume`    | `vol?, channel?`        | —       | Set volume 0.0 – 1.0. `channel` −1 = all            |
-| `getVolume` | `channel?`              | `float` | Get channel volume                                  |
-| `playing`   | `channel?`              | `bool`  | Is the channel playing? (−1 = any)                  |
+| Function    | Parameters             | Returns | Description                                                                                                    |
+| ----------- | ---------------------- | ------- | -------------------------------------------------------------------------------------------------------------- |
+| `play`      | `id, channel?, loops?` | —       | Play a sound. `id` is a `res`-registered name or `res.handle()` integer. `channel` −1 = auto. `loops` 0 = once |
+| `stop`      | `channel?`             | —       | Stop a channel (−1 = all)                                                                                      |
+| `volume`    | `vol?, channel?`       | —       | Set volume 0.0 – 1.0. `channel` −1 = all                                                                       |
+| `getVolume` | `channel?`             | `float` | Get channel volume                                                                                             |
+| `playing`   | `channel?`             | `bool`  | Is the channel playing? (−1 = any)                                                                             |
 
 ```js
 /* Play a jump sound on channel 0 */
-sfx.play(0, 0);
+sfx.play("jump", 0);
 
 /* Loop an engine hum on channel 3, half volume */
 sfx.volume(0.5, 3);
-sfx.play(2, 3, -1);
+sfx.play("engine", 3, -1);
+
+/* Hot-loop fast path: hoist the lookup out of the inner loop */
+const H_BLIP = res.handle("blip");
+for (let i = 0; i < 64; ++i) sfx.play(H_BLIP, i & 7);
 
 /* Stop all channels */
 sfx.stop(-1);
@@ -584,21 +639,21 @@ sfx.stop(-1);
 
 ## `mus` — Music
 
-| Function    | Parameters                     | Returns | Description                                                                                           |
-| ----------- | ------------------------------ | ------- | ----------------------------------------------------------------------------------------------------- |
-| `play`      | `id?, fade_ms?, channel_mask?` | —       | Play a music track. `fade_ms` for crossfade. `channel_mask` selects output channels (default 0 = all) |
-| `stop`      | `fade_ms?`                     | —       | Stop music with optional fade-out (default 0 = immediate)                                             |
-| `volume`    | `vol?`                         | —       | Set music volume 0.0 – 1.0                                                                            |
-| `getVolume` |                                | `float` | Get current music volume                                                                              |
-| `playing`   |                                | `bool`  | Is music playing?                                                                                     |
+| Function    | Parameters                    | Returns | Description                                                                                                                                                      |
+| ----------- | ----------------------------- | ------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `play`      | `id, fade_ms?, channel_mask?` | —       | Play a music track. `id` is a `res`-registered name or `res.handle()` integer. `fade_ms` for crossfade. `channel_mask` selects output channels (default 0 = all) |
+| `stop`      | `fade_ms?`                    | —       | Stop music with optional fade-out (default 0 = immediate)                                                                                                        |
+| `volume`    | `vol?`                        | —       | Set music volume 0.0 – 1.0                                                                                                                                       |
+| `getVolume` |                               | `float` | Get current music volume                                                                                                                                         |
+| `playing`   |                               | `bool`  | Is music playing?                                                                                                                                                |
 
 ```js
 /* Start looping the title theme, then crossfade to gameplay music */
-mus.play(0); // play track 0
+mus.play("title");
 mus.volume(0.8);
 
-/* Later, crossfade to track 1 */
-mus.play(1, 500); // 500 ms fade
+/* Later, crossfade to another track */
+mus.play("gameplay", 500); // 500 ms fade
 
 /* Fade out */
 mus.stop(1000);

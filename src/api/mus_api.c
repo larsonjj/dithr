@@ -10,9 +10,19 @@
 
 static JSValue js_mus_play(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
+    int32_t slot;
+
     (void)this_val;
+    if (argc < 1) {
+        return JS_ThrowTypeError(ctx, "mus.play: missing music name or handle");
+    }
+    slot = dtr_api_resolve_audio_slot(ctx, argv[0], DTR_RES_MUSIC);
+    if (slot < 0) {
+        return JS_ThrowTypeError(ctx,
+                                 "mus.play: unknown music (must be a loaded res name or handle)");
+    }
     dtr_mus_play(AUD(ctx),
-                 dtr_api_opt_int(ctx, argc, argv, 0, 0),
+                 slot,
                  dtr_api_opt_int(ctx, argc, argv, 1, 0),
                  (uint32_t)(dtr_api_opt_int(ctx, argc, argv, 2, 0) & 0x7FFFFFFF));
     return JS_UNDEFINED;

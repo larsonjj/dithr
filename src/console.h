@@ -59,6 +59,7 @@ typedef struct dtr_console {
     dtr_cart_t          *cart;
     dtr_postfx_t        *postfx;
     dtr_tween_t          tween;
+    struct dtr_res      *res;
 
     /* Math PRNG state (xorshift64, per-console instance) */
     uint64_t rng_state;

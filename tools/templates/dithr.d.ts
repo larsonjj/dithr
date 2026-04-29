@@ -54,6 +54,10 @@ interface DithrSynthSfx {
     speed: number;
     loopStart: number;
     loopEnd: number;
+    envAttack: number;
+    envDecay: number;
+    envSustain: number;
+    envRelease: number;
 }
 
 interface DithrTweenHandle {
@@ -102,6 +106,7 @@ interface DithrGfx {
 
     // Sprites
     spr(idx?: number, x?: number, y?: number, w?: number, h?: number, flip_x?: boolean, flip_y?: boolean): void;
+    sprBatch(data: Int32Array, count?: number): void;
     sspr(sx?: number, sy?: number, sw?: number, sh?: number, dx?: number, dy?: number, dw?: number, dh?: number): void;
     sprRot(idx?: number, x?: number, y?: number, angle?: number, cx?: number, cy?: number): void;
     sprAffine(idx?: number, x?: number, y?: number, origin_x?: number, origin_y?: number, rot_x?: number, rot_y?: number): void;
@@ -173,6 +178,7 @@ interface DithrMap {
     levels(): string[];
     currentLevel(): string;
     load(name: string): boolean;
+    use(nameOrHandle: string | number): boolean;
     objects(name?: string, slot?: number): DithrMapObject[];
     object(name: string, slot?: number): DithrMapObject | undefined;
     objectsIn(x: number, y: number, w: number, h: number, slot?: number): DithrMapObject[];
@@ -402,7 +408,7 @@ interface DithrEvt {
 // ---------------------------------------------------------------------------
 
 interface DithrSfx {
-    play(id?: number, channel?: number, loops?: number): void;
+    play(id: string | number, channel?: number, loops?: number): void;
     stop(channel?: number): void;
     volume(vol?: number, channel?: number): void;
     getVolume(channel?: number): number;
@@ -414,7 +420,7 @@ interface DithrSfx {
 // ---------------------------------------------------------------------------
 
 interface DithrMus {
-    play(id?: number, fade_ms?: number, channel_mask?: number): void;
+    play(id: string | number, fade_ms?: number, channel_mask?: number): void;
     stop(fade_ms?: number): void;
     volume(vol?: number): void;
     getVolume(): number;
@@ -615,6 +621,13 @@ interface DithrUi {
 // tween — Tweening Engine
 // ---------------------------------------------------------------------------
 
+interface DithrTweenStepConfig {
+    from: number;
+    to: number;
+    dur: number;
+    ease?: string;
+}
+
 interface DithrTween {
     start(from: number, to: number, dur: number, ease?: string, delay?: number): DithrTweenHandle;
     tick(dt: number): void;
@@ -623,6 +636,11 @@ interface DithrTween {
     cancel(handle_or_id: DithrTweenHandle | number): void;
     cancelAll(): void;
     ease(t: number, name: string): number;
+    sequence(steps: DithrTweenStepConfig[]): DithrTweenHandle;
+    parallel(steps: DithrTweenStepConfig[]): DithrTweenHandle;
+    seqVal(handle_or_id: DithrTweenHandle | number): number;
+    seqDone(handle_or_id: DithrTweenHandle | number): boolean;
+    seqCancel(handle_or_id: DithrTweenHandle | number): void;
 }
 
 // ---------------------------------------------------------------------------
@@ -642,7 +660,7 @@ interface DithrCam {
 
 interface DithrSynth {
     // Definitions
-    set(idx: number, notes: DithrSynthNote[], speed?: number, loopStart?: number, loopEnd?: number): boolean;
+    set(idx: number, notes: DithrSynthNote[], speed?: number, loopStart?: number, loopEnd?: number, envAttack?: number, envDecay?: number, envSustain?: number, envRelease?: number): boolean;
     get(idx: number): DithrSynthSfx | undefined;
     count(): number;
 
@@ -665,6 +683,36 @@ interface DithrSynth {
 }
 
 // ---------------------------------------------------------------------------
+// res — Resource Loader
+// ---------------------------------------------------------------------------
+
+type DithrResKind = 'sprite' | 'map' | 'sfx' | 'music' | 'json' | 'raw' | 'hex';
+
+interface DithrResSheetOpts {
+    tileW?: number;
+    tileH?: number;
+}
+
+interface DithrRes {
+    loadSprite(name: string, path: string): Promise<void>;
+    loadMap(name: string, path: string): Promise<void>;
+    loadSfx(name: string, path: string): Promise<void>;
+    loadMusic(name: string, path: string): Promise<void>;
+    loadJson(name: string, path: string): Promise<unknown>;
+    loadRaw(name: string, path: string): Promise<Uint8Array>;
+    loadHex(name: string, path: string): Promise<Uint8Array>;
+    has(name: string): boolean;
+    isLoaded(name: string): boolean;
+    handle(name: string): number;
+    unload(name: string): boolean;
+    list(kind?: DithrResKind): string[];
+    setActiveSheet(name: string, opts?: DithrResSheetOpts): void;
+    setActiveFlags(name: string): void;
+    setActivePalette(name: string): void;
+    preload(names: string[]): Promise<void[]>;
+}
+
+// ---------------------------------------------------------------------------
 // Global declarations
 // ---------------------------------------------------------------------------
 
@@ -678,6 +726,7 @@ declare const input: DithrInput;
 declare const evt: DithrEvt;
 declare const sfx: DithrSfx;
 declare const mus: DithrMus;
+declare const res: DithrRes;
 declare const postfx: DithrPostfx;
 declare const math: DithrMath;
 declare const cart: DithrCart;

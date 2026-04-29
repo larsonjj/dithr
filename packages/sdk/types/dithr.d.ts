@@ -178,6 +178,7 @@ interface DithrMap {
     levels(): string[];
     currentLevel(): string;
     load(name: string): boolean;
+    use(nameOrHandle: string | number): boolean;
     objects(name?: string, slot?: number): DithrMapObject[];
     object(name: string, slot?: number): DithrMapObject | undefined;
     objectsIn(x: number, y: number, w: number, h: number, slot?: number): DithrMapObject[];
@@ -407,7 +408,7 @@ interface DithrEvt {
 // ---------------------------------------------------------------------------
 
 interface DithrSfx {
-    play(id?: number, channel?: number, loops?: number): void;
+    play(id: string | number, channel?: number, loops?: number): void;
     stop(channel?: number): void;
     volume(vol?: number, channel?: number): void;
     getVolume(channel?: number): number;
@@ -419,7 +420,7 @@ interface DithrSfx {
 // ---------------------------------------------------------------------------
 
 interface DithrMus {
-    play(id?: number, fade_ms?: number, channel_mask?: number): void;
+    play(id: string | number, fade_ms?: number, channel_mask?: number): void;
     stop(fade_ms?: number): void;
     volume(vol?: number): void;
     getVolume(): number;
@@ -682,6 +683,36 @@ interface DithrSynth {
 }
 
 // ---------------------------------------------------------------------------
+// res — Resource Loader
+// ---------------------------------------------------------------------------
+
+type DithrResKind = 'sprite' | 'map' | 'sfx' | 'music' | 'json' | 'raw' | 'hex';
+
+interface DithrResSheetOpts {
+    tileW?: number;
+    tileH?: number;
+}
+
+interface DithrRes {
+    loadSprite(name: string, path: string): Promise<void>;
+    loadMap(name: string, path: string): Promise<void>;
+    loadSfx(name: string, path: string): Promise<void>;
+    loadMusic(name: string, path: string): Promise<void>;
+    loadJson(name: string, path: string): Promise<unknown>;
+    loadRaw(name: string, path: string): Promise<Uint8Array>;
+    loadHex(name: string, path: string): Promise<Uint8Array>;
+    has(name: string): boolean;
+    isLoaded(name: string): boolean;
+    handle(name: string): number;
+    unload(name: string): boolean;
+    list(kind?: DithrResKind): string[];
+    setActiveSheet(name: string, opts?: DithrResSheetOpts): void;
+    setActiveFlags(name: string): void;
+    setActivePalette(name: string): void;
+    preload(names: string[]): Promise<void[]>;
+}
+
+// ---------------------------------------------------------------------------
 // Global declarations
 // ---------------------------------------------------------------------------
 
@@ -695,6 +726,7 @@ declare const input: DithrInput;
 declare const evt: DithrEvt;
 declare const sfx: DithrSfx;
 declare const mus: DithrMus;
+declare const res: DithrRes;
 declare const postfx: DithrPostfx;
 declare const math: DithrMath;
 declare const cart: DithrCart;

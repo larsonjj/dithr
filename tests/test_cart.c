@@ -642,13 +642,16 @@ static void test_cart_parse_runtime(void)
 }
 
 /* ------------------------------------------------------------------ */
-/*  Parse — sfx and music arrays                                       */
+/*  Parse — legacy sfx/music arrays are now ignored                   */
 /* ------------------------------------------------------------------ */
 
 static void test_cart_parse_sfx_music(void)
 {
     dtr_cart_t *cart;
     bool        ok;
+    /* In Phase 3 the cart manifest no longer carries sfx/music paths;
+     * loading happens via res.loadSfx/Music. The parser must simply not
+     * crash on legacy keys (silently ignored). */
     const char *json = "{"
                        "  \"sfx\": [\"jump.wav\", \"hit.wav\"],"
                        "  \"music\": [\"theme.ogg\"]"
@@ -658,18 +661,13 @@ static void test_cart_parse_sfx_music(void)
     prv_setup();
     ok = dtr_cart_parse(cart, s_ctx, json, strlen(json));
     DTR_ASSERT(ok);
-    DTR_ASSERT_EQ_INT(cart->sfx_count, 2);
-    DTR_ASSERT(strcmp(cart->sfx_paths[0], "jump.wav") == 0);
-    DTR_ASSERT(strcmp(cart->sfx_paths[1], "hit.wav") == 0);
-    DTR_ASSERT_EQ_INT(cart->music_count, 1);
-    DTR_ASSERT(strcmp(cart->music_paths[0], "theme.ogg") == 0);
     prv_teardown();
     dtr_cart_destroy(cart);
     DTR_PASS();
 }
 
 /* ------------------------------------------------------------------ */
-/*  Parse — code path and maps                                         */
+/*  Parse — code path; legacy maps array is now ignored               */
 /* ------------------------------------------------------------------ */
 
 static void test_cart_parse_code_maps(void)
@@ -686,9 +684,7 @@ static void test_cart_parse_code_maps(void)
     ok = dtr_cart_parse(cart, s_ctx, json, strlen(json));
     DTR_ASSERT(ok);
     DTR_ASSERT(strcmp(cart->code_path, "main.js") == 0);
-    DTR_ASSERT_EQ_INT(cart->map_count, 2);
-    DTR_ASSERT(strcmp(cart->map_paths[0], "level1.json") == 0);
-    DTR_ASSERT(strcmp(cart->map_paths[1], "level2.json") == 0);
+    /* Legacy maps[] no longer populates cart->maps[] — load via res. */
     prv_teardown();
     dtr_cart_destroy(cart);
     DTR_PASS();
@@ -879,8 +875,6 @@ static void test_cart_parse_empty_strings(void)
     prv_setup();
     ok = dtr_cart_parse(cart, s_ctx, json, strlen(json));
     DTR_ASSERT(ok);
-    DTR_ASSERT_EQ_INT(cart->sfx_count, 0);
-    DTR_ASSERT_EQ_INT(cart->music_count, 0);
     DTR_ASSERT_EQ_INT(cart->map_count, 0);
     prv_teardown();
     dtr_cart_destroy(cart);

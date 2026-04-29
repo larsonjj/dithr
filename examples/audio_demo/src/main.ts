@@ -1,15 +1,12 @@
 // Audio Demo
 //
 // Shows how to:
+//   - Load audio with res.loadSfx() / res.loadMusic()
 //   - Play sound effects with sfx.play()
 //   - Control per-channel volume with sfx.volume()
 //   - Play / stop music with mus.play() / mus.stop()
 //   - Fade music in/out
 //   - Query playback state
-//
-// PLACEHOLDER: No audio files are loaded yet.  Add .wav/.ogg files to
-// assets/sfx/ and .ogg/.mp3 to assets/music/, then list them in cart.json.
-// Until then, the UI is fully functional but silent.
 
 // --- State -----------------------------------------------------------
 
@@ -31,7 +28,14 @@ function prvStatus(msg: string) {
 
 // --- Callbacks -------------------------------------------------------
 
-export function _init(): void {
+export async function _init(): Promise<void> {
+    await Promise.all([
+        res.loadSfx('blip', 'assets/sfx/blip.wav'),
+        res.loadSfx('coin', 'assets/sfx/coin.wav'),
+        res.loadSfx('hit', 'assets/sfx/hit.wav'),
+        res.loadSfx('jump', 'assets/sfx/jump.wav'),
+        res.loadMusic('theme', 'assets/music/theme.mp3'),
+    ]);
     prvStatus('press 1-4 to play SFX, M to play music');
 }
 
@@ -39,35 +43,35 @@ export function _update(_dt: number): void {
     // Play SFX on channels 0-3 via number keys
     if (key.btnp(key.A)) {
         // '1' key — using A as proxy since key.1 may not exist
-        sfx.play(0, 0);
+        sfx.play('blip', 0);
         flashCh = 0;
         flashTimer = 15;
-        prvStatus('sfx 0 -> ch 0');
+        prvStatus('blip -> ch 0');
     }
     if (key.btnp(key.B)) {
-        sfx.play(1, 1);
+        sfx.play('coin', 1);
         flashCh = 1;
         flashTimer = 15;
-        prvStatus('sfx 1 -> ch 1');
+        prvStatus('coin -> ch 1');
     }
     if (key.btnp(key.C)) {
-        sfx.play(2, 2);
+        sfx.play('hit', 2);
         flashCh = 2;
         flashTimer = 15;
-        prvStatus('sfx 2 -> ch 2');
+        prvStatus('hit -> ch 2');
     }
     if (key.btnp(key.D)) {
-        sfx.play(3, 3);
+        sfx.play('jump', 3);
         flashCh = 3;
         flashTimer = 15;
-        prvStatus('sfx 3 -> ch 3');
+        prvStatus('jump -> ch 3');
     }
 
     // Music controls
     if (key.btnp(key.W)) {
         // M = play music
         if (!mus.playing()) {
-            mus.play(0, 0, 500);
+            mus.play('theme', 500);
             musPlaying = true;
             prvStatus('music: play (500ms fade in)');
         } else {

@@ -10,9 +10,19 @@
 
 static JSValue js_sfx_play(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
+    int32_t slot;
+
     (void)this_val;
+    if (argc < 1) {
+        return JS_ThrowTypeError(ctx, "sfx.play: missing sfx name or handle");
+    }
+    slot = dtr_api_resolve_audio_slot(ctx, argv[0], DTR_RES_SFX);
+    if (slot < 0) {
+        return JS_ThrowTypeError(ctx,
+                                 "sfx.play: unknown sfx (must be a loaded res name or handle)");
+    }
     dtr_sfx_play(AUD(ctx),
-                 dtr_api_opt_int(ctx, argc, argv, 0, 0),
+                 slot,
                  dtr_api_opt_int(ctx, argc, argv, 1, -1),
                  dtr_api_opt_int(ctx, argc, argv, 2, 0));
     return JS_UNDEFINED;

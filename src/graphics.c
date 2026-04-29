@@ -8,6 +8,7 @@
 #include "font.h"
 #include "simd.h"
 
+#include <SDL3/SDL_log.h>
 #include <math.h>
 #include <stddef.h>
 #include <stdio.h>
@@ -1262,6 +1263,17 @@ void dtr_gfx_font_reset(dtr_graphics_t *gfx)
 /*  Sprites                                                            */
 /* ------------------------------------------------------------------ */
 
+/* One-shot warning when a gfx.spr* call lands before res.setActiveSheet. */
+static inline void prv_warn_no_sheet(dtr_graphics_t *gfx)
+{
+    if (!gfx->warned_no_sheet) {
+        gfx->warned_no_sheet = true;
+        SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
+                    "gfx.spr* called before res.setActiveSheet "
+                    "\u2014 did you await your res.load* calls in _init?");
+    }
+}
+
 void dtr_gfx_spr(dtr_graphics_t *gfx,
                  int32_t         idx,
                  int32_t         x,
@@ -1291,7 +1303,11 @@ void dtr_gfx_spr(dtr_graphics_t *gfx,
     int32_t             sht_w;
 
     sht = &gfx->sheet;
-    if (sht->pixels == NULL || idx < 0 || idx >= sht->count) {
+    if (sht->pixels == NULL) {
+        prv_warn_no_sheet(gfx);
+        return;
+    }
+    if (idx < 0 || idx >= sht->count) {
         return;
     }
     if (w_tiles <= 0) {
@@ -1496,6 +1512,7 @@ void dtr_gfx_spr_batch(dtr_graphics_t *gfx, const int32_t *data, int32_t count)
 
     sht = &gfx->sheet;
     if (sht->pixels == NULL) {
+        prv_warn_no_sheet(gfx);
         return;
     }
 
@@ -1900,7 +1917,11 @@ void dtr_gfx_spr_rot(dtr_graphics_t *gfx,
     float               sin_a;
 
     sht = &gfx->sheet;
-    if (sht->pixels == NULL || idx < 0 || idx >= sht->count) {
+    if (sht->pixels == NULL) {
+        prv_warn_no_sheet(gfx);
+        return;
+    }
+    if (idx < 0 || idx >= sht->count) {
         return;
     }
 
@@ -1941,7 +1962,11 @@ void dtr_gfx_spr_affine(dtr_graphics_t *gfx,
     float               inv_det;
 
     sht = &gfx->sheet;
-    if (sht->pixels == NULL || idx < 0 || idx >= sht->count) {
+    if (sht->pixels == NULL) {
+        prv_warn_no_sheet(gfx);
+        return;
+    }
+    if (idx < 0 || idx >= sht->count) {
         return;
     }
 

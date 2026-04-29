@@ -125,10 +125,16 @@ if (NOT EMSCRIPTEN)
     dtr_add_test(test_api_bridge test_api_bridge.c)
 endif()
 
+# --- Resource registry / async load queue tests ---
+if (NOT EMSCRIPTEN)
+    dtr_add_test(test_resources test_resources.c)
+endif()
+
 # --- API bridge tests that need a graphics context ---
 if (NOT EMSCRIPTEN)
     dtr_add_test(test_api_bridge_gfx test_api_bridge_gfx.c)
     dtr_add_test(test_api_bridge_map test_api_bridge_map.c)
+    dtr_add_test(test_api_res test_api_res.c)
 endif()
 
 # --- Console lifecycle tests (require SDL display subsystem) ---
@@ -154,6 +160,7 @@ if (NOT EMSCRIPTEN)
     list(APPEND DTR_TEST_TARGETS
         test_cart test_event test_runtime test_cart_import test_console
         test_api_bridge test_api_bridge_gfx test_api_bridge_map test_editor_js
+        test_resources test_api_res
     )
 endif()
 set_tests_properties(${DTR_TEST_TARGETS}
@@ -161,6 +168,19 @@ set_tests_properties(${DTR_TEST_TARGETS}
         TIMEOUT 120
         ENVIRONMENT "SDL_AUDIO_DRIVER=dummy;SDL_VIDEO_DRIVER=dummy;SDL_AUDIODRIVER=dummy;SDL_VIDEODRIVER=dummy"
 )
+
+# --- Node-based tests (asset resolver, etc.) ---
+# Requires Node.js ≥ 18 for the built-in `node:test` runner. Skipped when not
+# found so source-only checkouts on CI without Node still build.
+find_program(NODE_EXECUTABLE node)
+if (NODE_EXECUTABLE)
+    add_test(
+        NAME test_resolve_assets
+        COMMAND ${NODE_EXECUTABLE} --test
+            "${CMAKE_CURRENT_SOURCE_DIR}/node/test_resolve_assets.js"
+    )
+    set_tests_properties(test_resolve_assets PROPERTIES TIMEOUT 60)
+endif()
 
 # --- Optional micro-benchmarks (LABELS perf, opt-in) ---
 option(DTR_BUILD_PERF "Build the tests/perf/ benchmark suite" OFF)

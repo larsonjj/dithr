@@ -12,6 +12,7 @@ set(DITHR_CORE_SOURCES
     cart.c
     cart_import.c
     postfx.c
+    resources.c
     api/api_register.c
     api/gfx_api.c
     api/map_api.c
@@ -36,6 +37,7 @@ set(DITHR_CORE_SOURCES
     ui.c
     tween.c
     api/touch_api.c
+    api/res_api.c
 )
 
 # Prefix sources with current dir for out-of-tree references

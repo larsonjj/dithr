@@ -46,8 +46,9 @@ my-game/
     },
 
     // --- Sprites ---
+    // Default tile size for spr*/map* when no setActiveSheet({tileW,tileH}) is set.
+    // Sheets themselves are loaded at runtime via res.loadSprite(name, path).
     "sprites": {
-        "sheet": "assets/sprites/spritesheet.png",
         "tileW": 8, // tile width in pixels  (default 8)
         "tileH": 8, // tile height in pixels (default 8)
     },
@@ -72,10 +73,68 @@ my-game/
     // --- Entry point ---
     "code": "src/main.js",
 
-    // --- Maps (Tiled export) ---
-    "maps": [],
+    // --- Asset packaging ---
+    "assets": {
+        "include": ["**/*"], // glob(s) of files to ship; default = everything
+        "exclude": ["**/*.psd", "**/*.aseprite"], // working files to omit
+        "dynamic": ["assets/dlc/**"], // bundled on native, HTTP-fetched on web
+        "compress": false, // false | "br" | "gzip" — pre-compress dynamic text files
+    },
 }
 ```
+
+### `assets` block
+
+The `assets` block declares which files in the cart directory are
+distributed. The same manifest drives the WASM preload bundle, the
+desktop export, and which paths are reachable via the [`res.*` API](api-reference.md#res).
+
+#### Resolution rules
+
+For each file under the cart directory:
+
+1. Files matched by **`exclude`** are omitted entirely (from every export).
+2. Files not matched by **`include`** are omitted entirely.
+3. Files matched by **`dynamic`** are:
+    - Bundled into the cart folder on **desktop** export (read via `SDL_LoadFile`).
+    - Copied to a separate `dynamic/` directory on **web** export and
+      fetched at runtime via `res.load*` (HTTP).
+4. Everything else is **bundled** — preloaded into the WASM virtual FS at
+   `/cart/`, or copied into `cart/` on desktop.
+
+`exclude` always wins over `dynamic` and `include`. `cart.json` itself is
+always bundled regardless of the rules above.
+
+The following paths are **always excluded** (not configurable):
+`node_modules/**`, `.git/**`, `build/**`, `.DS_Store`.
+
+#### Glob syntax
+
+Standard minimatch patterns:
+
+| Pattern | Matches                                              |
+| ------- | ---------------------------------------------------- |
+| `**`    | Any number of path segments (including zero)         |
+| `*`     | Any characters except `/`                            |
+| `?`     | Any single character except `/`                      |
+| Literal | Exact match (regex special chars escaped internally) |
+
+#### `compress`
+
+Controls pre-compression of files in `dynamic` before they ship in a web
+export. Has no effect on native exports (desktop reads raw files from disk).
+
+| Value    | Behavior                                                    |
+| -------- | ----------------------------------------------------------- |
+| `false`  | No pre-compression. Rely on host's `Content-Encoding` only. |
+| `"br"`   | Generate `.br` siblings via brotli. Recommended.            |
+| `"gzip"` | Generate `.gz` siblings. Wider browser baseline.            |
+
+When enabled, files with already-compressed payloads
+(`.png`, `.ogg`, `.mp3`, `.wav`) are skipped. The browser inflates `.br`
+or `.gz` siblings via the native `DecompressionStream` API. Brotli
+requires Chrome 117+, Firefox 130+, Safari 17.6+ (mid-2024); use
+`"gzip"` for older targets.
 
 ### Field reference
 
@@ -98,6 +157,10 @@ my-game/
 | `audio.channels`         | int    | 8           | Mixer channels (max 16)                                  |
 | `input.default_mappings` | object | `{}`        | Action name → array of binding strings                   |
 | `code`                   | string | —           | Path to the main JS file (relative to cart.json)         |
+| `assets.include`         | array  | `["**/*"]`  | Globs of files to ship in exports                        |
+| `assets.exclude`         | array  | `[]`        | Globs of files to omit from all exports                  |
+| `assets.dynamic`         | array  | `[]`        | Globs of files HTTP-fetched on web (bundled on native)   |
+| `assets.compress`        | enum   | `false`     | `false`, `"br"`, or `"gzip"` — pre-compress dynamic text |
 | `maps`                   | array  | `[]`        | Tiled map data (see below)                               |
 
 ### Binding string format

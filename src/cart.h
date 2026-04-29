@@ -101,8 +101,6 @@ typedef struct dtr_cart_timing {
 typedef struct dtr_cart_sprites {
     int32_t tile_w;
     int32_t tile_h;
-    int32_t sheet_w;
-    int32_t sheet_h;
     int32_t max_sprites;
 } dtr_cart_sprites_t;
 
@@ -176,28 +174,16 @@ struct dtr_cart {
     char  *code;
     size_t code_len;
 
-    /* Asset paths from cart.json */
-    char    sprite_sheet_path[512];
-    char    sprite_flags_path[512];
-    char    code_path[512];
-    char    build_command[512];
-    char    map_paths[DTR_CART_MAX_MAPS][512];
-    char    sfx_paths[DTR_CART_MAX_SFX][512];
-    int32_t sfx_count;
-    char    music_paths[DTR_CART_MAX_MUSIC][512];
-    int32_t music_count;
+    /* Asset paths from cart.json (Phase 3 left only the flags + code paths;
+     * sprite sheet / sfx / music / maps are loaded via res.* JS API). */
+    char sprite_flags_path[512];
+    char code_path[512];
+    char build_command[512];
 
-    /* Map levels */
+    /* Map levels (still cached here for baked carts; dev carts use res.* now) */
     dtr_map_level_t *maps[DTR_CART_MAX_MAPS];
     int32_t          map_count;
     int32_t          current_map;
-
-    /* Sprite sheet raw RGBA (loaded, then passed to graphics) */
-    uint8_t *sprite_rgba;
-    int32_t  sprite_w;
-    int32_t  sprite_h;
-    int32_t  sprite_rgba_w;
-    int32_t  sprite_rgba_h;
 
     /* dget/dset numeric persistence */
     double dslots[DTR_CART_PERSIST_SLOTS];

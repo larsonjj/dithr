@@ -22,15 +22,5 @@
     "default_mappings": {}
   },
   "code": "dist/main.js",
-  "buildCommand": "npx esbuild src/main.ts --bundle --format=esm --target=es2020 --outfile=dist/main.js",
-  "maps": [],
-  "sfx": [
-    "assets/sfx/blip.wav",
-    "assets/sfx/jump.wav",
-    "assets/sfx/hit.wav",
-    "assets/sfx/coin.wav"
-  ],
-  "music": [
-    "assets/music/theme.mp3"
-  ]
+  "buildCommand": "npx esbuild src/main.ts --bundle --format=esm --target=es2020 --outfile=dist/main.js"
 }

@@ -14,6 +14,7 @@
 #include "input.h"
 #include "mouse.h"
 #include "postfx.h"
+#include "resources.h"
 #include "runtime.h"
 #include "touch.h"
 
@@ -105,6 +106,10 @@ static void prv_console_cleanup(dtr_console_t *con)
     dtr_gamepad_destroy(con->gamepads);
     dtr_mouse_destroy(con->mouse);
     dtr_key_destroy(con->keys);
+    /* res must be destroyed BEFORE the runtime so its JSValues are released
+       while the JSContext is still alive. */
+    dtr_res_destroy(con, con->res);
+    con->res = NULL;
     dtr_audio_destroy(con->audio);
     dtr_gfx_destroy(con->graphics);
     dtr_cart_destroy(con->cart);
@@ -511,6 +516,9 @@ dtr_console_t *dtr_console_create(const char *cart_path)
     /* --- Cart ref to JS context --- */
     con->cart->ctx = con->runtime->ctx;
 
+    /* --- Resource registry (must outlive cart but be freed before runtime) --- */
+    con->res = dtr_res_create();
+
     /* --- Load assets (sprites, maps, sfx, music) --- */
     prv_load_cart_assets(con);
 
@@ -552,7 +560,7 @@ dtr_console_t *dtr_console_create(const char *cart_path)
     dtr_event_flush(con->events);
 
     /* --- Call _init() --- */
-    dtr_runtime_call(con->runtime, con->runtime->atom_init);
+    dtr_runtime_call_init(con->runtime);
 
     /* --- Ready --- */
     con->running     = true;
@@ -940,6 +948,16 @@ void dtr_console_iterate(dtr_console_t *con)
        Raw key/mouse/gamepad state is already current (set by SDL events). */
     dtr_input_update(con->input, con->keys, con->gamepads, con->mouse, con->touch);
 
+    /* Phase 3.5: if the cart's _init returned a Promise that hasn't
+     * settled yet, defer all JS callbacks. We still pump the resource
+     * loader and drain microtasks so the promise can resolve. The
+     * framebuffer is left untouched (whatever was last drawn shows). */
+    if (dtr_runtime_init_pending(con->runtime)) {
+        dtr_res_pump(con);
+        dtr_runtime_drain_jobs(con->runtime);
+        return;
+    }
+
     /* JS _fixedUpdate(fixed_dt) — fixed-timestep accumulator loop */
     {
         uint64_t t0 = SDL_GetPerformanceCounter();
@@ -990,6 +1008,11 @@ void dtr_console_iterate(dtr_console_t *con)
         dtr_runtime_call(con->runtime, con->runtime->atom_draw);
         con->draw_ms = (float)((double)(SDL_GetPerformanceCounter() - t0) / (double)freq * 1000.0);
     }
+
+    /* Drain pending resource loads (bounded per frame). Runs before
+       microtask drain so .then handlers fire the same frame the load
+       completes. */
+    dtr_res_pump(con);
 
 #if DEV_BUILD
     /* Reload toast overlay */
@@ -1412,7 +1435,7 @@ bool dtr_console_reload(dtr_console_t *con)
     con->fixed_acc = saved_fixed_acc;
 
     /* ---- 7. Call _init() ---- */
-    dtr_runtime_call(con->runtime, con->runtime->atom_init);
+    dtr_runtime_call_init(con->runtime);
 
     /* ---- 8. Fire sys:cart_load ---- */
     dtr_event_emit(con->events, "sys:cart_load", JS_UNDEFINED);
@@ -1484,57 +1507,9 @@ static bool prv_load_cart_assets(dtr_console_t *con)
 
     cart = con->cart;
 
-    /* Sprites: load sheet from PNG or hex file */
-    if (cart->sprite_sheet_path[0] != '\0') {
-        size_t path_len;
-
-        if (!prv_validate_asset_path(
-                cart->sprite_sheet_path, cart->base_path, path_buf, sizeof(path_buf))) {
-            SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
-                         "Rejected sprite sheet path: %s",
-                         cart->sprite_sheet_path);
-            goto skip_sprites;
-        }
-        path_len = SDL_strlen(cart->sprite_sheet_path);
-
-        if (path_len > 4 && SDL_strcmp(cart->sprite_sheet_path + path_len - 4, ".hex") == 0) {
-            /* Hex-encoded palette-indexed sheet */
-            size_t hex_len = 0;
-            char  *hex     = (char *)SDL_LoadFile(path_buf, &hex_len);
-
-            if (hex != NULL) {
-                dtr_gfx_load_sheet_hex(con->graphics,
-                                       hex,
-                                       hex_len,
-                                       cart->sprites.sheet_w,
-                                       cart->sprites.sheet_h,
-                                       cart->sprites.tile_w,
-                                       cart->sprites.tile_h);
-                SDL_free(hex);
-            }
-        } else {
-            /* PNG → RGBA → quantise to palette sheet */
-            int32_t w = 0, h = 0;
-
-            DTR_FREE(cart->sprite_rgba);
-            cart->sprite_rgba = NULL;
-
-            cart->sprite_rgba   = dtr_import_png(path_buf, &w, &h);
-            cart->sprite_rgba_w = w;
-            cart->sprite_rgba_h = h;
-
-            if (cart->sprite_rgba != NULL) {
-                dtr_gfx_load_sheet(con->graphics,
-                                   cart->sprite_rgba,
-                                   cart->sprite_rgba_w,
-                                   cart->sprite_rgba_h,
-                                   cart->sprites.tile_w,
-                                   cart->sprites.tile_h);
-            }
-        }
-    }
-
-skip_sprites:
+    /* Phase 3: sprite sheets, maps, sfx, and music are loaded via the
+     * res.* JS API (see _init in cart code). The console no longer
+     * pre-loads them from cart.json — that legacy path is gone. */
 
     /* Sprite flags: load from hex if configured */
     if (cart->sprite_flags_path[0] != '\0') {
@@ -1556,76 +1531,6 @@ skip_sprites:
     }
 
 skip_flags:
-
-    /* Maps: already parsed during cart_parse for baked carts */
-    /* For dev carts, import from source files */
-    if (!cart->baked) {
-        for (int32_t idx = 0; idx < cart->map_count; ++idx) {
-            const char *src;
-            size_t      src_len;
-
-            src     = cart->map_paths[idx];
-            src_len = SDL_strlen(src);
-
-            /* Validate and build full path */
-            if (!prv_validate_asset_path(src, cart->base_path, path_buf, sizeof(path_buf))) {
-                SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Rejected map path: %s", src);
-                continue;
-            }
-
-            /* Detect format by extension */
-            if (src_len > 4 && SDL_strcmp(src + src_len - 4, ".tmj") == 0) {
-                dtr_import_tiled(path_buf, &cart->maps[idx], con->runtime->ctx);
-            } else if (src_len > 5 && SDL_strcmp(src + src_len - 5, ".ldtk") == 0) {
-                dtr_import_ldtk(path_buf, &cart->maps[idx], con->runtime->ctx);
-            }
-        }
-    }
-
-    /* SFX files */
-    for (int32_t idx = 0; idx < cart->sfx_count; ++idx) {
-        if (cart->sfx_paths[idx][0] != '\0') {
-            size_t   len;
-            uint8_t *data;
-
-            if (!prv_validate_asset_path(
-                    cart->sfx_paths[idx], cart->base_path, path_buf, sizeof(path_buf))) {
-                SDL_LogError(
-                    SDL_LOG_CATEGORY_APPLICATION, "Rejected sfx path: %s", cart->sfx_paths[idx]);
-                continue;
-            }
-            data = (uint8_t *)SDL_LoadFile(path_buf, &len);
-            if (data != NULL) {
-                dtr_audio_load_sfx(con->audio, data, len);
-                SDL_free(data);
-            } else {
-                SDL_Log("Failed to load sfx: %s", path_buf);
-            }
-        }
-    }
-
-    /* Music files */
-    for (int32_t idx = 0; idx < cart->music_count; ++idx) {
-        if (cart->music_paths[idx][0] != '\0') {
-            size_t   len;
-            uint8_t *data;
-
-            if (!prv_validate_asset_path(
-                    cart->music_paths[idx], cart->base_path, path_buf, sizeof(path_buf))) {
-                SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
-                             "Rejected music path: %s",
-                             cart->music_paths[idx]);
-                continue;
-            }
-            data = (uint8_t *)SDL_LoadFile(path_buf, &len);
-            if (data != NULL) {
-                dtr_audio_load_music(con->audio, data, len);
-                SDL_free(data);
-            } else {
-                SDL_Log("Failed to load music: %s", path_buf);
-            }
-        }
-    }
 
     /* JS source code */
     if (cart->code == NULL && cart->code_path[0] != '\0') {

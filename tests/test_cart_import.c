@@ -465,112 +465,6 @@ static void test_ldtk_no_levels_key(void)
 }
 
 /* ------------------------------------------------------------------ */
-/*  Aseprite importer (can test NULL / missing file path)              */
-/* ------------------------------------------------------------------ */
-
-static void test_aseprite_missing_file(void)
-{
-    dtr_cart_t *cart;
-    bool        ok;
-
-    prv_setup();
-    cart = dtr_cart_create();
-    DTR_ASSERT(cart != NULL);
-
-    ok = dtr_import_aseprite("nonexistent_file.json", cart, s_ctx);
-    DTR_ASSERT(!ok);
-    DTR_ASSERT(cart->sprite_rgba == NULL);
-
-    dtr_cart_destroy(cart);
-    prv_teardown();
-    DTR_PASS();
-}
-
-static void test_aseprite_invalid_json(void)
-{
-    dtr_cart_t *cart;
-    bool        ok;
-    const char *path = "_test_ase_bad.json";
-
-    prv_setup();
-    cart = dtr_cart_create();
-    DTR_ASSERT(cart != NULL);
-
-    DTR_ASSERT(prv_write_file(path, "NOT JSON"));
-    ok = dtr_import_aseprite(path, cart, s_ctx);
-    remove(path);
-
-    DTR_ASSERT(!ok);
-
-    dtr_cart_destroy(cart);
-    prv_teardown();
-    DTR_PASS();
-}
-
-static void test_aseprite_no_meta(void)
-{
-    dtr_cart_t *cart;
-    bool        ok;
-    const char *path = "_test_ase_nometa.json";
-    const char *json = "{\"frames\": {}}";
-
-    prv_setup();
-    cart = dtr_cart_create();
-    DTR_ASSERT(cart != NULL);
-
-    DTR_ASSERT(prv_write_file(path, json));
-    ok = dtr_import_aseprite(path, cart, s_ctx);
-    remove(path);
-
-    /* No meta → sprite_rgba stays NULL → returns false */
-    DTR_ASSERT(!ok);
-
-    dtr_cart_destroy(cart);
-    prv_teardown();
-    DTR_PASS();
-}
-
-/* ------------------------------------------------------------------ */
-/*  PNG importer (missing file)                                        */
-/* ------------------------------------------------------------------ */
-
-static void test_png_missing_file(void)
-{
-    int32_t  w = -1;
-    int32_t  h = -1;
-    uint8_t *pixels;
-
-    pixels = dtr_import_png("nonexistent_file.png", &w, &h);
-    DTR_ASSERT(pixels == NULL);
-    DTR_ASSERT_EQ_INT(w, 0);
-    DTR_ASSERT_EQ_INT(h, 0);
-
-    DTR_PASS();
-}
-
-/* ------------------------------------------------------------------ */
-/*  PNG importer (corrupt file → graceful failure)                     */
-/* ------------------------------------------------------------------ */
-
-static void test_png_corrupt_file(void)
-{
-    int32_t     w = -1;
-    int32_t     h = -1;
-    uint8_t    *pixels;
-    const char *path = "_test_corrupt.png";
-
-    DTR_ASSERT(prv_write_file(path, "this is not a PNG file"));
-    pixels = dtr_import_png(path, &w, &h);
-    remove(path);
-
-    DTR_ASSERT(pixels == NULL);
-    DTR_ASSERT_EQ_INT(w, 0);
-    DTR_ASSERT_EQ_INT(h, 0);
-
-    DTR_PASS();
-}
-
-/* ------------------------------------------------------------------ */
 /*  Main                                                               */
 /* ------------------------------------------------------------------ */
 
@@ -596,15 +490,6 @@ int main(int argc, char *argv[])
     DTR_RUN_TEST(test_ldtk_invalid_json);
     DTR_RUN_TEST(test_ldtk_empty_levels);
     DTR_RUN_TEST(test_ldtk_no_levels_key);
-
-    /* Aseprite */
-    DTR_RUN_TEST(test_aseprite_missing_file);
-    DTR_RUN_TEST(test_aseprite_invalid_json);
-    DTR_RUN_TEST(test_aseprite_no_meta);
-
-    /* PNG */
-    DTR_RUN_TEST(test_png_missing_file);
-    DTR_RUN_TEST(test_png_corrupt_file);
 
     DTR_TEST_END();
 }
