@@ -31,9 +31,10 @@ typedef struct test_ctx {
 
 static void prv_make_tmpdir(test_ctx_t *tc)
 {
-    /* Use the build-tree temp area beside the test exe so cleanup works
-       on Windows even if SDL tmp dirs are restricted. */
-    SDL_snprintf(tc->tmpdir, sizeof(tc->tmpdir), "test_resources_tmp");
+    /* Write scratch beside the test exe (under build/) so the repo source
+       tree never accumulates stray files when tests are run from any cwd. */
+    const char *base = SDL_GetBasePath();
+    SDL_snprintf(tc->tmpdir, sizeof(tc->tmpdir), "%stest_resources_tmp", base != NULL ? base : "");
     SDL_CreateDirectory(tc->tmpdir);
 }
 

@@ -30,8 +30,7 @@ import type { StrokeHistory } from './stroke_history.js';
 
 // ─── Map op types ────────────────────────────────────────────────────────────
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-interface MapOp { [key: string]: any; }
+interface MapOp { [key: string]: unknown; }
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 

@@ -3,6 +3,15 @@
 # hang in headless CI environments (macOS Cocoa/NSApplication, Linux/Wayland).
 add_compile_definitions(SDL_MAIN_HANDLED)
 
+# Under ASan, native stack frames balloon ~3-4x.  We must SHRINK the JS stack
+# budget so QuickJS's own JS_CheckStackOverflow trips before the OS exhausts
+# the (now much smaller) effective native stack.  We force this via a compile
+# definition because MSVC's ASan does not reliably expose __SANITIZE_ADDRESS__
+# / __has_feature(address_sanitizer) for the test source to detect.
+if (DTR_ENABLE_ASAN)
+    add_compile_definitions(TEST_STACK_KB=128)
+endif()
+
 # When using MSVC ASan, locate the runtime DLL so it can be copied beside
 # test executables.  The DLL lives next to cl.exe.
 if (MSVC AND DTR_ENABLE_ASAN)

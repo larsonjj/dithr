@@ -13,12 +13,15 @@
 /*  Helpers                                                            */
 /* ------------------------------------------------------------------ */
 
-/* ASan inflates stack frames; give QuickJS more room. */
+/* ASan inflates native stack frames ~3-4x, so the JS stack budget must be
+ * SMALLER under ASan: QuickJS's own overflow check must trip before the OS
+ * stack is exhausted.  The CMake build forces TEST_STACK_KB=128 when ASan is
+ * enabled; this fallback handles direct compiler-driven sanitizer builds. */
 #if defined(__SANITIZE_ADDRESS__)
-#define TEST_STACK_KB 1024
+#define TEST_STACK_KB 128
 #elif defined(__has_feature)
 #if __has_feature(address_sanitizer)
-#define TEST_STACK_KB 1024
+#define TEST_STACK_KB 128
 #endif
 #endif
 #ifndef TEST_STACK_KB

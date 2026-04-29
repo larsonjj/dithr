@@ -28,7 +28,10 @@ typedef struct test_ctx {
 
 static void prv_make_tmpdir(test_ctx_t *tc)
 {
-    SDL_snprintf(tc->tmpdir, sizeof(tc->tmpdir), "test_api_res_tmp");
+    /* Write scratch beside the test exe (under build/) so the repo source
+       tree never accumulates stray files when tests are run from any cwd. */
+    const char *base = SDL_GetBasePath();
+    SDL_snprintf(tc->tmpdir, sizeof(tc->tmpdir), "%stest_api_res_tmp", base != NULL ? base : "");
     SDL_CreateDirectory(tc->tmpdir);
 }
 

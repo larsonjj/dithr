@@ -6,6 +6,10 @@
 # Build artifacts
 build/
 external/
+
+# Test scratch directories (also written by tests run from repo root)
+test_api_res_tmp/
+test_resources_tmp/
 *.o
 *.a
 *.so
