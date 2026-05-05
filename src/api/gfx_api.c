@@ -414,6 +414,54 @@ js_gfx_text_height(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst
     return JS_NewInt32(ctx, h);
 }
 
+static JSValue
+js_gfx_print_wrapped(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+{
+    const char *text;
+    int32_t     x;
+    int32_t     y;
+    int32_t     max_w;
+    uint8_t     col;
+    int32_t     h;
+
+    (void)this_val;
+    if (argc < 1) {
+        return JS_NewInt32(ctx, 0);
+    }
+    text = JS_ToCString(ctx, argv[0]);
+    if (text == NULL) {
+        return JS_NewInt32(ctx, 0);
+    }
+    x     = dtr_api_opt_int(ctx, argc, argv, 1, 0);
+    y     = dtr_api_opt_int(ctx, argc, argv, 2, 0);
+    max_w = dtr_api_opt_int(ctx, argc, argv, 3, 320);
+    col   = prv_resolve_col(ctx, argc, argv, 4);
+    h     = dtr_gfx_print_wrapped(GFX(ctx), text, x, y, max_w, col);
+    JS_FreeCString(ctx, text);
+    return JS_NewInt32(ctx, h);
+}
+
+static JSValue
+js_gfx_text_wrap_height(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+{
+    const char *text;
+    int32_t     max_w;
+    int32_t     h;
+
+    (void)this_val;
+    if (argc < 1) {
+        return JS_NewInt32(ctx, 0);
+    }
+    text = JS_ToCString(ctx, argv[0]);
+    if (text == NULL) {
+        return JS_NewInt32(ctx, 0);
+    }
+    max_w = dtr_api_opt_int(ctx, argc, argv, 1, 320);
+    h     = dtr_gfx_text_wrap_height(GFX(ctx), text, max_w);
+    JS_FreeCString(ctx, text);
+    return JS_NewInt32(ctx, h);
+}
+
 /* ---- Sprites ---------------------------------------------------------- */
 
 static JSValue js_gfx_spr(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
@@ -1160,6 +1208,8 @@ static const JSCFunctionListEntry js_gfx_funcs[] = {
     JS_CFUNC_DEF("print", 4, js_gfx_print),
     JS_CFUNC_DEF("textWidth", 1, js_gfx_text_width),
     JS_CFUNC_DEF("textHeight", 1, js_gfx_text_height),
+    JS_CFUNC_DEF("printWrapped", 5, js_gfx_print_wrapped),
+    JS_CFUNC_DEF("textWrapHeight", 2, js_gfx_text_wrap_height),
     JS_CFUNC_DEF("spr", 7, js_gfx_spr),
     JS_CFUNC_DEF("sprBatch", 2, js_gfx_spr_batch),
     JS_CFUNC_DEF("sspr", 10, js_gfx_sspr),

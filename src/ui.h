@@ -12,6 +12,9 @@
 extern "C" {
 #endif /* __cplusplus */
 
+/* Forward declaration — full definition is in graphics.h */
+typedef struct dtr_graphics dtr_graphics_t;
+
 /**
  * \brief           Axis-aligned rectangle used by all layout functions
  */
@@ -21,6 +24,63 @@ typedef struct dtr_ui_rect {
     int32_t width;
     int32_t height;
 } dtr_ui_rect_t;
+
+/* ---- Group stack ------------------------------------------------------- */
+
+/** Maximum nesting depth of ui_group_push calls. */
+#define DTR_UI_GROUP_MAX_DEPTH 16
+
+typedef struct dtr_ui_group_entry {
+    dtr_ui_rect_t rect;
+    bool          clip_applied;
+} dtr_ui_group_entry_t;
+
+/**
+ * \brief           Stateful UI context — holds a group/clip stack.
+ *                  One instance lives on the console alongside the graphics
+ *                  subsystem.
+ */
+typedef struct dtr_ui {
+    dtr_graphics_t      *gfx; /**< Weak ref — owned by console */
+    int32_t              depth;
+    dtr_ui_group_entry_t stack[DTR_UI_GROUP_MAX_DEPTH];
+} dtr_ui_t;
+
+/**
+ * \brief           Create and return a new UI context.
+ * \param[in]       gfx: Graphics instance (weak ref, must outlive the context)
+ */
+dtr_ui_t *dtr_ui_create(dtr_graphics_t *gfx);
+
+/**
+ * \brief           Destroy a UI context created with dtr_ui_create.
+ */
+void dtr_ui_destroy(dtr_ui_t *ui);
+
+/**
+ * \brief           Push a group rect onto the stack.
+ * \param[in]       clip: If true, calls gfx.clip to restrict drawing to rect.
+ * \return          true on success; false if the stack is full.
+ */
+bool dtr_ui_group_push(dtr_ui_t *ui, dtr_ui_rect_t rect, bool clip);
+
+/**
+ * \brief           Pop the innermost group.  If clip was applied it is reset.
+ *                  Safe to call on an empty stack (no-op).
+ */
+void dtr_ui_group_pop(dtr_ui_t *ui);
+
+/**
+ * \brief           Return the current group rect, or a zero-origin full-screen
+ *                  rect if the stack is empty.
+ */
+dtr_ui_rect_t dtr_ui_group_current(const dtr_ui_t *ui);
+
+/**
+ * \brief           Clamp child to the intersection with the current group rect.
+ *                  If there is no active group the child is returned unchanged.
+ */
+dtr_ui_rect_t dtr_ui_fit(const dtr_ui_t *ui, dtr_ui_rect_t child);
 
 /* ---- Construction ------------------------------------------------------ */
 

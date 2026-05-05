@@ -3,6 +3,7 @@
  * \brief           Unit tests for stateless UI layout helpers
  */
 
+#include "graphics.h"
 #include "test_harness.h"
 #include "ui.h"
 
@@ -258,6 +259,207 @@ static void test_place_bottom_right(void)
 }
 
 /* ------------------------------------------------------------------ */
+/*  Group stack                                                        */
+/* ------------------------------------------------------------------ */
+
+static void test_group_push_pop_basic(void)
+{
+    dtr_graphics_t *gfx;
+    dtr_ui_t       *ui;
+    dtr_ui_rect_t   rect;
+    dtr_ui_rect_t   cur;
+    bool            ok;
+
+    gfx = dtr_gfx_create(320, 180);
+    DTR_ASSERT_NOT_NULL(gfx);
+    ui = dtr_ui_create(gfx);
+    DTR_ASSERT_NOT_NULL(ui);
+
+    rect = dtr_ui_rect(10, 20, 100, 50);
+    ok   = dtr_ui_group_push(ui, rect, false);
+    DTR_ASSERT(ok);
+    cur = dtr_ui_group_current(ui);
+    DTR_ASSERT_EQ_INT(cur.pos_x, 10);
+    DTR_ASSERT_EQ_INT(cur.pos_y, 20);
+    DTR_ASSERT_EQ_INT(cur.width, 100);
+    DTR_ASSERT_EQ_INT(cur.height, 50);
+
+    dtr_ui_group_pop(ui);
+    /* After pop, stack is empty — current returns zero rect */
+    cur = dtr_ui_group_current(ui);
+    DTR_ASSERT_EQ_INT(cur.width, 0);
+    DTR_ASSERT_EQ_INT(cur.height, 0);
+
+    dtr_ui_destroy(ui);
+    dtr_gfx_destroy(gfx);
+    DTR_PASS();
+}
+
+static void test_group_pop_empty_is_safe(void)
+{
+    dtr_graphics_t *gfx;
+    dtr_ui_t       *ui;
+
+    gfx = dtr_gfx_create(320, 180);
+    DTR_ASSERT_NOT_NULL(gfx);
+    ui = dtr_ui_create(gfx);
+    DTR_ASSERT_NOT_NULL(ui);
+
+    /* Should not crash */
+    dtr_ui_group_pop(ui);
+    dtr_ui_group_pop(ui);
+
+    dtr_ui_destroy(ui);
+    dtr_gfx_destroy(gfx);
+    DTR_PASS();
+}
+
+static void test_group_nested(void)
+{
+    dtr_graphics_t *gfx;
+    dtr_ui_t       *ui;
+    dtr_ui_rect_t   outer;
+    dtr_ui_rect_t   inner;
+    dtr_ui_rect_t   cur;
+
+    gfx = dtr_gfx_create(320, 180);
+    DTR_ASSERT_NOT_NULL(gfx);
+    ui = dtr_ui_create(gfx);
+    DTR_ASSERT_NOT_NULL(ui);
+
+    outer = dtr_ui_rect(0, 0, 100, 80);
+    inner = dtr_ui_rect(10, 10, 50, 40);
+
+    dtr_ui_group_push(ui, outer, false);
+    dtr_ui_group_push(ui, inner, false);
+    cur = dtr_ui_group_current(ui);
+    DTR_ASSERT_EQ_INT(cur.pos_x, 10);
+    DTR_ASSERT_EQ_INT(cur.width, 50);
+
+    dtr_ui_group_pop(ui);
+    cur = dtr_ui_group_current(ui);
+    DTR_ASSERT_EQ_INT(cur.pos_x, 0);
+    DTR_ASSERT_EQ_INT(cur.width, 100);
+
+    dtr_ui_group_pop(ui);
+
+    dtr_ui_destroy(ui);
+    dtr_gfx_destroy(gfx);
+    DTR_PASS();
+}
+
+static void test_group_depth_limit(void)
+{
+    dtr_graphics_t *gfx;
+    dtr_ui_t       *ui;
+    dtr_ui_rect_t   rect;
+    bool            ok;
+
+    gfx = dtr_gfx_create(320, 180);
+    DTR_ASSERT_NOT_NULL(gfx);
+    ui = dtr_ui_create(gfx);
+    DTR_ASSERT_NOT_NULL(ui);
+
+    rect = dtr_ui_rect(0, 0, 10, 10);
+    for (int32_t i = 0; i < DTR_UI_GROUP_MAX_DEPTH; ++i) {
+        ok = dtr_ui_group_push(ui, rect, false);
+        DTR_ASSERT(ok);
+    }
+    /* One more should fail */
+    ok = dtr_ui_group_push(ui, rect, false);
+    DTR_ASSERT(!ok);
+
+    dtr_ui_destroy(ui);
+    dtr_gfx_destroy(gfx);
+    DTR_PASS();
+}
+
+static void test_group_fit_clamps_child(void)
+{
+    dtr_graphics_t *gfx;
+    dtr_ui_t       *ui;
+    dtr_ui_rect_t   parent;
+    dtr_ui_rect_t   child;
+    dtr_ui_rect_t   fit;
+
+    gfx = dtr_gfx_create(320, 180);
+    DTR_ASSERT_NOT_NULL(gfx);
+    ui = dtr_ui_create(gfx);
+    DTR_ASSERT_NOT_NULL(ui);
+
+    parent = dtr_ui_rect(10, 10, 80, 60);
+    child  = dtr_ui_rect(0, 0, 200, 200); /* extends outside parent */
+
+    dtr_ui_group_push(ui, parent, false);
+    fit = dtr_ui_fit(ui, child);
+
+    /* Clamped to intersection */
+    DTR_ASSERT_EQ_INT(fit.pos_x, 10);
+    DTR_ASSERT_EQ_INT(fit.pos_y, 10);
+    DTR_ASSERT_EQ_INT(fit.width, 80);
+    DTR_ASSERT_EQ_INT(fit.height, 60);
+
+    dtr_ui_group_pop(ui);
+    dtr_ui_destroy(ui);
+    dtr_gfx_destroy(gfx);
+    DTR_PASS();
+}
+
+static void test_group_fit_no_group_passthrough(void)
+{
+    dtr_graphics_t *gfx;
+    dtr_ui_t       *ui;
+    dtr_ui_rect_t   child;
+    dtr_ui_rect_t   fit;
+
+    gfx = dtr_gfx_create(320, 180);
+    DTR_ASSERT_NOT_NULL(gfx);
+    ui = dtr_ui_create(gfx);
+    DTR_ASSERT_NOT_NULL(ui);
+
+    child = dtr_ui_rect(5, 5, 40, 30);
+    fit   = dtr_ui_fit(ui, child);
+
+    /* No active group — child returned unchanged */
+    DTR_ASSERT_EQ_INT(fit.pos_x, 5);
+    DTR_ASSERT_EQ_INT(fit.pos_y, 5);
+    DTR_ASSERT_EQ_INT(fit.width, 40);
+    DTR_ASSERT_EQ_INT(fit.height, 30);
+
+    dtr_ui_destroy(ui);
+    dtr_gfx_destroy(gfx);
+    DTR_PASS();
+}
+
+static void test_group_fit_zero_intersection(void)
+{
+    dtr_graphics_t *gfx;
+    dtr_ui_t       *ui;
+    dtr_ui_rect_t   parent;
+    dtr_ui_rect_t   child;
+    dtr_ui_rect_t   fit;
+
+    gfx = dtr_gfx_create(320, 180);
+    DTR_ASSERT_NOT_NULL(gfx);
+    ui = dtr_ui_create(gfx);
+    DTR_ASSERT_NOT_NULL(ui);
+
+    parent = dtr_ui_rect(100, 100, 50, 50);
+    child  = dtr_ui_rect(0, 0, 20, 20); /* completely outside parent */
+
+    dtr_ui_group_push(ui, parent, false);
+    fit = dtr_ui_fit(ui, child);
+
+    DTR_ASSERT_EQ_INT(fit.width, 0);
+    DTR_ASSERT_EQ_INT(fit.height, 0);
+
+    dtr_ui_group_pop(ui);
+    dtr_ui_destroy(ui);
+    dtr_gfx_destroy(gfx);
+    DTR_PASS();
+}
+
+/* ------------------------------------------------------------------ */
 /*  Main                                                               */
 /* ------------------------------------------------------------------ */
 
@@ -281,6 +483,15 @@ int main(void)
     DTR_RUN_TEST(test_vstack_with_gap);
     DTR_RUN_TEST(test_place_center);
     DTR_RUN_TEST(test_place_bottom_right);
+
+    /* Group stack */
+    DTR_RUN_TEST(test_group_push_pop_basic);
+    DTR_RUN_TEST(test_group_pop_empty_is_safe);
+    DTR_RUN_TEST(test_group_nested);
+    DTR_RUN_TEST(test_group_depth_limit);
+    DTR_RUN_TEST(test_group_fit_clamps_child);
+    DTR_RUN_TEST(test_group_fit_no_group_passthrough);
+    DTR_RUN_TEST(test_group_fit_zero_intersection);
 
     DTR_TEST_END();
 }

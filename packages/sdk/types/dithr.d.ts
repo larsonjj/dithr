@@ -102,6 +102,10 @@ interface DithrGfx {
     print(text: string | number, x?: number, y?: number, col?: number): void;
     textWidth(text: string): number;
     textHeight(text: string): number;
+    /** Draw text with word-wrap within maxW pixels. Returns total pixel height consumed. */
+    printWrapped(text: string, x: number, y: number, maxW: number, col?: number): number;
+    /** Measure the pixel height printWrapped would consume without drawing. */
+    textWrapHeight(text: string, maxW: number): number;
     font(sx?: number, sy?: number, char_w?: number, char_h?: number, first?: number, count?: number): void;
 
     // Sprites
@@ -610,6 +614,14 @@ interface DithrCol {
 // ui — UI Layout Helpers
 // ---------------------------------------------------------------------------
 
+/** Handle returned by ui.group() — call .end() when drawing is complete. */
+interface DithrUiGroup {
+    /** The rect this group was pushed with. */
+    readonly rect: DithrRect;
+    /** Pop the group (and restore clip if clip was requested). */
+    end(): void;
+}
+
 interface DithrUi {
     rect(x: number, y: number, w: number, h: number): DithrRect;
     inset(rect: DithrRect, n: number): DithrRect;
@@ -619,6 +631,16 @@ interface DithrUi {
     hstack(rect: DithrRect, n: number, gap?: number): DithrRect[];
     vstack(rect: DithrRect, n: number, gap?: number): DithrRect[];
     place(parent: DithrRect, ax: number, ay: number, w: number, h: number): DithrRect;
+    /** Push a group rect onto the stack.  Returns true on success. */
+    groupPush(rect: DithrRect, clip?: boolean): boolean;
+    /** Pop the innermost group (safe to call on empty stack). */
+    groupPop(): void;
+    /** Return the current group rect, or {x:0,y:0,w:0,h:0} if no group is active. */
+    groupRect(): DithrRect;
+    /** Clamp child to the intersection with the current group rect. */
+    fit(child: DithrRect): DithrRect;
+    /** Push a group, call fn, then pop.  opts.clip applies gfx.clip automatically. */
+    withGroup(rect: DithrRect, fn: () => void, opts?: { clip?: boolean }): void;
 }
 
 // ---------------------------------------------------------------------------

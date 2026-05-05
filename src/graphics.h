@@ -293,6 +293,29 @@ int32_t dtr_gfx_text_width(dtr_graphics_t *gfx, const char *str);
 int32_t dtr_gfx_text_height(dtr_graphics_t *gfx, const char *str);
 
 /**
+ * \brief           Print a string wrapped to max_w pixels, returning the total
+ *                  pixel height consumed.  Wraps at whitespace boundaries; falls
+ *                  back to character-break for tokens longer than max_w.
+ *                  Embedded '\\n' characters are honoured as hard line-breaks.
+ * \param[in]       max_w: Maximum pixel width per line (>0; clamped to 1)
+ * \return          Total pixel height of the printed block
+ */
+int32_t dtr_gfx_print_wrapped(dtr_graphics_t *gfx,
+                              const char     *str,
+                              int32_t         x,
+                              int32_t         y,
+                              int32_t         max_w,
+                              uint8_t         col);
+
+/**
+ * \brief           Measure the pixel height that print_wrapped would consume
+ *                  without drawing anything.
+ * \param[in]       max_w: Maximum pixel width per line (>0; clamped to 1)
+ * \return          Total pixel height of the wrapped block
+ */
+int32_t dtr_gfx_text_wrap_height(dtr_graphics_t *gfx, const char *str, int32_t max_w);
+
+/**
  * \\brief           Set a custom font from a sprite sheet region
  * \\param[in]       sx: Source X of the font grid on the sheet
  * \\param[in]       sy: Source Y of the font grid on the sheet

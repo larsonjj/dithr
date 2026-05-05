@@ -225,22 +225,24 @@ export function _draw(): void {
         const sidebar = bodySplit[0];
         const mainArea = bodySplit[1];
 
-        // --- Sidebar: stat bars ---
+        // --- Sidebar: stat bars (clipped so they don't bleed during slide-in) ---
         drawPanel(sidebar, COL_PANEL);
-        const sbInner = ui.inset(sidebar, 3);
+        ui.withGroup(ui.inset(sidebar, 3), () => {
+            const sbInner = ui.groupRect();
 
-        gfx.print('Stats', sbInner.x, sbInner.y, COL_TITLE);
+            gfx.print('Stats', sbInner.x, sbInner.y, COL_TITLE);
 
-        const barArea = ui.rect(sbInner.x, sbInner.y + 10, sbInner.w, sbInner.h - 10);
-        const rows = ui.vstack(barArea, 3, 3);
+            const barArea = ui.rect(sbInner.x, sbInner.y + 10, sbInner.w, sbInner.h - 10);
+            const rows = ui.vstack(barArea, 3, 3);
 
-        const labels = ['HP', 'MP', 'XP'];
-        const colors = [COL_BAR_HP, COL_BAR_MP, COL_BAR_XP];
-        for (let i = 0; i < 3; i++) {
-            const labelSplit = ui.hsplit(rows[i], 0.25, 1);
-            drawLabel(labels[i], labelSplit[0], colors[i]);
-            drawBar(labelSplit[1], barValues[i], colors[i]);
-        }
+            const labels = ['HP', 'MP', 'XP'];
+            const colors = [COL_BAR_HP, COL_BAR_MP, COL_BAR_XP];
+            for (let i = 0; i < 3; i++) {
+                const labelSplit = ui.hsplit(rows[i], 0.25, 1);
+                drawLabel(labels[i], labelSplit[0], colors[i]);
+                drawBar(labelSplit[1], barValues[i], colors[i]);
+            }
+        }, { clip: true });
 
         drawMainArea(mainArea);
     } else {
@@ -260,19 +262,40 @@ function drawMainArea(area: { x: number; y: number; w: number; h: number }) {
     const topSection = topBottom[0];
     const bottomSection = topBottom[1];
 
-    // --- Menu buttons (hstack) ---
+    // --- Menu buttons (clipped so items don't bleed while sliding in) ---
     gfx.print('Menu', topSection.x, topSection.y, COL_TITLE);
     const menuArea = ui.rect(topSection.x, topSection.y + 10, topSection.w, topSection.h - 10);
     const slots = ui.vstack(menuArea, menuItems.length, 2);
-    for (let i = 0; i < menuItems.length; i++) {
-        const slot = slots[i];
-        slot.x += math.flr(menuOffsets[i]);
-        drawPanel(slot, COL_MENU);
-        gfx.print(menuItems[i], slot.x + 3, slot.y + 1, COL_TITLE);
-    }
+    ui.withGroup(topSection, () => {
+        for (let i = 0; i < menuItems.length; i++) {
+            const slot = ui.fit({
+                ...slots[i],
+                x: slots[i].x + math.flr(menuOffsets[i]),
+            });
+            drawPanel(slot, COL_MENU);
+            gfx.print(menuItems[i], slot.x + 3, slot.y + 1, COL_TITLE);
+        }
+    }, { clip: true });
 
-    // --- Bottom section: easing curve visualizer ---
-    drawEasingPreview(bottomSection);
+    // --- Bottom section: split into easing visualizer + description panel ---
+    const bottomSplit = ui.hsplit(bottomSection, 0.65, 3);
+    drawEasingPreview(bottomSplit[0]);
+
+    // Tooltip / description panel — demonstrates printWrapped auto-wrapping
+    const descPanel = bottomSplit[1];
+    drawPanel(descPanel, COL_PANEL);
+    ui.withGroup(ui.inset(descPanel, 3), () => {
+        const p = ui.groupRect();
+        gfx.print('Info', p.x, p.y, COL_TITLE);
+        gfx.printWrapped(
+            'Easing functions interpolate between two values over time. ' +
+                'Use withGroup + printWrapped to auto-wrap text inside any panel.',
+            p.x,
+            p.y + 8,
+            p.w,
+            COL_LABEL,
+        );
+    }, { clip: true });
 }
 
 function drawEasingPreview(area: { x: number; y: number; w: number; h: number }) {

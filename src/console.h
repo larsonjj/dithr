@@ -10,6 +10,7 @@
 #include "particles.h"
 #include "touch.h"
 #include "tween.h"
+#include "ui.h"
 
 #include <SDL3/SDL.h>
 
@@ -61,6 +62,7 @@ typedef struct dtr_console {
     dtr_postfx_t        *postfx;
     dtr_tween_t          tween;
     dtr_particles_t     *particles;
+    dtr_ui_t            *ui;
 
     /* Math PRNG state (xorshift64, per-console instance) */
     uint64_t rng_state;

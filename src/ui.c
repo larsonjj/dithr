@@ -5,6 +5,127 @@
 
 #include "ui.h"
 
+#include "graphics.h"
+
+#include <SDL3/SDL.h>
+
+/* ---- Group stack ------------------------------------------------------- */
+
+dtr_ui_t *dtr_ui_create(dtr_graphics_t *gfx)
+{
+    dtr_ui_t *ui;
+
+    ui = SDL_malloc(sizeof(dtr_ui_t));
+    if (ui == NULL) {
+        return NULL;
+    }
+    ui->gfx   = gfx;
+    ui->depth = 0;
+    return ui;
+}
+
+void dtr_ui_destroy(dtr_ui_t *ui)
+{
+    SDL_free(ui);
+}
+
+bool dtr_ui_group_push(dtr_ui_t *ui, dtr_ui_rect_t rect, bool clip)
+{
+    dtr_ui_group_entry_t *entry;
+
+    if (ui == NULL || ui->depth >= DTR_UI_GROUP_MAX_DEPTH) {
+        return false;
+    }
+
+    entry               = &ui->stack[ui->depth];
+    entry->rect         = rect;
+    entry->clip_applied = clip;
+    ui->depth++;
+
+    if (clip && ui->gfx != NULL) {
+        dtr_gfx_clip(ui->gfx, rect.pos_x, rect.pos_y, rect.width, rect.height);
+    }
+    return true;
+}
+
+void dtr_ui_group_pop(dtr_ui_t *ui)
+{
+    dtr_ui_group_entry_t *entry;
+
+    if (ui == NULL || ui->depth <= 0) {
+        return;
+    }
+
+    ui->depth--;
+    entry = &ui->stack[ui->depth];
+
+    if (entry->clip_applied && ui->gfx != NULL) {
+        if (ui->depth > 0) {
+            /* Restore parent clip */
+            dtr_ui_rect_t pr = ui->stack[ui->depth - 1].rect;
+            dtr_gfx_clip(ui->gfx, pr.pos_x, pr.pos_y, pr.width, pr.height);
+        } else {
+            dtr_gfx_clip_reset(ui->gfx);
+        }
+    }
+}
+
+dtr_ui_rect_t dtr_ui_group_current(const dtr_ui_t *ui)
+{
+    if (ui == NULL || ui->depth <= 0) {
+        return dtr_ui_rect(0, 0, 0, 0);
+    }
+    return ui->stack[ui->depth - 1].rect;
+}
+
+dtr_ui_rect_t dtr_ui_fit(const dtr_ui_t *ui, dtr_ui_rect_t child)
+{
+    dtr_ui_rect_t parent;
+    dtr_ui_rect_t out;
+    int32_t       x0;
+    int32_t       y0;
+    int32_t       x1;
+    int32_t       y1;
+    int32_t       px0;
+    int32_t       py0;
+    int32_t       px1;
+    int32_t       py1;
+
+    if (ui == NULL || ui->depth <= 0) {
+        return child;
+    }
+
+    parent = ui->stack[ui->depth - 1].rect;
+
+    x0  = child.pos_x;
+    y0  = child.pos_y;
+    x1  = child.pos_x + child.width;
+    y1  = child.pos_y + child.height;
+    px0 = parent.pos_x;
+    py0 = parent.pos_y;
+    px1 = parent.pos_x + parent.width;
+    py1 = parent.pos_y + parent.height;
+
+    if (x0 < px0) {
+        x0 = px0;
+    }
+    if (y0 < py0) {
+        y0 = py0;
+    }
+    if (x1 > px1) {
+        x1 = px1;
+    }
+    if (y1 > py1) {
+        y1 = py1;
+    }
+
+    out.pos_x  = x0;
+    out.pos_y  = y0;
+    out.width  = x1 - x0 > 0 ? x1 - x0 : 0;
+    out.height = y1 - y0 > 0 ? y1 - y0 : 0;
+    return out;
+}
+
 dtr_ui_rect_t dtr_ui_rect(int32_t pos_x, int32_t pos_y, int32_t width, int32_t height)
 {
     dtr_ui_rect_t rect;

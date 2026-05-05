@@ -100,6 +100,8 @@ static void prv_console_cleanup(dtr_console_t *con)
 #endif
     dtr_postfx_destroy(con->postfx);
     dtr_particles_destroy(con->particles);
+    dtr_ui_destroy(con->ui);
+    con->ui = NULL;
     dtr_event_destroy(con->events);
     dtr_input_destroy(con->input);
     dtr_touch_destroy(con->touch);
@@ -512,6 +514,9 @@ dtr_console_t *dtr_console_create(const char *cart_path)
 
     /* --- Particle pool --- */
     con->particles = dtr_particles_create();
+
+    /* --- UI context --- */
+    con->ui = dtr_ui_create(con->graphics);
 
     /* --- Cart ref to JS context --- */
     con->cart->ctx = con->runtime->ctx;

@@ -1191,6 +1191,126 @@ int32_t dtr_gfx_text_height(dtr_graphics_t *gfx, const char *str)
     return lines * ch;
 }
 
+/* ---- Wrap helpers ------------------------------------------------------ */
+
+/**
+ * Measure the pixel width of the next word in *src (up to first whitespace or
+ * end-of-string).  Does not advance *src.
+ */
+static int32_t prv_word_width(int32_t cw, const char *src)
+{
+    int32_t     w   = 0;
+    const char *ptr = src;
+
+    while (*ptr != '\0' && *ptr != ' ' && *ptr != '\t' && *ptr != '\n') {
+        w += cw + 1;
+        ++ptr;
+    }
+    if (w > 0) {
+        w -= 1; /* no trailing inter-char gap */
+    }
+    return w;
+}
+
+/**
+ * Core wrapped-layout engine.  When draw==true it renders each character via
+ * dtr_gfx_print; when draw==false it only measures.  Returns total height.
+ */
+static int32_t prv_print_wrapped_impl(dtr_graphics_t *gfx,
+                                      const char     *str,
+                                      int32_t         ox,
+                                      int32_t         oy,
+                                      int32_t         max_w,
+                                      uint8_t         col,
+                                      bool            draw)
+{
+    int32_t     cw;
+    int32_t     ch;
+    int32_t     x;
+    int32_t     y;
+    const char *ptr;
+    char        glyph_buf[2];
+
+    if (max_w < 1) {
+        max_w = 1;
+    }
+
+    cw           = gfx->custom_font.active ? gfx->custom_font.char_w : DTR_FONT_W;
+    ch           = gfx->custom_font.active ? gfx->custom_font.char_h : DTR_FONT_H;
+    x            = ox;
+    y            = oy;
+    glyph_buf[1] = '\0';
+
+    for (ptr = str; *ptr != '\0';) {
+        uint8_t c = (uint8_t)*ptr;
+
+        /* Hard newline */
+        if (c == '\n') {
+            x = ox;
+            y += ch;
+            ++ptr;
+            continue;
+        }
+
+        /* Skip spaces that land at line start (after a soft-wrap) */
+        if (c == ' ' || c == '\t') {
+            if (x == ox) {
+                ++ptr;
+                continue;
+            }
+        }
+
+        /* Space: check if next word still fits on this line */
+        if (c == ' ' || c == '\t') {
+            int32_t space_w   = cw + 1;
+            int32_t next_word = prv_word_width(cw, ptr + 1);
+
+            if (next_word > 0 && x + space_w + next_word - 1 > ox + max_w - 1) {
+                /* Soft wrap — skip the space */
+                x = ox;
+                y += ch;
+                ++ptr;
+                continue;
+            }
+            /* Space fits — draw it (advance only) */
+            x += space_w;
+            ++ptr;
+            continue;
+        }
+
+        /* Regular character: does it fit on this line? */
+        if (x + cw - 1 > ox + max_w - 1) {
+            /* Hard character-break */
+            x = ox;
+            y += ch;
+        }
+
+        if (draw) {
+            glyph_buf[0] = (char)c;
+            dtr_gfx_print(gfx, glyph_buf, x, y, col);
+        }
+        x += cw + 1;
+        ++ptr;
+    }
+
+    return y - oy + ch;
+}
+
+int32_t dtr_gfx_print_wrapped(dtr_graphics_t *gfx,
+                              const char     *str,
+                              int32_t         x,
+                              int32_t         y,
+                              int32_t         max_w,
+                              uint8_t         col)
+{
+    return prv_print_wrapped_impl(gfx, str, x, y, max_w, col, true);
+}
+
+int32_t dtr_gfx_text_wrap_height(dtr_graphics_t *gfx, const char *str, int32_t max_w)
+{
+    return prv_print_wrapped_impl(gfx, str, 0, 0, max_w, 0, false);
+}
+
 void dtr_gfx_font(dtr_graphics_t *gfx,
                   int32_t         sx,
                   int32_t         sy,

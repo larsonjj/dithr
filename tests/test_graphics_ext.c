@@ -552,6 +552,99 @@ static void test_gfx_init_default_palette(void)
 }
 
 /* ------------------------------------------------------------------ */
+/*  Text wrapping                                                      */
+/* ------------------------------------------------------------------ */
+
+/* Built-in font: 4px wide + 1px gap = 5px per char, 6px tall */
+#define FONT_W    4
+#define FONT_H    6
+#define FONT_STEP 5 /* char_w + 1 */
+
+static void test_gfx_wrap_height_single_line(void)
+{
+    dtr_graphics_t *gfx;
+    int32_t         h;
+
+    gfx = dtr_gfx_create(320, 180);
+    DTR_ASSERT_NOT_NULL(gfx);
+
+    /* "Hi" = 2 chars × 5 = 10px wide, max_w=100 → fits on one line */
+    h = dtr_gfx_text_wrap_height(gfx, "Hi", 100);
+    DTR_ASSERT_EQ_INT(h, FONT_H);
+
+    dtr_gfx_destroy(gfx);
+    DTR_PASS();
+}
+
+static void test_gfx_wrap_height_wraps_at_space(void)
+{
+    dtr_graphics_t *gfx;
+    int32_t         h;
+
+    gfx = dtr_gfx_create(320, 180);
+    DTR_ASSERT_NOT_NULL(gfx);
+
+    /* "AB CD": "AB"=9px, "CD"=9px, space=5px → total 23px > max_w=15
+     * → wraps after "AB", 2 lines */
+    h = dtr_gfx_text_wrap_height(gfx, "AB CD", 15);
+    DTR_ASSERT_EQ_INT(h, FONT_H * 2);
+
+    dtr_gfx_destroy(gfx);
+    DTR_PASS();
+}
+
+static void test_gfx_wrap_height_hard_newline(void)
+{
+    dtr_graphics_t *gfx;
+    int32_t         h;
+
+    gfx = dtr_gfx_create(320, 180);
+    DTR_ASSERT_NOT_NULL(gfx);
+
+    /* Hard \n always produces a new line regardless of max_w */
+    h = dtr_gfx_text_wrap_height(gfx, "A\nB", 200);
+    DTR_ASSERT_EQ_INT(h, FONT_H * 2);
+
+    dtr_gfx_destroy(gfx);
+    DTR_PASS();
+}
+
+static void test_gfx_wrap_height_long_word_char_break(void)
+{
+    dtr_graphics_t *gfx;
+    int32_t         h;
+
+    gfx = dtr_gfx_create(320, 180);
+    DTR_ASSERT_NOT_NULL(gfx);
+
+    /* "ABCDE" = 5 chars × 5 = 24px (no trailing gap), max_w=9 (fits 2 chars)
+     * → 3 lines (2+2+1) */
+    h = dtr_gfx_text_wrap_height(gfx, "ABCDE", 9);
+    DTR_ASSERT_EQ_INT(h, FONT_H * 3);
+
+    dtr_gfx_destroy(gfx);
+    DTR_PASS();
+}
+
+static void test_gfx_print_wrapped_returns_height(void)
+{
+    dtr_graphics_t *gfx;
+    int32_t         h_measure;
+    int32_t         h_draw;
+
+    gfx = dtr_gfx_create(320, 180);
+    DTR_ASSERT_NOT_NULL(gfx);
+
+    /* draw and measure must agree */
+    h_measure = dtr_gfx_text_wrap_height(gfx, "Hello World", 30);
+    h_draw    = dtr_gfx_print_wrapped(gfx, "Hello World", 0, 0, 30, 7);
+    DTR_ASSERT_EQ_INT(h_measure, h_draw);
+
+    dtr_gfx_destroy(gfx);
+    DTR_PASS();
+}
+
+/* ------------------------------------------------------------------ */
 /*  Main                                                               */
 /* ------------------------------------------------------------------ */
 
@@ -581,6 +674,13 @@ int main(int argc, char *argv[])
     DTR_RUN_TEST(test_gfx_dl_spr_affine_dispatch);
     DTR_RUN_TEST(test_gfx_dl_layer_order);
     DTR_RUN_TEST(test_gfx_init_default_palette);
+
+    /* Text wrapping */
+    DTR_RUN_TEST(test_gfx_wrap_height_single_line);
+    DTR_RUN_TEST(test_gfx_wrap_height_wraps_at_space);
+    DTR_RUN_TEST(test_gfx_wrap_height_hard_newline);
+    DTR_RUN_TEST(test_gfx_wrap_height_long_word_char_break);
+    DTR_RUN_TEST(test_gfx_print_wrapped_returns_height);
 
     DTR_TEST_END();
 }
