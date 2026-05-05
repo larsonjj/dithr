@@ -267,6 +267,8 @@ function drawLimits() {
 }
 
 function drawFileIo() {
+    const pageRect = ui.groupRect();
+    const wrapW = pageRect.w - 8;
     let y = 18;
     const gap = 8;
 
@@ -279,25 +281,24 @@ function drawFileIo() {
     y += gap;
     const lines = fileContent.split('\n');
     for (let i = 0; i < math.min(lines.length, 4); ++i) {
-        gfx.print(`  ${lines[i]}`, 4, y, 6);
-        y += gap;
+        y += gfx.printWrapped(`  ${lines[i]}`, 4, y, wrapW, 6);
     }
     y += 4;
 
-    gfx.print(`Files: ${fileList.join(', ')}`, 4, y, 7);
-    y += gap;
-    gfx.print(`Dirs: ${dirList.join(', ')}`, 4, y, 7);
-    y += gap + 4;
+    // Long, dynamic strings — auto-wrap inside the page width.
+    y += gfx.printWrapped(`Files: ${fileList.join(', ')}`, 4, y, wrapW, 7) + 1;
+    y += gfx.printWrapped(`Dirs: ${dirList.join(', ')}`, 4, y, wrapW, 7) + 5;
 
-    gfx.print(`Clipboard: ${clipboardText.substring(0, 40)}`, 4, y, 7);
-    y += gap + 4;
+    y += gfx.printWrapped(`Clipboard: ${clipboardText}`, 4, y, wrapW, 7) + 5;
 
     gfx.print(`Text input: ${textInputEnabled ? 'ON' : 'OFF'}`, 4, y, textInputEnabled ? 11 : 6);
     y += gap;
-    gfx.print(`Typed: ${typedText.substring(typedText.length - 30)}`, 4, y, 7);
+    gfx.printWrapped(`Typed: ${typedText}`, 4, y, wrapW, 7);
 }
 
 function drawGamepad() {
+    const pageRect = ui.groupRect();
+    const wrapW = pageRect.w - 8;
     let y = 18;
     const gap = 8;
 
@@ -310,8 +311,8 @@ function drawGamepad() {
         if (connected) {
             const name = pad.name(i);
             const dz = pad.deadzone(undefined, i);
-            gfx.print(`Pad ${i}: ${name}`, 4, y, 11);
-            y += gap;
+            // Gamepad names can be long — let them wrap.
+            y += gfx.printWrapped(`Pad ${i}: ${name}`, 4, y, wrapW, 11);
             gfx.print(`  deadzone: ${dz.toFixed(2)}`, 4, y, 6);
             y += gap;
             gfx.print(
@@ -329,15 +330,14 @@ function drawGamepad() {
             );
             y += gap;
 
-            // Button state
+            // Held-button list grows with simultaneous presses — wrap it.
             const btns = ['A', 'B', 'X', 'Y', 'L1', 'R1', 'START', 'SELECT'];
             const bvals = [pad.A, pad.B, pad.X, pad.Y, pad.L1, pad.R1, pad.START, pad.SELECT];
             let held = '';
             for (let b = 0; b < btns.length; ++b) {
                 if (pad.btn(bvals[b], i)) held += `${btns[b]} `;
             }
-            gfx.print(`  Held: ${held || 'none'}`, 4, y, 6);
-            y += gap + 4;
+            y += gfx.printWrapped(`  Held: ${held || 'none'}`, 4, y, wrapW, 6) + 4;
         } else {
             gfx.print(`Pad ${i}: not connected`, 4, y, 5);
             y += gap;
@@ -352,22 +352,31 @@ export function _draw(): void {
     gfx.rectfill(0, 0, 319, 10, 1);
     gfx.print(`${PAGE_NAMES[page]} (${page + 1}/${NUM_PAGES})  </>`, 4, 2, 7);
 
-    switch (page) {
-        case 0:
-            drawSysInfo();
-            break;
-        case 1:
-            drawLimits();
-            break;
-        case 2:
-            drawFileIo();
-            break;
-        case 3:
-            drawGamepad();
-            break;
-        default:
-            break;
-    }
+    // Clip the page body so long strings can't bleed past the screen edge,
+    // and expose the page rect via groupRect() for printWrapped sizing.
+    const pageArea = ui.rect(0, 12, 320, 168);
+    ui.withGroup(
+        pageArea,
+        () => {
+            switch (page) {
+                case 0:
+                    drawSysInfo();
+                    break;
+                case 1:
+                    drawLimits();
+                    break;
+                case 2:
+                    drawFileIo();
+                    break;
+                case 3:
+                    drawGamepad();
+                    break;
+                default:
+                    break;
+            }
+        },
+        { clip: true },
+    );
 
     sys.drawFps();
 }

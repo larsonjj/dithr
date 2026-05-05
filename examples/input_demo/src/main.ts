@@ -231,10 +231,19 @@ export function _draw(): void {
     }
 
     // --- Event log ---
+    // Clip + wrap so long messages stay inside the right column.
     gfx.print('-- event log --', 160, 82, 6);
-    for (let i = 0; i < logLines.length; ++i) {
-        gfx.print(logLines[i], 160, 90 + i * 8, 7);
-    }
+    const logArea = ui.rect(160, 90, 156, 80);
+    ui.withGroup(
+        logArea,
+        () => {
+            let ly = logArea.y;
+            for (let i = 0; i < logLines.length; ++i) {
+                ly += gfx.printWrapped(logLines[i], logArea.x, ly, logArea.w, 7) + 1;
+            }
+        },
+        { clip: true },
+    );
 
     // --- Instructions ---
     gfx.print('arrows/wasd/lstick=move z/spc=flash', 4, 170, 5);

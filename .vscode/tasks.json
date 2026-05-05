@@ -98,9 +98,9 @@
     {
       "label": "Build Example TS (Cart)",
       "type": "shell",
-      "command": "cd $(dirname ${input:ExampleCart}) && npm run build",
+      "command": "cd $(dirname ${input:ExampleCart}) && { [ -x node_modules/.bin/esbuild ] || npm install; } && npm run build",
       "windows": {
-        "command": "cd (Split-Path -Parent '${input:ExampleCart}'); npm run build"
+        "command": "cd (Split-Path -Parent '${input:ExampleCart}'); if (-not (Test-Path node_modules/.bin/esbuild.cmd)) { npm install }; npm run build"
       },
       "problemMatcher": []
     },
