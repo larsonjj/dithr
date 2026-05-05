@@ -112,6 +112,8 @@ interface DithrGfx {
     spr(idx?: number, x?: number, y?: number, w?: number, h?: number, flip_x?: boolean, flip_y?: boolean): void;
     sprBatch(data: Int32Array, count?: number): void;
     sspr(sx?: number, sy?: number, sw?: number, sh?: number, dx?: number, dy?: number, dw?: number, dh?: number): void;
+    /** Draw a 9-slice / 9-patch from the sprite sheet into the destination rect. */
+    nineSlice(sx?: number, sy?: number, sw?: number, sh?: number, dx?: number, dy?: number, dw?: number, dh?: number, border?: number): void;
     sprRot(idx?: number, x?: number, y?: number, angle?: number, cx?: number, cy?: number): void;
     sprAffine(idx?: number, x?: number, y?: number, origin_x?: number, origin_y?: number, rot_x?: number, rot_y?: number): void;
 
@@ -163,6 +165,8 @@ interface DithrGfx {
     dlEnd(): void;
     dlSpr(layer: number, idx: number, x: number, y: number, w?: number, h?: number, flip_x?: boolean, flip_y?: boolean): void;
     dlSspr(layer: number, sx: number, sy: number, sw: number, sh: number, dx: number, dy: number, dw: number, dh: number): void;
+    /** Enqueue a 9-slice draw command on the draw list at the given layer. */
+    dlNineSlice(layer: number, sx: number, sy: number, sw: number, sh: number, dx: number, dy: number, dw: number, dh: number, border: number): void;
     dlSprRot(layer: number, idx: number, x: number, y: number, angle?: number, cx?: number, cy?: number): void;
     dlSprAffine(layer: number, idx: number, x: number, y: number, origin_x?: number, origin_y?: number, rot_x?: number, rot_y?: number): void;
 }
@@ -639,6 +643,8 @@ interface DithrUi {
     groupRect(): DithrRect;
     /** Clamp child to the intersection with the current group rect. */
     fit(child: DithrRect): DithrRect;
+    /** Draw a 9-slice panel from the sprite sheet, clamped to the active group bounds. */
+    panel(rect: DithrRect, sx: number, sy: number, sw: number, sh: number, border: number): void;
     /** Push a group, call fn, then pop.  opts.clip applies gfx.clip automatically. */
     withGroup(rect: DithrRect, fn: () => void, opts?: { clip?: boolean }): void;
 }

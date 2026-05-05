@@ -99,6 +99,7 @@ typedef enum dtr_draw_cmd_type {
     DTR_DRAW_SSPR       = 1,
     DTR_DRAW_SPR_ROT    = 2,
     DTR_DRAW_SPR_AFFINE = 3,
+    DTR_DRAW_NINE_SLICE = 4,
 } dtr_draw_cmd_type_t;
 
 /**
@@ -116,6 +117,9 @@ typedef struct dtr_draw_cmd {
         struct {
             int32_t sx, sy, sw, sh, dx, dy, dw, dh;
         } sspr;
+        struct {
+            int32_t sx, sy, sw, sh, dx, dy, dw, dh, border;
+        } nine_slice;
         struct {
             int32_t idx, x, y, cx, cy;
             float   angle;
@@ -370,6 +374,16 @@ void dtr_gfx_sspr(dtr_graphics_t *gfx,
                   int32_t         dy,
                   int32_t         dw,
                   int32_t         dh);
+void dtr_gfx_nine_slice(dtr_graphics_t *gfx,
+                        int32_t         sx,
+                        int32_t         sy,
+                        int32_t         sw,
+                        int32_t         sh,
+                        int32_t         dx,
+                        int32_t         dy,
+                        int32_t         dw,
+                        int32_t         dh,
+                        int32_t         border);
 void dtr_gfx_spr_rot(dtr_graphics_t *gfx,
                      int32_t         idx,
                      int32_t         x,
@@ -477,6 +491,17 @@ void dtr_gfx_dl_sspr(dtr_graphics_t *gfx,
                      int32_t         dy,
                      int32_t         dw,
                      int32_t         dh);
+void dtr_gfx_dl_nine_slice(dtr_graphics_t *gfx,
+                           int32_t         layer,
+                           int32_t         sx,
+                           int32_t         sy,
+                           int32_t         sw,
+                           int32_t         sh,
+                           int32_t         dx,
+                           int32_t         dy,
+                           int32_t         dw,
+                           int32_t         dh,
+                           int32_t         border);
 void dtr_gfx_dl_spr_rot(dtr_graphics_t *gfx,
                         int32_t         layer,
                         int32_t         idx,

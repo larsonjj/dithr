@@ -82,6 +82,22 @@ dtr_ui_rect_t dtr_ui_group_current(const dtr_ui_t *ui);
  */
 dtr_ui_rect_t dtr_ui_fit(const dtr_ui_t *ui, dtr_ui_rect_t child);
 
+/**
+ * \brief           Draw a 9-slice panel from the sprite sheet into rect,
+ *                  clamped to the current group bounds.
+ * \param[in]       rect: Target screen rect (will be clipped to active group)
+ * \param[in]       sx, sy: Top-left of source tile on sprite sheet
+ * \param[in]       sw, sh: Size of source tile
+ * \param[in]       border: Width/height of the corner regions in pixels
+ */
+void dtr_ui_panel(dtr_ui_t     *ui,
+                  dtr_ui_rect_t rect,
+                  int32_t       sx,
+                  int32_t       sy,
+                  int32_t       sw,
+                  int32_t       sh,
+                  int32_t       border);
+
 /* ---- Construction ------------------------------------------------------ */
 
 /**

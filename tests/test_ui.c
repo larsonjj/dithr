@@ -7,6 +7,8 @@
 #include "test_harness.h"
 #include "ui.h"
 
+#include <string.h>
+
 /* ------------------------------------------------------------------ */
 /*  ui.rect                                                            */
 /* ------------------------------------------------------------------ */
@@ -460,6 +462,47 @@ static void test_group_fit_zero_intersection(void)
 }
 
 /* ------------------------------------------------------------------ */
+/*  ui_panel                                                           */
+/* ------------------------------------------------------------------ */
+
+/* panel with no active group must not crash, and with a sheet loaded
+   it should draw without exploding. */
+static void test_panel_no_crash(void)
+{
+    dtr_graphics_t *gfx;
+    dtr_ui_t       *ui;
+    uint8_t         sheet_data[64];
+
+    gfx = dtr_gfx_create(64, 64);
+    DTR_ASSERT_NOT_NULL(gfx);
+    ui = dtr_ui_create(gfx);
+    DTR_ASSERT_NOT_NULL(ui);
+
+    memset(sheet_data, 5, sizeof(sheet_data));
+    gfx->sheet.pixels = sheet_data;
+    gfx->sheet.width  = 8;
+    gfx->sheet.height = 8;
+    gfx->sheet.tile_w = 8;
+    gfx->sheet.tile_h = 8;
+    gfx->sheet.cols   = 1;
+    gfx->sheet.rows   = 1;
+    gfx->sheet.count  = 1;
+
+    /* No active group — rect passes through unchanged */
+    dtr_ui_panel(ui, dtr_ui_rect(0, 0, 32, 32), 0, 0, 8, 8, 2);
+
+    /* With a group that clips the rect */
+    dtr_ui_group_push(ui, dtr_ui_rect(0, 0, 16, 16), false);
+    dtr_ui_panel(ui, dtr_ui_rect(0, 0, 32, 32), 0, 0, 8, 8, 2);
+    dtr_ui_group_pop(ui);
+
+    gfx->sheet.pixels = NULL;
+    dtr_ui_destroy(ui);
+    dtr_gfx_destroy(gfx);
+    DTR_PASS();
+}
+
+/* ------------------------------------------------------------------ */
 /*  Main                                                               */
 /* ------------------------------------------------------------------ */
 
@@ -492,6 +535,9 @@ int main(void)
     DTR_RUN_TEST(test_group_fit_clamps_child);
     DTR_RUN_TEST(test_group_fit_no_group_passthrough);
     DTR_RUN_TEST(test_group_fit_zero_intersection);
+
+    /* ui_panel */
+    DTR_RUN_TEST(test_panel_no_crash);
 
     DTR_TEST_END();
 }

@@ -645,6 +645,101 @@ static void test_gfx_print_wrapped_returns_height(void)
 }
 
 /* ------------------------------------------------------------------ */
+/*  Nine-slice                                                         */
+/* ------------------------------------------------------------------ */
+
+/* Calling nine_slice with a destination smaller than two borders must
+   not crash (border is clamped internally). */
+static void test_nine_slice_no_crash_small_dst(void)
+{
+    dtr_graphics_t *gfx;
+    uint8_t         sheet_data[64];
+
+    gfx = dtr_gfx_create(64, 64);
+    DTR_ASSERT_NOT_NULL(gfx);
+
+    memset(sheet_data, 1, sizeof(sheet_data));
+    gfx->sheet.pixels = sheet_data;
+    gfx->sheet.width  = 8;
+    gfx->sheet.height = 8;
+    gfx->sheet.tile_w = 8;
+    gfx->sheet.tile_h = 8;
+    gfx->sheet.cols   = 1;
+    gfx->sheet.rows   = 1;
+    gfx->sheet.count  = 1;
+
+    /* dst 4×4 with border=4 → border will be clamped to 2 */
+    dtr_gfx_nine_slice(gfx, 0, 0, 8, 8, 0, 0, 4, 4, 4);
+    /* dst smaller than a single pixel — no crash */
+    dtr_gfx_nine_slice(gfx, 0, 0, 8, 8, 0, 0, 1, 1, 4);
+    /* zero-size dst — early return, no crash */
+    dtr_gfx_nine_slice(gfx, 0, 0, 8, 8, 0, 0, 0, 0, 2);
+
+    gfx->sheet.pixels = NULL;
+    dtr_gfx_destroy(gfx);
+    DTR_PASS();
+}
+
+/* The border clamping must not produce negative widths/heights. */
+static void test_nine_slice_border_clamp(void)
+{
+    dtr_graphics_t *gfx;
+    uint8_t         sheet_data[64];
+
+    gfx = dtr_gfx_create(64, 64);
+    DTR_ASSERT_NOT_NULL(gfx);
+
+    memset(sheet_data, 2, sizeof(sheet_data));
+    gfx->sheet.pixels = sheet_data;
+    gfx->sheet.width  = 8;
+    gfx->sheet.height = 8;
+    gfx->sheet.tile_w = 8;
+    gfx->sheet.tile_h = 8;
+    gfx->sheet.cols   = 1;
+    gfx->sheet.rows   = 1;
+    gfx->sheet.count  = 1;
+
+    /* border > sw/2 and > dw/2 simultaneously */
+    dtr_gfx_nine_slice(gfx, 0, 0, 4, 4, 0, 0, 10, 10, 8);
+
+    gfx->sheet.pixels = NULL;
+    dtr_gfx_destroy(gfx);
+    DTR_PASS();
+}
+
+/* dlNineSlice must enqueue exactly one command with type NINE_SLICE. */
+static void test_nine_slice_dl_dispatch(void)
+{
+    dtr_graphics_t *gfx;
+    uint8_t         sheet_data[64];
+
+    gfx = dtr_gfx_create(64, 64);
+    DTR_ASSERT_NOT_NULL(gfx);
+
+    memset(sheet_data, 3, sizeof(sheet_data));
+    gfx->sheet.pixels = sheet_data;
+    gfx->sheet.width  = 8;
+    gfx->sheet.height = 8;
+    gfx->sheet.tile_w = 8;
+    gfx->sheet.tile_h = 8;
+    gfx->sheet.cols   = 1;
+    gfx->sheet.rows   = 1;
+    gfx->sheet.count  = 1;
+
+    dtr_gfx_dl_begin(gfx);
+    DTR_ASSERT_EQ_INT(gfx->draw_list.count, 0);
+    dtr_gfx_dl_nine_slice(gfx, 0, 0, 0, 8, 8, 0, 0, 32, 32, 3);
+    DTR_ASSERT_EQ_INT(gfx->draw_list.count, 1);
+    DTR_ASSERT_EQ_INT((int32_t)gfx->draw_list.cmds[0].type, (int32_t)DTR_DRAW_NINE_SLICE);
+    DTR_ASSERT_EQ_INT(gfx->draw_list.cmds[0].u.nine_slice.border, 3);
+    dtr_gfx_dl_end(gfx);
+
+    gfx->sheet.pixels = NULL;
+    dtr_gfx_destroy(gfx);
+    DTR_PASS();
+}
+
+/* ------------------------------------------------------------------ */
 /*  Main                                                               */
 /* ------------------------------------------------------------------ */
 
@@ -681,6 +776,11 @@ int main(int argc, char *argv[])
     DTR_RUN_TEST(test_gfx_wrap_height_hard_newline);
     DTR_RUN_TEST(test_gfx_wrap_height_long_word_char_break);
     DTR_RUN_TEST(test_gfx_print_wrapped_returns_height);
+
+    /* Nine-slice */
+    DTR_RUN_TEST(test_nine_slice_no_crash_small_dst);
+    DTR_RUN_TEST(test_nine_slice_border_clamp);
+    DTR_RUN_TEST(test_nine_slice_dl_dispatch);
 
     DTR_TEST_END();
 }

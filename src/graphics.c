@@ -1817,6 +1817,116 @@ void dtr_gfx_sspr(dtr_graphics_t *gfx,
     }
 }
 
+void dtr_gfx_nine_slice(dtr_graphics_t *gfx,
+                        int32_t         sx,
+                        int32_t         sy,
+                        int32_t         sw,
+                        int32_t         sh,
+                        int32_t         dx,
+                        int32_t         dy,
+                        int32_t         dw,
+                        int32_t         dh,
+                        int32_t         border)
+{
+    int32_t center_sw;
+    int32_t center_sh;
+    int32_t center_dw;
+    int32_t center_dh;
+
+    if (border < 0 || sw <= 0 || sh <= 0 || dw <= 0 || dh <= 0) {
+        return;
+    }
+    /* Clamp border so it fits inside both source and destination. */
+    if (border * 2 > sw) {
+        border = sw / 2;
+    }
+    if (border * 2 > sh) {
+        border = sh / 2;
+    }
+    if (border * 2 > dw) {
+        border = dw / 2;
+    }
+    if (border * 2 > dh) {
+        border = dh / 2;
+    }
+
+    center_sw = sw - border * 2;
+    center_sh = sh - border * 2;
+    center_dw = dw - border * 2;
+    center_dh = dh - border * 2;
+
+    /* --- Corners (drawn at 1:1 when border == dst_corner, stretched otherwise) --- */
+    dtr_gfx_sspr(gfx, sx, sy, border, border, dx, dy, border, border); /* top-left     */
+    dtr_gfx_sspr(gfx,
+                 sx + sw - border,
+                 sy,
+                 border,
+                 border,
+                 dx + dw - border,
+                 dy,
+                 border,
+                 border); /* top-right    */
+    dtr_gfx_sspr(gfx,
+                 sx,
+                 sy + sh - border,
+                 border,
+                 border,
+                 dx,
+                 dy + dh - border,
+                 border,
+                 border); /* bottom-left  */
+    dtr_gfx_sspr(gfx,
+                 sx + sw - border,
+                 sy + sh - border,
+                 border,
+                 border,
+                 dx + dw - border,
+                 dy + dh - border,
+                 border,
+                 border); /* bottom-right */
+
+    /* --- Edges (stretch one axis) --- */
+    if (center_sw > 0 && center_dw > 0) {
+        dtr_gfx_sspr(
+            gfx, sx + border, sy, center_sw, border, dx + border, dy, center_dw, border); /* top */
+        dtr_gfx_sspr(gfx,
+                     sx + border,
+                     sy + sh - border,
+                     center_sw,
+                     border,
+                     dx + border,
+                     dy + dh - border,
+                     center_dw,
+                     border); /* bottom */
+    }
+    if (center_sh > 0 && center_dh > 0) {
+        dtr_gfx_sspr(
+            gfx, sx, sy + border, border, center_sh, dx, dy + border, border, center_dh); /* left */
+        dtr_gfx_sspr(gfx,
+                     sx + sw - border,
+                     sy + border,
+                     border,
+                     center_sh,
+                     dx + dw - border,
+                     dy + border,
+                     border,
+                     center_dh); /* right */
+    }
+
+    /* --- Center (stretch both axes) --- */
+    if (center_sw > 0 && center_sh > 0 && center_dw > 0 && center_dh > 0) {
+        dtr_gfx_sspr(gfx,
+                     sx + border,
+                     sy + border,
+                     center_sw,
+                     center_sh,
+                     dx + border,
+                     dy + border,
+                     center_dw,
+                     center_dh);
+    }
+}
+
 /**
  * Shared affine sprite transform.
  *
@@ -2316,6 +2426,40 @@ void dtr_gfx_dl_sspr(dtr_graphics_t *gfx,
     ++gfx->draw_list.count;
 }
 
+void dtr_gfx_dl_nine_slice(dtr_graphics_t *gfx,
+                           int32_t         layer,
+                           int32_t         sx,
+                           int32_t         sy,
+                           int32_t         sw,
+                           int32_t         sh,
+                           int32_t         dx,
+                           int32_t         dy,
+                           int32_t         dw,
+                           int32_t         dh,
+                           int32_t         border)
+{
+    dtr_draw_cmd_t *cmd;
+
+    if (gfx->draw_list.count >= CONSOLE_MAX_DRAW_CMDS) {
+        fprintf(stderr, "Draw list: max commands reached, dropping command\n");
+        return;
+    }
+    cmd                      = &gfx->draw_list.cmds[gfx->draw_list.count];
+    cmd->type                = DTR_DRAW_NINE_SLICE;
+    cmd->layer               = layer;
+    cmd->order               = gfx->draw_list.count;
+    cmd->u.nine_slice.sx     = sx;
+    cmd->u.nine_slice.sy     = sy;
+    cmd->u.nine_slice.sw     = sw;
+    cmd->u.nine_slice.sh     = sh;
+    cmd->u.nine_slice.dx     = dx;
+    cmd->u.nine_slice.dy     = dy;
+    cmd->u.nine_slice.dw     = dw;
+    cmd->u.nine_slice.dh     = dh;
+    cmd->u.nine_slice.border = border;
+    ++gfx->draw_list.count;
+}
+
 void dtr_gfx_dl_spr_rot(dtr_graphics_t *gfx,
                         int32_t         layer,
                         int32_t         idx,
@@ -2468,6 +2612,18 @@ void dtr_gfx_dl_end(dtr_graphics_t *gfx)
                              cmd->u.sspr.dy,
                              cmd->u.sspr.dw,
                              cmd->u.sspr.dh);
+                break;
+            case DTR_DRAW_NINE_SLICE:
+                dtr_gfx_nine_slice(gfx,
+                                   cmd->u.nine_slice.sx,
+                                   cmd->u.nine_slice.sy,
+                                   cmd->u.nine_slice.sw,
+                                   cmd->u.nine_slice.sh,
+                                   cmd->u.nine_slice.dx,
+                                   cmd->u.nine_slice.dy,
+                                   cmd->u.nine_slice.dw,
+                                   cmd->u.nine_slice.dh,
+                                   cmd->u.nine_slice.border);
                 break;
             case DTR_DRAW_SPR_ROT:
                 dtr_gfx_spr_rot(gfx,

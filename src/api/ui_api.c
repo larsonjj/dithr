@@ -310,6 +310,29 @@ static JSValue js_ui_fit(JSContext *ctx, JSValueConst this_val, int argc, JSValu
 }
 
 /* ------------------------------------------------------------------ */
+/*  ui.panel(rect, sx, sy, sw, sh, border) → undefined                 */
+/* ------------------------------------------------------------------ */
+
+static JSValue js_ui_panel(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+{
+    dtr_console_t *con;
+
+    (void)this_val;
+    if (argc < 6) {
+        return JS_UNDEFINED;
+    }
+    con = dtr_api_get_console(ctx);
+    dtr_ui_panel(con->ui,
+                 prv_js_to_rect(ctx, argv[0]),
+                 dtr_api_opt_int(ctx, argc, argv, 1, 0),
+                 dtr_api_opt_int(ctx, argc, argv, 2, 0),
+                 dtr_api_opt_int(ctx, argc, argv, 3, 8),
+                 dtr_api_opt_int(ctx, argc, argv, 4, 8),
+                 dtr_api_opt_int(ctx, argc, argv, 5, 2));
+    return JS_UNDEFINED;
+}
+
+/* ------------------------------------------------------------------ */
 /*  ui.withGroup(rect, fn, opts?) → undefined                           */
 /*  opts: { clip?: boolean }                                            */
 /* ------------------------------------------------------------------ */
@@ -365,6 +388,7 @@ static const JSCFunctionListEntry js_ui_funcs[] = {
     JS_CFUNC_DEF("groupPop", 0, js_ui_group_pop),
     JS_CFUNC_DEF("groupRect", 0, js_ui_group_rect),
     JS_CFUNC_DEF("fit", 1, js_ui_fit),
+    JS_CFUNC_DEF("panel", 6, js_ui_panel),
     JS_CFUNC_DEF("withGroup", 3, js_ui_with_group),
 };
 

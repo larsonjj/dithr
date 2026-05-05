@@ -2,6 +2,8 @@
 //
 // Showcases the ui.* layout API and tween.* animation engine:
 //   - ui.anchor, ui.inset, ui.hsplit, ui.vsplit, ui.hstack, ui.vstack, ui.place
+//   - ui.withGroup (clip+group stack), ui.fit
+//   - ui.panel / gfx.nineSlice (9-slice sprite panels)
 //   - tween.start (with Promise chaining), tween.tick, tween.val, tween.ease
 //
 // Press SPACE to replay the intro animation.
@@ -10,7 +12,6 @@
 // --- Constants -------------------------------------------------------
 
 const COL_BG = 1; // dark blue background
-const COL_PANEL = 2; // dark purple panel fill
 const COL_BORDER = 5; // dark grey border
 const COL_TITLE = 7; // white
 const COL_LABEL = 6; // light grey
@@ -19,7 +20,6 @@ const COL_BAR_HP = 11; // green
 const COL_BAR_MP = 12; // blue
 const COL_BAR_XP = 10; // yellow
 const COL_HIGHLIGHT = 8; // red
-const COL_MENU = 13; // purple-ish
 
 // --- State -----------------------------------------------------------
 
@@ -46,11 +46,42 @@ let bounceY = 0;
 
 let introDone = false;
 
+// --- 9-slice panel tile ----------------------------------------------
+//
+// Build a 16x16 bevel-style sprite at runtime so all panels share the
+// same pixel-perfect corners regardless of their destination size:
+//
+//  col 5 (dark grey)   outer 1-px ring
+//  col 6 (light grey)  top/left inner highlight
+//  col 1 (dark blue)   bottom/right inner shadow
+//  col 2 (dark purple) centre fill
+//
+// The tile is (re-)created in _init and _restore so it survives
+// hot-reloads (runtime sheet data is not preserved across reloads).
+
+function buildPanelTile(): void {
+    gfx.sheetCreate(16, 16, 16, 16);
+    for (let py = 0; py < 16; py++) {
+        for (let px = 0; px < 16; px++) {
+            let col: number;
+            if (px === 0 || px === 15 || py === 0 || py === 15) {
+                col = 5; // outer edge
+            } else if (px === 1 || py === 1) {
+                col = 6; // top-left highlight
+            } else if (px === 14 || py === 14) {
+                col = 1; // bottom-right shadow
+            } else {
+                col = 2; // centre fill
+            }
+            gfx.sset(px, py, col);
+        }
+    }
+}
+
 // --- Helpers ---------------------------------------------------------
 
-function drawPanel(r: { x: number; y: number; w: number; h: number }, col: number) {
-    gfx.rectfill(r.x, r.y, r.x + r.w - 1, r.y + r.h - 1, col);
-    gfx.rect(r.x, r.y, r.x + r.w - 1, r.y + r.h - 1, COL_BORDER);
+function drawPanel(r: { x: number; y: number; w: number; h: number }): void {
+    ui.panel(r, 0, 0, 16, 16, 2);
 }
 
 function drawBar(r: { x: number; y: number; w: number; h: number }, fill: number, col: number) {
@@ -136,11 +167,13 @@ export function _restore(s: any): void {
     menuOffsets = [0, 0, 0, 0];
     titleAlpha = 1;
     bounceY = 0;
+    buildPanelTile(); // rebuild spritesheet — lost on hot-reload
 }
 
 // --- Callbacks -------------------------------------------------------
 
 export function _init(): void {
+    buildPanelTile();
     if (!introDone) {
         startIntro();
     }
@@ -200,7 +233,7 @@ export function _draw(): void {
     const body = parts[1];
 
     // Draw title bar
-    drawPanel(titleBar, COL_PANEL);
+    drawPanel(titleBar);
     if (titleAlpha > 0.5) {
         gfx.print('UI & Tween Demo', titleBar.x + 4, titleBar.y + 3, COL_TITLE);
     }
@@ -226,7 +259,7 @@ export function _draw(): void {
         const mainArea = bodySplit[1];
 
         // --- Sidebar: stat bars (clipped so they don't bleed during slide-in) ---
-        drawPanel(sidebar, COL_PANEL);
+        drawPanel(sidebar);
         ui.withGroup(ui.inset(sidebar, 3), () => {
             const sbInner = ui.groupRect();
 
@@ -254,7 +287,7 @@ export function _draw(): void {
 }
 
 function drawMainArea(area: { x: number; y: number; w: number; h: number }) {
-    drawPanel(area, COL_PANEL);
+    drawPanel(area);
     const inner = ui.inset(area, 4);
 
     // Top section: menu items as horizontal stack
@@ -272,7 +305,7 @@ function drawMainArea(area: { x: number; y: number; w: number; h: number }) {
                 ...slots[i],
                 x: slots[i].x + math.flr(menuOffsets[i]),
             });
-            drawPanel(slot, COL_MENU);
+            drawPanel(slot);
             gfx.print(menuItems[i], slot.x + 3, slot.y + 1, COL_TITLE);
         }
     }, { clip: true });
@@ -283,7 +316,7 @@ function drawMainArea(area: { x: number; y: number; w: number; h: number }) {
 
     // Tooltip / description panel — demonstrates printWrapped auto-wrapping
     const descPanel = bottomSplit[1];
-    drawPanel(descPanel, COL_PANEL);
+    drawPanel(descPanel);
     ui.withGroup(ui.inset(descPanel, 3), () => {
         const p = ui.groupRect();
         gfx.print('Info', p.x, p.y, COL_TITLE);
@@ -309,7 +342,7 @@ function drawEasingPreview(area: { x: number; y: number; w: number; h: number })
 
     for (let c = 0; c < 3; c++) {
         const box = cols[c];
-        drawPanel(box, COL_BAR_BG);
+        drawPanel(box);
 
         const bInner = ui.inset(box, 2);
         // Label

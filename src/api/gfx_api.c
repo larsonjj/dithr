@@ -539,6 +539,23 @@ static JSValue js_gfx_sspr(JSContext *ctx, JSValueConst this_val, int argc, JSVa
     return JS_UNDEFINED;
 }
 
+static JSValue
+js_gfx_nine_slice(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+{
+    (void)this_val;
+    dtr_gfx_nine_slice(GFX(ctx),
+                       dtr_api_opt_int(ctx, argc, argv, 0, 0),
+                       dtr_api_opt_int(ctx, argc, argv, 1, 0),
+                       dtr_api_opt_int(ctx, argc, argv, 2, 8),
+                       dtr_api_opt_int(ctx, argc, argv, 3, 8),
+                       dtr_api_opt_int(ctx, argc, argv, 4, 0),
+                       dtr_api_opt_int(ctx, argc, argv, 5, 0),
+                       dtr_api_opt_int(ctx, argc, argv, 6, 8),
+                       dtr_api_opt_int(ctx, argc, argv, 7, 8),
+                       dtr_api_opt_int(ctx, argc, argv, 8, 2));
+    return JS_UNDEFINED;
+}
+
 static JSValue js_gfx_spr_rot(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
     (void)this_val;
@@ -785,6 +802,24 @@ static JSValue js_gfx_dl_sspr(JSContext *ctx, JSValueConst this_val, int argc, J
                     dtr_api_opt_int(ctx, argc, argv, 6, 0),
                     dtr_api_opt_int(ctx, argc, argv, 7, 0),
                     dtr_api_opt_int(ctx, argc, argv, 8, 0));
+    return JS_UNDEFINED;
+}
+
+static JSValue
+js_gfx_dl_nine_slice(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+{
+    (void)this_val;
+    dtr_gfx_dl_nine_slice(GFX(ctx),
+                          dtr_api_opt_int(ctx, argc, argv, 0, 0),
+                          dtr_api_opt_int(ctx, argc, argv, 1, 0),
+                          dtr_api_opt_int(ctx, argc, argv, 2, 0),
+                          dtr_api_opt_int(ctx, argc, argv, 3, 8),
+                          dtr_api_opt_int(ctx, argc, argv, 4, 8),
+                          dtr_api_opt_int(ctx, argc, argv, 5, 0),
+                          dtr_api_opt_int(ctx, argc, argv, 6, 0),
+                          dtr_api_opt_int(ctx, argc, argv, 7, 8),
+                          dtr_api_opt_int(ctx, argc, argv, 8, 8),
+                          dtr_api_opt_int(ctx, argc, argv, 9, 2));
     return JS_UNDEFINED;
 }
 
@@ -1213,6 +1248,7 @@ static const JSCFunctionListEntry js_gfx_funcs[] = {
     JS_CFUNC_DEF("spr", 7, js_gfx_spr),
     JS_CFUNC_DEF("sprBatch", 2, js_gfx_spr_batch),
     JS_CFUNC_DEF("sspr", 10, js_gfx_sspr),
+    JS_CFUNC_DEF("nineSlice", 9, js_gfx_nine_slice),
     JS_CFUNC_DEF("sprRot", 6, js_gfx_spr_rot),
     JS_CFUNC_DEF("sprAffine", 7, js_gfx_spr_affine),
     JS_CFUNC_DEF("fget", 2, js_gfx_fget),
@@ -1245,6 +1281,7 @@ static const JSCFunctionListEntry js_gfx_funcs[] = {
     JS_CFUNC_DEF("dlEnd", 0, js_gfx_dl_end),
     JS_CFUNC_DEF("dlSpr", 8, js_gfx_dl_spr),
     JS_CFUNC_DEF("dlSspr", 9, js_gfx_dl_sspr),
+    JS_CFUNC_DEF("dlNineSlice", 10, js_gfx_dl_nine_slice),
     JS_CFUNC_DEF("dlSprRot", 7, js_gfx_dl_spr_rot),
     JS_CFUNC_DEF("dlSprAffine", 8, js_gfx_dl_spr_affine),
 };

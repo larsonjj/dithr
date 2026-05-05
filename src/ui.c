@@ -126,6 +126,32 @@ dtr_ui_rect_t dtr_ui_fit(const dtr_ui_t *ui, dtr_ui_rect_t child)
     return out;
 }
 
+void dtr_ui_panel(dtr_ui_t     *ui,
+                  dtr_ui_rect_t rect,
+                  int32_t       sx,
+                  int32_t       sy,
+                  int32_t       sw,
+                  int32_t       sh,
+                  int32_t       border)
+{
+    dtr_ui_rect_t clamped;
+
+    if (ui == NULL) {
+        return;
+    }
+    clamped = dtr_ui_fit(ui, rect);
+    dtr_gfx_nine_slice(ui->gfx,
+                       sx,
+                       sy,
+                       sw,
+                       sh,
+                       clamped.pos_x,
+                       clamped.pos_y,
+                       clamped.width,
+                       clamped.height,
+                       border);
+}
+
 dtr_ui_rect_t dtr_ui_rect(int32_t pos_x, int32_t pos_y, int32_t width, int32_t height)
 {
     dtr_ui_rect_t rect;
