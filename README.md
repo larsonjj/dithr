@@ -15,8 +15,8 @@
 | —        | clang-tidy              | [![tidy](https://img.shields.io/github/actions/workflow/status/dithrkit/dithr/ci.yml?branch=main&label=tidy)](https://github.com/dithrkit/dithr/actions/workflows/ci.yml)            | Static analysis, warnings as errors |
 | —        | ESLint + Prettier       | [![jslint](https://img.shields.io/github/actions/workflow/status/dithrkit/dithr/ci.yml?branch=main&label=lint)](https://github.com/dithrkit/dithr/actions/workflows/ci.yml)          | Example cart JS linting             |
 
-A fantasy console engine for building retro games. Write game logic in
-JavaScript, and the engine handles rendering, audio, input, and tilemaps
+A game engine toolkit for building retro and pixel-art games. Write game logic in
+JavaScript (or TypeScript), and the engine handles rendering, audio, input, and tilemaps
 through a concise built-in API. Runs natively on Windows, macOS and Linux, or
 in the browser via WebAssembly.
 
