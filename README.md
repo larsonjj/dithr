@@ -7,7 +7,7 @@
 | Linux    | GCC (Release)           | [![linux-gcc-rel](https://img.shields.io/github/actions/workflow/status/dithrkit/dithr/ci.yml?branch=main&label=build)](https://github.com/dithrkit/dithr/actions/workflows/ci.yml)  | Ninja                               |
 | Linux    | GCC (ASan/UBSan)        | [![linux-gcc-asan](https://img.shields.io/github/actions/workflow/status/dithrkit/dithr/ci.yml?branch=main&label=build)](https://github.com/dithrkit/dithr/actions/workflows/ci.yml) | Address + UB sanitizers             |
 | Linux    | Clang (Debug)           | [![linux-clang](https://img.shields.io/github/actions/workflow/status/dithrkit/dithr/ci.yml?branch=main&label=build)](https://github.com/dithrkit/dithr/actions/workflows/ci.yml)    | Ninja, shared libs off              |
-| Linux    | GCC + lcov              | [![coverage](https://img.shields.io/github/actions/workflow/status/dithrkit/dithr/ci.yml?branch=main&label=coverage)](https://github.com/dithrkit/dithr/actions/workflows/ci.yml)    | Line coverage ≥ 60 %                |
+| Linux    | GCC + lcov              | [![coverage](https://img.shields.io/github/actions/workflow/status/dithrkit/dithr/ci.yml?branch=main&label=coverage)](https://github.com/dithrkit/dithr/actions/workflows/ci.yml)    | Line coverage ≥ 65 %                |
 | macOS    | AppleClang (Debug)      | [![macos-dbg](https://img.shields.io/github/actions/workflow/status/dithrkit/dithr/ci.yml?branch=main&label=build)](https://github.com/dithrkit/dithr/actions/workflows/ci.yml)      | Ninja, shared libs off              |
 | macOS    | AppleClang (ASan/UBSan) | [![macos-asan](https://img.shields.io/github/actions/workflow/status/dithrkit/dithr/ci.yml?branch=main&label=build)](https://github.com/dithrkit/dithr/actions/workflows/ci.yml)     | Address + UB sanitizers             |
 | WASM     | Emscripten (latest)     | [![wasm](https://img.shields.io/github/actions/workflow/status/dithrkit/dithr/ci.yml?branch=main&label=build)](https://github.com/dithrkit/dithr/actions/workflows/ci.yml)           | + Playwright browser smoke test     |
@@ -200,6 +200,7 @@ The `examples/` directory contains playable demo carts:
 | `transition_demo`  | Screen transitions — fade, wipe, dissolve                |
 | `drawlist_demo`    | Depth-sorted rendering with draw list commands           |
 | `palette_fx`       | Palette remapping, fill patterns & custom fonts          |
+| `synth_demo`       | Procedural sound synthesis with the synth API            |
 | `collision_demo`   | Collision helpers — rect, circle, point & mixed tests    |
 | `sys_explorer`     | System introspection, file I/O & clipboard               |
 | `tween_showcase`   | Easing curves, tween pool, math utils & input remapping  |

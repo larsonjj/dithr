@@ -39,7 +39,7 @@ _OPTIONAL_ in this document are to be interpreted as described in BCP 14 [RFC211
 
 Here are listed most obvious and important general rules. Please check them carefully before you continue with other chapters.
 
-- `clang-format` SHOULD be used with formatting file attached to this repository (version `15.x` is a minimum)
+- `clang-format` SHOULD be used with formatting file attached to this repository (version `22.x` is required, matching CI)
 - Use `C11` standard
 - Do not use tabs, use spaces instead
 - Use `4` spaces per indent level
