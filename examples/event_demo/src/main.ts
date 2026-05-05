@@ -168,16 +168,24 @@ export function _draw(): void {
     gfx.rectfill(0, 0, 160, 9, 0);
     gfx.print(`SCORE: ${score}  COMBO: ${combo}`, 2, 1, 7);
 
-    // Event log panel
-    const lx = 1;
+    // Event log panel — clip + wrap so long messages stay inside the panel.
     const ly = 180 - MAX_LOG * 7 - 2;
-    gfx.rectfill(0, ly - 9, 200, 179, 0);
-    gfx.print('-- event log --', lx, ly - 8, 6);
-    for (let i = 0; i < eventLog.length; ++i) {
-        const entry = eventLog[i];
-        const c2 = entry.age < 0.5 ? 7 : entry.age < 2 ? 6 : 5;
-        gfx.print(entry.text, lx, ly + i * 7, c2);
-    }
+    const panel = ui.rect(0, ly - 9, 200, 188 - (ly - 9));
+    gfx.rectfill(panel.x, panel.y, panel.x + panel.w - 1, 179, 0);
+    gfx.print('-- event log --', panel.x + 1, panel.y + 1, 6);
+    ui.withGroup(
+        ui.inset(panel, 1),
+        () => {
+            const inner = ui.groupRect();
+            let y = ly;
+            for (let i = 0; i < eventLog.length; ++i) {
+                const entry = eventLog[i];
+                const c2 = entry.age < 0.5 ? 7 : entry.age < 2 ? 6 : 5;
+                y += gfx.printWrapped(entry.text, inner.x, y, inner.w, c2);
+            }
+        },
+        { clip: true },
+    );
 
     // Controls hint
     gfx.print('O=off score  R=re-register', 2, 172, 5);

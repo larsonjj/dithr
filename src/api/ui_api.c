@@ -345,10 +345,10 @@ static JSValue js_ui_with_group(JSContext *ctx, JSValueConst this_val, int argc,
     dtr_ui_group_pop(con->ui);
 
     if (JS_IsException(result)) {
-        JS_FreeValue(ctx, result);
-    } else {
-        JS_FreeValue(ctx, result);
+        /* Propagate the callback's exception to the caller. */
+        return result;
     }
+    JS_FreeValue(ctx, result);
     return JS_UNDEFINED;
 }
 
