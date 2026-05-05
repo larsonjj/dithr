@@ -28,9 +28,8 @@ static bool prv_load_cart_assets(dtr_console_t *con);
 static void prv_render_pause_overlay(dtr_console_t *con);
 static void prv_render_error_overlay(dtr_console_t *con);
 #if DEV_BUILD
-static SDL_EnumerationResult SDLCALL prv_scan_src_cb(void       *userdata,
-                                                     const char *dirname,
-                                                     const char *fname);
+static SDL_EnumerationResult
+    SDLCALL prv_scan_src_cb(void *userdata, const char *dirname, const char *fname);
 #endif
 
 /**
