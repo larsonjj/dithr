@@ -120,6 +120,9 @@ dtr_add_test(test_synth test_synth.c)
 # --- Tween tests ---
 dtr_add_test(test_tween test_tween.c LINK_LIB dithr_core_test)
 
+# --- Particle system tests ---
+dtr_add_test(test_particles test_particles.c LINK_LIB dithr_core_test)
+
 # --- API bridge tests (require QuickJS, no graphics/audio) ---
 if (NOT EMSCRIPTEN)
     dtr_add_test(test_api_bridge test_api_bridge.c)
@@ -148,7 +151,7 @@ endif()
 set(DTR_TEST_TARGETS
     test_input test_graphics test_graphics_ext
     test_mouse_gamepad test_touch test_module_normalize test_audio test_postfx
-    test_col test_cam test_ui test_map test_synth test_tween
+    test_col test_cam test_ui test_map test_synth test_tween test_particles
 )
 if (NOT EMSCRIPTEN)
     list(APPEND DTR_TEST_TARGETS

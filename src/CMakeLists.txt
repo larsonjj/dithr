@@ -4,6 +4,10 @@ set(DITHR_CORE_SOURCES
     console.c
     runtime.c
     graphics.c
+    graphics_state.c
+    graphics_sprite_meta.c
+    graphics_transitions.c
+    graphics_sheet.c
     audio.c
     input.c
     mouse.c
@@ -35,7 +39,9 @@ set(DITHR_CORE_SOURCES
     touch.c
     ui.c
     tween.c
+    particles.c
     api/touch_api.c
+    api/particles_api.c
 )
 
 # Prefix sources with current dir for out-of-tree references

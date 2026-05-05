@@ -493,6 +493,10 @@ interface DithrMath {
     dist(x1: number, y1: number, x2: number, y2: number): number;
     angle(x1: number, y1: number, x2: number, y2: number): number;
 
+    // Perlin noise (Ken Perlin's improved noise, deterministic, returns ~-1..1)
+    noise2d(x: number, y: number): number;
+    noise3d(x: number, y: number, z: number): number;
+
     // Constants
     readonly PI: number;
     readonly TAU: number;
@@ -572,6 +576,7 @@ interface DithrSys {
     // File I/O (sandboxed to cart directory)
     readFile(path: string): string | undefined;
     writeFile(path: string, content: string): boolean;
+    deleteFile(path: string): boolean;
     listFiles(dir?: string): string[];
     listDirs(dir?: string): string[];
 
@@ -682,6 +687,52 @@ interface DithrSynth {
 }
 
 // ---------------------------------------------------------------------------
+// particles — Fixed-pool particle system
+// ---------------------------------------------------------------------------
+
+interface DithrParticleSpawn {
+    x?: number;
+    y?: number;
+    vx?: number;
+    vy?: number;
+    ax?: number;
+    ay?: number;
+    /** Per-second velocity decay, 0 (none) .. 1 (instant). */
+    drag?: number;
+    /** Lifetime in seconds (default 1). */
+    life?: number;
+    /** Palette index at birth (default 7). */
+    color?: number;
+    /** Optional palette index at death (interpolates from `color`). */
+    color1?: number;
+    /** Render size in pixels (default 1). */
+    size?: number;
+    /** Render kind: particles.PIXEL | RECT | CIRCLE. */
+    kind?: number;
+    /** Burst size; > 1 enables `spread`/`speedMin`/`speedMax`. */
+    count?: number;
+    /** Cone half-angle (radians) around the (vx,vy) direction. */
+    spread?: number;
+    speedMin?: number;
+    speedMax?: number;
+}
+
+interface DithrParticles {
+    readonly PIXEL: number;
+    readonly RECT: number;
+    readonly CIRCLE: number;
+
+    /** Spawn one or more particles; returns the count actually emitted. */
+    emit(cfg: DithrParticleSpawn): number;
+    /** Advance simulation; defaults to `sys.delta()` when omitted. */
+    update(dt?: number): void;
+    /** Render every active particle via gfx primitives. */
+    draw(): void;
+    clear(): void;
+    count(): number;
+}
+
+// ---------------------------------------------------------------------------
 // Global declarations
 // ---------------------------------------------------------------------------
 
@@ -704,6 +755,7 @@ declare const ui: DithrUi;
 declare const tween: DithrTween;
 declare const cam: DithrCam;
 declare const synth: DithrSynth;
+declare const particles: DithrParticles;
 
 // ---------------------------------------------------------------------------
 // Global callbacks (implement these in your cart)

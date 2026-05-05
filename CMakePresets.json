@@ -28,6 +28,26 @@
       }
     },
     {
+      "name": "relwithdebinfo",
+      "displayName": "Release + Debug Info",
+      "description": "Optimised build with debug info — useful for profiling and crash analysis",
+      "binaryDir": "${sourceDir}/build/relwithdebinfo",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+        "DTR_ENABLE_LTO": "ON"
+      }
+    },
+    {
+      "name": "minsizerel",
+      "displayName": "Min Size Release",
+      "description": "Size-optimised release build (e.g. for embedded targets)",
+      "binaryDir": "${sourceDir}/build/minsizerel",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "MinSizeRel",
+        "DTR_ENABLE_LTO": "ON"
+      }
+    },
+    {
       "name": "wasm",
       "displayName": "WASM Release",
       "description": "Emscripten WebAssembly release build",
@@ -147,6 +167,14 @@
     {
       "name": "release",
       "configurePreset": "release"
+    },
+    {
+      "name": "relwithdebinfo",
+      "configurePreset": "relwithdebinfo"
+    },
+    {
+      "name": "minsizerel",
+      "configurePreset": "minsizerel"
     },
     {
       "name": "wasm",

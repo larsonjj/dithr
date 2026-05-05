@@ -7,6 +7,7 @@
 #define DTR_CONSOLE_H
 
 #include "console_defs.h"
+#include "particles.h"
 #include "touch.h"
 #include "tween.h"
 
@@ -59,6 +60,7 @@ typedef struct dtr_console {
     dtr_cart_t          *cart;
     dtr_postfx_t        *postfx;
     dtr_tween_t          tween;
+    dtr_particles_t     *particles;
 
     /* Math PRNG state (xorshift64, per-console instance) */
     uint64_t rng_state;

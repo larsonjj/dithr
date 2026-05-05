@@ -794,6 +794,30 @@ js_sys_write_file(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst 
 }
 
 static JSValue
+js_sys_delete_file(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+{
+    const char *rel;
+    char        full[1024];
+
+    (void)this_val;
+    if (argc < 1) {
+        return JS_FALSE;
+    }
+    rel = JS_ToCString(ctx, argv[0]);
+    if (rel == NULL) {
+        return JS_FALSE;
+    }
+
+    if (!prv_resolve_sandboxed(ctx, rel, full, sizeof(full))) {
+        JS_FreeCString(ctx, rel);
+        return JS_ThrowRangeError(ctx, "deleteFile: path outside cart directory");
+    }
+    JS_FreeCString(ctx, rel);
+
+    return SDL_RemovePath(full) ? JS_TRUE : JS_FALSE;
+}
+
+static JSValue
 js_sys_list_files(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
     const char *rel;
@@ -1036,6 +1060,7 @@ static const JSCFunctionListEntry js_sys_funcs[] = {
     JS_CFUNC_DEF("clipboardSet", 1, js_sys_clipboard_set),
     JS_CFUNC_DEF("readFile", 1, js_sys_read_file),
     JS_CFUNC_DEF("writeFile", 2, js_sys_write_file),
+    JS_CFUNC_DEF("deleteFile", 1, js_sys_delete_file),
     JS_CFUNC_DEF("listFiles", 1, js_sys_list_files),
     JS_CFUNC_DEF("listDirs", 1, js_sys_list_dirs),
     JS_CFUNC_DEF("drawFps", 0, js_sys_draw_fps),

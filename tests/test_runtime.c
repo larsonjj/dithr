@@ -670,6 +670,19 @@ static void test_stack_overflow(void)
     DTR_PASS();
 }
 
+/* ------------------------------------------------------------------ */
+/*  Bytecode cache                                                     */
+/* ------------------------------------------------------------------ */
+
+/** The cache is process-global; clearing an empty cache or clearing twice
+ *  must be a safe no-op. */
+static void test_bc_cache_clear_idempotent(void)
+{
+    dtr_runtime_bc_cache_clear();
+    dtr_runtime_bc_cache_clear();
+    DTR_PASS();
+}
+
 /* ================================================================== */
 /*  Main                                                               */
 /* ================================================================== */
@@ -730,6 +743,9 @@ int main(int argc, char *argv[])
     /* Memory & stack limits */
     DTR_RUN_TEST(test_memory_limit);
     DTR_RUN_TEST(test_stack_overflow);
+
+    /* Bytecode cache */
+    DTR_RUN_TEST(test_bc_cache_clear_idempotent);
 
     DTR_TEST_END();
 }

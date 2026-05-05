@@ -56,6 +56,12 @@ dtr_runtime_t *dtr_runtime_create(dtr_console_t *con, int32_t heap_mb, int32_t s
  */
 void dtr_runtime_destroy(dtr_runtime_t *rt);
 
+/**
+ * \brief           Drop all entries from the process-wide module bytecode
+ *                  cache.  Call from console teardown.
+ */
+void dtr_runtime_bc_cache_clear(void);
+
 /* ------------------------------------------------------------------------ */
 /*  Evaluation and invocation                                                */
 /* ------------------------------------------------------------------------ */

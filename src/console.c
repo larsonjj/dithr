@@ -28,8 +28,9 @@ static bool prv_load_cart_assets(dtr_console_t *con);
 static void prv_render_pause_overlay(dtr_console_t *con);
 static void prv_render_error_overlay(dtr_console_t *con);
 #if DEV_BUILD
-static SDL_EnumerationResult
-    SDLCALL prv_scan_src_cb(void *userdata, const char *dirname, const char *fname);
+static SDL_EnumerationResult SDLCALL prv_scan_src_cb(void       *userdata,
+                                                     const char *dirname,
+                                                     const char *fname);
 #endif
 
 /**
@@ -99,6 +100,7 @@ static void prv_console_cleanup(dtr_console_t *con)
     con->prev_code_len = 0;
 #endif
     dtr_postfx_destroy(con->postfx);
+    dtr_particles_destroy(con->particles);
     dtr_event_destroy(con->events);
     dtr_input_destroy(con->input);
     dtr_touch_destroy(con->touch);
@@ -109,6 +111,7 @@ static void prv_console_cleanup(dtr_console_t *con)
     dtr_gfx_destroy(con->graphics);
     dtr_cart_destroy(con->cart);
     dtr_runtime_destroy(con->runtime);
+    dtr_runtime_bc_cache_clear();
 
     if (con->screen_tex != NULL) {
         SDL_DestroyTexture(con->screen_tex);
@@ -507,6 +510,9 @@ dtr_console_t *dtr_console_create(const char *cart_path)
 
     /* --- Tween pool --- */
     dtr_tween_init(&con->tween);
+
+    /* --- Particle pool --- */
+    con->particles = dtr_particles_create();
 
     /* --- Cart ref to JS context --- */
     con->cart->ctx = con->runtime->ctx;
@@ -1125,6 +1131,9 @@ bool dtr_console_reload(dtr_console_t *con)
     /* Fixed-update accumulator snapshot */
     float saved_fixed_acc = 0.0f;
 
+    /* Tween pool snapshot (in-flight tweens survive hot-reload) */
+    dtr_tween_t saved_tween;
+
     /* Palette state snapshot */
     uint8_t saved_draw_pal[CONSOLE_PALETTE_SIZE];
     uint8_t saved_screen_pal[CONSOLE_PALETTE_SIZE];
@@ -1276,6 +1285,9 @@ bool dtr_console_reload(dtr_console_t *con)
     /* ---- 2d. Snapshot fixed-update accumulator ---- */
     saved_fixed_acc = con->fixed_acc;
 
+    /* ---- 2e. Snapshot tween pool ---- */
+    saved_tween = con->tween;
+
     /* ---- 3. Create new runtime in temporary ---- */
     new_rt = dtr_runtime_create(con,
                                 (int32_t)(con->cart->runtime.mem_limit / (1024u * 1024u)),
@@ -1410,6 +1422,12 @@ bool dtr_console_reload(dtr_console_t *con)
 
     /* ---- 6d. Restore fixed-update accumulator ---- */
     con->fixed_acc = saved_fixed_acc;
+
+    /* ---- 6e. Restore tween pool (in-flight tweens survive hot-reload) ---- */
+    con->tween = saved_tween;
+
+    /* ---- 6f. Particle pool already survives — it's heap-allocated and the
+     *          runtime swap doesn't touch it.  Nothing to do. ---- */
 
     /* ---- 7. Call _init() ---- */
     dtr_runtime_call(con->runtime, con->runtime->atom_init);

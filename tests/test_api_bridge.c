@@ -13,10 +13,12 @@
 #include "gamepad.h"
 #include "input.h"
 #include "mouse.h"
+#include "particles.h"
 #include "runtime.h"
 #include "test_harness.h"
 #include "touch.h"
 
+#include <SDL3/SDL.h>
 #include <math.h>
 #include <stdio.h>
 #include <string.h>
@@ -1341,6 +1343,107 @@ static void test_sys_log_no_crash(void)
     DTR_PASS();
 }
 
+static void test_sys_file_io_roundtrip(void)
+{
+    test_ctx_t *tc = prv_setup();
+    char       *cwd;
+
+    /* Sandbox base — use the test binary's cwd so we have write access. */
+    cwd = SDL_GetCurrentDirectory();
+    DTR_ASSERT_NOT_NULL(cwd);
+    SDL_strlcpy(tc->con.cart->base_path, cwd, sizeof(tc->con.cart->base_path));
+    SDL_free(cwd);
+
+    prv_register(tc, dtr_sys_api_register);
+
+    /* Write → read → verify content matches */
+    DTR_ASSERT(prv_eval_bool(tc, "sys.writeFile('dtr_test_io.txt', 'hello')"));
+    DTR_ASSERT(prv_eval_bool(tc, "sys.readFile('dtr_test_io.txt') === 'hello'"));
+
+    /* Delete should succeed and read should now return undefined */
+    DTR_ASSERT(prv_eval_bool(tc, "sys.deleteFile('dtr_test_io.txt')"));
+    DTR_ASSERT(prv_eval_bool(tc, "sys.readFile('dtr_test_io.txt') === undefined"));
+
+    /* Path traversal must be rejected (deleteFile throws RangeError) */
+    {
+        const char *code = "(()=>{ try { sys.deleteFile('../escape'); return false; }"
+                           " catch(e){ return true; } })()";
+        JSValue     v;
+        int32_t     b = 0;
+
+        v = JS_Eval(tc->rt->ctx, code, strlen(code), "<test>", JS_EVAL_TYPE_GLOBAL);
+        JS_ToInt32(tc->rt->ctx, &b, v);
+        JS_FreeValue(tc->rt->ctx, v);
+        DTR_ASSERT(b == 1);
+    }
+
+    prv_teardown(tc);
+    DTR_PASS();
+}
+
+static void test_math_noise(void)
+{
+    test_ctx_t *tc = prv_setup();
+
+    prv_register(tc, dtr_math_api_register);
+
+    /* noise2d at integer lattice points should be ~0 (Perlin property) */
+    DTR_ASSERT(fabs(prv_eval_f64(tc, "math.noise2d(1, 1)")) < 0.01);
+    DTR_ASSERT(fabs(prv_eval_f64(tc, "math.noise3d(2, 3, 4)")) < 0.01);
+
+    /* Non-lattice values should fall in [-1, 1] and be deterministic */
+    DTR_ASSERT(prv_eval_bool(tc, "Math.abs(math.noise2d(0.37, 0.91)) <= 1"));
+    DTR_ASSERT(prv_eval_bool(tc, "math.noise2d(0.5, 0.5) === math.noise2d(0.5, 0.5)"));
+    DTR_ASSERT(prv_eval_bool(tc, "math.noise3d(0.1, 0.2, 0.3) === math.noise3d(0.1, 0.2, 0.3)"));
+
+    /* Different inputs should produce different outputs */
+    DTR_ASSERT(prv_eval_bool(tc, "math.noise2d(0.1, 0.2) !== math.noise2d(0.7, 0.4)"));
+
+    prv_teardown(tc);
+    DTR_PASS();
+}
+
+static void test_particles_emit_update(void)
+{
+    test_ctx_t *tc = prv_setup();
+
+    /* particles.draw() requires graphics; only test emit/update/clear/count here */
+    tc->con.particles = dtr_particles_create();
+    DTR_ASSERT_NOT_NULL(tc->con.particles);
+
+    prv_register(tc, dtr_particles_api_register);
+
+    DTR_ASSERT_EQ_INT(prv_eval_i32(tc, "particles.count()"), 0);
+
+    /* Single emit */
+    DTR_ASSERT_EQ_INT(prv_eval_i32(tc, "particles.emit({x:1,y:2,life:0.5,color:7})"), 1);
+    DTR_ASSERT_EQ_INT(prv_eval_i32(tc, "particles.count()"), 1);
+
+    /* Burst */
+    DTR_ASSERT_EQ_INT(prv_eval_i32(tc, "particles.emit({x:0,y:0,vx:10,count:8,spread:1,life:0.5})"),
+                      8);
+    DTR_ASSERT_EQ_INT(prv_eval_i32(tc, "particles.count()"), 9);
+
+    /* Update beyond all lifetimes — every particle should retire */
+    prv_eval_void(tc, "particles.update(2.0)");
+    DTR_ASSERT_EQ_INT(prv_eval_i32(tc, "particles.count()"), 0);
+
+    /* clear() resets state */
+    prv_eval_void(tc, "particles.emit({life:1})");
+    prv_eval_void(tc, "particles.clear()");
+    DTR_ASSERT_EQ_INT(prv_eval_i32(tc, "particles.count()"), 0);
+
+    /* Constants exposed */
+    DTR_ASSERT_EQ_INT(prv_eval_i32(tc, "particles.PIXEL"), 0);
+    DTR_ASSERT_EQ_INT(prv_eval_i32(tc, "particles.RECT"), 1);
+    DTR_ASSERT_EQ_INT(prv_eval_i32(tc, "particles.CIRCLE"), 2);
+
+    dtr_particles_destroy(tc->con.particles);
+    tc->con.particles = NULL;
+    prv_teardown(tc);
+    DTR_PASS();
+}
+
 /* ================================================================== */
 /*  Cart API tests                                                     */
 /* ================================================================== */
@@ -1540,6 +1643,9 @@ int main(void)
     DTR_RUN_TEST(test_sys_pause_resume);
     DTR_RUN_TEST(test_sys_time_delta);
     DTR_RUN_TEST(test_sys_log_no_crash);
+    DTR_RUN_TEST(test_sys_file_io_roundtrip);
+    DTR_RUN_TEST(test_math_noise);
+    DTR_RUN_TEST(test_particles_emit_update);
 
     /* Cart API — 4 tests */
     DTR_RUN_TEST(test_cart_dset_dget);

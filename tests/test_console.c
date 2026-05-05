@@ -3,6 +3,7 @@
  * \brief           Unit tests for the console lifecycle
  */
 
+#include "cart.h"
 #include "console.h"
 #include "input.h"
 #include "mouse.h"
@@ -140,6 +141,50 @@ static void test_console_reload_assets_empty(void)
     DTR_ASSERT(ok);
 
     dtr_console_destroy(con);
+    DTR_PASS();
+}
+
+/* ------------------------------------------------------------------ */
+/*  reload: full round-trip with on-disk JS file                       */
+/* ------------------------------------------------------------------ */
+
+static void test_console_reload_roundtrip(void)
+{
+#if DEV_BUILD
+    dtr_console_t *con;
+    char          *cwd;
+    char           js_path[1024];
+    const char    *src1 = "globalThis.__rl = 1;";
+    const char    *src2 = "globalThis.__rl = 2;";
+    bool           ok;
+
+    con = dtr_console_create("__nonexistent_cart__.json");
+    DTR_ASSERT(con != NULL);
+
+    /* Wire up an on-disk JS file under a known sandbox base. */
+    cwd = SDL_GetCurrentDirectory();
+    DTR_ASSERT_NOT_NULL(cwd);
+    SDL_strlcpy(con->cart->base_path, cwd, sizeof(con->cart->base_path));
+    SDL_free(cwd);
+
+    SDL_strlcpy(con->cart->code_path, "__dtr_reload_test.js", sizeof(con->cart->code_path));
+    SDL_snprintf(js_path, sizeof(js_path), "%s/%s", con->cart->base_path, con->cart->code_path);
+
+    /* Initial load */
+    DTR_ASSERT(SDL_SaveFile(js_path, src1, SDL_strlen(src1)));
+    ok = dtr_console_reload(con);
+    DTR_ASSERT(ok);
+
+    /* Mutate source and reload again */
+    DTR_ASSERT(SDL_SaveFile(js_path, src2, SDL_strlen(src2)));
+    ok = dtr_console_reload(con);
+    DTR_ASSERT(ok);
+
+    /* Cleanup test file */
+    SDL_RemovePath(js_path);
+
+    dtr_console_destroy(con);
+#endif
     DTR_PASS();
 }
 
@@ -308,6 +353,7 @@ int main(void)
     DTR_RUN_TEST(test_console_iterate_once);
     DTR_RUN_TEST(test_console_event_quit);
     DTR_RUN_TEST(test_console_reload_assets_empty);
+    DTR_RUN_TEST(test_console_reload_roundtrip);
     DTR_RUN_TEST(test_console_event_key_down);
     DTR_RUN_TEST(test_console_event_key_up);
     DTR_RUN_TEST(test_console_event_escape_pause);

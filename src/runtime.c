@@ -11,6 +11,119 @@
 #include <string.h>
 
 /* ------------------------------------------------------------------ */
+/*  Module bytecode cache                                              */
+/* ------------------------------------------------------------------ */
+/*  QuickJS bytecode is portable across contexts of the same runtime
+ *  vintage, so we serialize compiled modules with `JS_WriteObject` and
+ *  cache them keyed by `path` + `mtime`.  On hot-reload, unchanged
+ *  modules skip the lexer/parser entirely and are deserialized with
+ *  `JS_ReadObject`.  The cache is process-wide and survives runtime
+ *  destruction — that's the whole point.                               */
+
+#define DTR_BC_CACHE_SIZE 64
+
+typedef struct dtr_bc_entry {
+    char     path[512];
+    int64_t  mtime; /**< SDL_Time (ns since epoch); 0 = empty slot */
+    uint8_t *buf;
+    size_t   len;
+    uint32_t lru; /**< Higher = more recently used */
+} dtr_bc_entry_t;
+
+static dtr_bc_entry_t s_bc_cache[DTR_BC_CACHE_SIZE];
+static uint32_t       s_bc_lru_counter = 0;
+
+static dtr_bc_entry_t *prv_bc_lookup(const char *path, int64_t mtime)
+{
+    int32_t i;
+
+    for (i = 0; i < DTR_BC_CACHE_SIZE; ++i) {
+        dtr_bc_entry_t *e;
+
+        e = &s_bc_cache[i];
+        if (e->mtime != 0 && e->mtime == mtime && SDL_strcmp(e->path, path) == 0) {
+            e->lru = ++s_bc_lru_counter;
+            return e;
+        }
+    }
+    return NULL;
+}
+
+static dtr_bc_entry_t *prv_bc_evict_slot(void)
+{
+    int32_t  i;
+    int32_t  victim;
+    uint32_t oldest;
+
+    /* Prefer empty slot. */
+    for (i = 0; i < DTR_BC_CACHE_SIZE; ++i) {
+        if (s_bc_cache[i].mtime == 0) {
+            return &s_bc_cache[i];
+        }
+    }
+
+    /* Else evict least-recently-used. */
+    victim = 0;
+    oldest = s_bc_cache[0].lru;
+    for (i = 1; i < DTR_BC_CACHE_SIZE; ++i) {
+        if (s_bc_cache[i].lru < oldest) {
+            oldest = s_bc_cache[i].lru;
+            victim = i;
+        }
+    }
+
+    if (s_bc_cache[victim].buf != NULL) {
+        SDL_free(s_bc_cache[victim].buf);
+        s_bc_cache[victim].buf = NULL;
+    }
+    s_bc_cache[victim].mtime = 0;
+    return &s_bc_cache[victim];
+}
+
+static void prv_bc_store(const char *path, int64_t mtime, JSContext *ctx, JSValueConst func_val)
+{
+    dtr_bc_entry_t *slot;
+    uint8_t        *bc;
+    size_t          bc_len;
+
+    bc = JS_WriteObject(ctx, &bc_len, func_val, JS_WRITE_OBJ_BYTECODE);
+    if (bc == NULL) {
+        return;
+    }
+
+    slot = prv_bc_evict_slot();
+    SDL_strlcpy(slot->path, path, sizeof(slot->path));
+    slot->mtime = mtime;
+    /* QuickJS allocates with js_malloc; copy into SDL-owned buffer so we can
+     * outlive the JSContext. */
+    slot->buf = SDL_malloc(bc_len);
+    if (slot->buf != NULL) {
+        SDL_memcpy(slot->buf, bc, bc_len);
+        slot->len = bc_len;
+        slot->lru = ++s_bc_lru_counter;
+    } else {
+        slot->mtime = 0;
+        slot->len   = 0;
+    }
+    js_free(ctx, bc);
+}
+
+void dtr_runtime_bc_cache_clear(void)
+{
+    int32_t i;
+
+    for (i = 0; i < DTR_BC_CACHE_SIZE; ++i) {
+        if (s_bc_cache[i].buf != NULL) {
+            SDL_free(s_bc_cache[i].buf);
+            s_bc_cache[i].buf = NULL;
+        }
+        s_bc_cache[i].mtime = 0;
+        s_bc_cache[i].len   = 0;
+    }
+    s_bc_lru_counter = 0;
+}
+
+/* ------------------------------------------------------------------ */
 /*  Internal helpers                                                   */
 /* ------------------------------------------------------------------ */
 
@@ -154,16 +267,36 @@ prv_module_normalize(JSContext *ctx, const char *base_name, const char *name, vo
  */
 static JSModuleDef *prv_module_loader(JSContext *ctx, const char *module_name, void *opaque)
 {
-    dtr_console_t *con;
-    char           path[1024];
-    size_t         buf_len;
-    char          *buf;
-    JSValue        func_val;
-    JSModuleDef   *mod;
+    dtr_console_t  *con;
+    char            path[1024];
+    size_t          buf_len;
+    char           *buf;
+    JSValue         func_val;
+    JSModuleDef    *mod;
+    SDL_PathInfo    info;
+    int64_t         mtime = 0;
+    dtr_bc_entry_t *cached;
 
     con = (dtr_console_t *)opaque;
 
     SDL_snprintf(path, sizeof(path), "%s%s", con->cart->base_path, module_name);
+
+    /* ---- Bytecode cache fast-path ---- */
+    if (SDL_GetPathInfo(path, &info)) {
+        mtime  = (int64_t)info.modify_time;
+        cached = prv_bc_lookup(path, mtime);
+        if (cached != NULL && cached->buf != NULL) {
+            func_val = JS_ReadObject(ctx, cached->buf, cached->len, JS_READ_OBJ_BYTECODE);
+            if (!JS_IsException(func_val)) {
+                mod = JS_VALUE_GET_PTR(func_val);
+                JS_FreeValue(ctx, func_val);
+                return mod;
+            }
+            /* Stale cache entry — fall through to recompile. */
+            JS_FreeValue(ctx, func_val);
+        }
+    }
+
     buf = (char *)SDL_LoadFile(path, &buf_len);
     if (buf == NULL) {
         JS_ThrowReferenceError(ctx, "could not load module '%s'", module_name);
@@ -176,6 +309,11 @@ static JSModuleDef *prv_module_loader(JSContext *ctx, const char *module_name, v
 
     if (JS_IsException(func_val)) {
         return NULL;
+    }
+
+    /* Cache compiled bytecode (if we have a valid mtime). */
+    if (mtime != 0) {
+        prv_bc_store(path, mtime, ctx, func_val);
     }
 
     mod = JS_VALUE_GET_PTR(func_val);
